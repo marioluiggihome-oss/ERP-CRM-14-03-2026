@@ -9,12 +9,13 @@ import { useEffect, useState, useRef } from "react";
 import CarpinterLogo, { CarpinterMark } from "./CarpinterLogo";
 import {
   FileText, Sparkles, TrendingUp, Ruler, CheckCircle2, ChevronDown,
-  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star,
+  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star, Play,
 } from "lucide-react";
 
 /* ─── DATOS ──────────────────────────────────────────────────────────────── */
 
 const NAV_LINKS = [
+  { label: "Vídeo", href: "#video" },
   { label: "Producto", href: "#producto" },
   { label: "IA", href: "#ia" },
   { label: "Precios", href: "#precios" },
@@ -193,6 +194,50 @@ function Hero({ onEnter }) {
           </div>
         </div>
         <div className="hero-visual"><BlueprintPanel /></div>
+      </div>
+    </section>
+  );
+}
+
+function PromoVideo() {
+  const ref = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const toggle = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setPlaying(true); }
+    else { v.pause(); setPlaying(false); }
+  };
+  return (
+    <section className="sec sec-espresso promo" id="video">
+      <div className="wrap">
+        <div className="sec-head" data-reveal>
+          <Cota light>TU TALLER · TU OFICIO · TU NEGOCIO</Cota>
+          <h2 className="sec-h2" style={{ color: "#F5F0E7" }}>
+            Del banco de trabajo <span className="accent">a tu negocio</span>
+          </h2>
+          <p className="sec-sub" style={{ color: "rgba(245,240,231,.7)" }}>
+            Menos papeles, más oficio. Míralo en 20 segundos.
+          </p>
+        </div>
+        <div className="promo-frame" data-reveal onClick={toggle} role="button" tabIndex={0}
+             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggle(); }}>
+          <video
+            ref={ref}
+            className="promo-video"
+            src="/carpinter-promo.mp4"
+            poster="/carpinter-promo-poster.jpg"
+            preload="metadata"
+            playsInline
+            controls={playing}
+            onEnded={() => setPlaying(false)}
+          />
+          {!playing && (
+            <div className="promo-play">
+              <span className="promo-play-btn"><Play size={30} fill="#17130F" color="#17130F" /></span>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -455,6 +500,18 @@ const STYLES = `
 .cl-root .sec{padding:92px 0;}
 .cl-root .sec-bone{background:var(--bone);}
 .cl-root .sec-espresso{background:var(--espresso);}
+.cl-root .sec-sub{max-width:640px;margin:14px auto 0;font-size:1.02rem;line-height:1.6;text-align:center;}
+.cl-root .promo{text-align:center;}
+.cl-root .promo-frame{position:relative;max-width:920px;margin:38px auto 0;border-radius:18px;overflow:hidden;
+  cursor:pointer;box-shadow:0 30px 70px -25px rgba(0,0,0,.7);border:1px solid rgba(245,240,231,.12);background:#000;
+  aspect-ratio:16/9;}
+.cl-root .promo-video{display:block;width:100%;height:100%;object-fit:cover;}
+.cl-root .promo-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 50%, rgba(23,19,15,.15), rgba(23,19,15,.45));transition:background .25s;}
+.cl-root .promo-frame:hover .promo-play{background:radial-gradient(circle at 50% 50%, rgba(23,19,15,.05), rgba(23,19,15,.35));}
+.cl-root .promo-play-btn{display:flex;align-items:center;justify-content:center;width:82px;height:82px;border-radius:999px;
+  background:var(--bone);box-shadow:0 12px 34px -6px rgba(0,0,0,.6);padding-left:5px;transition:transform .2s;}
+.cl-root .promo-frame:hover .promo-play-btn{transform:scale(1.07);}
 .cl-root .sec-head{max-width:640px;margin-bottom:52px;}
 .cl-root .sec-h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.08;text-wrap:balance;margin:0 0 14px;}
 .cl-root .sec-lead{font-size:16px;line-height:1.6;color:var(--muted);margin:0;}
@@ -560,6 +617,7 @@ export default function CarpinterosLanding({ onEnter, embedded = false }) {
           propia, para no solaparse con la cabecera del portal. */}
       {!embedded && <Nav onEnter={onEnter} />}
       <Hero onEnter={onEnter} />
+      <PromoVideo />
       <Features />
       <AISection />
       <Pricing onEnter={onEnter} />
