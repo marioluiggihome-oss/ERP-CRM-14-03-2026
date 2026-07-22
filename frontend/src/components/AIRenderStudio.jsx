@@ -378,6 +378,8 @@ export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true;
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
   const canUseRender360 = isMaster || state?.currentUser?.canUseRender360 === true;
+  // Permiso específico para exportar a 4K (o rol master).
+  const canUse4K = isMaster || state?.currentUser?.canUse4K === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
   // Admin o lista vacía/ausente = todos permitidos (compatibilidad hacia atrás).
   const tiposPermitidos = (() => {
@@ -2329,11 +2331,13 @@ export default function AIRenderStudio({ state, setState }) {
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50">
                     {editing ? <Loader size={14} className="animate-spin" /> : <Wand2 size={14} />} HD
                   </button>
+                  {canUse4K && (
                   <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
                     title="Genera y descarga la imagen a resolución 4K real (3840 px): nitidez con IA + reescalado a 4K"
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 shadow-sm disabled:opacity-50">
                     {editing ? <Loader size={14} className="animate-spin" /> : <Maximize2 size={14} />} 4K
                   </button>
+                  )}
                   <button onClick={downloadRender} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                     {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar
