@@ -652,6 +652,98 @@ export default function AIRenderStudio({ state, setState }) {
     im.src = dataUrl;
   };
 
+  // Convierte un color hex (#rrggbb) a {r,g,b} para jsPDF.
+  const hexToRgb = (hex) => {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : { r: 100, g: 116, b: 139 };
+  };
+
+  // Devuelve la imagen del render con las marcas de instalaciones "quemadas"
+  // (punto + cota de altura), en alta resolución, como dataURL. Reutilizable para
+  // descargar o para el PDF de gremio.
+  const renderMarcadoDataUrl = (scale = 2) => new Promise(async (resolve) => {
+    const src = currentImage(); if (!src) return resolve(null);
+    const dataUrl = await imageToDataUrl(src);
+    const el = document.getElementById('render-annot-img');
+    const cw = (el?.offsetWidth || 1280) * scale, ch = (el?.offsetHeight || 720) * scale;
+    const im = new window.Image();
+    im.onload = () => {
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, 0, cw, ch);
+      const sc = Math.min(cw / im.width, ch / im.height);
+      const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+      ctx.drawImage(im, dx, dy, dw, dh);
+      marks.forEach((mk) => {
+        const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
+        ctx.beginPath(); ctx.arc(x, y, 8 * scale, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        ctx.lineWidth = 2 * scale; ctx.strokeStyle = '#fff'; ctx.stroke();
+        const cota = `${markH(mk)} cm`;
+        ctx.font = `bold ${11 * scale}px sans-serif`; const tw = ctx.measureText(cota).width;
+        ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(x + 11 * scale, y - 8 * scale, tw + 8 * scale, 16 * scale);
+        ctx.fillStyle = t.color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(cota, x + 15 * scale, y + 0.5);
+      });
+      resolve(cv.toDataURL('image/png'));
+    };
+    im.onerror = () => resolve(null);
+    im.src = dataUrl;
+  });
+
+  // ─── PDF de ESQUEMA PARA EL GREMIO (fontanero/electricista) ─────────────────
+  const esquemaGremioPDF = async () => {
+    if (!currentImage()) return;
+    if (!marks.length) { setError('No hay tomas marcadas. Pulsa «Detectar auto (IA)» o márcalas a mano antes de generar el esquema.'); return; }
+    setDownloading(true);
+    try {
+      const img = await renderMarcadoDataUrl(2);
+      if (!img) { setError('No se pudo preparar la imagen del esquema.'); return; }
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), M = 12;
+      // Cabecera
+      const logo = state?.logo;
+      if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+        try { const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG'); pdf.addImage(logo, fmt, M, 8, 28, 14); } catch (_) {}
+      }
+      pdf.setFont(undefined, 'bold'); pdf.setFontSize(15); pdf.setTextColor(20, 30, 60);
+      pdf.text('ESQUEMA DE INSTALACIONES — GREMIO', W - M, 14, { align: 'right' });
+      pdf.setFont(undefined, 'normal'); pdf.setFontSize(9); pdf.setTextColor(110);
+      const sub = [cliente && `Cliente: ${cliente}`, ref && `Ref: ${ref}`, new Date().toLocaleDateString('es-ES')].filter(Boolean).join('   ·   ');
+      pdf.text(sub, W - M, 20, { align: 'right' });
+      // Imagen del render con marcas (columna izquierda)
+      const imgW = W * 0.66 - M, areaY = 28, areaH = H - areaY - 14;
+      const props = pdf.getImageProperties(img);
+      const ratio = Math.min(imgW / props.width, areaH / props.height);
+      const iw = props.width * ratio, ih = props.height * ratio;
+      pdf.addImage(img, 'PNG', M, areaY, iw, ih);
+      // Tabla de tomas (columna derecha)
+      const tx = M + imgW + 6; let ty = areaY + 2;
+      pdf.setFont(undefined, 'bold'); pdf.setFontSize(10); pdf.setTextColor(20, 30, 60);
+      pdf.text('TOMAS A DEJAR', tx, ty); ty += 6;
+      pdf.setFontSize(7.5); pdf.setTextColor(130); pdf.setFont(undefined, 'normal');
+      pdf.text('Alturas orientativas desde suelo terminado.', tx, ty); ty += 6;
+      const used = [...new Set(marks.map(m => m.type))];
+      used.forEach((tp) => {
+        const t = MARK_TYPES[tp]; const n = marks.filter(m => m.type === tp).length;
+        const rgb = hexToRgb(t.color);
+        pdf.setFillColor(rgb.r, rgb.g, rgb.b); pdf.circle(tx + 2, ty - 1.2, 1.8, 'F');
+        pdf.setTextColor(40); pdf.setFont(undefined, 'bold'); pdf.setFontSize(9);
+        pdf.text(`${t.label}`, tx + 6, ty);
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(110); pdf.setFontSize(8);
+        pdf.text(`x${n}   ·   h ${t.h} cm`, tx + 6, ty + 4);
+        ty += 9.5;
+      });
+      // Total y pie
+      ty += 2; pdf.setDrawColor(220); pdf.line(tx, ty, W - M, ty); ty += 5;
+      pdf.setFont(undefined, 'bold'); pdf.setFontSize(9); pdf.setTextColor(20, 30, 60);
+      pdf.text(`Total puntos: ${marks.length}`, tx, ty);
+      pdf.setFontSize(7); pdf.setTextColor(150); pdf.setFont(undefined, 'normal');
+      pdf.text(pdf.splitTextToSize('Esquema orientativo generado por IA para coordinación con el gremio. Verificar in situ.', W - M - tx), tx, H - 12);
+      pdf.save(`esquema_gremio_${(cliente || ref || 'cocina').replace(/\s+/g, '_')}.pdf`);
+    } catch (e) { setError('No se pudo generar el esquema: ' + (e.message || '')); }
+    finally { setDownloading(false); }
+  };
+
   // La transcripción se concatena al texto base (lo escrito antes de dictar).
   useEffect(() => {
     if (transcript) {
@@ -2529,6 +2621,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <button onClick={() => setMarks(m => m.slice(0, -1))} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Deshacer</button>
                     <button onClick={() => { setMarks([]); setMarkTool(null); }} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Limpiar</button>
                     <button onClick={descargarConMarcas} className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900 flex items-center gap-1"><Download size={12} /> Descargar con marcas</button>
+                    <button onClick={esquemaGremioPDF} disabled={downloading} title="PDF con las tomas marcadas, sus alturas y leyenda para el fontanero/electricista" className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50 flex items-center gap-1"><FileText size={12} /> Esquema gremio (PDF)</button>
                     <span className="text-[10px] text-slate-400">{marks.length} marca(s)</span>
                   </>}
                   {markTool && marks.length === 0 && <span className="text-[10px] text-indigo-600 font-bold">Haz clic en el render para colocar «{MARK_TYPES[markTool].label}»</span>}
