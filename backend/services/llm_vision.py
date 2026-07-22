@@ -15,6 +15,20 @@ from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
+# Modelo de visión/texto preferido, configurable por entorno SIN tocar código.
+# Permite adoptar modelos más nuevos y baratos (p. ej. gemini-3.6-flash,
+# gemini-3.5-flash-lite) poniendo GEMINI_VISION_MODEL en Railway. Si el modelo no
+# existe para la clave, la lista de respaldo sigue con gemini-2.5-flash/pro.
+GEMINI_VISION_MODEL = (os.environ.get("GEMINI_VISION_MODEL") or "").strip() or None
+
+def _con_preferido(lista):
+    """Antepone el modelo preferido (env) a la lista de candidatos, sin duplicar."""
+    out = []
+    for m in ([GEMINI_VISION_MODEL] if GEMINI_VISION_MODEL else []) + list(lista):
+        if m and m not in out:
+            out.append(m)
+    return out
+
 # Contador de consumo de IA (best-effort; nunca debe romper una llamada).
 try:
     from services.ai_usage import record_ai_usage, record_ai_tokens, usage_from_response
@@ -166,8 +180,8 @@ async def _analyze_with_google_genai(
     # uno (porque ese nombre fue renombrado/retirado), se prueba el siguiente.
     requested = model or "gemini-2.5-flash"
     candidates = []
-    for m in [requested, "gemini-2.5-flash",
-              "gemini-flash-latest", "gemini-2.5-pro"]:
+    for m in _con_preferido([requested, "gemini-2.5-flash",
+              "gemini-flash-latest", "gemini-2.5-pro"]):
         if m not in candidates:
             candidates.append(m)
 
@@ -246,7 +260,7 @@ async def chat_with_gemini(
         # (NOT_FOUND/404), se prueba el siguiente, igual que en visión.
         requested = model or "gemini-2.5-flash"
         candidates = []
-        for m in [requested, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]:
+        for m in _con_preferido([requested, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]):
             if m not in candidates:
                 candidates.append(m)
 
@@ -300,7 +314,7 @@ async def search_with_gemini(
     client = google_genai.Client(api_key=gemini_key)
     requested = model or "gemini-2.5-flash"
     candidates = []
-    for m in [requested, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]:
+    for m in _con_preferido([requested, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]):
         if m not in candidates:
             candidates.append(m)
 

@@ -1621,6 +1621,7 @@ async def generar_alzado(payload: ProyectoBase):
                         arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
             ax.text((x0 + x1) / 2, y + 4, txt, ha="center", va="bottom", fontsize=7.5, color=C_COTA)
 
+        herr = {"puertas": 0, "cajones": 0}  # recuento de herraje para el resumen
         for idx, (ax, pared) in enumerate(zip(axes, paredes)):
             ancho = int(pared.get("ancho") or 400)
             alto = int(pared.get("alto") or 240)
@@ -1649,6 +1650,7 @@ async def generar_alzado(payload: ProyectoBase):
                     # Tiradores verticales de la columna (puerta superior e inferior).
                     tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.30, length=18)
                     tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.72, length=18)
+                    herr["puertas"] += 2
                 elif tipo in ALTOS:
                     wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
                     ax.text(x + w / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, label, ha="center", va="center", fontsize=7)
@@ -1664,6 +1666,7 @@ async def generar_alzado(payload: ProyectoBase):
                                 fontsize=6, color=C_FRENTE)
                         # Tirador horizontal centrado, junto al canto superior del frente.
                         tirador_h(ax, x + w / 2, yy + fh - 3, length=min(16, w * 0.5))
+                        herr["cajones"] += 1
                     ax.text(x + w / 2, ZOC_Y - 3, label, ha="center", va="top", fontsize=6.5, color=C_LINE)
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
@@ -1671,6 +1674,7 @@ async def generar_alzado(payload: ProyectoBase):
                     # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción).
                     if tipo not in HOB:
                         tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)
+                        herr["puertas"] += 1
                     if tipo in HOB:
                         hob_zones.append((x, w))
                         # marca de zona de cocción sobre la encimera
@@ -1691,6 +1695,7 @@ async def generar_alzado(payload: ProyectoBase):
                 w = min(60, ancho - x)
                 wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y, dash=True)
                 tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)  # puerta del bajo
+                herr["puertas"] += 1
                 cotas.append((x, x + w, f"{w}"))
                 x += w
             # relleno de altos, saltando columnas y la zona de campana (sobre placa)
@@ -1704,6 +1709,7 @@ async def generar_alzado(payload: ProyectoBase):
                 if not (ocupado_col or ocupado_camp):
                     wire(ax, x2, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0, dash=True)
                     tirador_v(ax, x2 + w - 5, ALTOS_Y0 + 12, length=16)  # puerta del alto (tirador abajo)
+                    herr["puertas"] += 1
                 x2 += w
             # encimera y zócalo
             ax.plot([0, ancho], [ENC_Y, ENC_Y], color=C_LINE, lw=2.2, zorder=4)
@@ -1743,13 +1749,26 @@ async def generar_alzado(payload: ProyectoBase):
             ax.text(0, alto + 12, f"ALZADO S{idx + 1} — {pared.get('nombre') or f'Pared {idx + 1}'} · escala orientativa · cotas en cm",
                     fontsize=9, fontweight="bold", color=C_LINE)
 
+        # Resumen de herraje (recuento aproximado a partir de puertas y cajones).
+        puertas = herr["puertas"]; cajones = herr["cajones"]
+        bisagras = puertas * 2                 # 2 bisagras por puerta (estándar)
+        guias = cajones                        # 1 juego de guías por frente de cajón
+        tiradores = puertas + cajones          # 1 tirador por puerta y por frente
+        resumen = (f"HERRAJE (aprox.):  {puertas} puertas · {cajones} cajones/gavetas   |   "
+                   f"{bisagras} bisagras · {guias} juegos de guías · {tiradores} tiradores")
+        fig.text(0.5, 0.005, resumen, ha="center", va="bottom", fontsize=8.5,
+                 color=C_HERRAJE, fontweight="bold",
+                 bbox=dict(boxstyle="round,pad=0.4", fc="#F3F1EC", ec=C_HERRAJE, lw=0.8))
+
         buf = io.BytesIO()
-        plt.tight_layout(pad=1.2)
+        plt.tight_layout(pad=1.2, rect=(0, 0.03, 1, 1))
         plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=C_BG)
         plt.close(fig)
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
-        return {"alzadoBase64": f"data:image/png;base64,{b64}", "paredes": len(paredes)}
+        return {"alzadoBase64": f"data:image/png;base64,{b64}", "paredes": len(paredes),
+                "herraje": {"puertas": puertas, "cajones": cajones, "bisagras": bisagras,
+                            "guias": guias, "tiradores": tiradores}}
     except Exception as e:
         logger.error(f"alzado error: {e}")
         raise HTTPException(status_code=500, detail=f"No se pudo generar la vista alámbrica: {e}")
