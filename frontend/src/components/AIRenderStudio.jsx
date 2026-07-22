@@ -1075,6 +1075,51 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // Genera la imagen a resolución 4K real (3840 px): primero un pase de nitidez con
+  // IA para añadir detalle fino, y después un reescalado determinista a 4K. La deja
+  // como render actual y la descarga automáticamente.
+  const generar4K = async () => {
+    const img = currentImage();
+    if (!img || editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      // 1) Pase de nitidez con IA (misma composición, más detalle).
+      let base = dataUrl;
+      try {
+        const desc = (
+          'Reprocesa esta imagen a MÁXIMA nitidez y detalle fotorrealista SIN cambiar '
+          + 'nada del diseño: mismos muebles, colores, materiales, distribución, encuadre, '
+          + 'perspectiva e iluminación. Solo mejora definición y detalle fino.'
+        );
+        const rr = await fetch(`${API_URL}/api/ai-engine/render`, {
+          method: 'POST', headers: getAuthHeaders(),
+          body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+        });
+        const rd = await rr.json();
+        if (rd.success) base = await imageToDataUrl(rd.result?.images?.[0]);
+      } catch { /* si el pase de IA falla, se escala igualmente la imagen actual */ }
+      // 2) Reescalado determinista a 4K (3840 px).
+      const up = await fetch(`${API_URL}/api/ai-engine/render/upscale-4k`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ imageBase64: base, width: 3840 }),
+      });
+      const ud = await up.json();
+      if (ud.success && ud.image) {
+        const merged = { ...(renderResult || {}), result: { images: [ud.image] }, description: `${renderResult?.description || description}\n[4K · ${ud.width}×${ud.height}]` };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+        // Descarga automática del 4K.
+        try {
+          const a = document.createElement('a');
+          a.href = ud.image; a.download = `render-4k-${Date.now()}.jpg`;
+          document.body.appendChild(a); a.click(); a.remove();
+        } catch { /* descarga best-effort */ }
+      } else setError(ud.detail || ud.error || 'No se pudo generar la versión 4K.');
+    } catch { setError('Error al generar la versión 4K.'); }
+    finally { setEditing(false); }
+  };
+
   const editRender = async () => {
     const img = currentImage();
     // Combina la instrucción principal + líneas adicionales (multi-línea).
@@ -2283,6 +2328,11 @@ export default function AIRenderStudio({ state, setState }) {
                     title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50">
                     {editing ? <Loader size={14} className="animate-spin" /> : <Wand2 size={14} />} HD
+                  </button>
+                  <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
+                    title="Genera y descarga la imagen a resolución 4K real (3840 px): nitidez con IA + reescalado a 4K"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 shadow-sm disabled:opacity-50">
+                    {editing ? <Loader size={14} className="animate-spin" /> : <Maximize2 size={14} />} 4K
                   </button>
                   <button onClick={downloadRender} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
