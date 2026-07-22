@@ -19,12 +19,18 @@ logger = logging.getLogger(__name__)
 # Permite adoptar modelos más nuevos y baratos (p. ej. gemini-3.6-flash,
 # gemini-3.5-flash-lite) poniendo GEMINI_VISION_MODEL en Railway. Si el modelo no
 # existe para la clave, la lista de respaldo sigue con gemini-2.5-flash/pro.
-GEMINI_VISION_MODEL = (os.environ.get("GEMINI_VISION_MODEL") or "").strip() or None
+# Por defecto usamos gemini-3.6-flash (más nuevo, capaz y barato). Si la clave no
+# lo tuviera disponible, la lista de respaldo cae a 3.5-flash-lite y 2.5-flash/pro.
+GEMINI_VISION_MODEL = (os.environ.get("GEMINI_VISION_MODEL") or "").strip() or "gemini-3.6-flash"
+# Modelos nuevos que se intentan antes que los 2.5 (con respaldo automático).
+GEMINI_NEW_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"]
 
 def _con_preferido(lista):
-    """Antepone el modelo preferido (env) a la lista de candidatos, sin duplicar."""
+    """Antepone el modelo preferido + los nuevos flash a los candidatos, sin duplicar.
+    Si un modelo no existe para la clave, Google devuelve 404 y se prueba el siguiente,
+    así que anteponer los nuevos es seguro (degradación automática a 2.5)."""
     out = []
-    for m in ([GEMINI_VISION_MODEL] if GEMINI_VISION_MODEL else []) + list(lista):
+    for m in ([GEMINI_VISION_MODEL] if GEMINI_VISION_MODEL else []) + GEMINI_NEW_FALLBACKS + list(lista):
         if m and m not in out:
             out.append(m)
     return out
