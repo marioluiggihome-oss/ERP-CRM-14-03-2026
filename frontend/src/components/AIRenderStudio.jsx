@@ -376,6 +376,8 @@ const PLACEHOLDER_TIPO = {
 
 export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true;
+  // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
+  const canUseRender360 = isMaster || state?.currentUser?.canUseRender360 === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
   // Admin o lista vacía/ausente = todos permitidos (compatibilidad hacia atrás).
   const tiposPermitidos = (() => {
@@ -2320,7 +2322,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <Image size={14} /> Comparar
                     </button>
                   )}
-                  {orbitFrames.length >= 2 ? (
+                  {canUseRender360 && (orbitFrames.length >= 2 ? (
                     <button
                       onClick={() => setOrbitOn(v => !v)}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${orbitOn ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -2338,7 +2340,7 @@ export default function AIRenderStudio({ state, setState }) {
                       {orbitLoading ? <Loader size={14} className="animate-spin" /> : <RotateCw size={14} />}
                       {orbitLoading ? 'Generando…' : 'Generar 360º'}
                     </button>
-                  )}
+                  ))}
                   <button
                     onClick={() => { setInteractiveMode(v => !v); setOrbitOn(false); if (!interactiveMode) { setZoom(1); setPanX(0); setPanY(0); } }}
                     className={`p-2 rounded-lg transition-colors ${interactiveMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}

@@ -24,6 +24,7 @@ const CAPABILITY_KEYS = [
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
+  'canUseRender360',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -166,6 +167,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessCRM: false,
     canUseResumenTotales: false,
     canUseCascos: false,
+    canUseRender360: false,
     canVerVinculadosCascos: false,
     canUsePropData: false,
     canUseArmarios2: false,
@@ -762,6 +764,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessCRM: false,
       canUseResumenTotales: false,
       canUseCascos: false,
+      canUseRender360: false,
       canVerVinculadosCascos: false,
       canUsePropData: false,
       canUseArmarios2: false,
@@ -2384,6 +2387,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
                               <span title="Presupuestador de cascos (Cocina Desmontada)." className="text-xs font-bold text-slate-700">Cocina Desmontada (Cascos)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUseRender360}
+                                onChange={(e) => setUserForm({...userForm, canUseRender360: e.target.checked})}
+                                className="w-4 h-4 rounded accent-indigo-600"
+                              />
+                              <span title="Estudio 3D: generar un giro 360º del render y moverlo con el ratón (consume créditos de IA)." className="text-xs font-bold text-slate-700">Render 360º (giro con ratón)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
