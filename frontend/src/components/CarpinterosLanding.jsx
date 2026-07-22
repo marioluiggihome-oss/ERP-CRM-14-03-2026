@@ -97,7 +97,7 @@ function Nav({ onEnter }) {
   return (
     <header className={`nav ${scrolled ? "nav-solid" : ""}`}>
       <div className="wrap nav-inner">
-        <a href="#top" className="nav-logo"><CarpinterLogo height={34} tone={scrolled ? "dark" : "light"} /></a>
+        <a href="#top" className="nav-logo"><CarpinterLogo height={48} tone={scrolled ? "dark" : "light"} /></a>
         <nav className="nav-links">
           {NAV_LINKS.map((l) => (
             <a key={l.label} href={l.href} style={{ color: scrolled ? "#5B4E3F" : "rgba(245,240,231,.8)" }}>{l.label}</a>
@@ -364,7 +364,7 @@ function Footer() {
     <footer className="footer">
       <div className="wrap footer-grid">
         <div className="footer-brand">
-          <CarpinterLogo height={38} tone="light" />
+          <CarpinterLogo height={52} tone="light" />
           <p>El ERP para carpinteros y ebanistas que gestionan su negocio con la misma precisión con la que trabajan la madera.</p>
         </div>
         <div className="footer-col">
