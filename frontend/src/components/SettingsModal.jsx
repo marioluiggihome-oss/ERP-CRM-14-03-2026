@@ -24,7 +24,7 @@ const CAPABILITY_KEYS = [
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
-  'canUseRender360', 'canUse4K',
+  'canUseRender360', 'canUse4K', 'canUseAmueblado',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -169,6 +169,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canUseCascos: false,
     canUseRender360: false,
     canUse4K: false,
+    canUseAmueblado: false,
     canVerVinculadosCascos: false,
     canUsePropData: false,
     canUseArmarios2: false,
@@ -767,6 +768,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canUseCascos: false,
       canUseRender360: false,
       canUse4K: false,
+      canUseAmueblado: false,
       canVerVinculadosCascos: false,
       canUsePropData: false,
       canUseArmarios2: false,
@@ -2407,6 +2409,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-indigo-600"
                               />
                               <span title="Estudio 3D: generar y descargar el render a resolución 4K real (3840 px)." className="text-xs font-bold text-slate-700">Render 4K</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUseAmueblado}
+                                onChange={(e) => setUserForm({...userForm, canUseAmueblado: e.target.checked})}
+                                className="w-4 h-4 rounded accent-amber-600"
+                              />
+                              <span title="Estudio 3D: diseñar el mueble sobre una foto de la estancia real del cliente (amueblado virtual)." className="text-xs font-bold text-slate-700">Amueblado virtual (foto real)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input

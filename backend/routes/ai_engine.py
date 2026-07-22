@@ -118,6 +118,7 @@ class RenderRequest(BaseModel):
     referenceImages: Optional[List[str]] = Field(None, description="Imágenes adicionales (elemento a copiar: puerta, mueble…) en base64/data URL")
     provider: Optional[str] = Field(None, description="Motor de render: manus | gemini (opcional; por defecto manus)")
     projectType: Optional[str] = Field(None, description="Tipo de proyecto elegido por el usuario: cocina|armario|bano|otro. Fuerza el sujeto del render.")
+    roomPhoto: Optional[bool] = Field(False, description="La imagen de referencia es una FOTO de la estancia REAL (vacía o a reformar): diseñar el mueble DENTRO de ella respetando su arquitectura.")
 
 
 class RenderComposeRequest(BaseModel):
@@ -265,6 +266,19 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
             await _tr.track(user.get("id"), user.get("username") or user.get("clientName") or "", ActivityType.AI_TELEMETRY, {"kind": "render"})
     except Exception:
         pass
+    # Amueblado virtual (roomPhoto): requiere permiso específico canUseAmueblado
+    # (o rol elevado). El JWT no lleva el flag, se comprueba en BD.
+    if request.roomPhoto:
+        allowed = any(user.get(f) for f in ADMIN_ROLE_FLAGS)
+        if not allowed:
+            try:
+                full = await _db.users.find_one({"id": user.get("id")}, {"_id": 0, "canUseAmueblado": 1}) or {}
+                allowed = bool(full.get("canUseAmueblado"))
+            except Exception:
+                allowed = False
+        if not allowed:
+            raise HTTPException(status_code=403, detail="No tienes activado el permiso de amueblado virtual. Pídeselo a tu administrador.")
+
     service = get_render_service()
 
     # Construir overrides desde parámetros opcionales
@@ -282,6 +296,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
         provider=request.provider,
         reference_images=request.referenceImages,
         project_type=request.projectType,
+        room_photo=bool(request.roomPhoto),
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")

@@ -473,6 +473,7 @@ class Render3DService:
         provider: Optional[str] = None,
         reference_images: Optional[list] = None,
         project_type: Optional[str] = None,
+        room_photo: bool = False,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -523,6 +524,38 @@ class Render3DService:
         # INTERPRETAR la distribución. En ese caso usamos la rama SIN referencia pero
         # pasando la imagen como guía de layout.
         is_sketch = self._is_sketch_reference(reference_image, reference_mime)
+
+        # ── AMUEBLADO VIRTUAL: la foto es la ESTANCIA REAL (vacía / a reformar) ──
+        # No hay que EDITAR un mueble existente, sino DISEÑAR uno nuevo DENTRO de esa
+        # estancia respetando su arquitectura (paredes, ventanas, puertas, suelo,
+        # techo, perspectiva y luz reales). Cierra ventas: el cliente ve su propio hueco.
+        if ref_b64 and not is_sketch and room_photo:
+            pt2 = (project_type or "").strip().lower()
+            pieza = {"armario": "fitted wardrobe/closet", "bano": "bathroom vanity/cabinetry"}.get(pt2, "kitchen")
+            parsed_params["briefExpanded"] = False
+            parsed_params["virtualStaging"] = True
+            task_prompt = (
+                f"The attached photo is a REAL ROOM (empty or to be renovated) of the client. "
+                f"Design and PLACE a brand-new {pieza} INSIDE this exact room. Keep the room's "
+                "ARCHITECTURE strictly unchanged: the same walls, corners and room shape, the "
+                "SAME windows and doors at their real position and size, the SAME ceiling, and the "
+                "SAME camera viewpoint, perspective and vanishing lines as the photo. Match the "
+                "real lighting and the direction of the natural light coming from the windows. "
+                "Only ADD the new furniture, integrating it realistically against the real walls "
+                "(respect the free wall lengths available). You MAY update floor and wall finishes "
+                "if the brief asks, but never move or resize the openings or change the room's "
+                "proportions.\n\n"
+                f"Furniture to design (finishes, materials, colors, layout): {description or 'cocina moderna funcional'}.\n\n"
+                "Photorealistic result, PBR materials, realistic shadows and reflections coherent "
+                "with the room's light, 16:9. It must look like a real photo of THIS room, now "
+                "furnished. No text, watermarks or logos."
+            )
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                reference_image_base64=ref_b64, reference_mime=ref_mime,
+                provider=provider,
+            )
+
         if ref_b64 and not is_sketch:
             change = (description or "").strip()
             parsed_params["briefExpanded"] = False
