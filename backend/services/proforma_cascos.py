@@ -56,6 +56,25 @@ def _cuenta_frentes(desc: str) -> Dict[str, int]:
     return {"puertas": puertas, "cajones": cajones, "gavetas": gavetas}
 
 
+def _tipo_mueble(desc: str) -> str:
+    """Clasifica el mueble para saber qué herraje de sujeción lleva:
+    - 'bajo'    → lleva PATAS (se apoya en el suelo).
+    - 'columna' → lleva PATAS (columna/semicolumna a suelo).
+    - 'alto'    → lleva COLGADORES (va colgado a la pared).
+    - 'panel'   → regleta/panel/zócalo (accesorio, sin patas ni colgadores).
+    """
+    t = (desc or "").upper()
+    if any(k in t for k in ("REG ", "PTA ", "ZOCALO", "ZÓCALO", "COPETE", "REGLETA", "COSTADO", "PANEL")):
+        return "panel"
+    if "SEMICOLUMNA" in t or "COLUMNA" in t:
+        return "columna"
+    if t.startswith("ALTO") or " ALTO" in t or "SOBREMODULO" in t or "SOBREMÓDULO" in t or "COLGADO" in t:
+        return "alto"
+    if t.startswith("BAJO") or " BAJO" in t or "FREGADERO" in t:
+        return "bajo"
+    return "otro"
+
+
 def _color_y_herraje(material: str):
     """Del texto de material saca color/acabado y si lleva herraje BLUM (Merivobox)."""
     m = (material or "").upper()
@@ -113,6 +132,7 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
         grueso = nums[2] if len(nums) > 2 else None
         color, herraje_blum = _color_y_herraje(material)
         frentes = _cuenta_frentes(desc)
+        tipo = _tipo_mueble(desc)
         # ¿Es un casco/mueble (tiene estructura y material melamina) o un accesorio
         # (regleta, panel, zócalo…)? Heurística: material con "MELAMINA"/"ZENIT" o
         # descripción con PUERTA/CAJON/GAVETA/COLUMNA/BAJO/ALTO.
@@ -124,7 +144,7 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
             "largo": largo, "ancho": ancho, "grueso": grueso,
             "cantidad": cantidad or 1.0, "pvp": precio, "total": total,
             "puertas": frentes["puertas"], "cajones": frentes["cajones"], "gavetas": frentes["gavetas"],
-            "esMueble": es_mueble,
+            "tipo": tipo, "esMueble": es_mueble,
         })
         i = j
     return items
