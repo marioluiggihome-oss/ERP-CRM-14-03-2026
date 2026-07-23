@@ -2084,7 +2084,8 @@ export default function AIRenderStudio({ state, setState }) {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder={PLACEHOLDER_TIPO[tipo3d] || PLACEHOLDER_TIPO.otro}
-                  className="flex-1 min-h-[150px] p-4 border border-slate-200 rounded-xl text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
+                  className="flex-1 min-h-[190px] p-4 border border-slate-200 rounded-xl text-[15px] leading-relaxed text-slate-800 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
+                  style={{ fontFamily: 'system-ui, sans-serif' }}
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {QUICK_PHRASES.map(t => (
