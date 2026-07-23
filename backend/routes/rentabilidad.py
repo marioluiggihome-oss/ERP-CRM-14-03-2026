@@ -1185,6 +1185,8 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
         "pvp": round(pvp, 2) if pvp is not None else None,
         "marca": str(payload.get("marca", (prev or {}).get("marca") or "")).strip(),
         "categoria": str(payload.get("categoria", (prev or {}).get("categoria") or "")).strip(),
+        # Imagen del electro (URL o dataURL) para mostrar en catálogo y bodegones.
+        "imagen": payload.get("imagen") if payload.get("imagen") is not None else (prev or {}).get("imagen"),
         "esElectro": bool(payload.get("esElectro")) if payload.get("esElectro") is not None else bool((prev or {}).get("esElectro")),
         "source": "manual",
         "updatedAt": datetime.now(timezone.utc).isoformat(),
@@ -1204,6 +1206,43 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
     except Exception as e:
         logger.error("No se pudo auditar cambio de coste %s: %s", cod, e)
     return {"success": True, "article": doc, "created": prev is None}
+
+
+# Electros SIEMENS del pedido (coste = precio neto proveedor; PVP = coste + 10%).
+_SIEMENS_ELECTROS = [
+    {"codigo": "WG56G2Z1ES", "nombre": "Lavadora", "coste": 339.01, "categoria": "Lavado"},
+    {"codigo": "SN63HX03TE", "nombre": "Lavavajillas totalmente integrado", "coste": 305.49, "categoria": "Lavado"},
+    {"codigo": "KG39NVXCG", "nombre": "Combi 203x60cm acero negro No Frost", "coste": 586.25, "categoria": "Frío"},
+    {"codigo": "LB88NPC60", "nombre": "Grupo filtrante", "coste": 313.87, "categoria": "Campana"},
+    {"codigo": "EH61AHCC1E", "nombre": "Placa de inducción", "coste": 326.45, "categoria": "Cocción"},
+    {"codigo": "HB578GES3", "nombre": "Horno", "coste": 313.87, "categoria": "Horno"},
+    {"codigo": "BE555LMB1", "nombre": "Microondas 25 l. electrónico grill 38 cm", "coste": 213.30, "categoria": "Microondas"},
+]
+
+
+@router.post("/rentabilidad/electros/seed-siemens")
+async def seed_siemens_electros(user: dict = Depends(require_rentabilidad)):
+    """Carga (o actualiza) los electros Siemens del pedido como electros del catálogo:
+    coste = precio neto proveedor, PVP = coste + 10%, marca Siemens. Solo master."""
+    if not any(user.get(f) for f in ("isAdmin", "isPrimaryAdmin", "isGerente")):
+        raise HTTPException(status_code=403, detail="Solo el master puede cargar estos electros.")
+    n = 0
+    for e in _SIEMENS_ELECTROS:
+        norm = _normalize_ref(e["codigo"])
+        prev = await db.article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
+        doc = {
+            "codigo": e["codigo"], "codigoNorm": norm, "nombre": e["nombre"],
+            "costeUnitario": round(e["coste"], 4),
+            "pvp": round(e["coste"] * 1.10, 2),        # PVP = coste + 10%
+            "marca": "Siemens", "categoria": e["categoria"],
+            "imagen": (prev or {}).get("imagen"),       # conserva imagen si ya la subieron
+            "esElectro": True, "source": "siemens-seed",
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "updatedBy": (user or {}).get("username", ""),
+        }
+        await db.article_costs.update_one({"codigoNorm": norm}, {"$set": doc}, upsert=True)
+        n += 1
+    return {"success": True, "cargados": n}
 
 
 @router.delete("/rentabilidad/article-costs/{codigo}")
