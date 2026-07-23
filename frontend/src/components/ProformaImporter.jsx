@@ -1,7 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Upload, Loader, FileText, Eye, EyeOff, Calculator } from 'lucide-react';
 import { authHeaders } from '../services/api';
-import { CASCOS } from '../data/cascos';
+import { CASCOS as _CASCOS_RAW } from '../data/cascos';
+
+const CASCOS = Array.isArray(_CASCOS_RAW) ? _CASCOS_RAW : [];
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const getAuthHeaders = () => authHeaders({ 'Content-Type': 'application/json' });
@@ -61,7 +63,7 @@ const _match_acb = (it) => {
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
 export default function ProformaImporter({ esMaster }) {
-  const [oculto, setOculto] = useState(true);
+  const [oculto, setOculto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [items, setItems] = useState([]);
