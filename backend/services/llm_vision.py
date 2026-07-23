@@ -19,16 +19,17 @@ logger = logging.getLogger(__name__)
 # Permite adoptar modelos más nuevos y baratos (p. ej. gemini-3.6-flash,
 # gemini-3.5-flash-lite) poniendo GEMINI_VISION_MODEL en Railway. Si el modelo no
 # existe para la clave, la lista de respaldo sigue con gemini-2.5-flash/pro.
-# Por defecto usamos gemini-3.6-flash (más nuevo, capaz y barato). Si la clave no
-# lo tuviera disponible, la lista de respaldo cae a 3.5-flash-lite y 2.5-flash/pro.
-GEMINI_VISION_MODEL = (os.environ.get("GEMINI_VISION_MODEL") or "").strip() or "gemini-3.6-flash"
-# Modelos nuevos que se intentan antes que los 2.5 (con respaldo automático).
-GEMINI_NEW_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"]
+# Modelo de visión preferido, OPCIONAL y por entorno. Por defecto NO se fuerza
+# ningún modelo nuevo: se usa el estable (gemini-2.5-flash/pro) que sí está
+# disponible. Para adoptar uno nuevo (p. ej. gemini-3.6-flash) cuando esté
+# disponible en tu clave, define GEMINI_VISION_MODEL en el entorno. Modelos extra
+# opcionales de respaldo temprano: GEMINI_EXTRA_MODELS (lista separada por comas).
+GEMINI_VISION_MODEL = (os.environ.get("GEMINI_VISION_MODEL") or "").strip() or None
+GEMINI_NEW_FALLBACKS = [m.strip() for m in (os.environ.get("GEMINI_EXTRA_MODELS") or "").split(",") if m.strip()]
 
 def _con_preferido(lista):
-    """Antepone el modelo preferido + los nuevos flash a los candidatos, sin duplicar.
-    Si un modelo no existe para la clave, Google devuelve 404 y se prueba el siguiente,
-    así que anteponer los nuevos es seguro (degradación automática a 2.5)."""
+    """Antepone el modelo preferido (env) y los extra (env) a los candidatos, sin
+    duplicar. Vacío por defecto → se respeta la lista estable de siempre."""
     out = []
     for m in ([GEMINI_VISION_MODEL] if GEMINI_VISION_MODEL else []) + GEMINI_NEW_FALLBACKS + list(lista):
         if m and m not in out:
@@ -221,7 +222,7 @@ async def _analyze_with_google_genai(
             return response.text or ""
         except Exception as e:
             msg = str(e)
-            if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
+            if any(k in msg for k in ('NOT_FOUND','404','400','403','INVALID_ARGUMENT','PERMISSION_DENIED')) or any(k in msg.lower() for k in ('not found','not supported','not available','unsupported','does not exist')):
                 last_err = e
                 logger.warning(f"Modelo Gemini '{model_name}' no disponible, probando siguiente: {msg[:120]}")
                 continue
@@ -283,7 +284,7 @@ async def chat_with_gemini(
                 return response.text or ""
             except Exception as e:
                 msg = str(e)
-                if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
+                if any(k in msg for k in ('NOT_FOUND','404','400','403','INVALID_ARGUMENT','PERMISSION_DENIED')) or any(k in msg.lower() for k in ('not found','not supported','not available','unsupported','does not exist')):
                     last_err = e
                     logger.warning(f"Modelo Gemini '{model_name}' no disponible, probando siguiente: {msg[:120]}")
                     continue
@@ -356,7 +357,7 @@ async def search_with_gemini(
             return (resp.text or "", _sources(resp), False)
         except Exception as e:
             msg = str(e)
-            if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
+            if any(k in msg for k in ('NOT_FOUND','404','400','403','INVALID_ARGUMENT','PERMISSION_DENIED')) or any(k in msg.lower() for k in ('not found','not supported','not available','unsupported','does not exist')):
                 last_err = e; continue
             # Cuota/permiso de Google Search → fallback sin búsqueda
             if any(x in msg for x in ('RESOURCE_EXHAUSTED', 'quota', 'PERMISSION_DENIED', 'permission', '429', '403')):
