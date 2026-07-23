@@ -23,8 +23,14 @@ const _TIPO_ACB = (desc, tipo) => {
   if (t.includes('ALTO') || t.includes('ALTILLO')) return 'Alto Con Balda';
   return tipo === 'bajo' ? 'Bajo Con Balda' : (tipo === 'alto' ? 'Alto Con Balda' : (tipo === 'columna' ? 'Columna Despensa' : null));
 };
-// Precio blanco 16mm (kit → 'blanco'; columnas → 'blancoEsp').
-const _precio_blanco = (c) => (c && c.precios ? (c.precios.blanco != null ? c.precios.blanco : (c.precios.blancoEsp != null ? c.precios.blancoEsp : null)) : null);
+// Prioridad de color: ANTRACITA (grafito) primero; luego el mejor disponible.
+const _COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike', 'robleAurora', 'blancoHidrofugo'];
+const _COLOR_LBL = { grafito: 'Antracita', aluminio: 'Aluminio', blancoEsp: 'Blanco', blanco: 'Blanco', roble: 'Roble', olmo: 'Olmo' };
+const _precio_color = (c) => {
+  if (!c || !c.precios) return null;
+  for (const col of _COLOR_PRIO) if (c.precios[col] != null) return { precio: c.precios[col], color: col };
+  return null;
+};
 // Ancho del mueble: del prefijo numérico del código Alvic (cm) o de las medidas.
 const _ancho_mm = (it) => {
   const m = /^(\d{2,3})/.exec(it.cod || '');
@@ -37,11 +43,15 @@ const _match_acb = (it) => {
   const tipoAcb = _TIPO_ACB(it.descripcion, it.tipo);
   if (!tipoAcb) return null;
   const w = _ancho_mm(it);
-  const pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === 16 && _precio_blanco(c) != null);
+  // Preferente: ANTRACITA (grafito) 19mm. Si el tipo no lo tiene (columnas),
+  // el mejor color disponible de ese tipo.
+  let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === 19 && c.precios && c.precios.grafito != null);
+  if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
   if (!pool.length) return null;
   let best = pool[0], bd = Infinity;
   for (const c of pool) { const d = Math.abs((c.ancho || 0) - w); if (d < bd) { bd = d; best = c; } }
-  return best;
+  const pc = _precio_color(best);
+  return { ...best, _precio: pc ? pc.precio : 0, _color: pc ? pc.color : '', _colorLbl: pc ? (_COLOR_LBL[pc.color] || pc.color) : '' };
 };
 
 // Importar PRESUPUESTO DE VENTA (solo MASTER). Sube el PDF con la relación de
@@ -92,8 +102,8 @@ export default function ProformaImporter({ esMaster }) {
   const calc = useMemo(() => {
     const facCasco = (1 - (Number(p.desc1) || 0) / 100) * (1 - (Number(p.desc2) || 0) / 100);
     const rows = items.map(it => {
-      const acb = _match_acb(it);                              // casco ACB equivalente (blanco 16)
-      const precioAcb = acb ? (Number(acb.precios?.blanco) || 0) : 0;
+      const acb = _match_acb(it);                              // casco ACB equivalente (antracita 19)
+      const precioAcb = acb ? (Number(acb._precio) || 0) : 0;
       const casco = precioAcb * facCasco;                      // coste = tarifa ACB -50% -28%
       const bisagras = (it.puertas || 0) * 2 * (Number(p.bisagra) || 0);
       const patas = (it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0;
@@ -195,7 +205,7 @@ export default function ProformaImporter({ esMaster }) {
                         <td className="px-2 py-1.5">{r.n}</td>
                         <td className="px-2 py-1.5 font-mono">{r.cod}</td>
                         <td className="px-2 py-1.5 max-w-[200px] truncate" title={`${r.descripcion} · ${r.color}`}>{r.descripcion}{r.herrajeBlum && <span className="ml-1 text-[9px] font-black text-orange-600">BLUM</span>}</td>
-                        <td className="px-2 py-1.5 text-slate-600">{r._acb ? `${r._acb.tipo} ${r._acb.ancho}` : (r.esMueble ? <span className="text-red-500 font-bold">sin equivalencia</span> : '—')}</td>
+                        <td className="px-2 py-1.5 text-slate-600">{r._acb ? `${r._acb.tipo} ${r._acb.ancho} · ${r._acb._colorLbl} ${r._acb.grosor}` : (r.esMueble ? <span className="text-red-500 font-bold">sin equivalencia</span> : '—')}</td>
                         <td className="px-2 py-1.5 text-center">{r.puertas}/{r.cajones}/{r.gavetas}</td>
                         <td className="px-2 py-1.5 text-right text-slate-400">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>
                         <td className="px-2 py-1.5 text-right">{eur(r._casco)}</td>
@@ -210,7 +220,7 @@ export default function ProformaImporter({ esMaster }) {
               {/* Resumen económico */}
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-slate-200 p-3 text-sm space-y-1">
-                  <div className="flex justify-between"><span className="text-slate-500">Cascos ACB (blanco 16, −{p.desc1}% −{p.desc2}%)</span><b>{eur(calc.totCasco)}</b></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Cascos ACB (antracita 19, −{p.desc1}% −{p.desc2}%)</span><b>{eur(calc.totCasco)}</b></div>
                   <div className="flex justify-between"><span className="text-slate-500">Herraje (bisagras, patas, colgadores, guías)</span><b>{eur(calc.totHerr)}</b></div>
                   <div className="flex justify-between border-t border-slate-100 pt-1"><span className="text-slate-600 font-bold">Materiales</span><b>{eur(calc.totMat)}</b></div>
                   <div className="flex justify-between"><span className="text-emerald-600 font-bold">+ Mano de obra</span><b className="text-emerald-700">{eur(calc.mo)}</b></div>
