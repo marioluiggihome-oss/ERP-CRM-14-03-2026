@@ -561,10 +561,12 @@ export default function AIRenderStudio({ state, setState }) {
     const src = srcArg || currentImage(); if (!src || detecting) return;
     setDetecting(true); setError(null);
     try {
-      const dataUrl = await imageToDataUrl(src);
+      // Reducir la imagen antes de enviar (un render 4K rompe la petición por tamaño).
+      const dataUrl = await shrinkForSave(src);
       const r = await fetch(`${API_URL}/api/ai-engine/detect-installations`, {
         method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl, tipo: tipo3d }),
       });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || `Error ${r.status}`); }
       const d = await r.json();
       if (d.success) {
         // Filtra las marcas a las instalaciones que tienen sentido en este tipo
@@ -574,7 +576,7 @@ export default function AIRenderStudio({ state, setState }) {
         if (validas.length) setSchematic(true);
         else setError('La IA no localizó puntos claros; márcalos a mano.');
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
-    } catch { setError('Error al detectar instalaciones.'); }
+    } catch (e) { setError(`Error al detectar instalaciones: ${e?.message || 'fallo de conexión'}`); }
     finally { setDetecting(false); }
   };
 

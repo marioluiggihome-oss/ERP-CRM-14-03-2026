@@ -759,6 +759,22 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
     tipo_proyecto = str(p.get("tipo") or "cocina").lower().strip()
     if not img:
         raise HTTPException(status_code=400, detail="Falta la imagen del render.")
+    # Reducir la imagen si es muy grande (p. ej. un render 4K): una imagen enorme
+    # dispara timeouts y errores en la llamada de visión. 1600px de ancho es de sobra
+    # para localizar las tomas.
+    try:
+        import base64 as _b64x, io as _iox
+        from PIL import Image as _PILImg
+        _m = _re.match(r"^data:image/[^;]+;base64,(.*)$", img, _re.DOTALL)
+        _raw = _m.group(1) if _m else img
+        _im = _PILImg.open(_iox.BytesIO(_b64x.b64decode(_raw))).convert("RGB")
+        if _im.width > 1600:
+            _h = round(_im.height * 1600 / _im.width)
+            _im = _im.resize((1600, _h), _PILImg.LANCZOS)
+            _buf = _iox.BytesIO(); _im.save(_buf, format="JPEG", quality=88)
+            img = "data:image/jpeg;base64," + _b64x.b64encode(_buf.getvalue()).decode()
+    except Exception as _e:
+        logger.warning("detect-installations: no se pudo reducir la imagen: %s", _e)
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
@@ -826,7 +842,7 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
                 "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|gas\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
                 "Sin puntos claros, devuelve {\"puntos\":[]}."
             )
-        text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")
+        text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-flash")
         m = _re.search(r"\{[\s\S]*\}", text or "")
         data = {}
         if m:
