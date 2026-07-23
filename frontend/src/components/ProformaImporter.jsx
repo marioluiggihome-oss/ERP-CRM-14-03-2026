@@ -20,10 +20,13 @@ export default function ProformaImporter({ esMaster }) {
 
   // Precios de herraje (editables) + mano de obra y margen (TOTALES del trabajo).
   const [p, setP] = useState({
+    desc1: 50,       // 1er descuento sobre la tarifa del casco (ACB: -50% deshace el punto x2)
+    desc2: 28,       // 2º descuento sobre la tarifa del casco (ACB: -28% real)
     bisagra: 7.46,   // € por bisagra BLUM (2 por puerta)
     pata: 1.20,      // € por pata (4 por mueble bajo/columna)
     colgador: 3.50,  // € por colgador (2 por mueble alto)
-    guia: 90.27,     // € juego de guías/cajón BLUM (solo si el doc no lo incluye ya)
+    cajon: 90.27,    // € cajón BLUM ANTARO M (por cada cajón)
+    gaveta: 127.49,  // € gaveta BLUM ANTARO D (por cada gaveta)
     manoObra: 0,     // € TOTAL de mano de obra (coste de producción)
     margen: 0,       // € TOTAL de margen a ganar (0 = coste)
   });
@@ -48,13 +51,14 @@ export default function ProformaImporter({ esMaster }) {
   };
 
   const calc = useMemo(() => {
+    const facCasco = (1 - (Number(p.desc1) || 0) / 100) * (1 - (Number(p.desc2) || 0) / 100);
     const rows = items.map(it => {
-      const casco = Number(it.pvp) || 0;
+      const casco = (Number(it.pvp) || 0) * facCasco;   // coste ACB = tarifa -50% -28%
       const bisagras = (it.puertas || 0) * 2 * (Number(p.bisagra) || 0);
       const patas = (it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0;
       const colgadores = (it.tipo === 'alto') ? 2 * (Number(p.colgador) || 0) : 0;
-      // Guías solo si el documento NO incluye ya el herraje BLUM (Merivobox).
-      const guias = it.herrajeBlum ? 0 : ((it.cajones || 0) + (it.gavetas || 0)) * (Number(p.guia) || 0);
+      // Cajones y gavetas SIEMPRE con BLUM (precios separados).
+      const guias = (it.cajones || 0) * (Number(p.cajon) || 0) + (it.gavetas || 0) * (Number(p.gaveta) || 0);
       const herraje = bisagras + patas + colgadores + guias;
       return { ...it, _casco: casco, _herraje: herraje, _bis: bisagras, _pat: patas, _col: colgadores, _gui: guias, _mat: casco + herraje };
     });
@@ -101,9 +105,18 @@ export default function ProformaImporter({ esMaster }) {
             <>
               {/* Casillas: herraje + mano de obra + margen */}
               <div className="rounded-xl border border-slate-200 p-3">
-                <div className="flex items-center gap-1.5 mb-2 text-slate-600"><Calculator size={14} /><span className="text-[11px] font-black uppercase tracking-wide">Herraje (precio unidad)</span></div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[['bisagra', 'Bisagra € (×2/puerta)'], ['pata', 'Pata € (×4/bajo)'], ['colgador', 'Colgador € (×2/alto)'], ['guia', 'Guía/cajón € (si no BLUM)']].map(([k, l]) => (
+                <div className="flex items-center gap-1.5 mb-2 text-slate-600"><Calculator size={14} /><span className="text-[11px] font-black uppercase tracking-wide">Coste del casco (descuentos sobre tarifa)</span></div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                  {[['desc1', 'Dto casco 1 % (−50)'], ['desc2', 'Dto casco 2 % (−28)']].map(([k, l]) => (
+                    <label key={k} className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{l}</span>
+                      <input type="number" step="any" value={p[k]} onChange={setNum(k)} className="px-2 py-1.5 border-2 border-amber-200 rounded-lg text-sm font-bold" />
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5 mb-2 text-slate-600"><span className="text-[11px] font-black uppercase tracking-wide">Herraje (precio unidad) · cajones y gavetas siempre con BLUM</span></div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[['bisagra', 'Bisagra € (×2/puerta)'], ['pata', 'Pata € (×4/bajo)'], ['colgador', 'Colgador € (×2/alto)'], ['cajon', 'Cajón BLUM €'], ['gaveta', 'Gaveta BLUM €']].map(([k, l]) => (
                     <label key={k} className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{l}</span>
                       <input type="number" step="any" value={p[k]} onChange={setNum(k)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
@@ -129,7 +142,7 @@ export default function ProformaImporter({ esMaster }) {
                     <tr className="text-left">
                       <th className="px-2 py-2">#</th><th className="px-2 py-2">Código</th><th className="px-2 py-2">Descripción</th>
                       <th className="px-2 py-2">Tipo</th><th className="px-2 py-2 text-center">P/C/G</th>
-                      <th className="px-2 py-2 text-right">Casco</th><th className="px-2 py-2 text-right">Herraje</th>
+                      <th className="px-2 py-2 text-right">Tarifa</th><th className="px-2 py-2 text-right">Casco coste</th><th className="px-2 py-2 text-right">Herraje</th>
                       <th className="px-2 py-2 text-right font-black">Coste mat.</th>
                     </tr>
                   </thead>
@@ -141,6 +154,7 @@ export default function ProformaImporter({ esMaster }) {
                         <td className="px-2 py-1.5 max-w-[200px] truncate" title={`${r.descripcion} · ${r.color}`}>{r.descripcion}{r.herrajeBlum && <span className="ml-1 text-[9px] font-black text-orange-600">BLUM</span>}</td>
                         <td className="px-2 py-1.5 capitalize text-slate-500">{r.tipo}</td>
                         <td className="px-2 py-1.5 text-center">{r.puertas}/{r.cajones}/{r.gavetas}</td>
+                        <td className="px-2 py-1.5 text-right text-slate-400">{eur(r.pvp)}</td>
                         <td className="px-2 py-1.5 text-right">{eur(r._casco)}</td>
                         <td className="px-2 py-1.5 text-right" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>{r._herraje ? eur(r._herraje) : '—'}</td>
                         <td className="px-2 py-1.5 text-right font-black text-slate-800">{eur(r._mat)}</td>
