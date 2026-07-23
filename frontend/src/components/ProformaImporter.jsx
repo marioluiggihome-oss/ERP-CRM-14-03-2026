@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Upload, Loader, FileText, Eye, EyeOff, Calculator } from 'lucide-react';
+import { Upload, Loader, FileText, Calculator } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
 
@@ -63,7 +63,6 @@ const _match_acb = (it) => {
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
 export default function ProformaImporter({ esMaster }) {
-  const [oculto, setOculto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [items, setItems] = useState([]);
@@ -137,13 +136,9 @@ export default function ProformaImporter({ esMaster }) {
           <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-200 px-2 py-0.5 rounded">Solo master</span>
           <h3 className="text-sm font-black text-amber-900">Importar presupuesto de venta → coste / precio</h3>
         </div>
-        <button onClick={() => setOculto(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-white border border-amber-300 text-amber-800 hover:bg-amber-100">
-          {oculto ? <><Eye size={14} /> Mostrar</> : <><EyeOff size={14} /> Ocultar</>}
-        </button>
       </div>
 
-      {!oculto && (
+      {(
         <div className="p-4 space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
             <button onClick={() => fileRef.current?.click()} disabled={cargando}
