@@ -962,7 +962,9 @@ export default function AIRenderStudio({ state, setState }) {
       const data = await response.json();
       if (data.success) {
         const etiqueta = (fin.modelo || fin.forma) ? `${fin.modelo || ''} · ${colorLabel}`.trim() : colorLabel;
-        const merged = { ...data, description: `${renderResult?.description || description}\n[Puerta] ${etiqueta}` };
+        let finalImg = data.result?.images?.[0];
+        try { finalImg = await keepResolution(await imageToDataUrl(finalImg), dataUrl); } catch { /* si falla, se usa la original */ }
+        const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Puerta] ${etiqueta}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
       } else setError(data.error || 'No se pudo generar la variante de color');
@@ -1110,6 +1112,31 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // Evita PERDER resolución entre peticiones: si el nuevo render sale más pequeño
+  // que la imagen de la que partimos, lo reescala (Lanczos aprox. vía canvas) para
+  // que nunca baje de la resolución previa. Devuelve un dataURL.
+  const keepResolution = (newSrc, refSrc) => new Promise((resolve) => {
+    if (!newSrc || !refSrc) return resolve(newSrc);
+    const ref = new window.Image();
+    ref.onload = () => {
+      const nw = new window.Image();
+      nw.onload = () => {
+        if (nw.width >= ref.width && nw.height >= ref.height) return resolve(newSrc);
+        const scale = Math.max(ref.width / nw.width, ref.height / nw.height);
+        const cw = Math.round(nw.width * scale), ch = Math.round(nw.height * scale);
+        const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(nw, 0, 0, cw, ch);
+        try { resolve(cv.toDataURL('image/png')); } catch { resolve(newSrc); }
+      };
+      nw.onerror = () => resolve(newSrc);
+      nw.src = newSrc;
+    };
+    ref.onerror = () => resolve(newSrc);
+    ref.src = refSrc;
+  });
+
   // ─── Visita de decorador/a: pasa el render por el "ojo" de un decorador
   // profesional. Mejora estilismo, iluminación, textiles, materiales y atmósfera
   // SIN tocar la estructura, los muebles ni las medidas. ────────────────────────
@@ -1120,13 +1147,16 @@ export default function AIRenderStudio({ state, setState }) {
     try {
       const dataUrl = await imageToDataUrl(img);
       const desc = (
-        `Aplica el TOQUE DE UN DECORADOR/A PROFESIONAL de interiorismo a este ${tipoActual.label.toLowerCase()} `
-        + 'usando la imagen adjunta como referencia FIEL. MANTÉN EXACTAMENTE los mismos muebles, módulos, '
-        + 'distribución, acabados principales y medidas: NO añadas ni quites módulos ni cambies la estructura. '
-        + 'Mejora SOLO la presentación y el estilismo, como en una visita de decoración: iluminación cálida y '
-        + 'equilibrada, paleta de materiales coherente y elegante, textiles y complementos bien elegidos (plantas, '
-        + 'objetos de decoración, arte, cestas, libros), styling cuidado de baldas y encimeras, y una atmósfera '
-        + 'acogedora y premium tipo revista de interiorismo. Fotorrealista, alta calidad, misma perspectiva.'
+        `Aplica el TOQUE DE UN DECORADOR/A PROFESIONAL a este ${tipoActual.label.toLowerCase()} usando la imagen `
+        + 'adjunta como referencia FIEL. REGLA ABSOLUTA: NO cambies NADA del mobiliario. Los muebles, módulos, '
+        + 'puertas y frentes, tiradores, encimera, electrodomésticos, distribución, medidas, MATERIALES, ACABADOS '
+        + 'y COLORES deben quedar EXACTAMENTE IGUALES que en la referencia, pixel a pixel en su forma y color. '
+        + 'NO recolores, NO cambies el material ni el acabado de ningún mueble ni de la encimera, NO añadas ni '
+        + 'quites ni muevas ni redimensiones módulos, NO reorganices nada. '
+        + 'Lo ÚNICO que puedes mejorar es el AMBIENTE de la estancia alrededor del mueble: iluminación más cálida '
+        + 'y equilibrada, y complementos decorativos SUELTOS que no forman parte del mueble (plantas, un cuadro en '
+        + 'la pared, textiles, fruteros, algún objeto sobre la encimera). Estos complementos no deben tapar ni '
+        + 'alterar los muebles. Misma cámara, misma perspectiva, fotorrealista y de alta calidad.'
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
@@ -1134,7 +1164,9 @@ export default function AIRenderStudio({ state, setState }) {
       });
       const data = await response.json();
       if (data.success) {
-        const merged = { ...data, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
+        let finalImg = data.result?.images?.[0];
+        try { finalImg = await keepResolution(await imageToDataUrl(finalImg), dataUrl); } catch { /* si falla, se usa la original */ }
+        const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
       } else setError(data.error || 'No se pudo aplicar la visita de decorador/a.');
@@ -1239,7 +1271,9 @@ export default function AIRenderStudio({ state, setState }) {
       });
       const data = await response.json();
       if (data.success) {
-        const merged = { ...data, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
+        let finalImg = data.result?.images?.[0];
+        try { finalImg = await keepResolution(await imageToDataUrl(finalImg), dataUrl); } catch { /* si falla, se usa la original */ }
+        const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
         setEditInstruction(''); setEditLines([]); setEditRefImage(null);
