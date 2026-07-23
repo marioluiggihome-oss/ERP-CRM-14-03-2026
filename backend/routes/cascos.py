@@ -184,18 +184,19 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
                 except Exception as e:
                     logger.warning("proforma visión página: %s", e)
             # Reutiliza los enriquecedores del parser de texto para color/herraje/frentes.
-            from services.proforma_cascos import _color_y_herraje, _cuenta_frentes
+            from services.proforma_cascos import _color_y_herraje, _cuenta_frentes, _tipo_mueble
             for r in allrows:
                 material = r.get("material") or ""
                 color, blum = _color_y_herraje(material)
-                fr = _cuenta_frentes(r.get("descripcion") or "")
+                desc = r.get("descripcion") or ""
+                fr = _cuenta_frentes(desc)
                 items.append({
-                    "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": r.get("descripcion") or "",
+                    "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": desc,
                     "material": material, "color": color, "herrajeBlum": blum,
                     "largo": r.get("largo"), "ancho": r.get("ancho"), "grueso": r.get("grueso"),
                     "cantidad": r.get("cantidad") or 1.0, "pvp": r.get("pvp"), "total": r.get("pvp"),
                     "puertas": fr["puertas"], "cajones": fr["cajones"], "gavetas": fr["gavetas"],
-                    "esMueble": True,
+                    "tipo": _tipo_mueble(desc), "esMueble": True,
                 })
         except HTTPException:
             raise
