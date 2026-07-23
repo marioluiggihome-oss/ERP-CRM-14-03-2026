@@ -462,6 +462,8 @@ export default function AIRenderStudio({ state, setState }) {
   const [savedId, setSavedId] = useState(null);
   const [savedList, setSavedList] = useState(null); // null = oculto
   const [savedSearch, setSavedSearch] = useState(''); // Buscador de proyectos por nombre/referencia
+  const [selMode, setSelMode] = useState(false);      // modo "unir proyectos" (selección múltiple)
+  const [selIds, setSelIds] = useState([]);           // ids de proyectos seleccionados para unir
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   // Captura de medidas de la estancia (para proporción/escala reales).
@@ -1253,6 +1255,10 @@ export default function AIRenderStudio({ state, setState }) {
     // Combina la instrucción principal + líneas adicionales (multi-línea).
     const allLines = [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
     if (!img || (!allLines.length && !editRefImage)) return;
+    // Instantánea de lo que se APLICA ahora, para luego borrar SOLO eso y conservar
+    // lo que el usuario escriba mientras se procesa (poder encolar órdenes).
+    const snapMain = editInstruction;
+    const snapLines = [...editLines];
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -1276,7 +1282,17 @@ export default function AIRenderStudio({ state, setState }) {
         const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
-        setEditInstruction(''); setEditLines([]); setEditRefImage(null);
+        // Borra SOLO lo que se aplicó; conserva lo escrito después (órdenes en cola).
+        setEditInstruction(prev => (prev === snapMain ? '' : prev));
+        setEditLines(prev => {
+          const rem = [...snapLines];
+          return prev.filter(l => {
+            const i = rem.indexOf(l);
+            if (i !== -1) { rem.splice(i, 1); return false; } // línea aplicada → quitar
+            return true;                                       // escrita después → conservar
+          });
+        });
+        setEditRefImage(null);
       } else setError(data.error || 'No se pudo editar el render');
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
@@ -1576,6 +1592,40 @@ export default function AIRenderStudio({ state, setState }) {
       if (savedId === id) setSavedId(null);
     } catch { setError('No se pudo eliminar.'); }
   };
+  // ─── UNIR proyectos: junta las imágenes de varios proyectos guardados (mismo
+  // cliente) en un proyecto nuevo, para tenerlas todas juntas. El usuario elige
+  // cuáles. No borra los originales. ──────────────────────────────────────────
+  const unirProyectos = async () => {
+    const ids = selIds.slice();
+    if (ids.length < 2) { setError('Selecciona al menos 2 proyectos para unir.'); return; }
+    setBusy(true); setError(null);
+    try {
+      // Trae el detalle (con imágenes) de cada proyecto seleccionado.
+      const detalles = [];
+      for (const id of ids) {
+        const r = await fetch(`${API_URL}/api/ai-engine/designs/${id}`, { headers: getAuthHeaders() });
+        if (r.ok) { const d = await r.json(); if (d?.design) detalles.push(d.design); }
+      }
+      if (!detalles.length) { setError('No se pudieron cargar los proyectos a unir.'); return; }
+      const imgs = detalles.flatMap(d => d.images || []).filter(Boolean);
+      if (!imgs.length) { setError('Los proyectos seleccionados no tienen imágenes guardadas.'); return; }
+      const clienteU = detalles[0].cliente || cliente || 'Cliente';
+      const refsU = [...new Set(detalles.map(d => d.ref).filter(Boolean))].join(' + ');
+      const r = await fetch(`${API_URL}/api/ai-engine/designs`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          cliente: clienteU, ref: refsU || 'Proyecto unido',
+          description: `Proyecto unido (${detalles.length} proyectos, ${imgs.length} imágenes)`,
+          images: imgs, referenceImage: detalles[0].referenceImage || null,
+        }),
+      });
+      const d = await r.json().catch(() => null);
+      if (d?.success) { setSelMode(false); setSelIds([]); await openList(); }
+      else setError(d?.error || d?.detail || 'No se pudo unir los proyectos.');
+    } catch { setError('Error de conexión al unir los proyectos.'); }
+    finally { setBusy(false); }
+  };
+
   // ─── Adjuntar el render al presupuesto (Resumen Totales) ────────────────────
   // Volcado a presupuesto dual (P1/P2): si el usuario tiene ambos, muestra modal.
   const [showDualModal, setShowDualModal] = useState(null); // null | 'choosing'
@@ -1614,8 +1664,12 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   const nuevoProyecto = () => {
-    setCliente(''); setRef(''); setSavedId(null); setRenderResult(null);
-    setDescription(''); setRefImage(null); setOriginalRef(null); setFloorPlan(null); setWallSketches([]); setError(null);
+    setCliente(''); setRef(''); setSavedId(null); setRenderResult(null); setRenderHistory([]);
+    setDescription(''); setRefImage(null); setRefImages([]); setOriginalRef(null); setFloorPlan(null); setWallSketches([]);
+    setEditInstruction(''); setEditLines([]); setEditRefImage(null);
+    setMarks([]); setMarkTool(null); setSchematic(false);
+    setOrbitFrames([]); setOrbitOn(false); setOrbitIndex(0);
+    setSavedList(null); setSelMode(false); setSelIds([]); setError(null);
   };
 
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
@@ -2974,8 +3028,19 @@ export default function AIRenderStudio({ state, setState }) {
         <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-4" onClick={() => setSavedList(null)}>
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h3 className="font-black text-slate-800">Mis proyectos 3D</h3>
-              <button onClick={() => setSavedList(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+              <h3 className="font-black text-slate-800 shrink-0">Mis proyectos 3D</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={nuevoProyecto}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700">
+                  <Plus size={14} /> Proyecto nuevo
+                </button>
+                <button onClick={() => { setSelMode(v => !v); setSelIds([]); }}
+                  title="Selecciona varios proyectos del mismo cliente y únelos en uno solo (todas las imágenes juntas)"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black ${selMode ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  <Layers size={14} /> {selMode ? 'Cancelar' : 'Unir'}
+                </button>
+                <button onClick={() => { setSavedList(null); setSelMode(false); setSelIds([]); }} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+              </div>
             </div>
             {savedList.length > 0 && (
               <div className="px-4 pt-3 pb-1">
@@ -2998,8 +3063,13 @@ export default function AIRenderStudio({ state, setState }) {
                 if (shown.length === 0) return (
                 <p className="text-sm text-slate-400 text-center py-8">Sin resultados para “{savedSearch}”.</p>
                 );
+                const toggleSel = (id) => setSelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
                 return shown.map(d => (
-                <div key={d.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
+                <div key={d.id} onClick={() => selMode && toggleSel(d.id)}
+                  className={`flex items-center gap-3 border rounded-xl p-2 mb-2 ${selMode ? 'cursor-pointer' : ''} ${selMode && selIds.includes(d.id) ? 'border-amber-400 bg-amber-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                  {selMode && (
+                    <input type="checkbox" readOnly checked={selIds.includes(d.id)} className="w-4 h-4 shrink-0 rounded accent-amber-600" />
+                  )}
                   <div className="w-12 h-12 shrink-0 bg-slate-200 rounded-lg overflow-hidden">
                     {d.images?.[0] ? <img src={assetSrc(d.images[0])} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400"><Image size={16} /></div>}
                   </div>
@@ -3007,12 +3077,23 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="font-bold text-slate-700 text-sm truncate">{d.cliente || 'Sin cliente'}{d.ref ? ` · ${d.ref}` : ''}</p>
                     {d.updatedAt && <p className="text-[10px] text-slate-400">{new Date(d.updatedAt).toLocaleString('es-ES')}</p>}
                   </div>
+                  {!selMode && <>
                   <button onClick={() => loadDesign(d)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
                   <button onClick={() => deleteDesign(d.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                  </>}
                 </div>
                 ));
               })()}
             </div>
+            {selMode && (
+              <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-3">
+                <span className="text-xs text-slate-500 flex-1">{selIds.length} seleccionado(s) · se creará un proyecto nuevo con todas sus imágenes.</span>
+                <button onClick={unirProyectos} disabled={busy || selIds.length < 2}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
+                  {busy ? <Loader size={14} className="animate-spin" /> : <Layers size={14} />} Unir y guardar juntos
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
