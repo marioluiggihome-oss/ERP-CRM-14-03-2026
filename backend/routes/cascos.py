@@ -120,3 +120,88 @@ async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depen
         raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
     await db.cascos_orders.delete_one({"id": order_id})
     return {"success": True}
+
+
+# ─── IMPORTADOR DE PROFORMA DE PROVEEDOR (solo MASTER) ──────────────────────────
+def _es_master(user: Optional[dict]) -> bool:
+    return bool(user and any(user.get(f) for f in ADMIN_ROLE_FLAGS + ["isPrimaryAdmin"]))
+
+
+@router.post("/cascos/proforma")
+async def importar_proforma(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Detecta los muebles de un PDF de proforma de proveedor (multipágina).
+    Solo MASTER. Devuelve la relación de muebles con código, descripción, color,
+    herraje, medidas, cantidad, PVP proveedor y recuento de puertas/cajones/gavetas.
+    Lee la capa de texto si existe; si el PDF es imagen, usa visión IA de respaldo."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede importar proformas de proveedor.")
+    import base64 as _b64, re as _re
+    raw = (payload or {}).get("pdfBase64") or (payload or {}).get("pdf") or ""
+    if not raw:
+        raise HTTPException(status_code=400, detail="Falta el PDF de la proforma.")
+    m = _re.match(r"^data:[^;]+;base64,(.*)$", raw, _re.DOTALL)
+    b64 = m.group(1) if m else raw
+    try:
+        pdf_bytes = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="PDF no válido.")
+
+    from services.proforma_cascos import (
+        parse_proforma_text, extract_pdf_text_all_pages, pdf_pages_to_png_b64,
+    )
+    # 1) Intento por CAPA DE TEXTO (rápido y exacto).
+    items = []
+    try:
+        txt = extract_pdf_text_all_pages(pdf_bytes)
+        if txt and len(txt.strip()) > 40:
+            items = parse_proforma_text(txt)
+    except Exception as e:
+        logger.warning("proforma: fallo lectura de texto: %s", e)
+
+    # 2) Respaldo por VISIÓN IA (PDF escaneado/imagen sin texto).
+    if not items:
+        try:
+            from services.llm_vision import analyze_image_with_gemini, is_vision_available
+            import json as _json
+            if not is_vision_available():
+                raise HTTPException(status_code=503, detail="El PDF es una imagen y la IA de visión no está configurada.")
+            prompt = (
+                "Esta imagen es una página de una PROFORMA de muebles de cocina (cascos). "
+                "Extrae la tabla de artículos. Devuelve SOLO un JSON: {\"items\":[{\"n\":1,"
+                "\"cod\":\"80GF/1P1GIN\",\"descripcion\":\"...\",\"material\":\"MELAMINA ... ZENIT - MERIVOBOX\","
+                "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73}]}. "
+                "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual."
+            )
+            pages = pdf_pages_to_png_b64(pdf_bytes)
+            allrows = []
+            for pg in pages:
+                try:
+                    t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt, model="gemini-2.5-pro")
+                    mm = _re.search(r"\{[\s\S]*\}", t or "")
+                    if mm:
+                        data = _json.loads(mm.group())
+                        allrows.extend(data.get("items") or [])
+                except Exception as e:
+                    logger.warning("proforma visión página: %s", e)
+            # Reutiliza los enriquecedores del parser de texto para color/herraje/frentes.
+            from services.proforma_cascos import _color_y_herraje, _cuenta_frentes
+            for r in allrows:
+                material = r.get("material") or ""
+                color, blum = _color_y_herraje(material)
+                fr = _cuenta_frentes(r.get("descripcion") or "")
+                items.append({
+                    "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": r.get("descripcion") or "",
+                    "material": material, "color": color, "herrajeBlum": blum,
+                    "largo": r.get("largo"), "ancho": r.get("ancho"), "grueso": r.get("grueso"),
+                    "cantidad": r.get("cantidad") or 1.0, "pvp": r.get("pvp"), "total": r.get("pvp"),
+                    "puertas": fr["puertas"], "cajones": fr["cajones"], "gavetas": fr["gavetas"],
+                    "esMueble": True,
+                })
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("proforma visión: %s", e)
+
+    if not items:
+        raise HTTPException(status_code=422, detail="No se pudieron detectar muebles en la proforma.")
+    return {"success": True, "items": items, "count": len(items)}

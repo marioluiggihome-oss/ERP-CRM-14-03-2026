@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
+import ProformaImporter from './ProformaImporter';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -621,6 +622,9 @@ const Cascos = ({ state, setState }) => {
           <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
         </div>
       </div>
+
+      {/* Importador de proforma de proveedor → coste nuestro (solo master, ocultable) */}
+      <ProformaImporter esMaster={!!(isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente)} />
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}
