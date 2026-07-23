@@ -622,11 +622,11 @@ const Cascos = ({ state, setState }) => {
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">{genCat ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} Catálogo</button>
           )}
           <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
-          {/* Candado: solo el master lo ve; al pulsarlo abre el importador de proforma. */}
+          {/* Candado (solo master): abre/cierra el importador de presupuesto de venta. */}
           {esMasterCascos && (
             <button onClick={() => setShowImport(v => !v)} title="Importar presupuesto de venta (solo master)"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold text-xs ${showImport ? 'bg-amber-400 text-amber-900' : 'bg-white/15 text-white hover:bg-white/25'}`}>
-              {showImport ? <Unlock size={15} /> : <Lock size={15} />}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showImport ? 'bg-amber-400 text-amber-900' : 'bg-amber-500/90 text-white hover:bg-amber-500'}`}>
+              {showImport ? <Unlock size={15} /> : <Lock size={15} />} Importar PDF
             </button>
           )}
         </div>
