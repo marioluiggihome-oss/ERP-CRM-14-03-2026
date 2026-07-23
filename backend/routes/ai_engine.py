@@ -850,4 +850,5 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
         raise
     except Exception as e:
         logger.error(f"detect-installations error: {e}")
-        raise HTTPException(status_code=500, detail="No se pudieron detectar las instalaciones.")
+        # Muestra el motivo real (recortado) para poder diagnosticar desde la app.
+        raise HTTPException(status_code=500, detail=f"No se pudieron detectar las instalaciones: {str(e)[:180]}")

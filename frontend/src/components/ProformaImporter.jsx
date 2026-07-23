@@ -29,8 +29,6 @@ export default function ProformaImporter({ esMaster }) {
   });
   const setNum = (k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
 
-  if (!esMaster) return null;
-
   const importar = async (file) => {
     if (!file) return;
     setCargando(true); setError(null); setItems([]);
@@ -45,7 +43,7 @@ export default function ProformaImporter({ esMaster }) {
       if (!r.ok) { setError(d.detail || d.error || `El servidor devolvió un error (${r.status}). Si el PDF es escaneado, la detección tarda más; reinténtalo.`); return; }
       if (d.success) setItems(d.items || []);
       else setError(d.detail || d.error || 'No se pudieron detectar los muebles.');
-    } catch { setError('No se pudo conectar para analizar el PDF. Reinténtalo en unos segundos.'); }
+    } catch (e) { setError(`No se pudo conectar para analizar el PDF (${e?.message || 'error de red'}). Si el PDF es escaneado tarda más; reinténtalo.`); }
     finally { setCargando(false); }
   };
 
@@ -69,6 +67,9 @@ export default function ProformaImporter({ esMaster }) {
     const precioVenta = costeProduccion + margen;
     return { rows, totMat, totCasco, totHerr, mo, margen, costeProduccion, precioVenta };
   }, [items, p]);
+
+  // Guard DESPUÉS de todos los hooks (evita el error de nº de hooks al llegar el usuario).
+  if (!esMaster) return null;
 
   return (
     <div className="bg-white border-2 border-amber-300 rounded-2xl overflow-hidden shadow-sm mb-4">

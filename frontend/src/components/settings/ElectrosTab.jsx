@@ -82,6 +82,19 @@ export default function ElectrosTab({ isMaster = false, isAdmin = false }) {
     } catch { alert('Error al detectar electros'); }
   };
 
+  const cargarSiemens = async () => {
+    if (!window.confirm('Cargar los 7 electros Siemens (coste = precio neto, PVP = coste + 10%). ¿Continuar?')) return;
+    try {
+      const r = await fetch(`${BASE}/api/rentabilidad/electros/seed-siemens`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: '{}',
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.success) { alert(data.detail || 'No se pudieron cargar'); return; }
+      alert(`${data.cargados} electros Siemens cargados.`);
+      await load();
+    } catch { alert('Error al cargar los electros Siemens'); }
+  };
+
   const quitarElectro = async (art) => {
     if (!window.confirm(`Quitar ${art.codigo} de Electros (no se borra del catálogo de costes).`)) return;
     try {
@@ -184,6 +197,11 @@ export default function ElectrosTab({ isMaster = false, isAdmin = false }) {
           {isAdmin && (
             <button onClick={detectar} className="px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold flex items-center gap-1.5">
               <Wand2 size={14} /> Detectar electros
+            </button>
+          )}
+          {isMaster && (
+            <button onClick={cargarSiemens} className="px-3 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold flex items-center gap-1.5">
+              <Plus size={14} /> Cargar 7 Siemens
             </button>
           )}
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
