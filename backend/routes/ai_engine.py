@@ -762,6 +762,9 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
     # Reducir la imagen si es muy grande (p. ej. un render 4K): una imagen enorme
     # dispara timeouts y errores en la llamada de visión. 1600px de ancho es de sobra
     # para localizar las tomas.
+    # SIEMPRE se re-codifica a un JPEG estándar (baseline) con PIL: así se normaliza
+    # cualquier imagen que Gemini rechace ("Unable to process input image") por venir
+    # de un canvas/formato raro, y de paso se reduce el tamaño.
     try:
         import base64 as _b64x, io as _iox
         from PIL import Image as _PILImg
@@ -771,10 +774,11 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
         if _im.width > 1600:
             _h = round(_im.height * 1600 / _im.width)
             _im = _im.resize((1600, _h), _PILImg.LANCZOS)
-            _buf = _iox.BytesIO(); _im.save(_buf, format="JPEG", quality=88)
-            img = "data:image/jpeg;base64," + _b64x.b64encode(_buf.getvalue()).decode()
+        _buf = _iox.BytesIO()
+        _im.save(_buf, format="JPEG", quality=88, optimize=True)  # baseline, sin perfil raro
+        img = "data:image/jpeg;base64," + _b64x.b64encode(_buf.getvalue()).decode()
     except Exception as _e:
-        logger.warning("detect-installations: no se pudo reducir la imagen: %s", _e)
+        logger.warning("detect-installations: no se pudo normalizar la imagen: %s", _e)
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
