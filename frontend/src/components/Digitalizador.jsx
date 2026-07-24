@@ -591,11 +591,13 @@ const Digitalizador = ({ state, setState }) => {
         pdf.setFont(undefined, 'normal');
         pdf.setFontSize(9); pdf.setTextColor(120);
         pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 10, { align: 'right' });
-        pdf.setTextColor(234, 120, 40); pdf.setFont(undefined, 'bold');
-        pdf.text(isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN', W - M, hy + 15, { align: 'right' });
-        pdf.setFont(undefined, 'normal');
-        pdf.setTextColor(120);
-        pdf.text(`${state?.currentUser?.clientName || ''}   ${new Date().toLocaleDateString('es-ES')}`, W - M, hy + 20, { align: 'right' });
+        // Solo se marca cuando está VALORADO; sin valoración no se imprime nada
+        // (ni el sello ni la línea de usuario/fecha), para que el PDF salga limpio.
+        if (isValorado) {
+          pdf.setTextColor(234, 120, 40); pdf.setFont(undefined, 'bold');
+          pdf.text('DOCUMENTO VALORADO', W - M, hy + 15, { align: 'right' });
+          pdf.setFont(undefined, 'normal');
+        }
       };
 
       drawHeader();
