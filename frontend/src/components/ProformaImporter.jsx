@@ -33,27 +33,37 @@ const _precio_color = (c) => {
   for (const col of _COLOR_PRIO) if (c.precios[col] != null) return { precio: c.precios[col], color: col };
   return null;
 };
-// Ancho del mueble: del prefijo numérico del código Alvic (cm) o de las medidas.
-const _ancho_mm = (it) => {
+// VALOR DE PUNTO de Cocina Desmontada: el precio del presupuestador = precio base
+// del catálogo × 2,0. El coste = ese precio × -50% × -28% (el -50% deshace el x2).
+const _PUNTO = 2.0;
+// Medidas del mueble Alvic: ancho (del prefijo del código, cm), alto (Largo) y
+// fondo (Grueso), en mm.
+const _medidas_mm = (it) => {
   const m = /^(\d{2,3})/.exec(it.cod || '');
-  const porCodigo = m ? parseInt(m[1], 10) * 10 : 0;
-  const cand = [porCodigo, Number(it.ancho) || 0, Number(it.largo) || 0].filter(v => v >= 150 && v <= 1200);
-  return cand[0] || porCodigo || 600;
+  const ancho = m ? parseInt(m[1], 10) * 10 : (Number(it.ancho) || 600);
+  const alto = Number(it.largo) || 0;    // en la proforma, "Largo" es la altura del mueble
+  const fondo = Number(it.grueso) || 0;  // "Grueso" es el fondo
+  return { ancho, alto, fondo };
 };
-// Busca el casco ACB (gama kit, 16mm) del tipo indicado más cercano en ancho.
+// Empareja con el casco ACB del mismo tipo, minimizando la distancia en ancho
+// (peso alto), alto y fondo. Antracita (grafito 19) preferente.
 const _match_acb = (it) => {
   const tipoAcb = _TIPO_ACB(it.descripcion, it.tipo);
   if (!tipoAcb) return null;
-  const w = _ancho_mm(it);
-  // Preferente: ANTRACITA (grafito) 19mm. Si el tipo no lo tiene (columnas),
-  // el mejor color disponible de ese tipo.
+  const { ancho, alto, fondo } = _medidas_mm(it);
   let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === 19 && c.precios && c.precios.grafito != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
   if (!pool.length) return null;
   let best = pool[0], bd = Infinity;
-  for (const c of pool) { const d = Math.abs((c.ancho || 0) - w); if (d < bd) { bd = d; best = c; } }
+  for (const c of pool) {
+    const d = Math.abs((c.ancho || 0) - ancho) * 3
+      + (alto ? Math.abs((c.alto || 0) - alto) : 0)
+      + (fondo ? Math.abs((c.fondo || 0) - fondo) : 0);
+    if (d < bd) { bd = d; best = c; }
+  }
   const pc = _precio_color(best);
-  return { ...best, _precio: pc ? pc.precio : 0, _color: pc ? pc.color : '', _colorLbl: pc ? (_COLOR_LBL[pc.color] || pc.color) : '' };
+  const base = pc ? pc.precio : 0;
+  return { ...best, _base: base, _precio: base * _PUNTO, _color: pc ? pc.color : '', _colorLbl: pc ? (_COLOR_LBL[pc.color] || pc.color) : '' };
 };
 
 // Importar PRESUPUESTO DE VENTA (solo MASTER). Sube el PDF con la relación de
