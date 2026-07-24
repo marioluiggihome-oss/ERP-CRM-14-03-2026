@@ -78,19 +78,25 @@ export default function ProformaImporter({ esMaster }) {
   const [items, setItems] = useState([]);
   const fileRef = useRef(null);
 
-  // Precios de herraje (editables) + mano de obra y margen (TOTALES del trabajo).
+  // Costes reales de herraje = Set + Fondo (columna de coste de la tarifa).
+  const HERRAJE = {
+    blum: { cajon: 41.34, gaveta: 54.37 },   // Set 31,59/44,62 + Fondo 9,75
+    gtv: { cajon: 24.65, gaveta: 29.41 },     // Set AXIS 15,07/19,83 + Fondo 9,58
+  };
+  const BISAGRA = { blum: 3.07, emuca: 1.01 }; // BLUM Blumotion 2,61 + base 0,46 · EMUCA 1,01
+  const [marcaCaj, setMarcaCaj] = useState('blum');  // marca de cajones/gavetas
+  const [marcaBis, setMarcaBis] = useState('blum');  // marca de bisagras
   const [p, setP] = useState({
-    desc1: 50,       // 1er descuento sobre la tarifa del casco (ACB: -50% deshace el punto x2)
-    desc2: 28,       // 2º descuento sobre la tarifa del casco (ACB: -28% real)
-    bisagra: 7.46,   // € por bisagra BLUM (2 por puerta)
-    pata: 1.20,      // € por pata (4 por mueble bajo/columna)
-    colgador: 3.50,  // € por colgador (2 por mueble alto)
-    cajon: 90.27,    // € cajón BLUM ANTARO M (por cada cajón)
-    gaveta: 127.49,  // € gaveta BLUM ANTARO D (por cada gaveta)
-    manoObra: 0,     // € TOTAL de mano de obra (coste de producción)
-    margen: 0,       // € TOTAL de margen a ganar (0 = coste)
+    desc1: 50, desc2: 28,           // descuentos casco ACB (-50 deshace punto x2, -28 real)
+    bisagra: BISAGRA.blum,          // € por bisagra (2 por puerta)
+    pata: 1.20, colgador: 3.50,     // € pata (4/bajo) · colgador (2/alto)
+    cajon: HERRAJE.blum.cajon,      // € cajón completo (set + fondo)
+    gaveta: HERRAJE.blum.gaveta,    // € gaveta completa (set + fondo)
+    manoObra: 0, margen: 0,         // € TOTALES (mano de obra y margen)
   });
   const setNum = (k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
+  const cambiarMarcaCaj = (m) => { setMarcaCaj(m); setP(prev => ({ ...prev, cajon: HERRAJE[m].cajon, gaveta: HERRAJE[m].gaveta })); };
+  const cambiarMarcaBis = (m) => { setMarcaBis(m); setP(prev => ({ ...prev, bisagra: BISAGRA[m] })); };
 
   const importar = async (file) => {
     if (!file) return;
@@ -174,7 +180,19 @@ export default function ProformaImporter({ esMaster }) {
                     </label>
                   ))}
                 </div>
-                <div className="flex items-center gap-1.5 mb-2 text-slate-600"><span className="text-[11px] font-black uppercase tracking-wide">Herraje (precio unidad) · cajones y gavetas siempre con BLUM</span></div>
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  <span className="text-[11px] font-black uppercase tracking-wide text-slate-600">Herraje (coste real = set + fondo)</span>
+                  <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">Cajones/gavetas:
+                    <select value={marcaCaj} onChange={e => cambiarMarcaCaj(e.target.value)} className="border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold">
+                      <option value="blum">BLUM</option><option value="gtv">GTV</option>
+                    </select>
+                  </label>
+                  <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">Bisagras:
+                    <select value={marcaBis} onChange={e => cambiarMarcaBis(e.target.value)} className="border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold">
+                      <option value="blum">BLUM</option><option value="emuca">EMUCA</option>
+                    </select>
+                  </label>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[['bisagra', 'Bisagra € (×2/puerta)'], ['pata', 'Pata € (×4/bajo)'], ['colgador', 'Colgador € (×2/alto)'], ['cajon', 'Cajón BLUM €'], ['gaveta', 'Gaveta BLUM €']].map(([k, l]) => (
                     <label key={k} className="flex flex-col gap-1">
