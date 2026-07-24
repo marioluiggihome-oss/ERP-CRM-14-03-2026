@@ -370,6 +370,8 @@ async def generate_rentabilidad_pdf(
     if cliente: filters_text.append(f"Cliente: {cliente}")
     if categoria: filters_text.append(f"Categoría: {categoria}")
     if doc_type: filters_text.append(f"Tipo: {doc_type}")
+    if revisada == "si": filters_text.append("Solo documentos validados")
+    elif revisada == "no": filters_text.append("Solo pendientes de validar")
     meta = f"Generado {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     if filters_text:
         meta += "  ·  " + "  ·  ".join(filters_text)
