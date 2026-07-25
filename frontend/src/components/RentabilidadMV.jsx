@@ -66,7 +66,7 @@ export default function RentabilidadMV({ esMaster }) {
   const [cant, setCant] = useState(1);
   // Costes de componentes (editables).
   const [p, setP] = useState({
-    doorM2: 60,   // € coste puerta/frente por m2 (Alvic) — provisional
+    doorM2: 30,   // € coste puerta/frente por m2
     bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20,
   });
   const setNum = (k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
