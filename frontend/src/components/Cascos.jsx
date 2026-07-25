@@ -3,6 +3,7 @@ import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, Clipb
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 import ProformaImporter from './ProformaImporter';
+import RentabilidadMV from './RentabilidadMV';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -152,6 +153,7 @@ const Cascos = ({ state, setState }) => {
   const currentUser = state?.currentUser;
   const esMasterCascos = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente);
   const [showImport, setShowImport] = useState(false); // sección importar proforma (tras candado, solo master)
+  const [showRentaMV, setShowRentaMV] = useState(false); // módulo rentabilidad tarifa MV (solo master)
   const [seccion, setSeccion] = useState('cascos'); // proveedor activo: cascos | blum | gtv | emuca
   const [gama, setGama] = useState('kit');
   const [q, setQ] = useState(''); // búsqueda por palabras (fregadero, campana, altillo…)
@@ -629,11 +631,18 @@ const Cascos = ({ state, setState }) => {
               {showImport ? <Unlock size={15} /> : <Lock size={15} />} Importar PDF
             </button>
           )}
+          {esMasterCascos && (
+            <button onClick={() => setShowRentaMV(v => !v)} title="Rentabilidad Tarifa MV (solo master)"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showRentaMV ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'}`}>
+              {showRentaMV ? <Unlock size={15} /> : <Lock size={15} />} Rentabilidad MV
+            </button>
+          )}
         </div>
       </div>
 
       {/* Importador de proforma → coste nuestro. Oculto tras el candado (solo master). */}
       {esMasterCascos && showImport && <ProformaImporter esMaster={true} />}
+      {esMasterCascos && showRentaMV && <RentabilidadMV esMaster={true} />}}
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}

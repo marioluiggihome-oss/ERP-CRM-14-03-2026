@@ -206,3 +206,30 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
     if not items:
         raise HTTPException(status_code=422, detail="No se pudieron detectar muebles en la proforma.")
     return {"success": True, "items": items, "count": len(items)}
+
+
+# ─── Tarifa MV (puntos) para el módulo de Rentabilidad ──────────────────────────
+import json as _mvjson, os as _mvos
+_MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
+
+
+@router.get("/mv/tarifa")
+async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(get_current_user)):
+    """Devuelve la tarifa MV pedida (por defecto T1) con sus códigos y puntos, y el
+    valor de punto. Para el módulo de Rentabilidad Tarifa MV (solo master)."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede ver la tarifa MV.")
+    try:
+        with open(_MV_PATH, "r", encoding="utf-8") as f:
+            data = _mvjson.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo leer la tarifa MV: {e}")
+    tfs = data.get("tariffs", {})
+    if tariff not in tfs:
+        raise HTTPException(status_code=404, detail=f"Tarifa {tariff} no encontrada.")
+    return {
+        "success": True,
+        "tariff": tariff,
+        "pointValue": data.get("_meta", {}).get("pointValue", 3.33),
+        "familias": tfs[tariff],
+    }
