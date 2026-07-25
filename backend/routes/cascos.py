@@ -233,3 +233,55 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
         "pointValue": data.get("_meta", {}).get("pointValue", 3.33),
         "familias": tfs[tariff],
     }
+
+
+@router.post("/mv/detectar-pdf")
+async def mv_detectar_pdf(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Detecta códigos de muebles MV en un PDF (relación/presupuesto) para el módulo
+    de Rentabilidad MV. Devuelve los códigos candidatos; el frontend los valida
+    contra la tarifa. Solo master."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede importar relaciones MV.")
+    import base64 as _b64, re as _re
+    raw = (payload or {}).get("pdfBase64") or ""
+    m = _re.match(r"^data:[^;]+;base64,(.*)$", raw, _re.DOTALL)
+    b64 = m.group(1) if m else raw
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el PDF.")
+    try:
+        pdf_bytes = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="PDF no válido.")
+
+    from services.proforma_cascos import extract_pdf_text_all_pages, pdf_pages_to_png_b64
+    text = ""
+    try:
+        text = extract_pdf_text_all_pages(pdf_bytes) or ""
+    except Exception as e:
+        logger.warning("mv detectar: texto %s", e)
+    # Respaldo por visión IA si el PDF es imagen.
+    if len(text.strip()) < 30:
+        try:
+            from services.llm_vision import analyze_image_with_gemini, is_vision_available
+            if is_vision_available():
+                pages = pdf_pages_to_png_b64(pdf_bytes)
+                prompt = ("Esta imagen es un presupuesto/relación de muebles de cocina. Extrae SOLO los "
+                          "CÓDIGOS de mueble (tipo B60, A60, BCG40, CD60, D/I si aparece) y su cantidad. "
+                          "Devuelve un JSON: {\"lineas\":[{\"cod\":\"B60\",\"cant\":1}]}.")
+                import json as _json
+                for pg in pages:
+                    t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt, model="gemini-2.5-flash")
+                    mm = _re.search(r"\{[\s\S]*\}", t or "")
+                    if mm:
+                        text += " " + " ".join(f"{it.get('cod','')} x{it.get('cant',1)}" for it in (_json.loads(mm.group()).get("lineas") or []))
+        except Exception as e:
+            logger.warning("mv detectar visión: %s", e)
+
+    # Candidatos: token tipo LETRAS+DIGITOS (+ D/I opcional). El frontend valida.
+    cands = _re.findall(r"\b([A-Z]{1,5}\d{2,3}(?:D/I|D|I)?)\b", (text or "").upper())
+    # Cantidades "x2" contiguas
+    lineas = []
+    seen = {}
+    for c in cands:
+        seen[c] = seen.get(c, 0) + 1
+    return {"success": True, "codigos": list(seen.keys()), "conteo": seen}
