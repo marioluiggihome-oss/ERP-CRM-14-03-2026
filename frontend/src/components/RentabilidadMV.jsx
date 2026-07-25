@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, Loader, Calculator, TrendingUp } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Plus, Trash2, Loader, Calculator, TrendingUp, Upload } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS } from '../data/cascos';
 
@@ -101,6 +101,33 @@ export default function RentabilidadMV({ esMaster }) {
     setLineas(prev => [...prev, { cod: sel, altura: esAlto ? alturaSel : '', puntos, cant: Math.max(1, Number(cant) || 1) }]);
   };
 
+  // Importar una relación de muebles desde PDF: detecta los códigos y los añade.
+  const fileRef = useRef(null);
+  const [importando, setImportando] = useState(false);
+  const [noSoportados, setNoSoportados] = useState([]);
+  const importarPDF = async (file) => {
+    if (!file || !familias) return;
+    setImportando(true); setError(null); setNoSoportados([]);
+    try {
+      const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+      const r = await fetch(`${API_URL}/api/cascos/mv/detectar-pdf`, { method: 'POST', headers: H(), body: JSON.stringify({ pdfBase64: b64 }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.success) { setError(d.detail || 'No se pudieron detectar muebles en el PDF.'); return; }
+      const bajo = familias.BAJO?.items || {}, alto = familias.ALTO?.items || {};
+      const nuevas = [], noSop = [];
+      (d.codigos || []).forEach(c => {
+        const cant = (d.conteo && d.conteo[c]) || 1;
+        if (bajo[c] != null) nuevas.push({ cod: c, altura: '', puntos: bajo[c], cant });
+        else if (alto[c] != null) nuevas.push({ cod: c, altura: '90', puntos: puntosDe(c, '90'), cant });
+        else noSop.push(c);
+      });
+      if (nuevas.length) setLineas(prev => [...prev, ...nuevas]);
+      setNoSoportados(noSop);
+      if (!nuevas.length) setError('No se reconoció ningún código de bajo/alto en el PDF.');
+    } catch { setError('Error al importar el PDF.'); }
+    finally { setImportando(false); }
+  };
+
   const calc = useMemo(() => {
     const rows = lineas.map(l => {
       const d = despiece({ cod: l.cod, altura: l.altura }, p) || {};
@@ -155,6 +182,16 @@ export default function RentabilidadMV({ esMaster }) {
               <input type="number" min="1" value={cant} onChange={e => setCant(e.target.value)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm w-16" />
             </label>
             <button onClick={anadir} disabled={!sel} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"><Plus size={14} /> Añadir</button>
+            <span className="w-px h-8 bg-slate-200 mx-1" />
+            <button onClick={() => fileRef.current?.click()} disabled={importando} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50">
+              {importando ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />} {importando ? 'Detectando…' : 'Importar PDF'}
+            </button>
+            <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => importarPDF(e.target.files?.[0])} />
+          </div>
+        )}
+        {noSoportados.length > 0 && (
+          <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+            <b>Códigos detectados aún no soportados</b> (Fase 2: cajoneras, columnas, rincones…): {noSoportados.join(', ')}
           </div>
         )}
 
