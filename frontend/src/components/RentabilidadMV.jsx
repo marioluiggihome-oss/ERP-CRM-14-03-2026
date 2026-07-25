@@ -7,52 +7,107 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const H = () => authHeaders({ 'Content-Type': 'application/json' });
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
-// Coste del casco ACB antracita (grafito 19): precio base x2 (punto) x -50% x -28%.
+// Precio del color: antracita (grafito) preferente; si el tipo no lo tiene
+// (columnas), el mejor disponible.
+const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike'];
+const precioColor = (c) => { if (!c || !c.precios) return null; for (const k of COLOR_PRIO) if (c.precios[k] != null) return c.precios[k]; return null; };
+
+// Coste del casco ACB: precio base × 2 (valor punto) × −50% × −28% (= base × 0,72).
 const cascoACB = (tipoAcb, ancho, alto) => {
-  const pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === 19 && c.precios && c.precios.grafito != null);
-  if (!pool.length) return { coste: 0, med: '' };
-  let best = pool[0], bd = Infinity;
-  for (const c of pool) {
+  const pool = CASCOS.filter(c => c.tipo === tipoAcb && precioColor(c) != null);
+  const p19 = pool.filter(c => c.grosor === 19);
+  const use = p19.length ? p19 : pool;
+  if (!use.length) return { coste: 0, med: '' };
+  let best = use[0], bd = Infinity;
+  for (const c of use) {
     const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
     if (d < bd) { bd = d; best = c; }
   }
-  return { coste: best.precios.grafito * 2 * 0.5 * 0.72, med: `${best.ancho}x${best.alto}` };
+  return { coste: (precioColor(best) || 0) * 2 * 0.5 * 0.72, med: `${best.ancho}x${best.alto}` };
 };
 
-// Descompone un código MV (Fase 1: BAJO y ALTO) en componentes + coste.
+// Reglas de descomposición por familia MV (Fase 2). Cada regla dice: tipo de casco
+// ACB, altura, si lleva patas/colgadores, cuántas puertas (dio=según D/I), cajones,
+// gavetas, baldas. 'dio' = 1 si el código lleva D/I, 2 si no.
+const RULES = {
+  BAJO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 'dio', baldas: 1 },
+  BAJO_FREGADERO: { casco: 'Bajo Fregadero', alto: 800, patas: 1, puertas: 'dio' },
+  BAJO_RINCON_CIEGO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1 },
+  BAJO_RINCON_ESCUADRA: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 2 },
+  BAJO_HORNO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajFn: c => /BHC|BHZ/.test(c) ? 1 : 0, gavFn: c => /BHG/.test(c) ? 1 : 0 },
+  BAJO_TERMINAL: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertasFn: c => /BTP/.test(c) ? 1 : 0, baldas: 1 },
+  BAJO_PUERTA_CAJON: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 'dio', cajones: 1 },
+  BAJO_5_CAJONES: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 5 },
+  BAJO_3CAJ_1GAV: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 3, gavetas: 1 },
+  BAJO_2GAV_1CAJ: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 1, gavetas: 2 },
+  BAJO_2CAJ_1GAV_1FRENTE: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 2, gavetas: 1 },
+  BAJO_2GAV_1FRENTE: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, gavetas: 2 },
+  ALTO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio', baldasSel: true },
+  ALTO_DECORATIVO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 0, baldasSel: true },
+  ALTO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio', vitrina: true },
+  ALTO_ESCURREPLATOS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_MICROONDAS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_CAMPANA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_CALENTADOR: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_CALDERA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_SOBREFRIGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_TERMINAL: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTO_RINCON_CIEGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTO_RINCON_ESCUADRA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_RINCON_CHAFLAN: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTO_ABATIBLE: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_COMBINADO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_COMBINADO_PLUS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_COMBINADO_PLUS_J: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTILLO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTILLO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1, vitrina: true },
+  COLUMNA_DESPENSERO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2, baldas: 4 },
+  COLUMNA_FRIGO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  COLUMNA_HORNO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  COLUMNA_HORNO_MICRO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  MEDIACOLUMNA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', baldas: 2 },
+  MEDIA_PUERTA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1 },
+  MEDIACOLUMNA_HORNO: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1 },
+  MEDIACOLUMNA_VITRINA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', vitrina: true },
+  MEDIACOL_VITRINA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1, vitrina: true },
+};
+const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
+
+// Ancho (mm) del prefijo numérico del código.
+const anchoDe = (cod) => { const m = (cod || '').match(/(\d{2,3})/); return m ? parseInt(m[1], 10) * 10 : 600; };
+
+// Descompone un código MV según la regla de su familia.
 const despiece = (item, p) => {
-  const cod = item.cod, alturaAlto = item.altura; // altura solo para altos (70/90)
+  const cod = item.cod, altura = item.altura, familia = item.familia;
+  const R = RULES[familia] || RULE_GENERICA;
   const dio = /D\/I/.test(cod);
-  let m;
-  if ((m = cod.match(/^B(\d{2,3})/))) {
-    const w = parseInt(m[1], 10) * 10;
-    const wCasco = w < 300 ? 300 : w;
-    const puertas = dio ? 1 : 2;
-    const cc = cascoACB('Bajo Con Balda', wCasco, 800);
-    const areaP = (w / 1000) * 0.713;               // frente ~713 mm alto
-    return {
-      fam: 'Bajo', med: cc.med, inc: w < 300 ? 'inc. corte 25→30' : '',
-      casco: cc.coste, puerta: areaP * (Number(p.doorM2) || 0), puertas,
-      bisagras: puertas * 2 * (Number(p.bisagra) || 0), patas: Number(p.pata4) || 0,
-      colg: 0, soportes: 0, mo: Number(p.mano) || 0,
-    };
-  }
-  if ((m = cod.match(/^A(\d{2,3})/))) {
-    const w = parseInt(m[1], 10) * 10;
-    const puertas = dio ? 1 : 2;
-    const altoMm = (alturaAlto === '90' ? 900 : 700);
-    const cc = cascoACB('Alto Con Balda', w, altoMm);
-    const areaP = (w / 1000) * (altoMm / 1000);
-    const baldas = alturaAlto === '90' ? 2 : 1;
-    return {
-      fam: 'Alto', med: cc.med, inc: '',
-      casco: cc.coste, puerta: areaP * (Number(p.doorM2) || 0), puertas,
-      bisagras: puertas * 2 * (Number(p.bisagra) || 0), patas: 0,
-      colg: 2 * (Number(p.colgador) || 0), soportes: baldas * 4 * (Number(p.soporte) || 0),
-      mo: Number(p.mano) || 0,
-    };
-  }
-  return null;
+  const w = anchoDe(cod);
+  const wCasco = w < 300 ? 300 : w;
+  const altoMm = R.altoSel ? (altura === '90' ? 900 : 700) : (R.altoCol ? (altura === '220' ? 2200 : 2000) : (R.alto || 800));
+  const cc = cascoACB(R.casco, wCasco, altoMm);
+  // Puertas
+  let puertas = 0;
+  if (R.puertasFn) puertas = R.puertasFn(cod);
+  else if (R.puertas === 'dio') puertas = dio ? 1 : 2;
+  else puertas = R.puertas || 0;
+  const cajones = (R.cajFn ? R.cajFn(cod) : (R.cajones || 0));
+  const gavetas = (R.gavFn ? R.gavFn(cod) : (R.gavetas || 0));
+  const baldas = R.baldasSel ? (altura === '90' ? 2 : 1) : (R.baldas || 0);
+  // Puerta: superficie × €/m² (+30% si es vitrina, por cristal/perfil)
+  const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : 713);
+  const areaP = puertas > 0 ? (w / 1000) * (altoFrente / 1000) : 0;
+  const doorRate = (Number(p.doorM2) || 0) * (R.vitrina ? 1.3 : 1);
+  return {
+    fam: familia, med: cc.med, inc: w < 300 ? 'inc. corte' : '',
+    casco: cc.coste,
+    puerta: areaP * doorRate, puertas,
+    bisagras: puertas * 2 * (Number(p.bisagra) || 0),
+    patas: R.patas ? (Number(p.pata4) || 0) : 0,
+    colg: R.colg ? 2 * (Number(p.colgador) || 0) : 0,
+    caj: cajones * (Number(p.cajon) || 0), gav: gavetas * (Number(p.gaveta) || 0),
+    soportes: baldas * 4 * (Number(p.soporte) || 0),
+    mo: Number(p.mano) || 0, generica: R.generica || false,
+  };
 };
 
 export default function RentabilidadMV({ esMaster }) {
@@ -68,6 +123,7 @@ export default function RentabilidadMV({ esMaster }) {
   const [p, setP] = useState({
     doorM2: 30,   // € coste puerta/frente por m2
     bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20,
+    cajon: 41.34, gaveta: 54.37,   // cajón/gaveta BLUM (set + fondo)
   });
   const setNum = (k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
 
@@ -81,24 +137,43 @@ export default function RentabilidadMV({ esMaster }) {
       .finally(() => setCargando(false));
   }, [esMaster]);
 
+  // Índice código → { familia, entry, type }. Cubre TODAS las familias con items.
+  const codeIndex = useMemo(() => {
+    const idx = {};
+    if (!familias) return idx;
+    Object.entries(familias).forEach(([fam, v]) => {
+      if (v && v.items) Object.entries(v.items).forEach(([cod, entry]) => { idx[cod] = { familia: fam, entry, type: v.type }; });
+    });
+    return idx;
+  }, [familias]);
+
+  const familiaDe = (cod) => codeIndex[cod]?.familia || null;
+
+  // Resuelve los puntos según el tipo de familia (single, dual, h7090, h127147, h200220).
   const puntosDe = (cod, altura) => {
-    if (!familias) return 0;
-    const bajo = familias.BAJO?.items || {};
-    if (bajo[cod] != null) return bajo[cod];
-    // ALTO tipo h7090: items[cod] = [puntos70, puntos90]
-    const alto = familias.ALTO;
-    if (alto?.items && alto.items[cod] != null) {
-      const v = alto.items[cod];
-      return Array.isArray(v) ? v[altura === '90' ? 1 : 0] : v;
-    }
-    return 0;
+    const it = codeIndex[cod]; if (!it) return 0;
+    const e = it.entry;
+    if (!Array.isArray(e)) return e;
+    if (it.type === 'h7090') return e[altura === '90' ? 1 : 0];
+    if (it.type === 'h200220') return e[altura === '220' ? 1 : 0];
+    if (it.type === 'h127147') return e[altura === '147' ? 1 : 0];
+    if (it.type === 'dual') return e[0]; // fregadero: precio normal (idx 0)
+    return e[0];
+  };
+  // Opciones de altura según la familia del código.
+  const alturasDe = (cod) => {
+    const t = codeIndex[cod]?.type;
+    if (t === 'h7090') return ['70', '90'];
+    if (t === 'h200220') return ['200', '220'];
+    if (t === 'h127147') return ['127', '147'];
+    return [];
   };
 
   const anadir = () => {
     if (!sel) return;
-    const esAlto = /^A/.test(sel);
-    const puntos = puntosDe(sel, alturaSel);
-    setLineas(prev => [...prev, { cod: sel, altura: esAlto ? alturaSel : '', puntos, cant: Math.max(1, Number(cant) || 1) }]);
+    const alts = alturasDe(sel);
+    const altura = alts.length ? alturaSel : '';
+    setLineas(prev => [...prev, { cod: sel, familia: familiaDe(sel), altura, puntos: puntosDe(sel, altura), cant: Math.max(1, Number(cant) || 1) }]);
   };
 
   // Importar una relación de muebles desde PDF: detecta los códigos y los añade.
@@ -113,13 +188,14 @@ export default function RentabilidadMV({ esMaster }) {
       const r = await fetch(`${API_URL}/api/cascos/mv/detectar-pdf`, { method: 'POST', headers: H(), body: JSON.stringify({ pdfBase64: b64 }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) { setError(d.detail || 'No se pudieron detectar muebles en el PDF.'); return; }
-      const bajo = familias.BAJO?.items || {}, alto = familias.ALTO?.items || {};
       const nuevas = [], noSop = [];
       (d.codigos || []).forEach(c => {
         const cant = (d.conteo && d.conteo[c]) || 1;
-        if (bajo[c] != null) nuevas.push({ cod: c, altura: '', puntos: bajo[c], cant });
-        else if (alto[c] != null) nuevas.push({ cod: c, altura: '90', puntos: puntosDe(c, '90'), cant });
-        else noSop.push(c);
+        if (codeIndex[c]) {
+          const alts = alturasDe(c);
+          const altura = alts.length ? alts[alts.length - 1] : ''; // por defecto la mayor (90/220/147)
+          nuevas.push({ cod: c, familia: familiaDe(c), altura, puntos: puntosDe(c, altura), cant });
+        } else noSop.push(c);
       });
       if (nuevas.length) setLineas(prev => [...prev, ...nuevas]);
       setNoSoportados(noSop);
@@ -130,8 +206,8 @@ export default function RentabilidadMV({ esMaster }) {
 
   const calc = useMemo(() => {
     const rows = lineas.map(l => {
-      const d = despiece({ cod: l.cod, altura: l.altura }, p) || {};
-      const coste = (d.casco || 0) + (d.puerta || 0) + (d.bisagras || 0) + (d.patas || 0) + (d.colg || 0) + (d.soportes || 0) + (d.mo || 0);
+      const d = despiece({ cod: l.cod, altura: l.altura, familia: l.familia }, p) || {};
+      const coste = (d.casco || 0) + (d.puerta || 0) + (d.bisagras || 0) + (d.patas || 0) + (d.colg || 0) + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
       const pvp = (Number(l.puntos) || 0) * pv;
       return { ...l, ...d, costeUd: coste, pvpUd: pvp, coste: coste * l.cant, pvp: pvp * l.cant, margen: (pvp - coste) * l.cant };
     });
@@ -157,23 +233,20 @@ export default function RentabilidadMV({ esMaster }) {
           <div className="flex items-end gap-2 flex-wrap bg-slate-50 border border-slate-200 rounded-xl p-3">
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase">Código MV (bajo/alto)</span>
-              <select value={sel} onChange={e => setSel(e.target.value)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm min-w-[160px]">
+              <select value={sel} onChange={e => setSel(e.target.value)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm min-w-[200px]">
                 <option value="">Elegir…</option>
-                <optgroup label="BAJOS">
-                  {Object.keys(familias.BAJO?.items || {}).map(c => <option key={c} value={c}>{c} · {familias.BAJO.items[c]} pts</option>)}
-                </optgroup>
-                {familias.ALTO?.items && (
-                  <optgroup label="ALTOS (70/90)">
-                    {Object.keys(familias.ALTO.items).map(c => <option key={c} value={c}>{c}</option>)}
+                {Object.entries(familias).filter(([, v]) => v && v.items).map(([fam, v]) => (
+                  <optgroup key={fam} label={fam.replace(/_/g, ' ')}>
+                    {Object.keys(v.items).map(c => <option key={c} value={c}>{c}</option>)}
                   </optgroup>
-                )}
+                ))}
               </select>
             </label>
-            {/^A/.test(sel) && (
+            {alturasDe(sel).length > 0 && (
               <label className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Altura</span>
                 <select value={alturaSel} onChange={e => setAlturaSel(e.target.value)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm">
-                  <option value="70">70</option><option value="90">90</option>
+                  {alturasDe(sel).map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </label>
             )}
@@ -198,8 +271,8 @@ export default function RentabilidadMV({ esMaster }) {
         {/* Parámetros de coste */}
         <div className="rounded-xl border border-slate-200 p-3">
           <div className="flex items-center gap-1.5 mb-2 text-slate-600"><Calculator size={14} /><span className="text-[11px] font-black uppercase tracking-wide">Costes de componente (editables)</span></div>
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-            {[['doorM2', 'Puerta €/m²'], ['bisagra', 'Bisagra €'], ['pata4', 'Patas (4) €'], ['colgador', 'Colgador €'], ['soporte', 'Soporte balda €'], ['mano', 'Mano obra €']].map(([k, l]) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            {[['doorM2', 'Puerta €/m²'], ['bisagra', 'Bisagra €'], ['cajon', 'Cajón €'], ['gaveta', 'Gaveta €'], ['pata4', 'Patas (4) €'], ['colgador', 'Colgador €'], ['soporte', 'Soporte balda €'], ['mano', 'Mano obra €']].map(([k, l]) => (
               <label key={k} className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase">{l}</span>
                 <input type="number" step="any" value={p[k]} onChange={setNum(k)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
@@ -229,7 +302,7 @@ export default function RentabilidadMV({ esMaster }) {
                     <td className="px-2 py-1.5 text-right">{eur(r.casco * r.cant)}</td>
                     <td className="px-2 py-1.5 text-right">{eur(r.puerta * r.cant)}</td>
                     <td className="px-2 py-1.5 text-right">{eur(r.bisagras * r.cant)}</td>
-                    <td className="px-2 py-1.5 text-right">{eur((r.patas + r.colg + r.soportes) * r.cant)}</td>
+                    <td className="px-2 py-1.5 text-right" title={`Patas ${eur(r.patas)} · Colg ${eur(r.colg)} · Cajones ${eur(r.caj)} · Gavetas ${eur(r.gav)} · Soportes ${eur(r.soportes)}`}>{eur((r.patas + r.colg + r.caj + r.gav + r.soportes) * r.cant)}{r.generica && <span className="text-[9px] text-amber-600 ml-1">aprox</span>}</td>
                     <td className="px-2 py-1.5 text-right">{eur(r.mo * r.cant)}</td>
                     <td className="px-2 py-1.5 text-right font-bold">{eur(r.coste)}</td>
                     <td className="px-2 py-1.5 text-right text-slate-500">{eur(r.pvp)}</td>
