@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Upload, Loader, FileText, Calculator } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
@@ -86,14 +86,11 @@ export default function ProformaImporter({ esMaster }) {
   const BISAGRA = { blum: 3.07, emuca: 1.01 }; // BLUM Blumotion 2,61 + base 0,46 · EMUCA 1,01
   const [marcaCaj, setMarcaCaj] = useState('blum');  // marca de cajones/gavetas
   const [marcaBis, setMarcaBis] = useState('blum');  // marca de bisagras
-  const [p, setP] = useState({
-    desc1: 50, desc2: 28,           // descuentos casco ACB (-50 deshace punto x2, -28 real)
-    bisagra: BISAGRA.blum,          // € por bisagra (2 por puerta)
-    pata: 1.20, colgador: 3.50,     // € pata (4/bajo) · colgador (2/alto)
-    cajon: HERRAJE.blum.cajon,      // € cajón completo (set + fondo)
-    gaveta: HERRAJE.blum.gaveta,    // € gaveta completa (set + fondo)
-    manoObra: 0, margen: 0,         // € TOTALES (mano de obra y margen)
+  const P_DEFAULT = { desc1: 50, desc2: 28, bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, manoObra: 0, margen: 0 };
+  const [p, setP] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem('alvic_costes') || 'null'); return s ? { ...P_DEFAULT, ...s } : P_DEFAULT; } catch { return P_DEFAULT; }
   });
+  useEffect(() => { try { localStorage.setItem('alvic_costes', JSON.stringify(p)); } catch { /* noop */ } }, [p]);
   const setNum = (k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
   const cambiarMarcaCaj = (m) => { setMarcaCaj(m); setP(prev => ({ ...prev, cajon: HERRAJE[m].cajon, gaveta: HERRAJE[m].gaveta })); };
   const cambiarMarcaBis = (m) => { setMarcaBis(m); setP(prev => ({ ...prev, bisagra: BISAGRA[m] })); };
