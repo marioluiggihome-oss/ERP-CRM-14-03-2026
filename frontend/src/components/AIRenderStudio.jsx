@@ -13,12 +13,11 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, TrendingUp } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
-import RentabilidadMV from './RentabilidadMV';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -451,35 +450,6 @@ export default function AIRenderStudio({ state, setState }) {
   const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderResult, setRenderResult] = useState(null);
-  const [showRentaMV, setShowRentaMV] = useState(false);   // módulo Rentabilidad MV embebido
-  const [mvSeed, setMvSeed] = useState([]);                // muebles cogidos del diseño → códigos MV
-  // Mapea la distribución detectada del render a códigos MV (Rentabilidad).
-  const cogerDelDiseno = async () => {
-    const img = currentImage(); if (!img || editing) return;
-    setEditing(true); setError(null);
-    try {
-      const dataUrl = await shrinkForSave(img);
-      const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-      const elems = (dj?.distribucion?.elementos) || [];
-      const anchos = [25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100];
-      const round = (a) => anchos.reduce((pr, c) => Math.abs(c - a / 10) < Math.abs(pr - a / 10) ? c : pr, 60);
-      const codes = elems.map(e => {
-        const w = round(Number(e.ancho) || 600);
-        const t = String(e.id || e.tipo || '').toLowerCase();
-        let cod;
-        if (t.includes('fregadero')) cod = `BF${w}`;
-        else if (t.includes('cajon') || t.includes('gaveta')) cod = `BCG${w}`;
-        else if (t.includes('horno') || t.includes('columna')) cod = `CH${w}`;
-        else if (t.includes('frigo') || t.includes('nevera') || t.includes('congelador')) cod = `CF${w}`;
-        else if (t.includes('despensa')) cod = `CD${w}`;
-        else cod = w < 60 ? `B${w}D/I` : `B${w}`;
-        return { cod, cant: 1 };
-      });
-      setMvSeed(codes); setShowRentaMV(true);
-      if (!codes.length) setError('No se detectaron muebles en el diseño para valorar.');
-    } catch (e) { setError(`No se pudo coger del diseño: ${e?.message || 'error'}`); }
-    finally { setEditing(false); }
-  };
   const [renderHistory, setRenderHistory] = useState([]);
   const [error, setError] = useState(null);
   // Créditos de IA del usuario (bolsa mensual ligada a su suscripción).
@@ -2625,13 +2595,6 @@ export default function AIRenderStudio({ state, setState }) {
                     title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
                     {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> {tipo3d === 'armario' ? 'Al presup. armarios' : 'Al presupuesto'}</>}
                   </button>
-                  {tipo3d === 'cocina' && isMaster && (
-                    <button onClick={cogerDelDiseno} disabled={editing || !currentImage()}
-                      title="Detecta los muebles del diseño y calcula PVP tarifa MV + escandallo/margen (master)"
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50">
-                      {editing ? <Loader size={14} className="animate-spin" /> : <TrendingUp size={14} />} Rentabilidad MV
-                    </button>
-                  )}
                   {(originalRef || refImage) && (
                     <button onClick={() => setCompareOn(v => !v)}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -2681,13 +2644,6 @@ export default function AIRenderStudio({ state, setState }) {
                   </button>
                 </div>
               </div>
-
-              {/* Rentabilidad MV (cogida del diseño) */}
-              {showRentaMV && (
-                <div className="shrink-0 mb-3">
-                  <RentabilidadMV esMaster={isMaster} seed={mvSeed} />
-                </div>
-              )}
 
               {/* Comparativa referencia vs render */}
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
