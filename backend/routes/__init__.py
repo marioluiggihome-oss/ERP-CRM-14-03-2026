@@ -12,6 +12,7 @@ from .digitalizador import router as digitalizador_router
 from .crm_module import router as crm_module_router
 from .marketing import router as marketing_router
 from .postventa import router as postventa_router
+from .automation import router as automation_router
 from .orders import router as orders_router
 from .ai_engine import ai_engine_router
 
@@ -27,6 +28,7 @@ __all__ = [
     'crm_module_router',
     'marketing_router',
     'postventa_router',
+    'automation_router',
     'orders_router',
     'ai_engine_router',
 ]
