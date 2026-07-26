@@ -213,7 +213,7 @@ import json as _mvjson, os as _mvos
 _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
 
-@router.get("/mv/tarifa")
+@router.get("/cascos/mv/tarifa")
 async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(get_current_user)):
     """Devuelve la tarifa MV pedida (por defecto T1) con sus códigos y puntos, y el
     valor de punto. Para el módulo de Rentabilidad Tarifa MV (solo master)."""
@@ -235,7 +235,7 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
     }
 
 
-@router.post("/mv/detectar-pdf")
+@router.post("/cascos/mv/detectar-pdf")
 async def mv_detectar_pdf(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Detecta códigos de muebles MV en un PDF (relación/presupuesto) para el módulo
     de Rentabilidad MV. Devuelve los códigos candidatos; el frontend los valida

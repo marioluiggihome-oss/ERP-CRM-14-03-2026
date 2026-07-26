@@ -640,7 +640,7 @@ const Cascos = ({ state, setState }) => {
       </div>
 
       {/* Módulo unificado de rentabilidad (Alvic/MV). Oculto tras el candado (solo master). */}
-      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}}
+      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}
