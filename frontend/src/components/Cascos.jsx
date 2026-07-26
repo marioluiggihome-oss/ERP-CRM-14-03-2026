@@ -3,6 +3,7 @@ import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, Clipb
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 import RentabilidadUnificada from './RentabilidadUnificada';
+import RelacionReview from './RelacionReview';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -153,6 +154,7 @@ const Cascos = ({ state, setState }) => {
   const esMasterCascos = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente);
   const [showRenta, setShowRenta] = useState(false); // módulo unificado de rentabilidad (Alvic/MV, solo master)
   const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
+  const [relacionRevisar, setRelacionRevisar] = useState(null); // muebles detectados pendientes de revisar
   const relacionInputRef = useRef(null);
 
   // Importa una RELACIÓN de muebles MV escrita en el PDF de nomenclaturas rellenable
@@ -172,10 +174,9 @@ const Cascos = ({ state, setState }) => {
       });
       let d = {}; try { d = await r.json(); } catch { d = {}; }
       if (!r.ok || !d.success) { alert(d.detail || 'No se pudo leer la relación del PDF.'); return; }
-      const cabs = (d.muebles || []).map(m => ({ tipo: m.tipo, ancho: m.ancho, alto: m.alto, fondo: m.fondo, qty: m.qty || 1 }));
-      if (!cabs.length) { alert('No se detectaron muebles en la relación.'); return; }
-      setState(p => ({ ...p, cascosPendingCabinets: cabs }));
-      alert(`✅ ${d.totalUnidades || cabs.length} mueble(s) detectados de la relación y volcados al presupuesto.\n\nSe emparejan con el catálogo por tipo y ancho; ajusta acabado, gama o cantidad si hace falta.`);
+      if (!(d.muebles || []).length) { alert('No se detectaron muebles en la relación.'); return; }
+      // Abrir panel de REVISIÓN (editar cantidades, borrar, buscar y añadir más).
+      setRelacionRevisar(d.muebles);
     } catch (e) {
       alert(`No se pudo conectar para leer la relación (${e?.message || 'error de red'}).`);
     } finally {
@@ -680,6 +681,21 @@ const Cascos = ({ state, setState }) => {
           )}
         </div>
       </div>
+
+      {/* Panel de revisión de la relación importada (editar, buscar y añadir, volcar). */}
+      {relacionRevisar && (
+        <RelacionReview
+          muebles={relacionRevisar}
+          apiUrl={API_URL}
+          authHeaders={auth}
+          onClose={() => setRelacionRevisar(null)}
+          onConfirm={(cabs) => {
+            setState(p => ({ ...p, cascosPendingCabinets: cabs }));
+            setRelacionRevisar(null);
+            alert(`✅ ${cabs.reduce((s, m) => s + (m.qty || 1), 0)} mueble(s) volcados al presupuesto.\n\nSe emparejan con el catálogo por tipo y ancho; ajusta acabado, gama o cantidad si hace falta.`);
+          }}
+        />
+      )}
 
       {/* Módulo unificado de rentabilidad (Alvic/MV). Oculto tras el candado (solo master). */}
       {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}
