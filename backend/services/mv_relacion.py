@@ -113,6 +113,10 @@ def parse_relacion_text(text: str, tariff: str = "T1"):
             cod = _find_code(idx, letters, width, mano)
             entry = idx.get(cod) if cod else None
             tipo = _tipo_de(letters)
+            # Regla de fábrica: los BAJOS se fabrican SIEMPRE a altura 80 cm. Si no se
+            # ha indicado altura para un bajo, se asume 80 (no hay otras alturas de bajo).
+            if tipo == "BAJO" and not alto:
+                alto = 80
             pts = _puntos(entry, alto)
             out.append({
                 "qty": qty,
