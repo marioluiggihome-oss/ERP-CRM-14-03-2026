@@ -3,6 +3,7 @@ Audit Logging Service
 Registra todas las acciones importantes para seguridad y compliance
 """
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from fastapi import Request
@@ -10,13 +11,28 @@ from enum import Enum
 
 logger = logging.getLogger("audit")
 
-# Configurar handler específico para auditoría
-audit_handler = logging.FileHandler("/var/log/luiggi_audit.log")
-audit_handler.setFormatter(logging.Formatter(
-    '%(asctime)s | %(levelname)s | %(message)s'
-))
-logger.addHandler(audit_handler)
+# Configurar handler específico para auditoría (best-effort: si el path no es
+# escribible, seguimos sin fichero — la persistencia real es en MongoDB).
+try:
+    audit_handler = logging.FileHandler("/var/log/luiggi_audit.log")
+    audit_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
+    logger.addHandler(audit_handler)
+except Exception:
+    pass
 logger.setLevel(logging.INFO)
+
+# Persistencia en MongoDB (colección db.audit_log). Cliente SÍNCRONO (pymongo) para
+# poder escribir desde el método estático `log()` sin depender del bucle asíncrono.
+# El registro es best-effort: nunca debe romper la operación auditada.
+try:
+    from pymongo import MongoClient as _SyncMongoClient
+    _audit_sync_client = _SyncMongoClient(
+        os.environ.get("MONGO_URL", "mongodb://localhost:27017"),
+        serverSelectionTimeoutMS=800,
+    )
+    _audit_db = _audit_sync_client[os.environ.get("DB_NAME", "luiggi_home")]
+except Exception:  # pragma: no cover
+    _audit_db = None
 
 
 class AuditAction(str, Enum):
@@ -140,7 +156,15 @@ class AuditLogger:
             logger.info(log_msg)
         else:
             logger.warning(log_msg)
-        
+
+        # Persistir en MongoDB para que la auditoría sea CONSULTABLE (no solo en el
+        # log del proceso, que en un entorno efímero se pierde). Best-effort.
+        if _audit_db is not None:
+            try:
+                _audit_db.audit_log.insert_one(dict(log_entry))
+            except Exception as e:
+                logger.debug(f"audit persist failed: {e}")
+
         return log_entry
     
     @staticmethod
