@@ -1896,9 +1896,7 @@ export default function AIRenderStudio({ state, setState }) {
         const merged = { ...data, description: 'Amueblado virtual sobre estancia real' };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
-        // Marca automáticamente las tomas (agua/desagüe/enchufes/gas) sobre el resultado,
-        // para verificar que la propuesta respeta las instalaciones existentes.
-        try { await detectInstalaciones(data.result?.images?.[0]); } catch { /* best-effort */ }
+        setSchematic(false); setMarks([]);  // el amueblado es solo el render; instalaciones = paso aparte
       } else setError(data.error || 'No se pudo amueblar la estancia.');
     } catch { setError('Error al amueblar la estancia.'); }
     finally { setIsGenerating(false); fetchCredits(); }
