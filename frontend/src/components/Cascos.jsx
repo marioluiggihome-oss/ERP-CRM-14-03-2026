@@ -328,10 +328,16 @@ const Cascos = ({ state, setState }) => {
     });
   };
   // Resultados del catálogo BLUM filtrados por texto (ref o nombre).
+  // Productos del proveedor de la sección activa (Blum / GTV / Emuca), no mezclados.
   const resultadosBlum = useMemo(() => {
     const t = norm(qBlum);
-    return BLUM_PRODUCTOS.filter(p => !t || norm(p.ref).includes(t) || norm(p.nombre).includes(t));
-  }, [qBlum]);
+    const marcaSec = seccion === 'gtv' ? 'GTV' : seccion === 'emuca' ? 'Emuca' : 'Blum';
+    return BLUM_PRODUCTOS.filter(p => (p.marca || 'Blum') === marcaSec && (!t || norm(p.ref).includes(t) || norm(p.nombre).includes(t)));
+  }, [qBlum, seccion]);
+  const totalMarcaSec = useMemo(() => {
+    const marcaSec = seccion === 'gtv' ? 'GTV' : seccion === 'emuca' ? 'Emuca' : 'Blum';
+    return BLUM_PRODUCTOS.filter(p => (p.marca || 'Blum') === marcaSec).length;
+  }, [seccion]);
 
   // Añade un accesorio BLUM al presupuesto. Precio = tarifa (sin descuento); el
   // descuento se aplica luego globalmente. No lleva medidas ni acabado de color.
@@ -771,11 +777,11 @@ const Cascos = ({ state, setState }) => {
             </div>
           </div>
           )}
-          </>) : seccion === 'blum' ? (
+          </>) : (seccion === 'blum' || seccion === 'gtv' || seccion === 'emuca') && totalMarcaSec > 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <ProviderLogo id="blum" height={24} />
-                <span className="text-xs text-slate-400">{resultadosBlum.length} de {BLUM_PRODUCTOS.length} artículos</span>
+                <ProviderLogo id={seccion} height={24} />
+                <span className="text-xs text-slate-400">{resultadosBlum.length} de {totalMarcaSec} artículos</span>
               </div>
               <div className="relative mb-3">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -797,7 +803,7 @@ const Cascos = ({ state, setState }) => {
                     </div>
                   </button>
                 ))}
-                {resultadosBlum.length === 0 && <p className="col-span-full p-8 text-center text-slate-400 text-sm">No hay artículos BLUM con esa búsqueda.</p>}
+                {resultadosBlum.length === 0 && <p className="col-span-full p-8 text-center text-slate-400 text-sm">No hay artículos con esa búsqueda.</p>}
               </div>
               <p className="text-[10px] text-slate-400 mt-3">Precios de tarifa sin descuento. El descuento se aplica en el presupuesto (campo «Descuento»).</p>
             </div>
