@@ -622,9 +622,10 @@ const Cascos = ({ state, setState }) => {
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">{genCat ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} Catálogo</button>
           )}
           <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
-          {/* Candado (solo master): abre/cierra la Rentabilidad unificada (Alvic/MV). */}
+          {/* Candado (solo master): SOLO se abre con Shift+clic (clic normal no hace nada). */}
           {esMasterCascos && (
-            <button onClick={() => setShowRenta(v => !v)} title="Rentabilidad Alvic/MV (solo master)"
+            <button onClick={(e) => { if (e.shiftKey) setShowRenta(v => !v); }}
+              title="Rentabilidad (solo master) — mantén Shift y haz clic para abrir"
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showRenta ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'}`}>
               {showRenta ? <Unlock size={15} /> : <Lock size={15} />} Rentabilidad
             </button>
