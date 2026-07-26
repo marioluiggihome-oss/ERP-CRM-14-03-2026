@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock } from 'lucide-react';
+import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 import RentabilidadUnificada from './RentabilidadUnificada';
@@ -152,6 +152,37 @@ const Cascos = ({ state, setState }) => {
   const currentUser = state?.currentUser;
   const esMasterCascos = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente);
   const [showRenta, setShowRenta] = useState(false); // módulo unificado de rentabilidad (Alvic/MV, solo master)
+  const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
+  const relacionInputRef = useRef(null);
+
+  // Importa una RELACIÓN de muebles MV escrita en el PDF de nomenclaturas rellenable
+  // (o cualquier PDF con esa notación) y la vuelca al presupuesto SIN necesidad de
+  // dibujo. El backend empareja cada código con la tarifa MV; el useEffect de
+  // `cascosPendingCabinets` casa cada mueble con el catálogo por tipo+ancho y lo precia.
+  const importarRelacion = async (file) => {
+    if (!file) return;
+    setImportandoRel(true);
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API_URL}/api/cascos/mv/detectar-relacion`, {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64: b64 }),
+      });
+      let d = {}; try { d = await r.json(); } catch { d = {}; }
+      if (!r.ok || !d.success) { alert(d.detail || 'No se pudo leer la relación del PDF.'); return; }
+      const cabs = (d.muebles || []).map(m => ({ tipo: m.tipo, ancho: m.ancho, alto: m.alto, fondo: m.fondo, qty: m.qty || 1 }));
+      if (!cabs.length) { alert('No se detectaron muebles en la relación.'); return; }
+      setState(p => ({ ...p, cascosPendingCabinets: cabs }));
+      alert(`✅ ${d.totalUnidades || cabs.length} mueble(s) detectados de la relación y volcados al presupuesto.\n\nSe emparejan con el catálogo por tipo y ancho; ajusta acabado, gama o cantidad si hace falta.`);
+    } catch (e) {
+      alert(`No se pudo conectar para leer la relación (${e?.message || 'error de red'}).`);
+    } finally {
+      setImportandoRel(false);
+      if (relacionInputRef.current) relacionInputRef.current.value = '';
+    }
+  };
   const [seccion, setSeccion] = useState('cascos'); // proveedor activo: cascos | blum | gtv | emuca
   const [gama, setGama] = useState('kit');
   const [q, setQ] = useState(''); // búsqueda por palabras (fregadero, campana, altillo…)
@@ -628,6 +659,17 @@ const Cascos = ({ state, setState }) => {
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">{genCat ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} Catálogo</button>
           )}
           <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
+          {/* Importar relación de muebles desde PDF (nomenclaturas rellenadas), sin dibujo. Solo master. */}
+          {esMasterCascos && (
+            <>
+              <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
+              <button onClick={() => relacionInputRef.current?.click()} disabled={importandoRel}
+                title="Importar relación de muebles desde un PDF (nomenclaturas rellenadas) — sin dibujo"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">
+                {importandoRel ? <Loader size={15} className="animate-spin" /> : <FileUp size={15} />} Importar relación
+              </button>
+            </>
+          )}
           {/* Candado (solo master): SOLO se abre con Shift+clic (clic normal no hace nada). */}
           {esMasterCascos && (
             <button onClick={(e) => { if (e.shiftKey) setShowRenta(v => !v); }}

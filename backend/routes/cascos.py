@@ -298,3 +298,43 @@ async def mv_detectar_pdf(payload: dict, current_user: Optional[dict] = Depends(
     for c in cands:
         seen[c] = seen.get(c, 0) + 1
     return {"success": True, "codigos": list(seen.keys()), "conteo": seen}
+
+
+@router.post("/cascos/mv/detectar-relacion")
+async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Lee una RELACIÓN de muebles MV escrita en el PDF de nomenclaturas rellenable
+    (o cualquier PDF con esa notación: '1 b25d + 1b30d (altura 80)', '1asc60x90 d'…)
+    y devuelve los muebles emparejados con la tarifa MV (código canónico, tipo,
+    ancho, alto, puntos y PVP). Pensado para VOLCAR al Presupuestador / Cocina
+    Desmontada sin necesidad de un dibujo. Solo master."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede importar relaciones MV.")
+    import base64 as _b64, re as _re
+    raw = (payload or {}).get("pdfBase64") or ""
+    m = _re.match(r"^data:[^;]+;base64,(.*)$", raw, _re.DOTALL)
+    b64 = m.group(1) if m else raw
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el PDF de la relación.")
+    try:
+        pdf_bytes = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="PDF no válido.")
+    tariff = (payload or {}).get("tariff") or "T1"
+    try:
+        from services.mv_relacion import detectar_relacion_pdf
+        muebles = detectar_relacion_pdf(pdf_bytes, tariff)
+    except Exception as e:
+        logger.error("mv detectar-relacion: %s", e)
+        raise HTTPException(status_code=500, detail=f"No se pudo leer la relación: {e}")
+    if not muebles:
+        raise HTTPException(
+            status_code=422,
+            detail="No se detectó ninguna relación de muebles. Rellena los recuadros con la notación (p. ej. '1 b60i + 1 a60d (altura 80)').",
+        )
+    return {
+        "success": True,
+        "muebles": muebles,
+        "count": len(muebles),
+        "totalUnidades": sum(int(x.get("qty") or 1) for x in muebles),
+        "totalPvp": round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2),
+    }
