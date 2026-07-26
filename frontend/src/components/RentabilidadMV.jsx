@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, Loader, Calculator, TrendingUp, Upload, Lock, Unlock } from 'lucide-react';
+import { Plus, Trash2, Loader, Calculator, TrendingUp, Upload, Lock, Unlock, Download } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS } from '../data/cascos';
 
@@ -178,6 +178,36 @@ export default function RentabilidadMV({ esMaster, seed }) {
     setLineas(prev => [...prev, { cod: sel, familia: familiaDe(sel), altura, puntos: puntosDe(sel, altura), cant: Math.max(1, Number(cant) || 1) }]);
   };
 
+  // Exporta el escandallo + margen a PDF (master).
+  const exportarPDF = async () => {
+    if (!calc.rows.length) return;
+    const { jsPDF } = await import('jspdf');
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth(); let y = 14;
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(15); pdf.setTextColor(20, 60, 40);
+    pdf.text('RENTABILIDAD TARIFA MV', 12, y); y += 6;
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(110);
+    pdf.text(`Valor punto ${pv} €  ·  Puerta ${p.doorM2} €/m²  ·  Generado`, 12, y); y += 6;
+    const cols = [['Código', 22], ['Cant', 12], ['Casco', 20], ['Puerta', 20], ['Bisag', 18], ['Otros', 20], ['M.O.', 16], ['Coste', 22], ['PVP', 22], ['Margen', 30]];
+    let x = 12; pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(40);
+    cols.forEach(([t, w]) => { pdf.text(t, x + 1, y); x += w; }); y += 2; pdf.setDrawColor(200); pdf.line(12, y, 12 + cols.reduce((a, c) => a + c[1], 0), y); y += 4;
+    pdf.setFont('helvetica', 'normal');
+    const E = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    calc.rows.forEach(r => {
+      x = 12; const otros = (r.patas + r.colg + r.caj + r.gav + r.soportes) * r.cant;
+      const vals = [`${r.cod}${r.altura ? '/' + r.altura : ''}`, String(r.cant), E(r.casco * r.cant), E(r.puerta * r.cant), E(r.bisagras * r.cant), E(otros), E(r.mo * r.cant), E(r.coste), E(r.pvp), `${E(r.margen)} (${r.pvp ? Math.round(r.margen / r.pvp * 100) : 0}%)`];
+      vals.forEach((v, i) => { pdf.text(String(v), x + 1, y); x += cols[i][1]; }); y += 5;
+      if (y > 190) { pdf.addPage(); y = 14; }
+    });
+    y += 2; pdf.setDrawColor(120); pdf.line(12, y, 12 + cols.reduce((a, c) => a + c[1], 0), y); y += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('TOTAL', 12, y);
+    pdf.text(`Coste ${E(calc.tot.coste)} €`, 130, y);
+    pdf.text(`PVP ${E(calc.tot.pvp)} €`, 175, y);
+    pdf.text(`MARGEN ${E(calc.tot.margen)} € (${calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%)`, 215, y);
+    pdf.save(`rentabilidad_mv_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   // Carga muebles precargados (p.ej. "coger del diseño" de Estudio 3D).
   const seedKey = JSON.stringify(seed || []);
   useEffect(() => {
@@ -282,9 +312,10 @@ export default function RentabilidadMV({ esMaster, seed }) {
               {importando ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />} {importando ? 'Detectando…' : 'Importar PDF'}
             </button>
             <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => importarPDF(e.target.files?.[0])} />
-            {lineas.length > 0 && (
+            {lineas.length > 0 && (<>
+              <button onClick={exportarPDF} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black bg-slate-800 text-white hover:bg-slate-900"><Download size={14} /> PDF</button>
               <button onClick={() => setLineas([])} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200"><Trash2 size={14} /> Vaciar</button>
-            )}
+            </>)}
           </div>
         )}
         {noSoportados.length > 0 && (
@@ -306,6 +337,16 @@ export default function RentabilidadMV({ esMaster, seed }) {
           </div>
           <p className="text-[10px] text-slate-400 mt-2">Casco = ACB antracita (base ×2 −50% −28%). Puerta = superficie × €/m² (provisional, carga tu tarifa Alvic). Bisagras 2/puerta. Patas en bajos; colgadores + soportes en altos.</p>
         </div>
+
+        {/* KPIs */}
+        {calc.rows.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="rounded-xl border border-slate-200 p-2.5"><div className="text-[10px] font-black text-slate-400 uppercase">Muebles</div><div className="text-lg font-black text-slate-800">{lineas.reduce((a, l) => a + l.cant, 0)}</div></div>
+            <div className="rounded-xl border border-slate-200 p-2.5"><div className="text-[10px] font-black text-slate-400 uppercase">PVP total</div><div className="text-lg font-black text-slate-800">{pvpVisible ? eur(calc.tot.pvp) : '•••'}</div></div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2.5"><div className="text-[10px] font-black text-emerald-500 uppercase">Margen total</div><div className="text-lg font-black text-emerald-700">{margenVisible ? eur(calc.tot.margen) : '•••'}</div></div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2.5"><div className="text-[10px] font-black text-emerald-500 uppercase">Margen medio</div><div className="text-lg font-black text-emerald-700">{margenVisible ? `${calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%` : '•••'}</div></div>
+          </div>
+        )}
 
         {/* Tabla */}
         {calc.rows.length > 0 && (
