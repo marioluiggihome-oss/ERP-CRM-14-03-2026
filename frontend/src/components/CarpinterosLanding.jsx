@@ -225,7 +225,7 @@ function PromoVideo() {
           <video
             ref={ref}
             className="promo-video"
-            src="/carpinter-promo.mp4"
+            src="/carpinter-promo-v2.mp4"
             poster="/carpinter-promo-poster.jpg"
             preload="metadata"
             playsInline

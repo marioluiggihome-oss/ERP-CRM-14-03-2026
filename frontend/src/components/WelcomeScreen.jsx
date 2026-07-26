@@ -120,7 +120,7 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
           <div className="max-w-xl mx-auto rounded-2xl overflow-hidden shadow-lg bg-black ring-1 ring-slate-200">
             <video
               className="w-full block"
-              src="/carpinter-promo.mp4"
+              src="/carpinter-promo-v2.mp4"
               poster="/carpinter-promo-poster.jpg"
               controls
               playsInline
