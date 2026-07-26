@@ -155,7 +155,25 @@ const Cascos = ({ state, setState }) => {
   const [showRenta, setShowRenta] = useState(false); // módulo unificado de rentabilidad (Alvic/MV, solo master)
   const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
   const [relacionRevisar, setRelacionRevisar] = useState(null); // muebles detectados pendientes de revisar
+  const [descargandoPdf, setDescargandoPdf] = useState(false);
   const relacionInputRef = useRef(null);
+
+  // Descarga el PDF de nomenclaturas rellenable (56 familias) desde el backend.
+  const descargarNomenclaturas = async () => {
+    setDescargandoPdf(true);
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/mv/nomenclaturas-pdf`, { headers: auth() });
+      if (!r.ok) { alert('No se pudo descargar el PDF de nomenclaturas.'); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'Nomenclaturas_MV_rellenable.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(`No se pudo descargar (${e?.message || 'error de red'}).`);
+    } finally { setDescargandoPdf(false); }
+  };
 
   // Importa una RELACIÓN de muebles MV escrita en el PDF de nomenclaturas rellenable
   // (o cualquier PDF con esa notación) y la vuelca al presupuesto SIN necesidad de
@@ -664,10 +682,20 @@ const Cascos = ({ state, setState }) => {
           {esMasterCascos && (
             <>
               <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
+              <button onClick={() => setRelacionRevisar([])}
+                title="Montar la relación de muebles en pantalla (sin PDF)"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs">
+                <List size={15} /> Relación en pantalla
+              </button>
               <button onClick={() => relacionInputRef.current?.click()} disabled={importandoRel}
                 title="Importar relación de muebles desde un PDF (nomenclaturas rellenadas) — sin dibujo"
                 className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">
                 {importandoRel ? <Loader size={15} className="animate-spin" /> : <FileUp size={15} />} Importar relación
+              </button>
+              <button onClick={descargarNomenclaturas} disabled={descargandoPdf}
+                title="Descargar el PDF rellenable de nomenclaturas (56 familias)"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">
+                {descargandoPdf ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} PDF nomenclaturas
               </button>
             </>
           )}

@@ -355,3 +355,24 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
         "totalUnidades": sum(int(x.get("qty") or 1) for x in muebles),
         "totalPvp": round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2),
     }
+
+
+@router.get("/cascos/mv/nomenclaturas-pdf")
+async def nomenclaturas_pdf(current_user: Optional[dict] = Depends(get_current_user)):
+    """Descarga el catálogo de nomenclaturas MV en PDF RELLENABLE (56 familias con
+    dibujo, códigos, anchos y recuadros editables). Solo master."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede descargar las nomenclaturas.")
+    import io as _io
+    from fastapi.responses import StreamingResponse
+    try:
+        from services.nomenclaturas_pdf import build_nomenclaturas_pdf
+        pdf = build_nomenclaturas_pdf()
+    except Exception as e:
+        logger.error("nomenclaturas pdf: %s", e)
+        raise HTTPException(status_code=500, detail=f"No se pudo generar el PDF: {e}")
+    return StreamingResponse(
+        _io.BytesIO(pdf),
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="Nomenclaturas_MV_rellenable.pdf"'},
+    )
