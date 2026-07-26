@@ -2,8 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
-import ProformaImporter from './ProformaImporter';
-import RentabilidadMV from './RentabilidadMV';
+import RentabilidadUnificada from './RentabilidadUnificada';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -152,8 +151,7 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
 const Cascos = ({ state, setState }) => {
   const currentUser = state?.currentUser;
   const esMasterCascos = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente);
-  const [showImport, setShowImport] = useState(false); // sección importar proforma (tras candado, solo master)
-  const [showRentaMV, setShowRentaMV] = useState(false); // módulo rentabilidad tarifa MV (solo master)
+  const [showRenta, setShowRenta] = useState(false); // módulo unificado de rentabilidad (Alvic/MV, solo master)
   const [seccion, setSeccion] = useState('cascos'); // proveedor activo: cascos | blum | gtv | emuca
   const [gama, setGama] = useState('kit');
   const [q, setQ] = useState(''); // búsqueda por palabras (fregadero, campana, altillo…)
@@ -624,25 +622,18 @@ const Cascos = ({ state, setState }) => {
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">{genCat ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} Catálogo</button>
           )}
           <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
-          {/* Candado (solo master): abre/cierra el importador de presupuesto de venta. */}
+          {/* Candado (solo master): abre/cierra la Rentabilidad unificada (Alvic/MV). */}
           {esMasterCascos && (
-            <button onClick={() => setShowImport(v => !v)} title="Importar presupuesto de venta (solo master)"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showImport ? 'bg-amber-400 text-amber-900' : 'bg-amber-500/90 text-white hover:bg-amber-500'}`}>
-              {showImport ? <Unlock size={15} /> : <Lock size={15} />} Importar PDF
-            </button>
-          )}
-          {esMasterCascos && (
-            <button onClick={() => setShowRentaMV(v => !v)} title="Rentabilidad Tarifa MV (solo master)"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showRentaMV ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'}`}>
-              {showRentaMV ? <Unlock size={15} /> : <Lock size={15} />} Rentabilidad MV
+            <button onClick={() => setShowRenta(v => !v)} title="Rentabilidad Alvic/MV (solo master)"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showRenta ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'}`}>
+              {showRenta ? <Unlock size={15} /> : <Lock size={15} />} Rentabilidad
             </button>
           )}
         </div>
       </div>
 
-      {/* Importador de proforma → coste nuestro. Oculto tras el candado (solo master). */}
-      {esMasterCascos && showImport && <ProformaImporter esMaster={true} />}
-      {esMasterCascos && showRentaMV && <RentabilidadMV esMaster={true} />}}
+      {/* Módulo unificado de rentabilidad (Alvic/MV). Oculto tras el candado (solo master). */}
+      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}}
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}
