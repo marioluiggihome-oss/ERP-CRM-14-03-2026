@@ -1971,12 +1971,12 @@ export default function AIRenderStudio({ state, setState }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             {/* Cliente / referencia del proyecto */}
             <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente"
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-36" />
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm flex-1 min-w-0 sm:flex-none sm:w-36" />
             <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia"
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-28" />
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm flex-1 min-w-0 sm:flex-none sm:w-28" />
             <button onClick={nuevoProyecto} title="Nuevo proyecto" className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50"><Plus size={14} /> Nuevo</button>
             <button onClick={openList} title="Mis proyectos guardados" className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50"><FolderOpen size={14} /> Proyectos</button>
             <button onClick={saveDesign} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">{busy ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Guardar</button>
