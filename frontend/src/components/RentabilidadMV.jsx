@@ -118,7 +118,8 @@ export default function RentabilidadMV({ esMaster, seed }) {
   const [lineas, setLineas] = useState([]);   // [{cod, altura, puntos, cant}]
   const [sel, setSel] = useState('');
   const [alturaSel, setAlturaSel] = useState('70');
-  const [margenVisible, setMargenVisible] = useState(false); // margen oculto salvo Shift+clic en candado
+  const [pvpVisible, setPvpVisible] = useState(false);       // clic en candado → ver PVP
+  const [margenVisible, setMargenVisible] = useState(false); // Shift+clic → ver también coste/margen
   const [cant, setCant] = useState(1);
   // Costes de componentes (editables).
   const [p, setP] = useState({
@@ -238,10 +239,10 @@ export default function RentabilidadMV({ esMaster, seed }) {
         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-200 px-2 py-0.5 rounded">Solo master</span>
         <h3 className="text-sm font-black text-emerald-900 flex items-center gap-1.5"><TrendingUp size={15} /> Rentabilidad Tarifa MV</h3>
         <button
-          onClick={(e) => { if (e.shiftKey) setMargenVisible(v => !v); }}
-          title={margenVisible ? 'Margen visible · Shift+clic para ocultar' : 'Margen OCULTO · mantén Shift y haz clic para ver'}
-          className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${margenVisible ? 'bg-emerald-600 text-white' : 'bg-white border border-emerald-300 text-emerald-700'}`}>
-          {margenVisible ? <Unlock size={12} /> : <Lock size={12} />} Margen
+          onClick={(e) => { if (e.shiftKey) setMargenVisible(v => !v); else setPvpVisible(v => !v); }}
+          title="Clic: ver/ocultar PVP · Shift+clic: ver/ocultar coste y margen"
+          className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${margenVisible ? 'bg-emerald-600 text-white' : (pvpVisible ? 'bg-emerald-200 text-emerald-800' : 'bg-white border border-emerald-300 text-emerald-700')}`}>
+          {(pvpVisible || margenVisible) ? <Unlock size={12} /> : <Lock size={12} />} {margenVisible ? 'Coste' : (pvpVisible ? 'PVP' : 'Ver')}
         </button>
         <span className="text-[11px] text-emerald-500">punto {pv} €</span>
       </div>
@@ -326,7 +327,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                     <td className="px-2 py-1.5 text-right" title={`Patas ${eur(r.patas)} · Colg ${eur(r.colg)} · Cajones ${eur(r.caj)} · Gavetas ${eur(r.gav)} · Soportes ${eur(r.soportes)}`}>{margenVisible ? eur((r.patas + r.colg + r.caj + r.gav + r.soportes) * r.cant) : '•••'}{r.generica && <span className="text-[9px] text-amber-600 ml-1">aprox</span>}</td>
                     <td className="px-2 py-1.5 text-right">{margenVisible ? eur(r.mo * r.cant) : '•••'}</td>
                     <td className="px-2 py-1.5 text-right font-bold">{margenVisible ? eur(r.coste) : '•••'}</td>
-                    <td className="px-2 py-1.5 text-right text-slate-500">{eur(r.pvp)}</td>
+                    <td className="px-2 py-1.5 text-right text-slate-500">{pvpVisible ? eur(r.pvp) : '•••'}</td>
                     <td className={`px-2 py-1.5 text-right font-black ${r.margen >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{margenVisible ? <>{eur(r.margen)} <span className="text-[9px]">({r.pvp ? Math.round(r.margen / r.pvp * 100) : 0}%)</span></> : '•••'}</td>
                     <td className="px-2 py-1.5"><button onClick={() => setLineas(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><Trash2 size={13} /></button></td>
                   </tr>
@@ -336,7 +337,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                 <tr className="border-t-2 border-emerald-300">
                   <td className="px-2 py-2" colSpan={7}>TOTAL COCINA</td>
                   <td className="px-2 py-2 text-right">{margenVisible ? eur(calc.tot.coste) : '•••'}</td>
-                  <td className="px-2 py-2 text-right">{eur(calc.tot.pvp)}</td>
+                  <td className="px-2 py-2 text-right">{pvpVisible ? eur(calc.tot.pvp) : '•••'}</td>
                   <td className="px-2 py-2 text-right text-emerald-800">{margenVisible ? <>{eur(calc.tot.margen)} <span className="text-[10px]">({calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%)</span></> : '•••'}</td>
                   <td></td>
                 </tr>
