@@ -105,6 +105,18 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
           </p>
         </div>
 
+        {/* Vídeo promocional carpinter.io */}
+        <div className="mb-8 rounded-2xl overflow-hidden shadow-lg bg-black max-w-3xl">
+          <video
+            className="w-full block"
+            src="/carpinter-promo.mp4"
+            poster="/carpinter-promo-poster.jpg"
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </div>
+
         {/* Accesos rápidos, agrupados por bloque temático */}
         <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Accesos rápidos</h2>
         <div className="space-y-7">
