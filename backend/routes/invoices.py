@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastA
 from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
+import re as _re
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict
 from pydantic import BaseModel
@@ -89,22 +91,54 @@ class InvoiceUpdate(BaseModel):
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
-async def next_invoice_number() -> str:
-    """Genera el siguiente número de factura FAC-YYYY-NNN"""
-    year = datetime.now(timezone.utc).year
-    prefix = f"FAC-{year}-"
+async def _seed_counter(key: str, prefix: str):
+    """Inicializa el contador atómico del año a partir del MÁXIMO número de factura
+    ya existente (para no colisionar con las facturas emitidas antes de este contador).
+    Solo actúa la primera vez (upsert con $setOnInsert)."""
+    existing = await db.counters.find_one({"key": key})
+    if existing:
+        return
     last = await db.invoices.find_one(
-        {"invoiceNumber": {"$regex": f"^{prefix}"}},
-        sort=[("invoiceNumber", -1)]
+        {"invoiceNumber": {"$regex": f"^{_re.escape(prefix)}"}},
+        sort=[("invoiceNumber", -1)],
     )
+    seed = 0
     if last:
         try:
-            last_num = int(last["invoiceNumber"].split("-")[-1])
+            seed = int(last["invoiceNumber"].split("-")[-1])
         except Exception:
-            last_num = 0
-    else:
-        last_num = 0
-    return f"{prefix}{last_num + 1:03d}"
+            seed = 0
+    await db.counters.update_one({"key": key}, {"$setOnInsert": {"key": key, "seq": seed}}, upsert=True)
+
+
+async def next_invoice_number() -> str:
+    """Reserva ATÓMICAMENTE el siguiente número de factura FAC-YYYY-NNN.
+
+    La regla que NO puede fallar (numeración correlativa sin huecos ni duplicados)
+    va en la base de datos: un contador con $inc atómico (findOneAndUpdate) garantiza
+    que dos facturas creadas a la vez NUNCA obtienen el mismo número, cosa que el
+    'leer el último y +1' anterior no aseguraba bajo concurrencia. Formato con ancho
+    mínimo de 3 dígitos (soporta >999: 1000, 1001…)."""
+    year = datetime.now(timezone.utc).year
+    prefix = f"FAC-{year}-"
+    key = f"invoice-{year}"
+    await _seed_counter(key, prefix)
+    doc = await db.counters.find_one_and_update(
+        {"key": key}, {"$inc": {"seq": 1}}, return_document=ReturnDocument.AFTER,
+    )
+    return f"{prefix}{doc['seq']:03d}"
+
+
+async def peek_next_invoice_number() -> str:
+    """Devuelve el número que se asignaría a la siguiente factura SIN consumirlo
+    (para previsualización en la UI). No incrementa el contador."""
+    year = datetime.now(timezone.utc).year
+    prefix = f"FAC-{year}-"
+    key = f"invoice-{year}"
+    await _seed_counter(key, prefix)
+    doc = await db.counters.find_one({"key": key})
+    seq = (doc.get("seq") if doc else 0) + 1
+    return f"{prefix}{seq:03d}"
 
 
 def calc_totals(lines: list, default_vat: float = 21, irpf_rate: float = 0):
@@ -341,8 +375,8 @@ async def get_invoices(
 
 @router.get("/next-number")
 async def get_next_number():
-    """Obtener el siguiente número de factura"""
-    num = await next_invoice_number()
+    """Obtener el siguiente número de factura (previsualización, NO lo consume)."""
+    num = await peek_next_invoice_number()
     return {"nextNumber": num}
 
 
