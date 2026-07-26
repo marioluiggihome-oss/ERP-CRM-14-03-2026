@@ -36,14 +36,15 @@ export default function RelacionReview({ muebles: inicial, onConfirm, onClose, a
     catch { return MV_COSTES_DEFAULT; }
   }, []);
 
-  // Catálogo MV para el desplegable (familia -> códigos).
+  // Catálogo MV para el desplegable (familia -> códigos) y valor de punto.
   const [familias, setFamilias] = useState(null);
+  const [pv, setPv] = useState(3.33);
   const [selFam, setSelFam] = useState('');
   const [selCod, setSelCod] = useState('');
   const [selQty, setSelQty] = useState(1);
   useEffect(() => {
     fetch(`${apiUrl}/api/cascos/mv/tarifa?tariff=T1`, { headers: authHeaders() })
-      .then(r => r.json()).then(d => { if (d.success) setFamilias(d.familias); }).catch(() => {});
+      .then(r => r.json()).then(d => { if (d.success) { setFamilias(d.familias); setPv(d.pointValue || 3.33); } }).catch(() => {});
   }, [apiUrl, authHeaders]);
   const codigosFam = useMemo(() => {
     if (!familias || !selFam) return [];
@@ -51,7 +52,34 @@ export default function RelacionReview({ muebles: inicial, onConfirm, onClose, a
     return it && typeof it === 'object' ? Object.keys(it) : [];
   }, [familias, selFam]);
 
+  // Alturas seleccionables según el TIPO de familia (deja las otras medidas posibles).
+  const OPCIONES_ALTURA = { h7090: [70, 90], h127147: [127, 147], h200220: [200, 220] };
+  const alturasDe = (m) => {
+    const t = familias?.[m.familia]?.type;
+    return OPCIONES_ALTURA[t] || null; // null = altura fija (p. ej. bajos a 80)
+  };
+  // Recalcula los PUNTOS/PVP de un código para una altura dada (según su tipo de familia).
+  const puntosLocal = (m, alto) => {
+    const info = familias?.[m.familia];
+    const e = info?.items?.[m.cod];
+    if (e == null) return m.pvp;
+    if (Array.isArray(e)) {
+      const t = info.type;
+      let i = 0;
+      if (t === 'h7090') i = alto >= 85 ? 1 : 0;
+      else if (t === 'h127147') i = alto > 137 ? 1 : 0;
+      else if (t === 'h200220') i = alto > 210 ? 1 : 0;
+      return Math.round((e[i] || e[0]) * pv * 100) / 100;
+    }
+    return typeof e === 'number' ? Math.round(e * pv * 100) / 100 : m.pvp;
+  };
+
   const setQty = (k, v) => setMuebles(prev => prev.map(m => m._k === k ? { ...m, qty: Math.max(1, Number(v) || 1) } : m));
+  const setAlto = (k, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const alto = Number(v) || null;
+    return { ...m, alto, pvp: puntosLocal(m, alto) };
+  }));
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
 
   const filas = muebles.map(m => {
@@ -166,6 +194,7 @@ export default function RelacionReview({ muebles: inicial, onConfirm, onClose, a
                 <th className="text-left py-1.5">Código</th>
                 <th className="text-left">Tipo</th>
                 <th className="text-right">Ancho</th>
+                <th className="text-center">Alto</th>
                 <th className="text-center">Uds</th>
                 <th className="text-right">PVP MV</th>
                 <th className="text-right whitespace-nowrap">
@@ -189,6 +218,16 @@ export default function RelacionReview({ muebles: inicial, onConfirm, onClose, a
                   <td className="text-slate-500 text-xs">{m.tipo}</td>
                   <td className="text-right text-slate-600">{m.ancho} cm</td>
                   <td className="text-center">
+                    {alturasDe(m) ? (
+                      <select value={m.alto || alturasDe(m)[0]} onChange={e => setAlto(m._k, e.target.value)}
+                        className="border border-slate-300 rounded px-1 py-0.5 text-sm bg-white">
+                        {alturasDe(m).map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    ) : (
+                      <span className="text-slate-500 text-xs">{m.alto ? `${m.alto}` : '—'}</span>
+                    )}
+                  </td>
+                  <td className="text-center">
                     <input type="number" min="1" value={m.qty || 1} onChange={e => setQty(m._k, e.target.value)}
                       className="w-14 text-center border border-slate-300 rounded px-1 py-0.5 text-sm" />
                   </td>
@@ -203,7 +242,7 @@ export default function RelacionReview({ muebles: inicial, onConfirm, onClose, a
                 </tr>
               ))}
               {!filas.length && (
-                <tr><td colSpan={8} className="text-center text-slate-400 py-6 text-sm">No hay muebles. Añade alguno arriba.</td></tr>
+                <tr><td colSpan={9} className="text-center text-slate-400 py-6 text-sm">No hay muebles. Añade alguno arriba.</td></tr>
               )}
             </tbody>
           </table>
