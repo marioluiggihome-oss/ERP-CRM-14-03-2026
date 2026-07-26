@@ -68,6 +68,7 @@ from routes import (
     digitalizador_router,
     crm_module_router,
     marketing_router,
+    postventa_router,
     orders_router,
     ai_engine_router,
 )
@@ -250,6 +251,7 @@ api_router.include_router(armarios_router)
 api_router.include_router(digitalizador_router)
 api_router.include_router(crm_module_router)
 api_router.include_router(marketing_router)
+api_router.include_router(postventa_router)
 api_router.include_router(orders_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(factory_reports_router)

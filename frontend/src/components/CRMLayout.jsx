@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone, LifeBuoy } from 'lucide-react';
 import CRMDashboard from './CRMDashboard';
 import CRMPipeline from './CRMPipeline';
 import CRMContacts from './CRMContacts';
@@ -7,6 +7,7 @@ import CRMCalendar from './CRMCalendar';
 import CRMActivities from './CRMActivities';
 import CRMParteDiario from './CRMParteDiario';
 import CRMMarketing from './CRMMarketing';
+import CRMPostventa from './CRMPostventa';
 
 const CRM_TABS = [
   { id: 'dashboard',   name: 'Resumen',       icon: LayoutDashboard, color: 'text-indigo-600',  activeBg: 'bg-indigo-600' },
@@ -16,6 +17,7 @@ const CRM_TABS = [
   { id: 'calendar',    name: 'Calendario',    icon: CalendarDays,    color: 'text-orange-600',  activeBg: 'bg-orange-600' },
   { id: 'parte',       name: 'Parte diario',  icon: Mic,             color: 'text-pink-600',    activeBg: 'bg-pink-600' },
   { id: 'marketing',   name: 'Marketing',     icon: Megaphone,       color: 'text-rose-600',    activeBg: 'bg-rose-600' },
+  { id: 'postventa',   name: 'Postventa',     icon: LifeBuoy,        color: 'text-cyan-600',    activeBg: 'bg-cyan-600' },
 ];
 
 const CRMLayout = ({ currentUser, initialTab, focusEvent }) => {
@@ -61,6 +63,7 @@ const CRMLayout = ({ currentUser, initialTab, focusEvent }) => {
         {activeTab === 'calendar'   && <CRMCalendar currentUser={currentUser} focusEvent={focusEvent} />}
         {activeTab === 'parte'      && <CRMParteDiario currentUser={currentUser} />}
         {activeTab === 'marketing'  && <CRMMarketing currentUser={currentUser} />}
+        {activeTab === 'postventa'  && <CRMPostventa currentUser={currentUser} />}
       </div>
     </div>
   );
