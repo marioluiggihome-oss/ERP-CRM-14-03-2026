@@ -751,6 +751,17 @@ const App = () => {
   })();
   const _showCarpLanding = _isCarpBrandEntry && (CARP_LANDING_PUBLISHED || _carpPreview);
 
+  // Vista previa de la LANDING aunque estés logueado: si pides ?carp / /carp /
+  // ?preview explícitamente, muestra la web comercial (para revisarla sin cerrar
+  // sesión). El botón "Entrar" de la landing (onEnter) la cierra y sigues a la app.
+  if (_carpPreview && _showCarpLanding && !state.carpLandingSkip && !_skipLanding) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#F5F0E8]" />}>
+        <CarpinterosLanding onEnter={() => setState(prev => ({ ...prev, carpLandingSkip: true }))} />
+      </Suspense>
+    );
+  }
+
   if (!state.currentUser) {
     if (_showCarpLanding && !state.carpLandingSkip && !_skipLanding) {
       return (
