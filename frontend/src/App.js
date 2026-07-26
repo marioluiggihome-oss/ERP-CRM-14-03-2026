@@ -734,8 +734,22 @@ const App = () => {
     } catch { return false; }
   })();
 
+  // La web comercial de carpinter.io AÚN NO está publicada: por ahora es PRIVADA.
+  // Mientras esté sin publicar, el público que entra por el dominio va directo al
+  // login (no ve la landing). Solo se muestra en modo VISTA PREVIA (?preview o
+  // #preview) para revisarla en privado. Para publicarla, poner esto en true.
+  const CARP_LANDING_PUBLISHED = false;
+  const _carpPreview = (() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.has('preview') || sp.get('vista') === 'previa'
+        || ((window.location.hash || '').toLowerCase().includes('preview'));
+    } catch { return false; }
+  })();
+  const _showCarpLanding = _isCarpBrandEntry && (CARP_LANDING_PUBLISHED || _carpPreview);
+
   if (!state.currentUser) {
-    if (_isCarpBrandEntry && !state.carpLandingSkip && !_skipLanding) {
+    if (_showCarpLanding && !state.carpLandingSkip && !_skipLanding) {
       return (
         <Suspense fallback={<div className="min-h-screen bg-[#F5F0E8]" />}>
           <CarpinterosLanding onEnter={() => setState(prev => ({ ...prev, carpLandingSkip: true }))} />
