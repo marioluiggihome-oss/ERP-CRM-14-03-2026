@@ -237,6 +237,24 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
             if product:
                 return product
 
+        # 3b. Variantes de código MV: LETRAS iniciales + ANCHO en cm, con o sin
+        #     sufijo D/I (el usuario escribe "A60I", "A-60 I", "B60D"; el catálogo
+        #     guarda "A60D/I"). Normalizamos y buscamos por prefijo letras+ancho para
+        #     que el código escrito a mano en el croquis case con el producto real.
+        mv = re.match(r'^([A-Z]+?)(\d{2,3})', code)
+        if mv:
+            letras, ancho_mv = mv.group(1), mv.group(2)
+            # Prefijo exacto de familia + ancho; el resto (D/I, sufijos) es libre.
+            pattern_mv = f"^{letras}{ancho_mv}(D/I|D|I)?$"
+            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_mv, "$options": "i"}}, {"_id": 0})
+            if product:
+                return product
+            # Fallback: mismas letras iniciales + mismo ancho, sufijo cualquiera.
+            pattern_mv2 = f"^{letras}{ancho_mv}\\b"
+            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_mv2, "$options": "i"}}, {"_id": 0})
+            if product:
+                return product
+
     # 4. Emparejamiento por TIPO + ANCHO (clave para que funcione en MV y ZC
     #    aunque el código sugerido por la IA no exista en esa biblioteca).
     product = await _match_by_type_and_width(tipo, width, height, base_filter)
@@ -534,13 +552,30 @@ def build_analysis_prompt(library: str) -> str:
 
 IMPORTANTE — BIBLIOTECA MV (MUEBLES VALENCIA):
 - Esta cocina usa el catálogo MV, cuya nomenclatura de códigos es DISTINTA a la
-  descrita arriba. NO fuerces el formato de código ZC.
-- Lo CRÍTICO es detectar correctamente para cada mueble: el TIPO
-  (ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO), el ANCHO en mm (suele ir rotulado
-  en el plano: 300, 400, 450, 500, 600, 700, 800, 900, 1000, 1200) y el nº de
-  puertas. La altura/fondo estímalas como siempre.
-- En "codigo_sugerido" pon tu mejor estimación, pero prioriza acertar TIPO y
-  ANCHO: el sistema buscará el producto MV que corresponda por tipo y medida.
+  descrita arriba. NO fuerces el formato de código ZC ni inventes códigos ZC.
+
+REGLA Nº1 (PRIORITARIA sobre cualquier estimación) — LEE LOS RÓTULOS ESCRITOS:
+- Estos planos suelen ser CROQUIS A MANO donde el usuario ESCRIBE el código MV
+  de cada módulo encima o al lado (p. ej. "A-60 I", "ACP.90", "A50 D.", "B.60 I",
+  "BGC90", "BJO D. 80"). Si ves un código escrito junto a un módulo, CÓPIALO
+  LITERALMENTE en "codigo_sugerido" — ese ES el código MV correcto. NO lo cambies,
+  NO lo redondees a otro ancho y NO lo sustituyas por tu estimación visual.
+- Transcribe con cuidado cada carácter: no confundas 6 con 5, 9 con 8, ni 0 con nada.
+  Si el usuario escribió "A-60 I" el código es A60I (ancho 60), NO A50. Si escribió
+  "ACP.90" es ACP90 (ancho 90), NO ACP80. Si escribió "BGC90" es BGC90, NO BCG80.
+- El ANCHO en cm va CODIFICADO en el número del código MV (A60→60cm, ACP90→90cm,
+  B60→60cm, BGC90→90cm, BJO80→80cm). Deriva "ancho_estimado" (en mm) de ESE número
+  del código escrito: A60 → 600, ACP90 → 900, B60 → 600, BGC90 → 900, BJO80 → 800.
+  Las letras D/I al final indican bisagra Derecha/Izquierda; NO son medidas.
+- Lee también la ALTURA rotulada (una cifra suelta al lado de la fila, p. ej. un "90"
+  junto a los altos = 90 cm de alto). Usa ESE número como "alto_estimado", no una
+  estimación por proporción.
+
+SOLO si NO hay código escrito para un módulo, estima TIPO + ANCHO + nº de puertas
+por proporción, usando anchos estándar (300/400/450/500/600/700/800/900/1000/1200 mm).
+
+- El sistema emparejará "codigo_sugerido" contra el catálogo MV; por eso transcribir
+  bien el código escrito es lo más importante para acertar el mueble y su precio.
 """
     return ANALYSIS_PROMPT_SINGLE
 

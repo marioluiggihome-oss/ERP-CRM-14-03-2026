@@ -173,16 +173,29 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
                 "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual."
             )
             pages = pdf_pages_to_png_b64(pdf_bytes)
+            # Cap de páginas para no exceder el timeout del gateway (una proforma
+            # suele tener pocas páginas; si trae muchas, procesamos las primeras).
+            MAX_PAGES = 12
+            if len(pages) > MAX_PAGES:
+                logger.warning("proforma visión: %d páginas, se procesan las primeras %d", len(pages), MAX_PAGES)
+                pages = pages[:MAX_PAGES]
             allrows = []
-            for pg in pages:
+
+            async def _una_pagina(pg):
                 try:
                     t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt, model="gemini-2.5-pro")
                     mm = _re.search(r"\{[\s\S]*\}", t or "")
                     if mm:
-                        data = _json.loads(mm.group())
-                        allrows.extend(data.get("items") or [])
+                        return (_json.loads(mm.group()).get("items")) or []
                 except Exception as e:
                     logger.warning("proforma visión página: %s", e)
+                return []
+
+            # Concurrente: reduce el tiempo de pared de N×t a ~t y evita el corte de red.
+            import asyncio as _asyncio
+            resultados = await _asyncio.gather(*[_una_pagina(pg) for pg in pages])
+            for rows in resultados:
+                allrows.extend(rows)
             # Reutiliza los enriquecedores del parser de texto para color/herraje/frentes.
             from services.proforma_cascos import _color_y_herraje, _cuenta_frentes, _tipo_mueble
             for r in allrows:
@@ -213,7 +226,7 @@ import json as _mvjson, os as _mvos
 _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
 
-@router.get("/mv/tarifa")
+@router.get("/cascos/mv/tarifa")
 async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(get_current_user)):
     """Devuelve la tarifa MV pedida (por defecto T1) con sus códigos y puntos, y el
     valor de punto. Para el módulo de Rentabilidad Tarifa MV (solo master)."""
@@ -235,7 +248,7 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
     }
 
 
-@router.post("/mv/detectar-pdf")
+@router.post("/cascos/mv/detectar-pdf")
 async def mv_detectar_pdf(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Detecta códigos de muebles MV en un PDF (relación/presupuesto) para el módulo
     de Rentabilidad MV. Devuelve los códigos candidatos; el frontend los valida

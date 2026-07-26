@@ -633,14 +633,14 @@ const Cascos = ({ state, setState }) => {
             <button onClick={(e) => { if (e.shiftKey) setShowRenta(v => !v); }}
               title="Rentabilidad (solo master) — mantén Shift y haz clic para abrir"
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showRenta ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'}`}>
-              {showRenta ? <Unlock size={15} /> : <Lock size={15} />} Rentabilidad
+              {showRenta ? <Unlock size={15} /> : <Lock size={15} />}
             </button>
           )}
         </div>
       </div>
 
       {/* Módulo unificado de rentabilidad (Alvic/MV). Oculto tras el candado (solo master). */}
-      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}}
+      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}
