@@ -722,7 +722,7 @@ const App = () => {
     try {
       const host = (window.location.hostname || '').toLowerCase();
       const sp = new URLSearchParams(window.location.search);
-      return host.includes('carpenter.io') || host.includes('carpinter.io') || sp.get('brand') === 'carpinteros';
+      return host.includes('carpenter.io') || host.includes('carpinter.io') || sp.get('brand') === 'carpinteros' || sp.has('carp');
     } catch { return false; }
   })();
 
@@ -742,7 +742,7 @@ const App = () => {
   const _carpPreview = (() => {
     try {
       const sp = new URLSearchParams(window.location.search);
-      return sp.has('preview') || sp.get('vista') === 'previa'
+      return sp.has('preview') || sp.has('carp') || sp.get('vista') === 'previa'
         || ((window.location.hash || '').toLowerCase().includes('preview'));
     } catch { return false; }
   })();
