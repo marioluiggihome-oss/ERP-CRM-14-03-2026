@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Mail, Phone, Building2, MapPin, Tag,
-  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck, User, Settings
+  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck, User, Settings, MessageCircle
 } from 'lucide-react';
 import { crmContactsAPI, clientsAPI, usersAPI } from '../services/api';
+
+// WhatsApp click-to-chat: normaliza el teléfono (añade +34 si no hay prefijo) y
+// abre wa.me con un saludo personalizado. Omnicanal desde la ficha del contacto.
+const waLink = (contact) => {
+  const raw = (contact?.phone || '').replace(/[^\d+]/g, '');
+  if (!raw) return null;
+  let num = raw.replace(/^\+/, '');
+  if (!raw.startsWith('+') && num.length === 9) num = '34' + num; // España por defecto
+  const primer = (contact?.name || '').trim().split(' ')[0] || '';
+  const texto = encodeURIComponent(`Hola ${primer}, te escribimos desde Luiggi Home 👋`);
+  return `https://wa.me/${num}?text=${texto}`;
+};
 
 const CLIENT_SEGMENTS = [
   "PROMOTOR",
@@ -409,6 +421,14 @@ const CRMContacts = ({ currentUser }) => {
                         <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-indigo-600">
                           <Phone size={11} className="text-slate-400" />
                           <span>{contact.phone}</span>
+                        </a>
+                      )}
+                      {contact.phone && waLink(contact) && (
+                        <a href={waLink(contact)} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs font-bold text-green-600 hover:text-green-700"
+                          title="Escribir por WhatsApp">
+                          <MessageCircle size={11} />
+                          <span>WhatsApp</span>
                         </a>
                       )}
                       {contact.email && (
