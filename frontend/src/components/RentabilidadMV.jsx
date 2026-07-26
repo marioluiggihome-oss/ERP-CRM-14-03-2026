@@ -76,8 +76,11 @@ const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1
 // Ancho (mm) del prefijo numérico del código.
 const anchoDe = (cod) => { const m = (cod || '').match(/(\d{2,3})/); return m ? parseInt(m[1], 10) * 10 : 600; };
 
+// Costes de componentes por defecto (editables, compartidos vía localStorage 'mv_costes').
+export const MV_COSTES_DEFAULT = { doorM2: 30, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
+
 // Descompone un código MV según la regla de su familia.
-const despiece = (item, p) => {
+export const despiece = (item, p) => {
   const cod = item.cod, altura = item.altura, familia = item.familia;
   const R = RULES[familia] || RULE_GENERICA;
   const dio = /D\/I/.test(cod);
@@ -122,7 +125,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
   const [margenVisible, setMargenVisible] = useState(false); // Shift+clic → ver también coste/margen
   const [cant, setCant] = useState(1);
   // Costes de componentes (editables).
-  const P_DEFAULT = { doorM2: 30, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
+  const P_DEFAULT = MV_COSTES_DEFAULT;
   const [p, setP] = useState(() => {
     try { const s = JSON.parse(localStorage.getItem('mv_costes') || 'null'); return s ? { ...P_DEFAULT, ...s } : P_DEFAULT; } catch { return P_DEFAULT; }
   });
