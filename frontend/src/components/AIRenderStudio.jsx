@@ -1887,7 +1887,9 @@ export default function AIRenderStudio({ state, setState }) {
         body: JSON.stringify({
           description: conMedidas(description.trim()) || 'cocina moderna funcional bien equipada',
           style: params.style, provider: providerOf(), projectType: tipo3d,
+          // 1ª imagen = estancia real; imágenes extra = croquis a lápiz de dónde van los muebles.
           referenceImage: refImage, roomPhoto: true,
+          referenceImages: (refImages && refImages.length > 1) ? refImages.slice(1) : undefined,
         }),
       });
       if (response.status === 402) { const d = await response.json().catch(() => ({})); setError(d.detail || 'Sin créditos de IA.'); return; }
