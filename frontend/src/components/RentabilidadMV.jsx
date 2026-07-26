@@ -122,11 +122,11 @@ export default function RentabilidadMV({ esMaster, seed }) {
   const [margenVisible, setMargenVisible] = useState(false); // Shift+clic → ver también coste/margen
   const [cant, setCant] = useState(1);
   // Costes de componentes (editables).
-  const [p, setP] = useState({
-    doorM2: 30,   // € coste puerta/frente por m2
-    bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20,
-    cajon: 41.34, gaveta: 54.37,   // cajón/gaveta BLUM (set + fondo)
+  const P_DEFAULT = { doorM2: 30, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
+  const [p, setP] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem('mv_costes') || 'null'); return s ? { ...P_DEFAULT, ...s } : P_DEFAULT; } catch { return P_DEFAULT; }
   });
+  useEffect(() => { try { localStorage.setItem('mv_costes', JSON.stringify(p)); } catch { /* noop */ } }, [p]);
   const setNum = (k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
 
   useEffect(() => {
@@ -282,6 +282,9 @@ export default function RentabilidadMV({ esMaster, seed }) {
               {importando ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />} {importando ? 'Detectando…' : 'Importar PDF'}
             </button>
             <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => importarPDF(e.target.files?.[0])} />
+            {lineas.length > 0 && (
+              <button onClick={() => setLineas([])} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200"><Trash2 size={14} /> Vaciar</button>
+            )}
           </div>
         )}
         {noSoportados.length > 0 && (
@@ -320,7 +323,11 @@ export default function RentabilidadMV({ esMaster, seed }) {
                 {calc.rows.map((r, i) => (
                   <tr key={i} className="border-t border-slate-100">
                     <td className="px-2 py-1.5 font-mono">{r.cod}{r.altura ? `/${r.altura}` : ''} <span className="text-[9px] text-slate-400">{r.puntos}pts · {r.med}{r.inc ? ' ⚠' : ''}</span></td>
-                    <td className="px-2 py-1.5 text-center">{r.cant}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      <input type="number" min="1" value={r.cant}
+                        onChange={e => { const v = Math.max(1, Number(e.target.value) || 1); setLineas(prev => prev.map((x, j) => j === i ? { ...x, cant: v } : x)); }}
+                        className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                    </td>
                     <td className="px-2 py-1.5 text-right">{margenVisible ? eur(r.casco * r.cant) : '•••'}</td>
                     <td className="px-2 py-1.5 text-right">{margenVisible ? eur(r.puerta * r.cant) : '•••'}</td>
                     <td className="px-2 py-1.5 text-right">{margenVisible ? eur(r.bisagras * r.cant) : '•••'}</td>
