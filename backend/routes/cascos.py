@@ -173,16 +173,29 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
                 "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual."
             )
             pages = pdf_pages_to_png_b64(pdf_bytes)
+            # Cap de páginas para no exceder el timeout del gateway (una proforma
+            # suele tener pocas páginas; si trae muchas, procesamos las primeras).
+            MAX_PAGES = 12
+            if len(pages) > MAX_PAGES:
+                logger.warning("proforma visión: %d páginas, se procesan las primeras %d", len(pages), MAX_PAGES)
+                pages = pages[:MAX_PAGES]
             allrows = []
-            for pg in pages:
+
+            async def _una_pagina(pg):
                 try:
                     t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt, model="gemini-2.5-pro")
                     mm = _re.search(r"\{[\s\S]*\}", t or "")
                     if mm:
-                        data = _json.loads(mm.group())
-                        allrows.extend(data.get("items") or [])
+                        return (_json.loads(mm.group()).get("items")) or []
                 except Exception as e:
                     logger.warning("proforma visión página: %s", e)
+                return []
+
+            # Concurrente: reduce el tiempo de pared de N×t a ~t y evita el corte de red.
+            import asyncio as _asyncio
+            resultados = await _asyncio.gather(*[_una_pagina(pg) for pg in pages])
+            for rows in resultados:
+                allrows.extend(rows)
             # Reutiliza los enriquecedores del parser de texto para color/herraje/frentes.
             from services.proforma_cascos import _color_y_herraje, _cuenta_frentes, _tipo_mueble
             for r in allrows:
