@@ -10,6 +10,7 @@ from .backup import router as backup_router
 from .armarios import router as armarios_router
 from .digitalizador import router as digitalizador_router
 from .crm_module import router as crm_module_router
+from .marketing import router as marketing_router
 from .orders import router as orders_router
 from .ai_engine import ai_engine_router
 
@@ -23,6 +24,7 @@ __all__ = [
     'armarios_router',
     'digitalizador_router',
     'crm_module_router',
+    'marketing_router',
     'orders_router',
     'ai_engine_router',
 ]
