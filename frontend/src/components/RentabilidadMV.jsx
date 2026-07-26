@@ -110,7 +110,7 @@ const despiece = (item, p) => {
   };
 };
 
-export default function RentabilidadMV({ esMaster }) {
+export default function RentabilidadMV({ esMaster, seed }) {
   const [pv, setPv] = useState(3.33);
   const [familias, setFamilias] = useState(null);
   const [cargando, setCargando] = useState(false);
@@ -175,6 +175,20 @@ export default function RentabilidadMV({ esMaster }) {
     const altura = alts.length ? alturaSel : '';
     setLineas(prev => [...prev, { cod: sel, familia: familiaDe(sel), altura, puntos: puntosDe(sel, altura), cant: Math.max(1, Number(cant) || 1) }]);
   };
+
+  // Carga muebles precargados (p.ej. "coger del diseño" de Estudio 3D).
+  const seedKey = JSON.stringify(seed || []);
+  useEffect(() => {
+    if (!familias || !seed || !seed.length) return;
+    const nuevas = [];
+    seed.forEach(s => {
+      if (!codeIndex[s.cod]) return;
+      const alts = alturasDe(s.cod);
+      const altura = s.altura || (alts.length ? alts[alts.length - 1] : '');
+      nuevas.push({ cod: s.cod, familia: familiaDe(s.cod), altura, puntos: puntosDe(s.cod, altura), cant: Math.max(1, Number(s.cant) || 1) });
+    });
+    if (nuevas.length) setLineas(nuevas);
+  }, [seedKey, familias]); // eslint-disable-line
 
   // Importar una relación de muebles desde PDF: detecta los códigos y los añade.
   const fileRef = useRef(null);
