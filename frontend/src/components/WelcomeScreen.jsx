@@ -2,8 +2,35 @@ import React from 'react';
 import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
-  ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap
+  ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, PlayCircle
 } from 'lucide-react';
+
+// ⬇️ Vídeo promocional de la INTRANET de Luiggi Home (NO el de carpinter.io, que
+//    es otra sección y otros clientes). Enlace de YouTube/Vimeo/Google Drive.
+//    NOTA Google Drive: el archivo debe estar compartido como "Cualquier persona
+//    con el enlace" para reproducirse incrustado.
+const PROMO_VIDEO_URL = 'https://drive.google.com/file/d/1ZlEJ4pn2mFYQjrgw4rS_88AweP0z6azK/view?usp=sharing';
+
+// Convierte un enlace normal de YouTube/Vimeo/Google Drive en su URL de embed.
+const toEmbedUrl = (url) => {
+  if (!url) return '';
+  try {
+    const u = String(url).trim();
+    let m;
+    if ((m = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/))) {
+      return `https://www.youtube.com/embed/${m[1]}`;
+    }
+    if ((m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/))) {
+      return `https://player.vimeo.com/video/${m[1]}`;
+    }
+    if ((m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/))) {
+      return `https://drive.google.com/file/d/${m[1]}/preview`;
+    }
+    return u;
+  } catch {
+    return '';
+  }
+};
 
 // Módulos para los accesos rápidos. Las condiciones `can` replican EXACTAMENTE
 // las del menú lateral, para no mostrar accesos a los que el usuario no tiene
@@ -63,6 +90,7 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
   const groupedModules = GROUPS
     .map((g) => ({ ...g, items: modules.filter((m) => m.group === g.id) }))
     .filter((g) => g.items.length > 0);
+  const embed = toEmbedUrl(PROMO_VIDEO_URL);
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
@@ -117,15 +145,24 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
             pantalla completa con el icono del propio reproductor. */}
         <div className="mt-8 sm:mt-10">
           <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Vídeo promocional</h2>
-          <div className="max-w-xl mx-auto rounded-2xl overflow-hidden shadow-lg bg-black ring-1 ring-slate-200">
-            <video
-              className="w-full block"
-              src="/carpinter-promo-v2.mp4"
-              poster="/carpinter-promo-poster.jpg"
-              controls
-              playsInline
-              preload="metadata"
-            />
+          <div className="max-w-xl mx-auto rounded-2xl overflow-hidden shadow-lg bg-slate-900 ring-1 ring-slate-200">
+            <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+              {embed ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={embed}
+                  title="Vídeo promocional Luiggi Home"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 gap-3">
+                  <PlayCircle size={56} className="opacity-70" />
+                  <p className="text-sm font-semibold">Vídeo promocional próximamente</p>
+                </div>
+              )}
+            </div>
           </div>
           <p className="text-center text-[11px] text-slate-400 mt-2">Pulsa el icono de pantalla completa del vídeo para ampliarlo.</p>
         </div>
