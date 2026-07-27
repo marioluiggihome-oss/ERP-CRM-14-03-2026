@@ -400,6 +400,12 @@ class Render3DService:
             "type of piece, exterior doors, finishes and colors, handles/pulls, "
             "materials, and the interior configuration (shelves, columns, drawers, "
             "open spaces) as specified.",
+            "PER-MODULE FRONTS ARE MANDATORY: count the fronts of EACH cabinet exactly "
+            "as stated. If a unit is described as '1 drawer + 2 gavetas (deep drawers)', "
+            "render that unit with exactly one shallow drawer front on top and two deep "
+            "drawer fronts below it — never replace it with a plain door or a different "
+            "count. A module with drawers must show drawer fronts (horizontal seams with "
+            "pulls), NOT a single full-height door.",
             "Camera angle: eye-level perspective showing the full piece within its space.",
             "Realism: photorealistic PBR materials with accurate roughness and reflectivity, "
             "realistic global illumination and contact shadows, true-to-scale proportions, "
@@ -608,9 +614,22 @@ class Render3DService:
         expanded_brief = await self._expand_brief(description, space_type)
         parsed_params["briefExpanded"] = bool(expanded_brief) and expanded_brief != (description or "").strip()
 
+        # El brief expandido por el LLM puede "diluir" las órdenes literales por
+        # módulo (p. ej. "el mueble de la izquierda lleva 1 cajón y 2 gavetas").
+        # Antepone la descripción ORIGINAL como orden obligatoria y prioritaria,
+        # para que el modelo de imagen respete los recuentos por módulo.
+        raw_layout = (description or "").strip()
+        combined = expanded_brief or description
+        if raw_layout:
+            combined = (
+                "MANDATORY MODULE LAYOUT — obey this LITERALLY; it overrides anything else. "
+                "Count the doors and drawers of EACH module exactly as written, left to right: "
+                f"«{raw_layout}».\n\n" + (combined or "")
+            )
+
         # Construir prompt GENÉRICO guiado por la descripción (ya expandida).
         prompt = self.build_render_prompt(
-            description=expanded_brief or description,
+            description=combined,
             style=parsed_params.get("style", "photorealistic"),
             space_type=space_type,
         )
