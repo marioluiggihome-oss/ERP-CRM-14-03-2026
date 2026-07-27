@@ -1590,9 +1590,22 @@ async def generar_alzado(payload: ProyectoBase):
             return [top] + [resto] * (n - 1)
 
         dist = payload.distribucion_estructurada
-        paredes = (dist.paredes if dist and dist.paredes else None) or [{"nombre": "Pared principal", "ancho": 400, "alto": 240}]
-        elementos = (dist.elementos if dist else None) or []
-        paredes = [p for p in paredes if (p.get("ancho") or 0) > 0][:4] or [{"nombre": "Pared", "ancho": 400, "alto": 240}]
+        # NUNCA inventar una pared por defecto (antes caía a 400x240 en silencio, lo
+        # que producía cotas falsas). Sin medidas válidas NO se dibuja: se avisa.
+        from services.kitchen_geometry import validar_distribucion
+        _val = validar_distribucion({
+            "tipo": getattr(dist, "tipo", "lineal") if dist else "lineal",
+            "paredes": (dist.paredes if dist and dist.paredes else []) or [],
+            "elementos": (dist.elementos if dist else []) or [],
+        })
+        if not _val.get("ok"):
+            raise HTTPException(
+                status_code=422,
+                detail=("No se puede dibujar el alzado sin medidas reales válidas. "
+                        f"{_val.get('motivo') or ''} " + " ".join(_val.get('avisos') or [])).strip())
+        paredes = _val["paredes"]
+        elementos = _val["elementos"]
+        _avisos_geom = _val.get("avisos") or []
 
         n = len(paredes)
         fig, axes = plt.subplots(n, 1, figsize=(14, 4.6 * n))
@@ -1767,6 +1780,7 @@ async def generar_alzado(payload: ProyectoBase):
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
         return {"alzadoBase64": f"data:image/png;base64,{b64}", "paredes": len(paredes),
+                "avisos": _avisos_geom,
                 "herraje": {"puertas": puertas, "cajones": cajones, "bisagras": bisagras,
                             "guias": guias, "tiradores": tiradores}}
     except Exception as e:
@@ -1891,7 +1905,16 @@ async def detect_distribucion(payload: dict):
                 x += e["ancho"]
             norm_elems.extend(grupo)
         elementos = norm_elems or elementos
-        return {"success": True, "distribucion": {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": elementos, "isla": {}, "medidasReales": bool(ancho_real)}}
+        # VALIDACIÓN DE GEOMETRÍA REAL (obligatoria, ver CLAUDE.md): ninguna medida
+        # imposible llega al dibujo; los electrodomésticos no se reescalan.
+        from services.kitchen_geometry import validar_distribucion
+        val = validar_distribucion(
+            {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": elementos},
+            ancho_real=ancho_real, alto_real=alto_real)
+        if not val.get("ok"):
+            raise HTTPException(status_code=422,
+                                detail=f"{val.get('motivo')} " + " ".join(val.get('avisos') or []))
+        return {"success": True, "distribucion": val, "avisos": val.get("avisos") or []}
     except HTTPException:
         raise
     except Exception as e:
@@ -2003,7 +2026,9 @@ async def distribucion_desde_texto(payload: dict):
             data = _json.loads(m.group())
         except Exception:
             data = {}
-    dist = _sanea_distribucion(data, ancho_real, alto_real)
-    if not dist.get("elementos"):
-        raise HTTPException(status_code=422, detail="No se reconocieron módulos en la descripción.")
-    return {"success": True, "distribucion": dist}
+    from services.kitchen_geometry import validar_distribucion
+    dist = validar_distribucion(data, ancho_real=ancho_real, alto_real=alto_real)
+    if not dist.get("ok"):
+        raise HTTPException(status_code=422,
+                            detail=f"{dist.get('motivo')} " + " ".join(dist.get('avisos') or []))
+    return {"success": True, "distribucion": dist, "avisos": dist.get("avisos") or []}

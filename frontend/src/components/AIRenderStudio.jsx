@@ -979,49 +979,49 @@ export default function AIRenderStudio({ state, setState }) {
   // Construye el prompt de la LÁMINA TÉCNICA según el tipo de proyecto. Cada tipo
   // tiene su propia composición y sus reglas (la campana solo aplica a cocina).
   const fichaPromptPorTipo = (tid) => {
-    const base = 'Composición de ficha de estudio profesional, fondo claro, tipografía legible, líneas de cota finas. Formato 16:9, alta legibilidad.';
+    // REGLA DE ORO (ver CLAUDE.md): un modelo de IMAGEN nunca escribe cotas — las
+    // inventa. Esta lámina es solo la PARTE GRÁFICA (vistas limpias sin números);
+    // las medidas reales las dibuja el motor vectorial determinista del backend.
+    const base = 'Composición de lámina de estudio profesional, fondo claro, estilo dibujo técnico limpio. Formato 16:9.';
+    const SIN_COTAS = '\nPROHIBIDO ESCRIBIR MEDIDAS: no dibujes líneas de cota, ni cifras, ni números, ni etiquetas de dimensión, ni escalas, ni texto de medidas en ninguna parte de la imagen. Las cotas se añaden aparte con un plano vectorial acotado. Si dibujas números, la lámina se descarta.';
     if (tid === 'armario') {
       return (
-        'Crea una LÁMINA TÉCNICA de ESTE armario/vestidor (usa la imagen adjunta como referencia FIEL: mismos módulos, acabados y distribución interior). ' + base + '\n'
-        + '- ARRIBA: el FRENTE/ALZADO del armario con COTAS: ancho total en metros y, DEBAJO de cada módulo, su ancho en cm con su nombre (p. ej. "100 DOBLE COLGAR", "50 CAJONERA", "50 BALDAS", "40 ZAPATERO").\n'
-        + '- CENTRO: el ALZADO INTERIOR (puertas abiertas) mostrando baldas, barras de colgar, cajones y altillos con sus alturas en cm.\n'
-        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN INTERIOR" con la lista de módulos y medidas.\n'
-        + '- ABAJO CENTRO: la PLANTA (vista cenital) a escala con cotas (ancho y fondo).\n'
+        'Crea una LÁMINA de ESTE armario/vestidor (usa la imagen adjunta como referencia FIEL: mismos módulos, acabados y distribución interior). ' + base + '\n'
+        + '- ARRIBA: el FRENTE/ALZADO del armario, con los módulos claramente separados.\n'
+        + '- CENTRO: el ALZADO INTERIOR (puertas abiertas) mostrando baldas, barras de colgar, cajones y altillos.\n'
+        + '- ABAJO CENTRO: la PLANTA (vista cenital).\n'
         + '- DERECHA: recuadro "ACABADOS" (frentes, tiradores, interior, iluminación LED, detalles).\n'
-        + 'REGLAS: NO dibujes campana, placa ni fregadero (es un armario). Baldas y barras a alturas ergonómicas coherentes; la suma de anchos de módulos = ancho total.'
+        + 'REGLAS: NO dibujes campana, placa ni fregadero (es un armario). Baldas y barras a alturas ergonómicas coherentes.' + SIN_COTAS
       );
     }
     if (tid === 'bano') {
       return (
-        'Crea una LÁMINA TÉCNICA de ESTE mueble/espacio de baño (usa la imagen adjunta como referencia FIEL: mismos elementos, acabados y distribución). ' + base + '\n'
-        + '- ARRIBA: el FRENTE/ALZADO con COTAS: ancho total en metros y, DEBAJO de cada elemento, su ancho en cm con su nombre (p. ej. "80 MUEBLE LAVABO", "35 COLUMNA", "60 ESPEJO", "70 DUCHA").\n'
-        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS" con la lista de elementos y medidas.\n'
-        + '- CENTRO/ABAJO: la PLANTA (vista cenital) a escala con cotas (ancho y fondo).\n'
+        'Crea una LÁMINA de ESTE mueble/espacio de baño (usa la imagen adjunta como referencia FIEL: mismos elementos, acabados y distribución). ' + base + '\n'
+        + '- ARRIBA: el FRENTE/ALZADO con los elementos claramente separados.\n'
+        + '- CENTRO/ABAJO: la PLANTA (vista cenital).\n'
         + '- DERECHA: recuadro "ACABADOS Y SANITARIOS" (mueble, encimera/lavabo, grifería, espejo, mampara, iluminación).\n'
-        + 'REGLAS: NO dibujes campana, placa ni cocina. Marca la altura del lavabo, del espejo y de la grifería. Coherencia de anchos: la suma de elementos = ancho total.'
+        + 'REGLAS: NO dibujes campana, placa ni cocina.' + SIN_COTAS
       );
     }
     if (tid === 'otro') {
       return (
-        'Crea una LÁMINA TÉCNICA de ESTE mueble a medida (usa la imagen adjunta como referencia FIEL: mismos módulos, acabados y distribución). ' + base + '\n'
-        + '- ARRIBA: el FRENTE/ALZADO con COTAS: ancho total en metros y, DEBAJO de cada módulo, su ancho en cm con su nombre.\n'
-        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS".\n'
-        + '- CENTRO/ABAJO: la PLANTA (vista cenital) a escala con cotas.\n'
+        'Crea una LÁMINA de ESTE mueble a medida (usa la imagen adjunta como referencia FIEL: mismos módulos, acabados y distribución). ' + base + '\n'
+        + '- ARRIBA: el FRENTE/ALZADO con los módulos separados.\n'
+        + '- CENTRO/ABAJO: la PLANTA (vista cenital).\n'
         + '- DERECHA: recuadro "ACABADOS" (frentes, tiradores, interior, iluminación, detalles).\n'
-        + 'REGLAS: dibuja solo lo que aparece en el render. La suma de anchos de módulos = ancho total.'
+        + 'REGLAS: dibuja solo lo que aparece en el render.' + SIN_COTAS
       );
     }
     // Cocina (por defecto)
     return (
-      'Crea una LÁMINA TÉCNICA de ESTA cocina (usa la imagen adjunta como referencia FIEL del diseño, mismos muebles, acabados y distribución). ' + base + '\n'
-      + '- ARRIBA: el FRENTE/ALZADO de la cocina con COTAS: el ancho total en metros y, DEBAJO de cada módulo, su ancho en cm con su nombre (p. ej. "60 FRIGORÍFICO", "40 COLUMNA", "60 FREGADERO", "80 COCINA", "30 MUEBLE"…).\n'
-      + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS" con la lista de módulos y sus medidas.\n'
-      + '- CENTRO/ABAJO: la PLANTA (vista cenital) de la cocina a escala con cotas (ancho y fondo en metros y ancho por módulo).\n'
+      'Crea una LÁMINA de ESTA cocina (usa la imagen adjunta como referencia FIEL del diseño, mismos muebles, acabados y distribución). ' + base + '\n'
+      + '- ARRIBA: el FRENTE/ALZADO de la cocina con cada módulo claramente separado.\n'
+      + '- CENTRO/ABAJO: la PLANTA (vista cenital) de la cocina.\n'
       + '- DERECHA: recuadro "ACABADOS SUGERIDOS" (puertas, encimera, tirador, salpicadero, iluminación, detalles).\n'
       + 'REGLAS TÉCNICAS OBLIGATORIAS del alzado:\n'
       + '  · La CAMPANA extractora va SIEMPRE centrada JUSTO ENCIMA de la placa/cocina (zona de cocción), con el MISMO ancho que esa zona; NUNCA la dibujes reflejada ni desplazada sobre otro módulo.\n'
-      + '  · Los muebles ALTOS se alinean verticalmente con los BAJOS: cada módulo alto encima del bajo que le corresponde y con anchos coherentes (la suma de altos = la suma de bajos = ancho total).\n'
-      + '  · Las cotas de cada módulo deben coincidir arriba (altos) y abajo (bajos) en la misma vertical.'
+      + '  · Los muebles ALTOS se alinean verticalmente con los BAJOS: cada módulo alto encima del bajo que le corresponde.'
+      + SIN_COTAS
     );
   };
 
@@ -1064,9 +1064,38 @@ export default function AIRenderStudio({ state, setState }) {
   const generarFichaTecnica = async () => {
     const img = currentImage();
     if (!img || editing) return;
+    // Sin el ancho REAL no hay cotas fiables: las medidas se estimarían. Antes de
+    // dibujar nada, se exige la escala real (regla: nunca inventar medidas).
+    const anchoReal = Number(String(medidas?.ancho ?? '').replace(',', '.')) || 0;
+    if (tipo3d === 'cocina' && !anchoReal) {
+      setError('Indica arriba el ANCHO REAL de la estancia (cm) antes de generar la ficha: sin esa escala las cotas no serían medidas reales.');
+      return;
+    }
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
+
+      // 1º LO IMPORTANTE: planta + alzado VECTORIALES ACOTADOS (deterministas,
+      // calculados desde medidas reales y validados por geometría de fabricación).
+      let exactosOk = false;
+      if (tipo3d === 'cocina') {
+        try {
+          const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+          if (dj?.success && dj.distribucion) {
+            const extra = await generarPlanosExactos(dj.distribucion);
+            if (extra.length) {
+              exactosOk = true;
+              setRenderResult(extra[0]);
+              setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
+              if (dj.avisos?.length) setError(`Planos acotados generados. Revisa: ${dj.avisos.join(' · ')}`);
+            }
+          }
+        } catch (e) {
+          setError(`No se pudieron generar los planos acotados: ${e?.message || 'error desconocido'}.`);
+        }
+      }
+
+      // 2º La lámina gráfica de la IA: SIN cotas (los números los pone el vectorial).
       const desc = fichaPromptPorTipo(tipo3d);
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
@@ -1074,25 +1103,11 @@ export default function AIRenderStudio({ state, setState }) {
       });
       const data = await response.json();
       if (data.success) {
-        const merged = { ...data, description: 'Ficha técnica: alzado + planta + medidas' };
-        setRenderResult(merged);
-        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
-      } else setError(data.error || 'No se pudo generar la ficha técnica.');
-
-      // Además, planta y alzado EXACTOS (vectoriales con cotas): se detecta la
-      // distribución del render con IA y se dibujan de forma determinista. El
-      // motor vectorial está modelado para COCINA (zonas de cocción, campana…),
-      // así que solo se añade en cocina. Es best-effort.
-      if (tipo3d === 'cocina') try {
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success && dj.distribucion) {
-          const extra = await generarPlanosExactos(dj.distribucion);
-          if (extra.length) setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
-        }
-      } catch (e) {
-        // La lámina IA ya está; los planos exactos son un extra, pero el motivo
-        // del fallo debe ser VISIBLE (no fallar en silencio).
-        setError(`Lámina generada, pero no se pudieron añadir los planos exactos: ${e?.message || 'error desconocido'}.`);
+        const merged = { ...data, description: 'Lámina de presentación (sin cotas; las medidas van en el plano acotado)' };
+        if (!exactosOk) setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 14));
+      } else if (!exactosOk) {
+        setError(data.error || 'No se pudo generar la ficha técnica.');
       }
     } catch (e) { setError(`Error al generar la ficha técnica: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
