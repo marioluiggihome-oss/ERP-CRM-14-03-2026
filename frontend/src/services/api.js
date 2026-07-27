@@ -879,6 +879,31 @@ export const telemetryAPI = {
 // ============================================
 
 export const backupAPI = {
+  // Descarga la copia COMPLETA de la base de datos en UNA sola petición: el ZIP
+  // se genera y se entrega en la misma llamada, así la copia aterriza en tu
+  // equipo y no depende del disco del contenedor (que es efímero y se borra al
+  // redesplegar). Devuelve el nombre del fichero descargado.
+  descargarAhora: async () => {
+    const response = await fetch(`${API_URL}/api/backup/descargar-ahora`, { headers: authHeaders() });
+    if (!response.ok) {
+      let motivo = `Error ${response.status}`;
+      try { const d = await response.json(); motivo = d.detail || d.error || motivo; } catch { /* noop */ }
+      throw new Error(motivo);
+    }
+    const cols = response.headers.get('X-Backup-Colecciones');
+    const docs = response.headers.get('X-Backup-Documentos');
+    const blob = await response.blob();
+    const cd = response.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    const nombre = (m && m[1]) || `luiggi_bd_completa_${new Date().toISOString().slice(0, 10)}.zip`;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    window.URL.revokeObjectURL(url);
+    return { nombre, colecciones: cols, documentos: docs, tamanoMB: (blob.size / (1024 * 1024)).toFixed(1) };
+  },
+
   getStatus: async () => {
     const response = await fetch(`${API_URL}/api/backup/status`);
     if (!response.ok) throw new Error('Error al obtener estado de backup');

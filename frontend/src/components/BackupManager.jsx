@@ -32,6 +32,18 @@ const BackupManager = () => {
     }
   };
 
+  // Descarga la copia completa AL INSTANTE (a prueba de disco efímero).
+  const handleDescargarAhora = async () => {
+    setIsLoading(true); setMessage(null);
+    try {
+      const r = await backupAPI.descargarAhora();
+      setMessage({ type: 'success',
+        text: `✅ Copia descargada: ${r.nombre} · ${r.colecciones} colecciones · ${r.documentos} documentos · ${r.tamanoMB} MB. Guárdala fuera del servidor.` });
+    } catch (e) {
+      setMessage({ type: 'error', text: `❌ No se pudo descargar la copia: ${e?.message || 'error'}` });
+    } finally { setIsLoading(false); }
+  };
+
   const handleManualBackup = async () => {
     setIsLoading(true);
     setMessage(null);
@@ -171,6 +183,26 @@ const BackupManager = () => {
             </div>
             <div className="absolute top-3 right-3 px-2 py-1 bg-orange-500 rounded-lg text-[8px] font-black uppercase">
               Recomendado
+            </div>
+          </button>
+
+          {/* Descargar copia completa AHORA (no depende del disco del servidor) */}
+          <button
+            onClick={handleDescargarAhora}
+            disabled={isLoading}
+            className="group relative bg-emerald-600 hover:bg-emerald-500 text-white p-8 rounded-2xl transition-all disabled:opacity-50"
+            data-testid="backup-download-now-btn"
+          >
+            <div className="flex flex-col items-center gap-4">
+              {isLoading ? <Loader2 className="w-12 h-12 animate-spin" />
+                         : <HardDrive className="w-12 h-12 group-hover:scale-110 transition-transform" />}
+              <div className="text-center">
+                <h3 className="font-black text-lg uppercase tracking-wider">Descargar copia completa</h3>
+                <p className="text-emerald-100 text-xs mt-1">Toda la base de datos, a tu equipo, al instante</p>
+              </div>
+            </div>
+            <div className="absolute top-3 right-3 px-2 py-1 bg-white text-emerald-700 rounded-lg text-[8px] font-black uppercase">
+              A prueba de reinicios
             </div>
           </button>
 

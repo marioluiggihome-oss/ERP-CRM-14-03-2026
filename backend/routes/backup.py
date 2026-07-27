@@ -47,7 +47,10 @@ async def daily_backup_job():
     try:
         logger.info("🔄 Starting daily backup...")
         result = await create_daily_backup_with_email()
-        logger.info(f"✅ Daily backup completed: {result}")
+        if result.get("copiaExterna"):
+            logger.info(f"✅ Daily backup completed y ENVIADO fuera del contenedor: {result}")
+        else:
+            logger.warning(f"⚠️ Daily backup hecho pero SIN copia externa (se perderá al redesplegar): {result}")
     except Exception as e:
         logger.error(f"❌ Daily backup failed: {e}")
 
@@ -87,7 +90,9 @@ async def create_daily_backup_with_email():
     
     shutil.rmtree(temp_dir)
     size_mb = os.path.getsize(zip_path) / (1024 * 1024)
-    
+    copia_externa = False          # ¿la copia ha salido del contenedor?
+    enviado_con_adjunto = False
+
     # Send email with backup info
     if RESEND_API_KEY:
         try:
@@ -95,7 +100,7 @@ async def create_daily_backup_with_email():
             
             # Read backup file for attachment (if small enough)
             attachment_data = None
-            if size_mb < 10:  # Only attach if less than 10MB
+            if size_mb < 20:  # se adjunta si cabe en el correo (limite ~40MB)
                 with open(zip_path, 'rb') as f:
                     import base64
                     attachment_data = base64.b64encode(f.read()).decode('utf-8')
@@ -126,14 +131,29 @@ async def create_daily_backup_with_email():
                 }]
             
             resend.Emails.send(email_params)
-            logger.info(f"📧 Backup email sent to {BACKUP_EMAIL}")
+            # Solo cuenta como copia EXTERNA si iba el fichero adjunto: un aviso
+            # por correo sin adjunto no es una copia recuperable.
+            enviado_con_adjunto = attachment_data is not None
+            logger.info(f"📧 Backup email sent to {BACKUP_EMAIL} (adjunto: {enviado_con_adjunto})")
         except Exception as e:
             logger.error(f"Failed to send backup email: {e}")
     
+    copia_externa = bool(enviado_con_adjunto)
+
     # Keep only last 7 backups
     cleanup_old_backups(7)
     
-    return {"filename": f"{backup_name}.zip", "size_mb": size_mb, "documents": total_docs}
+    # ¿Ha salido la copia del contenedor? BACKUP_DIR es disco EFÍMERO en Railway:
+    # si no sale, se pierde en el siguiente redespliegue y no hay copia real.
+    if not copia_externa:
+        logger.warning(
+            "⚠️ BACKUP SIN COPIA EXTERNA: el .zip (%.1f MB) solo está en %s, que es "
+            "disco efímero. Se perderá al redesplegar. Descárgalo con "
+            "/api/backup/descargar-ahora o revisa RESEND_API_KEY / el tamaño.",
+            size_mb, BACKUP_DIR)
+    return {"filename": f"{backup_name}.zip", "size_mb": size_mb,
+            "documents": total_docs, "copiaExterna": copia_externa,
+            "avisoDiscoEfimero": (not copia_externa)}
 
 def cleanup_old_backups(keep_count=7):
     """Remove old backups, keeping only the most recent ones"""
@@ -450,3 +470,80 @@ async def export_database_only(user=Depends(require_admin)):
         
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+# ─── COPIA COMPLETA EN UNA SOLA PETICIÓN (a prueba de disco efímero) ───────────
+# El resto de endpoints escriben el .zip en BACKUP_DIR (/app/backups) y la
+# descarga va en OTRA peticion. En Railway ese disco es EFIMERO: si el
+# contenedor se reinicia o se redespliega entre ambas, la copia se pierde y
+# "tener backup" es falso. Aqui el ZIP se construye y se ENTREGA en la misma
+# peticion, asi que la copia aterriza directamente en el equipo del usuario.
+@router.get("/descargar-ahora")
+async def descargar_copia_completa(user=Depends(require_admin)):
+    """Genera y DESCARGA en el momento una copia completa de la base de datos.
+
+    Todas las colecciones a JSON (bson.json_util: conserva ObjectId y fechas)
+    dentro de un ZIP, mas un _manifest.json con el recuento por coleccion para
+    poder verificar que la copia esta completa. Solo ADMIN.
+    """
+    from fastapi.responses import StreamingResponse
+    from tempfile import SpooledTemporaryFile
+
+    client = AsyncIOMotorClient(MONGO_URL)
+    try:
+        db = client[DB_NAME]
+        colecciones = await db.list_collection_names()
+        sello = datetime.now().strftime('%Y%m%d_%H%M%S')
+        nombre = f"luiggi_bd_completa_{sello}.zip"
+
+        # SpooledTemporaryFile: en memoria hasta 64 MB y a disco temporal si
+        # crece mas (evita agotar la RAM del contenedor con bases grandes).
+        tmp = SpooledTemporaryFile(max_size=64 * 1024 * 1024)
+        manifiesto = {
+            "generado": datetime.now().isoformat(),
+            "baseDeDatos": DB_NAME,
+            "colecciones": {},
+            "totalDocumentos": 0,
+        }
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            for nombre_col in sorted(colecciones):
+                try:
+                    docs = await db[nombre_col].find({}).to_list(length=None)
+                    z.writestr(f"{nombre_col}.json", json_util.dumps(docs, indent=2))
+                    manifiesto["colecciones"][nombre_col] = len(docs)
+                    manifiesto["totalDocumentos"] += len(docs)
+                except Exception as e:
+                    logger.error("backup %s: %s", nombre_col, e)
+                    manifiesto["colecciones"][nombre_col] = f"ERROR: {e}"
+            z.writestr("_manifest.json", json.dumps(manifiesto, ensure_ascii=False, indent=2))
+
+        tamano = tmp.tell()
+        tmp.seek(0)
+        logger.info("backup descargar-ahora: %s colecciones, %s documentos, %.1f MB",
+                    len(colecciones), manifiesto["totalDocumentos"], tamano / (1024 * 1024))
+
+        def _stream():
+            try:
+                while True:
+                    trozo = tmp.read(64 * 1024)
+                    if not trozo:
+                        break
+                    yield trozo
+            finally:
+                tmp.close()
+                client.close()
+
+        return StreamingResponse(
+            _stream(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{nombre}"',
+                "Content-Length": str(tamano),
+                "X-Backup-Colecciones": str(len(colecciones)),
+                "X-Backup-Documentos": str(manifiesto["totalDocumentos"]),
+            },
+        )
+    except Exception as e:
+        client.close()
+        logger.error("backup descargar-ahora: %s", e)
+        raise HTTPException(status_code=500, detail=f"No se pudo generar la copia: {e}")
