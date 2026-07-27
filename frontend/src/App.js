@@ -739,7 +739,7 @@ const App = () => {
   // Mientras esté sin publicar, el público que entra por el dominio va directo al
   // login (no ve la landing). Solo se muestra en modo VISTA PREVIA (?preview o
   // #preview) para revisarla en privado. Para publicarla, poner esto en true.
-  const CARP_LANDING_PUBLISHED = false;
+  const CARP_LANDING_PUBLISHED = true;
   const _carpPreview = (() => {
     try {
       const sp = new URLSearchParams(window.location.search);
