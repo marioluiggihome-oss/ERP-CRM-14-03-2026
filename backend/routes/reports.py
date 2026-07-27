@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query, HTTPException, Depends
 from typing import Optional, List
 from datetime import datetime, date
 import logging
+import re
 
 logger = logging.getLogger("reports")
 
@@ -33,40 +34,66 @@ router = APIRouter(tags=["reports"], dependencies=_REPORTS_DEPS)
 # ========== HELPERS ==========
 
 def classify_line(concepto: str) -> str:
-    """Clasifica una línea de factura en categoría de producto."""
-    c = concepto.lower()
-    if 'lavadora' in c:
+    """Clasifica una línea de factura en categoría de producto.
+
+    Coincidencia por PALABRA COMPLETA: buscar "placa" como subcadena marcaba
+    "aplacado" (una encimera) como placa de cocción. Con límites de palabra cada
+    término solo casa consigo mismo.
+    """
+    c = (concepto or "").lower()
+
+    def tiene(*claves):
+        return any(re.search(r'\b' + re.escape(k) + r'\w*', c) for k in claves)
+
+    # Lo más específico primero.
+    if tiene('lavadora'):
         return 'Lavadoras'
-    elif 'secadora' in c:
+    if tiene('secadora'):
         return 'Secadoras'
-    elif 'lavavajillas' in c:
+    if tiene('lavavajillas'):
         return 'Lavavajillas'
-    elif 'combi' in c or 'frigorífico' in c or 'frigorifico' in c:
+    if tiene('combi', 'frigorífico', 'frigorifico', 'nevera'):
         return 'Refrigeración'
-    elif 'campana' in c:
+    if tiene('campana', 'extractor'):
         return 'Campanas'
-    elif 'placa' in c or 'inducción' in c or 'induccion' in c:
-        return 'Placas de cocción'
-    elif 'horno' in c:
+    if tiene('horno'):
         return 'Hornos'
-    elif 'microondas' in c:
+    if tiene('microondas'):
         return 'Microondas'
-    elif 'grifo' in c or 'monomando' in c:
+    if tiene('vinoteca', 'congelador', 'calentador', 'termo', 'caldera'):
+        return 'Otros electrodomésticos'
+    if tiene('grifo', 'grifería', 'griferia', 'monomando'):
         return 'Grifería'
-    elif 'fregadero' in c:
+    if tiene('fregadero', 'seno'):
         return 'Fregaderos'
-    elif 'fabricación' in c or 'fabricacion' in c or 'cocina completa' in c or 'mueble' in c:
-        return 'Fabricación mobiliario'
-    elif 'transporte' in c or 'entregado' in c or 'envío' in c or 'envio' in c:
-        return 'Transporte/Logística'
-    elif 'armario' in c or 'vestidor' in c:
-        return 'Armarios'
-    elif 'encimera' in c or 'silestone' in c or 'dekton' in c:
+    # Encimera ANTES que placa: "encimera ... con aplacado" es encimera.
+    if tiene('encimera', 'silestone', 'dekton', 'granito', 'compac', 'neolith'):
         return 'Encimeras'
-    elif 'montaje' in c or 'instalación' in c or 'instalacion' in c:
+    if tiene('placa', 'inducción', 'induccion', 'vitrocerámica', 'vitroceramica'):
+        return 'Placas de cocción'
+    if tiene('fabricación', 'fabricacion') or 'cocina completa' in c or tiene('mueble'):
+        return 'Fabricación mobiliario'
+    if tiene('armario', 'vestidor'):
+        return 'Armarios'
+    if tiene('suelo', 'pavimento', 'tarima', 'parquet', 'parqué', 'laminado', 'spc',
+             'vinílico', 'vinilico', 'rodapié', 'rodapie'):
+        return 'Suelos'
+    if tiene('aplacado', 'costado', 'panel', 'copete', 'zócalo', 'zocalo', 'remate', 'canto'):
+        return 'Aplacados y remates'
+    if tiene('puerta', 'frente', 'cajón', 'cajon', 'gaveta'):
+        return 'Puertas y frentes'
+    if tiene('herraje', 'bisagra', 'guía', 'guia', 'tirador', 'pata', 'colgador',
+             'blum', 'accesorio'):
+        return 'Herrajes y accesorios'
+    if tiene('led', 'iluminación', 'iluminacion', 'luz', 'foco', 'enchufe', 'toma'):
+        return 'Iluminación y electricidad'
+    if tiene('tablero', 'melamina', 'banda', 'trasera', 'casco'):
+        return 'Tableros y cascos'
+    if tiene('montaje', 'instalación', 'instalacion') or 'mano de obra' in c:
         return 'Montaje/Instalación'
-    else:
-        return 'Otros'
+    if tiene('transporte', 'entregado', 'envío', 'envio', 'porte'):
+        return 'Transporte/Logística'
+    return 'Otros'
 
 
 # ========== ENDPOINTS ==========
@@ -339,13 +366,16 @@ async def generate_rentabilidad_pdf(
         company = ""
 
     def _eur(v):
+        # Formato ESPAÑOL: miles con punto y decimales con coma (1.234,56 €).
         try:
-            return f"{float(v):,.2f} €"
+            t = f"{float(v):,.2f}"
+            return t.replace(",", "\x00").replace(".", ",").replace("\x00", ".") + " €"
         except Exception:
             return "0,00 €"
     def _pct(v):
+        # Formato ESPAÑOL: decimales con coma (46,88%).
         try:
-            return f"{float(v):.2f}%"
+            return f"{float(v):.2f}".replace(".", ",") + "%"
         except Exception:
             return "0,00%"
 
@@ -412,9 +442,20 @@ async def generate_rentabilidad_pdf(
     elements.append(Spacer(1, 7*mm))
 
     # ── Helper de tabla con estilo (orden Coste · Venta · Margen · %) ────────
-    def styled_table(title, headers, rows, colw, money_cols=(), margin_col=None, pct_col=None):
+    # Estilo de celda de TEXTO: se envuelve en Paragraph para que el texto largo
+    # HAGA SALTO DE LÍNEA en vez de desbordarse encima de la columna siguiente
+    # (era la causa de que "Ref/Concepto/Cliente" salieran pisados).
+    cell_style = ParagraphStyle('cell', parent=styles['Normal'], fontSize=7.2, leading=8.6, textColor=INK)
+    head_style = ParagraphStyle('head', parent=styles['Normal'], fontSize=7, leading=8.4,
+                                textColor=colors.white, fontName='Helvetica-Bold')
+
+    def styled_table(title, headers, rows, colw, money_cols=(), margin_col=None, pct_col=None,
+                     text_cols=(0,), total_row=False):
         if title:
             elements.append(Paragraph(title, section_style))
+        headers = [Paragraph(str(h), head_style) for h in headers]
+        rows = [[Paragraph(str(v), cell_style) if i in text_cols else v
+                 for i, v in enumerate(r)] for r in rows]
         body = [headers] + rows
         t = Table(body, colWidths=colw, repeatRows=1)
         st = [
@@ -436,13 +477,20 @@ async def generate_rentabilidad_pdf(
         if margin_col is not None:
             for i, r in enumerate(rows, start=1):
                 try:
-                    val = float(str(r[margin_col]).replace('.', '').replace(',', '.').replace('€', '').replace('%', '').strip())
+                    _cell = r[margin_col]
+                    _txt = _cell.text if hasattr(_cell, 'text') else str(_cell)
+                    val = float(_txt.replace('.', '').replace(',', '.').replace('€', '').replace('%', '').strip())
                 except Exception:
                     val = 0
                 st.append(('TEXTCOLOR', (margin_col, i), (margin_col, i), GREEN if val >= 0 else RED))
                 st.append(('FONTNAME', (margin_col, i), (margin_col, i), 'Helvetica-Bold'))
         if pct_col is not None:
             st.append(('TEXTCOLOR', (pct_col, 1), (pct_col, -1), SLATE))
+        if total_row and len(rows) >= 1:
+            i = len(rows)   # última fila (índice en la tabla, con cabecera en 0)
+            st += [('BACKGROUND', (0, i), (-1, i), colors.HexColor('#eef2ff')),
+                   ('FONTNAME', (0, i), (-1, i), 'Helvetica-Bold'),
+                   ('LINEABOVE', (0, i), (-1, i), 0.8, ACCENT)]
         t.setStyle(TableStyle(st))
         elements.append(t)
         elements.append(Spacer(1, 6*mm))
@@ -451,19 +499,20 @@ async def generate_rentabilidad_pdf(
     if data["byCategory"]:
         rows = [[c["categoria"], str(c["count"]), _eur(c['coste']), _eur(c['venta']), _eur(c['margen']), _pct(c['pctTotal'])] for c in data["byCategory"]]
         styled_table("Por categoría", ["Categoría", "Líneas", "Coste", "Venta", "Margen", "% s/total"],
-                     rows, [110, 42, 78, 78, 78, 50], margin_col=4, pct_col=5)
+                     rows, [150, 42, 78, 78, 78, 52], margin_col=4, pct_col=5, text_cols=(0,))
 
     # Por cliente
     if data["byClient"]:
-        rows = [[c["cliente"][:34], str(c["docs"]), _eur(c['coste']), _eur(c['venta']), _eur(c['margen']), _pct(c['pctTotal'])] for c in data["byClient"]]
+        rows = [[c["cliente"], str(c["docs"]), _eur(c['coste']), _eur(c['venta']), _eur(c['margen']), _pct(c['pctTotal'])] for c in data["byClient"]]
         styled_table("Por cliente", ["Cliente", "Docs", "Coste", "Venta", "Margen", "% s/total"],
-                     rows, [130, 38, 74, 74, 74, 50], margin_col=4, pct_col=5)
+                     rows, [162, 38, 76, 76, 76, 50], margin_col=4, pct_col=5, text_cols=(0,))
 
     # Top líneas por venta
     if data["topLines"]:
-        rows = [[l.get("ref", "—")[:12], l.get("concepto", "")[:44], l.get("cliente", "")[:22], _eur(l.get('venta', 0)), l.get("categoria", "")] for l in data["topLines"][:15]]
+        rows = [[l.get("ref", "—") or "—", l.get("concepto", ""), l.get("cliente", ""),
+                 _eur(l.get('venta', 0)), l.get("categoria", "")] for l in data["topLines"][:15]]
         styled_table("Top líneas por venta", ["Ref", "Concepto", "Cliente", "Venta", "Categoría"],
-                     rows, [52, 168, 90, 60, 78])
+                     rows, [70, 190, 110, 62, 86], text_cols=(0, 1, 2, 4))
 
     # ── DETALLE COMPLETO POR DOCUMENTO Y PRODUCTO (PDF superdetallado) ──────
     if detalle:
@@ -490,9 +539,9 @@ async def generate_rentabilidad_pdf(
                 pc = (mg / c * 100) if c > 0 else 0
                 cant = ln.get("cantidad", "")
                 filas.append([
-                    str(ln.get("ref", "") or "—")[:14],
-                    str(ln.get("concepto", "") or "")[:58],
-                    (f"{cant:g}" if isinstance(cant, (int, float)) else str(cant or "")),
+                    str(ln.get("ref", "") or "—"),
+                    str(ln.get("concepto", "") or ""),
+                    (f"{cant:g}".replace(".", ",") if isinstance(cant, (int, float)) else str(cant or "")),
                     _eur(c), _eur(v), _eur(mg), _pct(pc),
                 ])
             if filas:
@@ -500,7 +549,8 @@ async def generate_rentabilidad_pdf(
                               _eur(tot.get("venta", 0)), _eur(tot.get("margen", 0)),
                               _pct(tot.get("margenPct", 0))])
                 styled_table("", ["Ref", "Producto / concepto", "Uds", "Coste", "Venta", "Margen", "%"],
-                             filas, [54, 196, 30, 62, 62, 62, 40], margin_col=5, pct_col=6)
+                             filas, [68, 188, 28, 62, 62, 62, 42],
+                             margin_col=5, pct_col=6, text_cols=(0, 1), total_row=True)
 
     # Footer sobrio (marca blanca)
     elements.append(Spacer(1, 6*mm))
