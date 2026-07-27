@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Upload, Mail, Clock, CheckCircle2, AlertCircle, Loader2, HardDrive, RefreshCw } from 'lucide-react';
+import { Download, Upload, Mail, Clock, CheckCircle2, AlertCircle, Loader2, HardDrive, RefreshCw, Cloud } from 'lucide-react';
 import { backupAPI } from '../services/api';
 
 const BackupManager = () => {
@@ -30,6 +30,21 @@ const BackupManager = () => {
     } catch (err) {
       console.error('Error loading backup history:', err);
     }
+  };
+
+  // ── Google Drive ────────────────────────────────────────────────────────
+  const [drive, setDrive] = useState(null);
+  useEffect(() => { backupAPI.driveEstado().then(setDrive).catch(() => setDrive(null)); }, []);
+
+  const handleSubirDrive = async () => {
+    setIsLoading(true); setMessage(null);
+    try {
+      const r = await backupAPI.driveSubirAhora();
+      setMessage({ type: 'success',
+        text: `☁️ Copia subida a Google Drive: ${r?.drive?.nombre || r?.filename || ''} (${(r?.size_mb || 0).toFixed?.(1) || r?.size_mb} MB, ${r?.documents || 0} documentos).` });
+    } catch (e) {
+      setMessage({ type: 'error', text: `❌ ${e?.message || 'No se pudo subir a Drive'}` });
+    } finally { setIsLoading(false); }
   };
 
   // Descarga la copia completa AL INSTANTE (a prueba de disco efímero).
@@ -204,6 +219,36 @@ const BackupManager = () => {
             <div className="absolute top-3 right-3 px-2 py-1 bg-white text-emerald-700 rounded-lg text-[8px] font-black uppercase">
               A prueba de reinicios
             </div>
+          </button>
+
+          {/* Copia automática a Google Drive */}
+          <button
+            onClick={handleSubirDrive}
+            disabled={isLoading || !drive?.configurado}
+            title={drive?.configurado ? 'Genera una copia y la sube a tu carpeta de Drive'
+                                      : 'Google Drive aún no está configurado'}
+            className={`group relative p-8 rounded-2xl transition-all disabled:opacity-60 ${
+              drive?.configurado ? 'bg-sky-600 hover:bg-sky-500 text-white'
+                                 : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
+            data-testid="backup-drive-btn"
+          >
+            <div className="flex flex-col items-center gap-4">
+              {isLoading ? <Loader2 className="w-12 h-12 animate-spin" />
+                         : <Cloud className="w-12 h-12 group-hover:scale-110 transition-transform" />}
+              <div className="text-center">
+                <h3 className="font-black text-lg uppercase tracking-wider">Subir a Google Drive</h3>
+                <p className={`text-xs mt-1 ${drive?.configurado ? 'text-sky-100' : 'text-slate-500'}`}>
+                  {drive?.configurado
+                    ? 'Copia diaria automática + subida manual'
+                    : 'Sin configurar: falta la cuenta de servicio o la carpeta'}
+                </p>
+              </div>
+            </div>
+            {drive?.configurado && (
+              <div className="absolute top-3 right-3 px-2 py-1 bg-white text-sky-700 rounded-lg text-[8px] font-black uppercase">
+                Activo
+              </div>
+            )}
           </button>
 
           {/* Import Backup */}

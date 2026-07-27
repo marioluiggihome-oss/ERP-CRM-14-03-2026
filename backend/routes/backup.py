@@ -138,7 +138,27 @@ async def create_daily_backup_with_email():
         except Exception as e:
             logger.error(f"Failed to send backup email: {e}")
     
-    copia_externa = bool(enviado_con_adjunto)
+    # ── COPIA A GOOGLE DRIVE (destino externo real) ───────────────────────────
+    # Es la copia que de verdad sobrevive al contenedor. El email queda como
+    # respaldo secundario (y está limitado por el tamaño del adjunto).
+    drive_res = {"ok": False, "error": "no configurado"}
+    try:
+        from services import drive_backup
+        if drive_backup.esta_configurado():
+            drive_res = drive_backup.subir_fichero(zip_path, f"{backup_name}.zip")
+            if drive_res.get("ok"):
+                logger.info("☁️ Copia subida a Google Drive: %s", drive_res.get("enlace"))
+                drive_backup.limpiar_antiguas(30)
+            else:
+                logger.error("No se pudo subir la copia a Drive: %s", drive_res.get("error"))
+        else:
+            logger.warning("Google Drive no configurado: la copia no saldrá del contenedor por esa vía.")
+    except Exception as e:
+        logger.error("Copia a Drive: %s", e)
+        drive_res = {"ok": False, "error": str(e)}
+
+    # La copia cuenta como EXTERNA si llegó a Drive o si viajó adjunta por email.
+    copia_externa = bool(drive_res.get("ok") or enviado_con_adjunto)
 
     # Keep only last 7 backups
     cleanup_old_backups(7)
@@ -153,6 +173,7 @@ async def create_daily_backup_with_email():
             size_mb, BACKUP_DIR)
     return {"filename": f"{backup_name}.zip", "size_mb": size_mb,
             "documents": total_docs, "copiaExterna": copia_externa,
+            "drive": drive_res, "emailConAdjunto": enviado_con_adjunto,
             "avisoDiscoEfimero": (not copia_externa)}
 
 def cleanup_old_backups(keep_count=7):
@@ -547,3 +568,35 @@ async def descargar_copia_completa(user=Depends(require_admin)):
         client.close()
         logger.error("backup descargar-ahora: %s", e)
         raise HTTPException(status_code=500, detail=f"No se pudo generar la copia: {e}")
+
+
+# ─── GOOGLE DRIVE: estado y subida manual ─────────────────────────────────────
+@router.get("/drive/estado")
+async def drive_estado(user=Depends(require_admin)):
+    """¿Está configurada la subida de copias a Google Drive? Solo ADMIN.
+    No devuelve secretos: solo si hay credenciales, la carpeta y el email de la
+    cuenta de servicio (que es justo el que hay que invitar a la carpeta)."""
+    from services import drive_backup
+    return {"success": True, **drive_backup.estado()}
+
+
+@router.post("/drive/subir-ahora")
+async def drive_subir_ahora(user=Depends(require_admin)):
+    """Genera una copia completa y la sube a Google Drive en el momento. Solo ADMIN."""
+    from services import drive_backup
+    if not drive_backup.esta_configurado():
+        raise HTTPException(
+            status_code=503,
+            detail=("Google Drive no está configurado. Faltan GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON "
+                    "y/o GOOGLE_DRIVE_FOLDER_ID, y la carpeta debe estar compartida con la "
+                    "cuenta de servicio como Editor."))
+    try:
+        resultado = await create_daily_backup_with_email()
+    except Exception as e:
+        logger.error("drive/subir-ahora: %s", e)
+        raise HTTPException(status_code=500, detail=f"No se pudo generar la copia: {e}")
+    drive = resultado.get("drive") or {}
+    if not drive.get("ok"):
+        raise HTTPException(status_code=502,
+                            detail=f"Copia generada pero NO subida a Drive: {drive.get('error')}")
+    return {"success": True, "mensaje": "Copia subida a Google Drive.", **resultado}

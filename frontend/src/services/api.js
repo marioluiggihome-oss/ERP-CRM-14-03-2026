@@ -904,6 +904,21 @@ export const backupAPI = {
     return { nombre, colecciones: cols, documentos: docs, tamanoMB: (blob.size / (1024 * 1024)).toFixed(1) };
   },
 
+  // Google Drive: estado de la integración (no expone secretos).
+  driveEstado: async () => {
+    const r = await fetch(`${API_URL}/api/backup/drive/estado`, { headers: authHeaders() });
+    if (!r.ok) throw new Error('No se pudo consultar el estado de Google Drive');
+    return r.json();
+  },
+
+  // Genera una copia y la sube a Drive en el momento.
+  driveSubirAhora: async () => {
+    const r = await fetch(`${API_URL}/api/backup/drive/subir-ahora`, { method: 'POST', headers: authHeaders() });
+    let d = null; try { d = await r.json(); } catch { d = null; }
+    if (!r.ok) throw new Error((d && (d.detail || d.error)) || `Error ${r.status}`);
+    return d;
+  },
+
   getStatus: async () => {
     const response = await fetch(`${API_URL}/api/backup/status`);
     if (!response.ok) throw new Error('Error al obtener estado de backup');
