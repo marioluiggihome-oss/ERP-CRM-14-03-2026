@@ -97,16 +97,40 @@ def _generate_render_prompt(layout: str, materials: str, style: str,
 
 
 def _parse_medidas(texto: str) -> dict:
-    """Parsea texto libre de medidas → dict con ancho, alto, isla_w, isla_h en cm."""
+    """Parsea texto libre de medidas → dict con ancho, alto, isla_w, isla_h en cm.
+
+    NUNCA inventa (ver CLAUDE.md): lo que no venga en el texto sale como None y se
+    lista en `faltan`. Antes rellenaba en silencio 400×350 (isla 200×100), y esos
+    números ficticios acababan impresos como si fueran medidas reales.
+    """
     nums = re.findall(r'(\d+(?:[.,]\d+)?)\s*(?:cm|m)?', (texto or "").lower())
     vals = [float(n.replace(',', '.')) for n in nums if float(n.replace(',', '.')) > 0]
     vals_cm = [int(v * 100) if v < 20 else int(v) for v in vals]
-    return {
-        "ancho":  vals_cm[0] if len(vals_cm) > 0 else 400,
-        "alto":   vals_cm[1] if len(vals_cm) > 1 else 350,
-        "isla_w": vals_cm[2] if len(vals_cm) > 2 else 200,
-        "isla_h": vals_cm[3] if len(vals_cm) > 3 else 100,
+    out = {
+        "ancho":  vals_cm[0] if len(vals_cm) > 0 else None,
+        "alto":   vals_cm[1] if len(vals_cm) > 1 else None,
+        "isla_w": vals_cm[2] if len(vals_cm) > 2 else 0,
+        "isla_h": vals_cm[3] if len(vals_cm) > 3 else 0,
     }
+    out["faltan"] = [k for k in ("ancho", "alto") if not out[k]]
+    return out
+
+
+def _medidas_para_dibujo(texto: str) -> dict:
+    """Medidas para algo que se va a DIBUJAR o calcular numéricamente. Sin medidas
+    reales no se dibuja: se rechaza con un motivo claro (jamás se aproxima)."""
+    m = _parse_medidas(texto)
+    if m["faltan"]:
+        raise HTTPException(
+            status_code=422,
+            detail=("Faltan medidas reales (" + ", ".join(m["faltan"]) +
+                    "). Indícalas para poder acotar: sin ellas las cotas no serían medidas reales."))
+    return m
+
+
+def _fmt_medida(v) -> str:
+    """Formatea una medida para un documento: si no se conoce, se dice."""
+    return f"{v}" if v else "por definir"
 
 # ─── Modelos ──────────────────────────────────────────────────────────────────
 
@@ -642,7 +666,7 @@ async def generar_plano_2d(payload: ProyectoBase):
             elementos = dist.elementos or []
         else:
             # Fallback al parser de texto
-            m = _parse_medidas(payload.medidas)
+            m = _medidas_para_dibujo(payload.medidas)
             tipo = 'l'  # default legacy
             paredes_data = [{'nombre': 'Pared norte', 'ancho': m['ancho'], 'alto': 240},
                            {'nombre': 'Pared oeste', 'ancho': m['alto'], 'alto': 240}]
@@ -922,7 +946,7 @@ async def generar_ficha_tecnica(payload: ProyectoBase):
     else:
         m = _parse_medidas(payload.medidas)
         tipo_label = 'Personalizada'
-        medidas_section = f"| **Medidas** | {m['ancho']}×{m['alto']} cm |"
+        medidas_section = f"| **Medidas** | {_fmt_medida(m['ancho'])}×{_fmt_medida(m['alto'])} cm |"
         if m['isla_w'] > 0:
             medidas_section += f"\n| **Isla** | {m['isla_w']}×{m['isla_h']} cm |"
         elementos = []
@@ -1065,7 +1089,7 @@ async def generar_presentacion(payload: ProyectoBase):
         electro_card = f"{len(elementos)} electrodoméstico{'s' if len(elementos) != 1 else ''} integrado{'s' if len(elementos) != 1 else ''}: " + ', '.join([e.get('label','') for e in elementos[:3]]) if elementos else 'A definir según necesidades'
     else:
         m = _parse_medidas(payload.medidas)
-        medidas_str = f"{m['ancho']}×{m['alto']} cm"
+        medidas_str = f"{_fmt_medida(m['ancho'])}×{_fmt_medida(m['alto'])} cm"
         tipo_label = 'Personalizada'
         dist_card = 'Optimizada para el flujo de trabajo'
         electro_card = 'Alta gama totalmente integrados'
@@ -1178,7 +1202,7 @@ async def generar_instalaciones(payload: InstalacionesInput):
     Genera el plan de instalaciones (eléctrica, fontanería, gas) para la cocina.
     Generación local instantánea basada en las medidas y descripción.
     """
-    m = _parse_medidas(payload.medidas)
+    m = _medidas_para_dibujo(payload.medidas)
     ancho = m["ancho"]
     alto = m["alto"]
     tiene_isla = m["isla_w"] > 0 and m["isla_h"] > 0
@@ -1568,8 +1592,24 @@ async def generar_alzado(payload: ProyectoBase):
 
         C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
         C_FRENTE = "#8A6D3B"; C_ENCH = "#1F6FB2"; C_HERRAJE = "#3F3F3F"
-        ALTOS_Y0, ALTOS_Y1, ENC_Y, ZOC_Y, COL_Y = 140, 210, 86, 10, 220
-        ENC_TOP = 90  # cara superior de la encimera (encimera de 4 cm)
+        # Geometría REAL de fabricación (una sola fuente de verdad: kitchen_geometry).
+        # Antes estas constantes no cuadraban con sus propios rótulos (la línea a 86
+        # se rotulaba "90" y una cota de 76 cm decía "80"). Ahora todo se DERIVA:
+        from services.kitchen_geometry import (
+            CASCO_BAJO_ALTO, ALTOS_ALTURAS, COLUMNA_ALTURAS,
+            ZOCALO_ALTO_MIN, ENCIMERA_GRUESO_MAX, SEPARACION_ENCIMERA_ALTOS_MIN,
+        )
+        ZOC_Y = ZOCALO_ALTO_MIN                      # 10  · cara superior del zócalo
+        ENC_Y = ZOC_Y + CASCO_BAJO_ALTO              # 90  · cara superior del casco bajo
+        ENC_TOP = ENC_Y + ENCIMERA_GRUESO_MAX        # 94  · cara superior de la encimera
+        ALTOS_Y1 = COLUMNA_ALTURAS[1]                # 220 · los altos rasan con la columna
+        ALTOS_Y0 = ALTOS_Y1 - ALTOS_ALTURAS[0]       # 150 · alto de 70 cm
+        COL_Y = COLUMNA_ALTURAS[1]                   # 220
+        _SEP_ALTOS = ALTOS_Y0 - ENC_TOP              # separación encimera→altos (56 cm)
+        # Autocomprobación: si alguien cambia una constante y la geometría deja de ser
+        # fabricable, se ve aquí en vez de salir un plano incoherente.
+        if not (SEPARACION_ENCIMERA_ALTOS_MIN - 1 <= _SEP_ALTOS <= 65):
+            logger.warning("alzado: separación encimera→altos fuera de norma (%s cm)", _SEP_ALTOS)
         COLS = {"frigorifico", "columna_hornos", "despensa", "congelador"}
         ALTOS = {"microondas"}  # la campana se dibuja SIEMPRE sobre la placa (abajo)
         HOB = {"placa", "cocina", "vitroceramica", "vitro", "induccion", "placa_induccion", "coccion", "vitroceramicamica"}
@@ -1650,6 +1690,7 @@ async def generar_alzado(payload: ProyectoBase):
             pos = 0
             cotas = []
             hob_zones = []   # (x, w) de las placas → la campana va justo encima
+            bajos_xy = []    # (x, w) de los bajos REALES → los altos se alinean con ellos
             for e in elems:
                 w = int(e.get("ancho") or 60)
                 tipo = str(e.get("id") or e.get("tipo") or "").lower()
@@ -1693,6 +1734,8 @@ async def generar_alzado(payload: ProyectoBase):
                         # marca de zona de cocción sobre la encimera
                         ax.plot([x + 6, x + w - 6], [ENC_Y - 2, ENC_Y - 2], color=C_LINE, lw=1.0)
                 cotas.append((x, x + w, f"{w}"))
+                if tipo not in COLS and tipo not in ALTOS:
+                    bajos_xy.append((x, w))   # para alinear los altos con los bajos reales
                 pos = max(pos, x + w)
 
             # CAMPANA: siempre centrada JUSTO ENCIMA de cada placa, con su mismo ancho.
@@ -1702,28 +1745,22 @@ async def generar_alzado(payload: ProyectoBase):
                 ax.plot([hx + 4, hx + hw - 4], [ALTOS_Y0 + 4, ALTOS_Y0 + 4], color=C_LINE, lw=1.4)
                 ax.text(hx + hw / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, "Campana", ha="center", va="center", fontsize=7)
 
-            # relleno con módulos estándar de 60 en bajos
-            x = pos
-            while x + 30 <= ancho:
-                w = min(60, ancho - x)
-                wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y, dash=True)
-                tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)  # puerta del bajo
-                herr["puertas"] += 1
-                cotas.append((x, x + w, f"{w}"))
-                x += w
-            # relleno de altos, saltando columnas y la zona de campana (sobre placa)
-            x2 = 0
-            while x2 + 30 <= ancho:
-                w = min(60, ancho - x2)
+            # NO se inventan módulos: el validador de geometría garantiza que los
+            # módulos suman el ancho de pared (si falta hueco, llega como "relleno"
+            # explícito). Antes aquí se rellenaba con módulos de 60 cm inventados y
+            # se les ponía cota como si fueran reales.
+            # ALTOS: se alinean con los BAJOS reales (misma anchura y posición),
+            # saltando columnas y la zona de campana sobre la placa.
+            for (bx, bw) in bajos_xy:
                 ocupado_col = any(str(t.get("id") or "").lower() in COLS
-                                  and (t.get("posicion_cm") or 0) < x2 + w and (t.get("posicion_cm") or 0) + (t.get("ancho") or 60) > x2
+                                  and (t.get("posicion_cm") or 0) < bx + bw
+                                  and (t.get("posicion_cm") or 0) + (t.get("ancho") or 0) > bx
                                   for t in elems)
-                ocupado_camp = any(hx < x2 + w and hx + hw > x2 for (hx, hw) in hob_zones)
+                ocupado_camp = any(hx < bx + bw and hx + hw > bx for (hx, hw) in hob_zones)
                 if not (ocupado_col or ocupado_camp):
-                    wire(ax, x2, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0, dash=True)
-                    tirador_v(ax, x2 + w - 5, ALTOS_Y0 + 12, length=16)  # puerta del alto (tirador abajo)
+                    wire(ax, bx, ALTOS_Y0, bw, ALTOS_Y1 - ALTOS_Y0, dash=True)
+                    tirador_v(ax, bx + bw - 5, ALTOS_Y0 + 12, length=16)
                     herr["puertas"] += 1
-                x2 += w
             # encimera y zócalo
             ax.plot([0, ancho], [ENC_Y, ENC_Y], color=C_LINE, lw=2.2, zorder=4)
             ax.plot([0, ancho], [ZOC_Y, ZOC_Y], color=C_LINE, lw=1.2, zorder=4)
@@ -1731,7 +1768,8 @@ async def generar_alzado(payload: ProyectoBase):
             for (a, b, t) in cotas:
                 cota_h(ax, a, b, -12, t)
             cota_h(ax, 0, ancho, -32, f"{ancho} cm")
-            for gy, t in ((ZOC_Y, "10"), (ENC_Y, "90"), (ALTOS_Y0, "140"), (ALTOS_Y1, "210"), (alto, str(alto))):
+            for gy, t in ((ZOC_Y, str(ZOC_Y)), (ENC_TOP, str(ENC_TOP)), (ALTOS_Y0, str(ALTOS_Y0)),
+                          (ALTOS_Y1, str(ALTOS_Y1)), (alto, str(alto))):
                 ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
                 ax.plot([-6, 0], [gy, gy], color=C_COTA, lw=0.8)
             # cota VERTICAL de alturas (lado derecho): tramos zócalo / bajo / alto
@@ -1742,9 +1780,12 @@ async def generar_alzado(payload: ProyectoBase):
                 ax.text(xc + 4, (y0 + y1) / 2, txt, ha="left", va="center", fontsize=7, color=C_COTA, rotation=90)
             for yy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
                 ax.plot([ancho, xc + 2], [yy, yy], color=C_COTA, lw=0.4, ls=":")
-            cota_v(ZOC_Y, ENC_Y, "80")            # cuerpo bajo (10→90 = 80 cm)
-            cota_v(ALTOS_Y0, ALTOS_Y1, "70")      # alto (140→210 = 70 cm)
-            cota_v(0, alto, f"{alto}")            # altura total pared
+            # Cotas verticales: el TEXTO se calcula del propio dibujo, así nunca
+            # puede volver a mentir respecto a lo dibujado.
+            cota_v(ZOC_Y, ENC_Y, f"{ENC_Y - ZOC_Y}")          # cuerpo del bajo (80)
+            cota_v(ENC_TOP, ALTOS_Y0, f"{_SEP_ALTOS}")        # encimera → altos (56)
+            cota_v(ALTOS_Y0, ALTOS_Y1, f"{ALTOS_Y1 - ALTOS_Y0}")  # alto (70)
+            cota_v(0, alto, f"{alto}")                        # altura total pared
             # ENCHUFES sobre la encimera (franja salpicadero), evitando zona de placa
             ench_y = (ENC_Y + ALTOS_Y0) / 2
             ex = 45
@@ -1822,7 +1863,7 @@ async def detect_distribucion(payload: dict):
             "Eres proyectista de cocinas. Analiza esta imagen (render de cocina) y deduce su DISTRIBUCIÓN. "
             "Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, en cada pared, "
             "la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho aproximado en cm "
-            "(anchos típicos de fabricación: 15,20,30,40,45,50,60,80,90,100,120). Electrodomésticos visibles cuentan como módulos "
+            "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles cuentan como módulos "
             "(frigorífico, columna horno/microondas, lavavajillas, fregadero, placa/cocina, campana...).\n"
             + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"

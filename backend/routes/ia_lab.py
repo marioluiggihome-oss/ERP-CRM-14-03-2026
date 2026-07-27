@@ -315,7 +315,20 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
         raw_alto = item.get('alto_estimado', 0) or 0
         raw_fondo = item.get('fondo_estimado', 0) or 0
 
-        width = int(raw_ancho * 10) if raw_ancho and raw_ancho < 200 else int(raw_ancho)
+        # El corte "< 200 ⇒ eran cm" rompía los módulos estrechos: un 150 real en mm
+        # (15 cm, ancho de fabricación válido) se convertía en 1500 mm. Se decide
+        # comparando AMBAS lecturas con los anchos REALES de fabricación y quedándose
+        # con la que encaja; si empatan, manda el mm que pide el prompt.
+        def _ancho_mm(v):
+            v = float(v or 0)
+            if v <= 0:
+                return 0
+            std_mm = [150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200]
+            como_mm, como_cm = v, v * 10
+            err = lambda x: min(abs(x - s) / s for s in std_mm)
+            return int(round(como_mm if err(como_mm) <= err(como_cm) else como_cm))
+
+        width = _ancho_mm(raw_ancho)
         alto_cm = int(raw_alto / 10) if raw_alto and raw_alto > 500 else int(raw_alto)
         height = alto_cm * 10  # cm → mm para búsqueda en catálogo
         fondo_cm = int(raw_fondo / 10) if raw_fondo and raw_fondo > 200 else int(raw_fondo)
