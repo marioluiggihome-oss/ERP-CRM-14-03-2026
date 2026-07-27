@@ -1897,3 +1897,113 @@ async def detect_distribucion(payload: dict):
     except Exception as e:
         logger.error(f"detect-distribucion error: {e}")
         raise HTTPException(status_code=500, detail="No se pudo analizar la distribución.")
+
+
+def _sanea_distribucion(data: dict, ancho_real: int, alto_real: int) -> dict:
+    """Sanea + normaliza una distribución {paredes, elementos} (mismo criterio que
+    detect-distribucion): reescala módulos a estándar y los recoloca contiguos."""
+    paredes = []
+    for p in (data.get("paredes") or [])[:4]:
+        try:
+            anc = int(round(float(p.get("ancho") or 0)))
+            alt = int(round(float(p.get("alto") or 240)))
+        except (TypeError, ValueError):
+            continue
+        if anc > 0:
+            paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"), "ancho": anc, "alto": alt or 240})
+    elementos = []
+    for e in (data.get("elementos") or [])[:40]:
+        try:
+            anc = int(round(float(e.get("ancho") or 60)))
+            pos = int(round(float(e.get("posicion_cm") or 0)))
+            pidx = int(e.get("pared_idx") or 0)
+        except (TypeError, ValueError):
+            continue
+        elementos.append({
+            "id": str(e.get("id") or "mueble").lower().strip().replace(" ", "_"),
+            "label": str(e.get("label") or e.get("id") or "Módulo")[:24],
+            "pared_idx": max(0, pidx), "posicion_cm": max(0, pos), "ancho": max(10, anc),
+        })
+    if not paredes:
+        paredes = [{"nombre": "Pared principal", "ancho": ancho_real or 400, "alto": alto_real or 240}]
+    STD = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120]
+    _snap = lambda w: min(STD, key=lambda s: abs(s - w))
+    if ancho_real and paredes:
+        paredes[0]["ancho"] = ancho_real
+        if alto_real:
+            paredes[0]["alto"] = alto_real
+    norm = []
+    for pidx, pared in enumerate(paredes):
+        grupo = sorted([e for e in elementos if e["pared_idx"] == pidx], key=lambda e: e["posicion_cm"])
+        if not grupo:
+            continue
+        suma = sum(e["ancho"] for e in grupo) or 1
+        factor = pared["ancho"] / suma
+        for e in grupo:
+            e["ancho"] = max(15, _snap(e["ancho"] * factor))
+        desfase = pared["ancho"] - sum(e["ancho"] for e in grupo)
+        if desfase and grupo:
+            i = max(range(len(grupo)), key=lambda i: grupo[i]["ancho"])
+            grupo[i]["ancho"] = max(15, grupo[i]["ancho"] + desfase)
+        x = 0
+        for e in grupo:
+            e["posicion_cm"] = x; x += e["ancho"]
+        norm.extend(grupo)
+    return {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": norm or elementos, "isla": {}, "medidasReales": bool(ancho_real)}
+
+
+@router.post("/distribucion-desde-texto")
+async def distribucion_desde_texto(payload: dict):
+    """Deduce la DISTRIBUCIÓN ESTRUCTURADA a partir de la DESCRIPCIÓN de texto del
+    diseño (la que el usuario escribe para el render), no de la imagen. Así el
+    alzado técnico refleja EXACTAMENTE lo pedido (recuentos de cajones/gavetas por
+    módulo), aunque el render fotorrealista no lo respete. Devuelve {success, distribucion}."""
+    import json as _json, re as _re
+    desc = ((payload or {}).get("descripcion") or (payload or {}).get("description") or "").strip()
+    if not desc:
+        raise HTTPException(status_code=400, detail="Falta la descripción del diseño.")
+    medidas = (payload or {}).get("medidas") or {}
+    def _num(v):
+        try:
+            n = float(str(v).replace(",", ".")); return n if n > 0 else 0
+        except (TypeError, ValueError):
+            return 0
+    ancho_real = int(round(_num(medidas.get("ancho"))))
+    alto_real = int(round(_num(medidas.get("altura")))) or 240
+    try:
+        from services.llm_vision import generate_text_with_gemini
+    except Exception:
+        raise HTTPException(status_code=503, detail="IA de texto no disponible.")
+    escala = (f"\nEl ancho total de la pared principal es {ancho_real} cm: la suma de anchos de sus módulos debe coincidir.\n" if ancho_real else "\n")
+    prompt = (
+        "Eres proyectista de cocinas. A partir de esta DESCRIPCIÓN de un diseño, deduce su DISTRIBUCIÓN "
+        "estructurada, RESPETANDO LITERALMENTE lo que se pide por cada módulo (nº de puertas, cajones y "
+        "gavetas, y su orden de izquierda a derecha). Anchos típicos en cm: 15,20,30,40,45,50,60,80,90,100,120.\n"
+        + escala +
+        "Devuelve SOLO un JSON con esta forma exacta:\n"
+        "{\"tipo\":\"lineal\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240}],"
+        "\"elementos\":[{\"id\":\"cajonera\",\"label\":\"1 cajón + 2 gavetas\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":60}]}.\n"
+        "REGLAS del campo 'id' (palabras clave que entiende el dibujo): frigorifico, congelador, "
+        "columna_hornos, horno, microondas, lavavajillas, fregadero, placa, campana, despensa, vinoteca, "
+        "cajonera (para módulos con cajones/gavetas), mueble (bajo/alto de puerta normal). "
+        "Para un módulo con cajones/gavetas usa id='cajonera' y en 'label' escribe el recuento EXACTO "
+        "(p. ej. '1 cajón + 2 gavetas') para que se dibujen los frentes correctos.\n"
+        f"DESCRIPCIÓN:\n{desc}\n\n"
+        "Devuelve SOLO el JSON."
+    )
+    try:
+        text = await generate_text_with_gemini(prompt, model="gemini-2.5-pro")
+    except Exception as e:
+        logger.error(f"distribucion-desde-texto IA: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo interpretar la descripción.")
+    m = _re.search(r"\{[\s\S]*\}", text or "")
+    data = {}
+    if m:
+        try:
+            data = _json.loads(m.group())
+        except Exception:
+            data = {}
+    dist = _sanea_distribucion(data, ancho_real, alto_real)
+    if not dist.get("elementos"):
+        raise HTTPException(status_code=422, detail="No se reconocieron módulos en la descripción.")
+    return {"success": True, "distribucion": dist}

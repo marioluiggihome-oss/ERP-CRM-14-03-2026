@@ -1116,6 +1116,24 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // Alzado técnico EXACTO desde LA DESCRIPCIÓN escrita (no desde el render). Útil
+  // cuando el render fotorrealista no respeta un módulo (p. ej. "1 cajón + 2 gavetas"):
+  // el alzado vectorial se dibuja de forma determinista con el recuento exacto pedido.
+  const generarAlzadoDesdeTexto = async () => {
+    const desc = (description || '').trim();
+    if (!desc) { setError('Escribe la descripción del diseño (con los módulos) para generar el alzado exacto.'); return; }
+    if (editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dj = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: desc, medidas });
+      if (!dj?.success || !dj.distribucion) { setError(dj?.detail || 'No se pudo interpretar la descripción para dibujar el alzado.'); return; }
+      const extra = await generarPlanosExactos(dj.distribucion);
+      if (!extra.length) { setError('No se pudo generar el alzado (respuesta vacía del servicio).'); return; }
+      setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
+    } catch (e) { setError(`Error al generar el alzado desde la descripción: ${e?.message || 'error desconocido'}.`); }
+    finally { setEditing(false); }
+  };
+
   // Evita PERDER resolución entre peticiones: si el nuevo render sale más pequeño
   // que la imagen de la que partimos, lo reescala (Lanczos aprox. vía canvas) para
   // que nunca baje de la resolución previa. Devuelve un dataURL.
@@ -2696,6 +2714,13 @@ export default function AIRenderStudio({ state, setState }) {
                     title="Planta acotada + alzado alámbrico EXACTOS (vectoriales, con cotas). Modelado para cocina."
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />} Planta + alzado (técnico)
+                  </button>
+                  )}
+                  {tipo3d === 'cocina' && (
+                  <button onClick={generarAlzadoDesdeTexto} disabled={editing}
+                    title="Alzado técnico EXACTO desde tu descripción (respeta cajones/gavetas por módulo, aunque el render no lo haga)."
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 flex items-center gap-1.5">
+                    {editing ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />} Alzado desde mi descripción
                   </button>
                   )}
                   <span className="w-px h-4 bg-slate-300 mx-0.5" />
