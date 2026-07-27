@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -1046,6 +1046,48 @@ export default function AIRenderStudio({ state, setState }) {
   // Genera los planos EXACTOS (planta acotada + alzado alámbrico) a partir de una
   // distribución detectada. Devuelve las láminas listas para el historial. Si un
   // endpoint falla, propaga el error (con motivo) en lugar de tragárselo.
+  // Vista ALÁMBRICA en blanco y negro (estilo CAD tipo TeoWin), con o sin cotas.
+  // Es el mismo motor vectorial determinista: nunca hay medidas inventadas.
+  const generarVistaAlambrica = async (conCotas) => {
+    if (editing) return;
+    setEditing(true); setError(null);
+    try {
+      let distribucion = null;
+      const img = currentImage();
+      if (img) {
+        const dataUrl = await imageToDataUrl(img);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) distribucion = dj.distribucion;
+      }
+      if (!distribucion && (description || '').trim()) {
+        const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
+        if (dt?.success) distribucion = dt.distribucion;
+      }
+      if (!distribucion) {
+        setError('Necesito un render o una descripción con los módulos para dibujar la vista alámbrica.');
+        return;
+      }
+      const ar = await postJson('/api/estudio-cocinas/alzado', {
+        nombre_cliente: cliente || 'Cliente',
+        distribucion_estructurada: distribucion,
+        con_cotas: !!conCotas,
+        monocromo: true,
+      });
+      if (!ar?.alzadoBase64) { setError('No se pudo generar la vista alámbrica.'); return; }
+      const lamina = {
+        success: true,
+        result: { images: [ar.alzadoBase64] },
+        description: conCotas ? 'Vista alámbrica B/N (con medidas)' : 'Vista alámbrica B/N (sin medidas)',
+        timestamp: new Date(),
+      };
+      setRenderResult(lamina);
+      setRenderHistory(prev => [lamina, ...prev].slice(0, 14));
+      if (ar.avisos?.length) setError(`Vista generada. Revisa: ${ar.avisos.join(' · ')}`);
+    } catch (e) {
+      setError(`Error al generar la vista alámbrica: ${e?.message || 'error desconocido'}.`);
+    } finally { setEditing(false); }
+  };
+
   const generarPlanosExactos = async (distribucion) => {
     const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: distribucion });
     const [pr, ar] = await Promise.all([
@@ -2737,6 +2779,20 @@ export default function AIRenderStudio({ state, setState }) {
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />} Alzado desde mi descripción
                   </button>
+                  )}
+                  {tipo3d === 'cocina' && (
+                  <>
+                    <button onClick={() => generarVistaAlambrica(true)} disabled={editing}
+                      title="Vista alámbrica en blanco y negro (estilo CAD) CON medidas acotadas."
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-zinc-900 text-white hover:bg-black disabled:opacity-50 flex items-center gap-1.5">
+                      {editing ? <Loader size={12} className="animate-spin" /> : <Ruler size={12} />} Alámbrica c/ medidas
+                    </button>
+                    <button onClick={() => generarVistaAlambrica(false)} disabled={editing}
+                      title="Vista alámbrica en blanco y negro (estilo CAD) SIN medidas, dibujo limpio."
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-zinc-900 ring-1 ring-zinc-900 hover:bg-zinc-100 disabled:opacity-50 flex items-center gap-1.5">
+                      {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Alámbrica s/ medidas
+                    </button>
+                  </>
                   )}
                   <span className="w-px h-4 bg-slate-300 mx-0.5" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Manual:</span>

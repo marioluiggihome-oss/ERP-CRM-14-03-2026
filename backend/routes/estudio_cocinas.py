@@ -165,6 +165,8 @@ class ProyectoBase(BaseModel):
     medidas: Optional[str] = Field(default="")
     presupuesto: Optional[str] = Field(default="")
     distribucion_estructurada: Optional[DistribucionEstructurada] = Field(default=None, description="Distribución estructurada")
+    con_cotas: Optional[bool] = Field(default=True, description="Dibujar las cotas en el alzado")
+    monocromo: Optional[bool] = Field(default=False, description="Vista alámbrica en blanco y negro (estilo CAD)")
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
@@ -1590,8 +1592,16 @@ async def generar_alzado(payload: ProyectoBase):
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
-        C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
-        C_FRENTE = "#8A6D3B"; C_ENCH = "#1F6FB2"; C_HERRAJE = "#3F3F3F"
+        # Vista alámbrica: paleta CAD en blanco y negro puro (estilo TeoWin) cuando
+        # se pide `monocromo`; si no, la paleta de color habitual.
+        _mono = bool(getattr(payload, "monocromo", False))
+        if _mono:
+            C_LINE = "#000000"; C_COTA = "#000000"; C_BG = "#FFFFFF"; C_GRID = "#D9D9D9"
+            C_FRENTE = "#000000"; C_ENCH = "#000000"; C_HERRAJE = "#000000"
+        else:
+            C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
+            C_FRENTE = "#8A6D3B"; C_ENCH = "#1F6FB2"; C_HERRAJE = "#3F3F3F"
+        _con_cotas = bool(getattr(payload, "con_cotas", True))
         # Geometría REAL de fabricación (una sola fuente de verdad: kitchen_geometry).
         # Antes estas constantes no cuadraban con sus propios rótulos (la línea a 86
         # se rotulaba "90" y una cota de 76 cm decía "80"). Ahora todo se DERIVA:
@@ -1716,15 +1726,17 @@ async def generar_alzado(payload: ProyectoBase):
                     for fh in fronts:
                         yy -= fh
                         ax.plot([x, x + w], [yy, yy], color=C_FRENTE, lw=0.8, zorder=3)
-                        ax.text(x + w / 2, yy + fh / 2, f"{fh:g}", ha="center", va="center",
-                                fontsize=6, color=C_FRENTE)
+                        if _con_cotas:
+                            ax.text(x + w / 2, yy + fh / 2, f"{fh:g}", ha="center", va="center",
+                                    fontsize=6, color=C_FRENTE)
                         # Tirador horizontal centrado, junto al canto superior del frente.
                         tirador_h(ax, x + w / 2, yy + fh - 3, length=min(16, w * 0.5))
                         herr["cajones"] += 1
                     ax.text(x + w / 2, ZOC_Y - 3, label, ha="center", va="top", fontsize=6.5, color=C_LINE)
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
-                    ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, f"{label}\n{w}×{ENC_Y - ZOC_Y}", ha="center", va="center", fontsize=6.5)
+                    _txt = f"{label}\n{w}×{ENC_Y - ZOC_Y}" if _con_cotas else label
+                    ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, _txt, ha="center", va="center", fontsize=6.5)
                     # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción).
                     if tipo not in HOB:
                         tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)
@@ -1764,28 +1776,30 @@ async def generar_alzado(payload: ProyectoBase):
             # encimera y zócalo
             ax.plot([0, ancho], [ENC_Y, ENC_Y], color=C_LINE, lw=2.2, zorder=4)
             ax.plot([0, ancho], [ZOC_Y, ZOC_Y], color=C_LINE, lw=1.2, zorder=4)
-            # cotas: módulos + total + alturas
-            for (a, b, t) in cotas:
-                cota_h(ax, a, b, -12, t)
-            cota_h(ax, 0, ancho, -32, f"{ancho} cm")
-            for gy, t in ((ZOC_Y, str(ZOC_Y)), (ENC_TOP, str(ENC_TOP)), (ALTOS_Y0, str(ALTOS_Y0)),
-                          (ALTOS_Y1, str(ALTOS_Y1)), (alto, str(alto))):
-                ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
-                ax.plot([-6, 0], [gy, gy], color=C_COTA, lw=0.8)
-            # cota VERTICAL de alturas (lado derecho): tramos zócalo / bajo / alto
-            xc = ancho + 14
-            def cota_v(y0, y1, txt):
-                ax.annotate("", xy=(xc, y0), xytext=(xc, y1),
-                            arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
-                ax.text(xc + 4, (y0 + y1) / 2, txt, ha="left", va="center", fontsize=7, color=C_COTA, rotation=90)
-            for yy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
-                ax.plot([ancho, xc + 2], [yy, yy], color=C_COTA, lw=0.4, ls=":")
-            # Cotas verticales: el TEXTO se calcula del propio dibujo, así nunca
-            # puede volver a mentir respecto a lo dibujado.
-            cota_v(ZOC_Y, ENC_Y, f"{ENC_Y - ZOC_Y}")          # cuerpo del bajo (80)
-            cota_v(ENC_TOP, ALTOS_Y0, f"{_SEP_ALTOS}")        # encimera → altos (56)
-            cota_v(ALTOS_Y0, ALTOS_Y1, f"{ALTOS_Y1 - ALTOS_Y0}")  # alto (70)
-            cota_v(0, alto, f"{alto}")                        # altura total pared
+            # COTAS: solo si se piden (la vista alámbrica "limpia" va sin ellas).
+            if _con_cotas:
+                for (a, b, t) in cotas:
+                    cota_h(ax, a, b, -12, t)
+                cota_h(ax, 0, ancho, -32, f"{ancho} cm")
+                for gy, t in ((ZOC_Y, str(ZOC_Y)), (ENC_TOP, str(ENC_TOP)), (ALTOS_Y0, str(ALTOS_Y0)),
+                              (ALTOS_Y1, str(ALTOS_Y1)), (alto, str(alto))):
+                    ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
+                    ax.plot([-6, 0], [gy, gy], color=C_COTA, lw=0.8)
+                # cota VERTICAL de alturas (lado derecho): zócalo / bajo / alto
+                xc = ancho + 14
+
+                def cota_v(y0, y1, txt):
+                    ax.annotate("", xy=(xc, y0), xytext=(xc, y1),
+                                arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
+                    ax.text(xc + 4, (y0 + y1) / 2, txt, ha="left", va="center", fontsize=7,
+                            color=C_COTA, rotation=90)
+                for yy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
+                    ax.plot([ancho, xc + 2], [yy, yy], color=C_COTA, lw=0.4, ls=":")
+                # El TEXTO se calcula del propio dibujo: nunca puede mentir.
+                cota_v(ZOC_Y, ENC_Y, f"{ENC_Y - ZOC_Y}")              # cuerpo del bajo (80)
+                cota_v(ENC_TOP, ALTOS_Y0, f"{_SEP_ALTOS}")            # encimera → altos (56)
+                cota_v(ALTOS_Y0, ALTOS_Y1, f"{ALTOS_Y1 - ALTOS_Y0}")  # alto (70)
+                cota_v(0, alto, f"{alto}")                            # altura total pared
             # ENCHUFES sobre la encimera (franja salpicadero), evitando zona de placa
             ench_y = (ENC_Y + ALTOS_Y0) / 2
             ex = 45
