@@ -111,22 +111,24 @@ const ReportGenerator = ({ onOpenDocument }) => {
     }
   }, [filters]);
 
-  // Exportar a PDF
-  const exportPDF = async () => {
+  // Exportar a PDF. Con `detalle` añade el desglose COMPLETO de productos
+  // (todas las líneas, documento a documento) además del resumen.
+  const exportPDF = async (detalle = false) => {
     setExporting(true);
     try {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
-      
+      if (detalle) params.append('detalle', '1');
+
       const r = await fetch(`${API_URL}/api/reports/rentabilidad/pdf?${params.toString()}`);
       if (r.ok) {
         const blob = await r.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `informe_rentabilidad_${new Date().toISOString().slice(0,10)}.pdf`;
+        a.download = `informe_rentabilidad${detalle ? '_detallado' : ''}_${new Date().toISOString().slice(0,10)}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -191,14 +193,25 @@ const ReportGenerator = ({ onOpenDocument }) => {
             Generar
           </button>
           {report && (
-            <button
-              onClick={exportPDF}
-              disabled={exporting}
-              className="flex items-center gap-2 bg-red-500 hover:bg-red-400 px-5 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
-            >
-              {exporting ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
-              PDF
-            </button>
+            <>
+              <button
+                onClick={() => exportPDF(false)}
+                disabled={exporting}
+                className="flex items-center gap-2 bg-red-500 hover:bg-red-400 px-5 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+              >
+                {exporting ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
+                PDF
+              </button>
+              <button
+                onClick={() => exportPDF(true)}
+                disabled={exporting}
+                title="PDF superdetallado: todos los productos, documento a documento (coste, venta, margen y % por línea)"
+                className="flex items-center gap-2 bg-slate-900 hover:bg-black px-5 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+              >
+                {exporting ? <RefreshCw size={16} className="animate-spin" /> : <FileText size={16} />}
+                PDF detallado
+              </button>
+            </>
           )}
         </div>
       </div>

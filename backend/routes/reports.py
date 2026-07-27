@@ -296,9 +296,12 @@ async def generate_rentabilidad_pdf(
     revisada: Optional[str] = Query(None),
     sort_by: Optional[str] = Query("fecha"),
     sort_order: Optional[str] = Query("desc"),
+    detalle: Optional[int] = Query(0, description="1 = PDF superdetallado: TODOS los productos, documento a documento"),
 ):
     """
     Genera un PDF del informe de rentabilidad con los mismos filtros.
+    Con `detalle=1` añade el desglose COMPLETO: cada documento con todas sus
+    líneas de producto (cantidad, coste, venta, margen y % sobre coste).
     """
     from fastapi.responses import StreamingResponse
     from reportlab.lib.pagesizes import A4
@@ -410,7 +413,8 @@ async def generate_rentabilidad_pdf(
 
     # ── Helper de tabla con estilo (orden Coste · Venta · Margen · %) ────────
     def styled_table(title, headers, rows, colw, money_cols=(), margin_col=None, pct_col=None):
-        elements.append(Paragraph(title, section_style))
+        if title:
+            elements.append(Paragraph(title, section_style))
         body = [headers] + rows
         t = Table(body, colWidths=colw, repeatRows=1)
         st = [
@@ -460,6 +464,43 @@ async def generate_rentabilidad_pdf(
         rows = [[l.get("ref", "—")[:12], l.get("concepto", "")[:44], l.get("cliente", "")[:22], _eur(l.get('venta', 0)), l.get("categoria", "")] for l in data["topLines"][:15]]
         styled_table("Top líneas por venta", ["Ref", "Concepto", "Cliente", "Venta", "Categoría"],
                      rows, [52, 168, 90, 60, 78])
+
+    # ── DETALLE COMPLETO POR DOCUMENTO Y PRODUCTO (PDF superdetallado) ──────
+    if detalle:
+        from reportlab.platypus import PageBreak
+        elements.append(PageBreak())
+        elements.append(Paragraph("Detalle por documento y producto", section_style))
+        elements.append(Paragraph(
+            "<font size=7.5 color='#64748b'>Todas las líneas de los documentos incluidos en el informe. "
+            "% = margen sobre coste.</font>", styles['Normal']))
+        elements.append(Spacer(1, 4*mm))
+        for ficha in data.get("fichas", []):
+            tot = ficha.get("totals", {}) or {}
+            cab = (f"<b>{(ficha.get('ref') or '—')}</b> · {(ficha.get('cliente') or 'Sin cliente')[:46]}"
+                   f" · {(ficha.get('fecha') or '')[:10]} · {(ficha.get('docType') or '').upper()}")
+            if ficha.get("revisada"):
+                cab += f" · <font color='#059669'>revisada{(' por ' + str(ficha.get('revisadaPor'))) if ficha.get('revisadaPor') else ''}</font>"
+            elements.append(Paragraph(f"<font size=8.5 color='#0f172a'>{cab}</font>", styles['Normal']))
+            filas = []
+            for ln in ficha.get("lines", []):
+                v = float(ln.get("venta", 0) or 0)
+                c = float(ln.get("coste", 0) or 0)
+                c = -abs(c) if v < 0 else c
+                mg = v - c
+                pc = (mg / c * 100) if c > 0 else 0
+                cant = ln.get("cantidad", "")
+                filas.append([
+                    str(ln.get("ref", "") or "—")[:14],
+                    str(ln.get("concepto", "") or "")[:58],
+                    (f"{cant:g}" if isinstance(cant, (int, float)) else str(cant or "")),
+                    _eur(c), _eur(v), _eur(mg), _pct(pc),
+                ])
+            if filas:
+                filas.append(["", "TOTAL DOCUMENTO", "", _eur(tot.get("coste", 0)),
+                              _eur(tot.get("venta", 0)), _eur(tot.get("margen", 0)),
+                              _pct(tot.get("margenPct", 0))])
+                styled_table("", ["Ref", "Producto / concepto", "Uds", "Coste", "Venta", "Margen", "%"],
+                             filas, [54, 196, 30, 62, 62, 62, 40], margin_col=5, pct_col=6)
 
     # Footer sobrio (marca blanca)
     elements.append(Spacer(1, 6*mm))
