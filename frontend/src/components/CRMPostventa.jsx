@@ -38,7 +38,7 @@ export default function CRMPostventa() {
       if (tr.success) { setTickets(tr.tickets || []); setEstados(tr.estados || estados); setPrioridades(tr.prioridades || prioridades); }
       if (sr.success) setStats(sr);
     } catch { /* noop */ } finally { setCargando(false); }
-  }, [filtro]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filtro]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
