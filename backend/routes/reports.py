@@ -119,9 +119,31 @@ async def generate_rentabilidad_report(
     from server import db
 
     try:
-        # Obtener todas las fichas de rentabilidad (por líneas de documentos)
-        fichas_cursor = db["sale_fichas"].find({})
-        fichas = await fichas_cursor.to_list(length=1000)
+        # Se filtra en MONGO lo que se puede (fecha, tipo, revisada) en vez de
+        # traerlo todo y filtrar en Python. Antes se leía find({}) con tope 1000:
+        # al superar 1000 fichas el informe PERDÍA documentos EN SILENCIO y los
+        # totales salían mal sin avisar. Ahora se acota la consulta y se detecta
+        # el truncado para avisar.
+        q = {}
+        if fecha_desde or fecha_hasta:
+            rango = {}
+            if fecha_desde:
+                rango["$gte"] = fecha_desde
+            if fecha_hasta:
+                rango["$lte"] = fecha_hasta
+            q["fecha"] = rango
+        if doc_type:
+            q["docType"] = {"$regex": f"^{re.escape(doc_type)}$", "$options": "i"}
+        # OJO: `revisada` NO se empuja a Mongo. En base puede estar como booleano,
+        # como "si" o como 1 según cómo se marcara; una igualdad estricta dejaría
+        # fichas fuera. Se sigue filtrando en Python (por veracidad), que ya cubre
+        # todas las variantes.
+
+        MAX_FICHAS = 20000
+        fichas = await db["sale_fichas"].find(q).sort("fecha", -1).to_list(length=MAX_FICHAS)
+        truncado = len(fichas) >= MAX_FICHAS
+        if truncado:
+            logger.warning("reports: consulta truncada en %s fichas; el informe puede estar incompleto", MAX_FICHAS)
 
         # Coste EFECTIVO de una linea (alineado con Rentabilidad): en un ABONO
         # (venta < 0) el coste resta en negativo para que el margen sea el neto
@@ -284,6 +306,7 @@ async def generate_rentabilidad_report(
                 "max_venta": max_venta,
                 "created_by": created_by,
             },
+            "truncado": truncado,
             "summary": {
                 "totalVenta": round(total_venta, 2),
                 "totalCoste": round(total_coste, 2),
@@ -422,7 +445,7 @@ async def generate_rentabilidad_pdf(
         ("COSTE TOTAL", _eur(summary['totalCoste']), INK_H),
         ("VENTA TOTAL", _eur(summary['totalVenta']), INK_H),
         ("MARGEN BRUTO", _eur(margen_val), GREEN_H if mpos else RED_H),
-        ("% MARGEN", _pct(summary['margenPct']), GREEN_H if ppos else RED_H),
+        ("% S/COSTE", _pct(summary['margenPct']), GREEN_H if ppos else RED_H),
         ("DOCUMENTOS", str(summary['numFichas']), ACCENT_H),
         ("LÍNEAS", str(summary['numLineas']), ACCENT_H),
     ]
@@ -574,8 +597,12 @@ async def get_available_filters():
     from server import db
 
     try:
-        fichas_cursor = db["sale_fichas"].find({})
-        fichas = await fichas_cursor.to_list(length=1000)
+        # Solo se necesitan estos campos para poblar los desplegables de filtros:
+        # con proyección y un tope alto no se pierden clientes al crecer la base.
+        fichas = await db["sale_fichas"].find(
+            {}, {"_id": 0, "cliente": 1, "clienteCodigo": 1, "docType": 1,
+                 "createdByName": 1, "lines.concepto": 1}
+        ).to_list(length=20000)
 
         clientes = set()
         clientes_map = {}  # nombre -> codigo (para poder buscar por código de cliente)

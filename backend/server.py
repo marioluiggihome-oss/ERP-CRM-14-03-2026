@@ -2636,6 +2636,12 @@ async def startup_event():
         await db.sale_fichas.create_index("id", unique=True, sparse=True)
         await db.sale_fichas.create_index("createdBy", sparse=True)
         await db.sale_fichas.create_index("createdAt")
+        # Índices de los campos por los que filtran los INFORMES de rentabilidad
+        # (antes se recorría la colección entera en memoria).
+        await db.sale_fichas.create_index("fecha")
+        await db.sale_fichas.create_index("docType", sparse=True)
+        await db.sale_fichas.create_index("revisada", sparse=True)
+        await db.sale_fichas.create_index([("fecha", -1), ("docType", 1)])
         await db.sale_ficha_docs.create_index("fichaId")
         await db.google_calendar_connections.create_index("userId", unique=True, sparse=True)
         await db.google_calendar_links.create_index([("userId", 1), ("module", 1), ("erpId", 1)])
