@@ -477,7 +477,7 @@ const RentabilidadPanel = ({ currentUser }) => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div className="bg-indigo-600 text-white p-4 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Venta total</p><p className="text-2xl font-black">{eur(t.venta)}</p></div>
         <div className="bg-orange-600 text-white p-4 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Coste total</p><p className="text-2xl font-black">{eur(t.coste)}</p></div>
-        <div className={`${(t.margen || 0) >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white p-4 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Margen total</p><p className="text-2xl font-black">{eur(t.margen)}</p><p className="text-[11px] opacity-80">{t.margenPct}%</p></div>
+        <div className={`${(t.margen || 0) >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white p-4 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Margen total</p><p className="text-2xl font-black">{eur(t.margen)}</p><p className="text-[11px] opacity-80">{t.margenPct}% s/coste</p></div>
         <div className="bg-slate-800 text-white p-4 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Proyectos</p><p className="text-2xl font-black">{t.proyectos || 0}</p></div>
       </div>
 
@@ -555,7 +555,7 @@ const RentabilidadPanel = ({ currentUser }) => {
               <SortHeader col="venta" label="Venta" align="right" />
               <SortHeader col="coste" label="Coste" align="right" />
               <SortHeader col="margen" label="Margen" align="right" />
-              <SortHeader col="margenPct" label="%" align="right" />
+              <SortHeader col="margenPct" label="% s/coste" align="right" />
               <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Costes</th>
               <th className="text-center p-3 text-xs font-black uppercase">Documento</th>

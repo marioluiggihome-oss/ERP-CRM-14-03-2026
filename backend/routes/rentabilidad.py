@@ -235,7 +235,10 @@ def _enrich_row(row, ref, costs_by_cat, cobrado_by_target, alerta_pct, order=Non
             cobrado += cobrado_by_target[tid]
     row["cobrado"] = round(cobrado, 2)
     row["pendienteCobro"] = round(row["venta"] - cobrado, 2)
-    row["alertaMargen"] = bool(row["venta"] > 0 and row["margenPct"] < alerta_pct)
+    # La alerta exige COSTE cargado: con el margen sobre coste, una fila sin coste
+    # daría 0% y saltaría una alerta falsa (no es margen bajo, es que falta el coste).
+    row["sinCoste"] = bool(row["venta"] > 0 and row["coste"] <= 0)
+    row["alertaMargen"] = bool(row["venta"] > 0 and row["coste"] > 0 and row["margenPct"] < alerta_pct)
     row["costesPorCategoria"] = {k: round(v, 2) for k, v in costs_by_cat.get(ref, {}).items()}
     if order:
         venta_pedido = float(order.get("totalAmount", 0) or 0)
@@ -325,7 +328,11 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 linked_order_ids.add(order_id)
             coste = float(costs_agg.get(ref, 0))
             margen = venta - coste
-            margen_pct = (margen / venta * 100) if venta > 0 else 0
+            # MARGEN SOBRE COSTE (criterio único del ERP): es el porcentaje que
+            # hay que aplicar al coste para llegar al PVP (coste x 1,4688 = venta
+            # -> 46,88%). Si no hay coste cargado no se puede calcular el
+            # multiplicador: se deja en 0 y la fila queda marcada como sin coste.
+            margen_pct = (margen / coste * 100) if coste > 0 else 0
             tot_venta += venta
             tot_coste += coste
             rows.append({
@@ -363,7 +370,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
             venta = float(o.get("totalAmount", 0) or 0)
             coste = float(costs_agg.get(ref, 0))
             margen = venta - coste
-            margen_pct = (margen / venta * 100) if venta > 0 else 0
+            margen_pct = (margen / coste * 100) if coste > 0 else 0
             tot_venta += venta
             tot_coste += coste
             rows.append({
@@ -394,7 +401,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
             venta = float(inv.get("taxBase", inv.get("subtotal", 0)) or 0)
             coste = float(costs_agg.get(ref, 0))
             margen = venta - coste
-            margen_pct = (margen / venta * 100) if venta > 0 else 0
+            margen_pct = (margen / coste * 100) if coste > 0 else 0
             tot_venta += venta
             tot_coste += coste
             rows.append({
@@ -434,7 +441,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "venta": round(tot_venta, 2),
                 "coste": round(tot_coste, 2),
                 "margen": round(tot_margen, 2),
-                "margenPct": round((tot_margen / tot_venta * 100) if tot_venta > 0 else 0, 1),
+                "margenPct": round((tot_margen / tot_coste * 100) if tot_coste > 0 else 0, 1),
                 "proyectos": len(rows),
                 "cobrado": round(tot_cobrado, 2),
                 "pendienteCobro": round(tot_pendiente, 2),
@@ -471,7 +478,7 @@ async def rentabilidad_por_periodo(userId: Optional[str] = None):
         m["venta"] = round(m["venta"], 2)
         m["coste"] = round(m["coste"], 2)
         m["margen"] = round(m["margen"], 2)
-        m["margenPct"] = round((m["margen"] / m["venta"] * 100) if m["venta"] > 0 else 0, 1)
+        m["margenPct"] = round((m["margen"] / m["coste"] * 100) if m["coste"] > 0 else 0, 1)
     return {"periodos": out}
 
 
