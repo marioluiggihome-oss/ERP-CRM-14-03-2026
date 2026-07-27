@@ -6,8 +6,8 @@ import RentabilidadMV from './RentabilidadMV';
 // Módulo unificado de rentabilidad (solo master). Un selector Sistema: ALVIC / MV
 // enruta al motor correspondiente. Mismo coste de fabricación, distinto sistema de
 // venta. Los clientes NO lo ven (gateado a master en Cocina Desmontada).
-export default function RentabilidadUnificada({ esMaster }) {
-  const [sistema, setSistema] = useState('mv');
+export default function RentabilidadUnificada({ esMaster, sistemaInicial }) {
+  const [sistema, setSistema] = useState(sistemaInicial === 'alvic' || sistemaInicial === 'mv' ? sistemaInicial : 'mv');
   if (!esMaster) return null;
   return (
     <div className="mb-4">

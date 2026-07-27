@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp } from 'lucide-react';
+import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 import RentabilidadUnificada from './RentabilidadUnificada';
@@ -156,6 +156,8 @@ const Cascos = ({ state, setState }) => {
   const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
   const [relacionRevisar, setRelacionRevisar] = useState(null); // muebles detectados pendientes de revisar
   const [descargandoPdf, setDescargandoPdf] = useState(false);
+  const [menuImportar, setMenuImportar] = useState(false);   // menú de vías de importación
+  const [sistemaRenta, setSistemaRenta] = useState(null);    // 'alvic' | 'mv' al abrir desde el menú
   const relacionInputRef = useRef(null);
 
   // Descarga el PDF de nomenclaturas rellenable (56 familias) desde el backend.
@@ -678,26 +680,59 @@ const Cascos = ({ state, setState }) => {
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">{genCat ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} Catálogo</button>
           )}
           <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
-          {/* Importar relación de muebles desde PDF (nomenclaturas rellenadas), sin dibujo. Solo master. */}
+          {/* IMPORTAR: todas las vías de entrada agrupadas y VISIBLES (solo master).
+              Antes la de Alvic estaba enterrada tras el candado + Shift + selector,
+              así que no se encontraba. Sigue siendo master-only: el cliente no la ve. */}
           {esMasterCascos && (
-            <>
+            <div className="relative">
               <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
-              <button onClick={() => setRelacionRevisar([])}
-                title="Montar la relación de muebles en pantalla (sin PDF)"
+              <button onClick={() => setMenuImportar(v => !v)}
+                title="Importar muebles: en pantalla, desde la plantilla PDF o desde un presupuesto Alvic"
                 className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs">
-                <List size={15} /> Relación en pantalla
+                {importandoRel ? <Loader size={15} className="animate-spin" /> : <FileUp size={15} />} Importar
+                <ChevronDown size={13} className={menuImportar ? 'rotate-180 transition-transform' : 'transition-transform'} />
               </button>
-              <button onClick={() => relacionInputRef.current?.click()} disabled={importandoRel}
-                title="Importar relación de muebles desde un PDF (nomenclaturas rellenadas) — sin dibujo"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">
-                {importandoRel ? <Loader size={15} className="animate-spin" /> : <FileUp size={15} />} Importar relación
-              </button>
-              <button onClick={descargarNomenclaturas} disabled={descargandoPdf}
-                title="Descargar el PDF rellenable de nomenclaturas (56 familias)"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">
-                {descargandoPdf ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} PDF nomenclaturas
-              </button>
-            </>
+              {menuImportar && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMenuImportar(false)} />
+                  <div className="absolute right-0 mt-1 z-50 w-72 bg-white rounded-xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-700">
+                    <button onClick={() => { setMenuImportar(false); setRelacionRevisar([]); }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5">
+                      <List size={16} className="text-indigo-600 mt-0.5 shrink-0" />
+                      <span>
+                        <span className="block text-xs font-black">Relación en pantalla</span>
+                        <span className="block text-[10px] text-slate-400">Montar los muebles a mano, sin PDF</span>
+                      </span>
+                    </button>
+                    <button onClick={() => { setMenuImportar(false); relacionInputRef.current?.click(); }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-t border-slate-100">
+                      <FileUp size={16} className="text-indigo-600 mt-0.5 shrink-0" />
+                      <span>
+                        <span className="block text-xs font-black">Desde plantilla (PDF nomenclaturas)</span>
+                        <span className="block text-[10px] text-slate-400">Sube la plantilla rellenada con los códigos MV</span>
+                      </span>
+                    </button>
+                    <button onClick={() => { setMenuImportar(false); setSistemaRenta('alvic'); setShowRenta(true); }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-amber-50 flex items-start gap-2.5 border-t border-slate-100">
+                      <Package size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                      <span>
+                        <span className="block text-xs font-black">Desde presupuesto Alvic (PDF)</span>
+                        <span className="block text-[10px] text-slate-400">Proforma Alvic → equivalencia de cascos ACB</span>
+                      </span>
+                    </button>
+                    <button onClick={() => { setMenuImportar(false); descargarNomenclaturas(); }}
+                      disabled={descargandoPdf}
+                      className="w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-start gap-2.5 border-t border-slate-100 disabled:opacity-50">
+                      <Download size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                      <span>
+                        <span className="block text-xs font-black">Descargar plantilla en blanco</span>
+                        <span className="block text-[10px] text-slate-400">PDF rellenable con las 56 familias</span>
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
           {/* Candado (solo master): SOLO se abre con Shift+clic (clic normal no hace nada). */}
           {esMasterCascos && (
@@ -726,7 +761,7 @@ const Cascos = ({ state, setState }) => {
       )}
 
       {/* Módulo unificado de rentabilidad (Alvic/MV). Oculto tras el candado (solo master). */}
-      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} />}
+      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} sistemaInicial={sistemaRenta} />}
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}

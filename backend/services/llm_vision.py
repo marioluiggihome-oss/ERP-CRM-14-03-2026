@@ -444,6 +444,7 @@ async def generate_image_with_gemini(
     reference_image_base64: Optional[str] = None,
     reference_mime: str = "image/png",
     reference_images: Optional[list] = None,
+    image_size: Optional[str] = None,
 ) -> str:
     """
     Genera una imagen con Gemini a partir de un prompt (y opcionalmente una
@@ -493,18 +494,37 @@ async def generate_image_with_gemini(
     # Encuadre 16:9 apaisado (config probada y estable). Se aplica de forma
     # defensiva: si la versión del SDK no soporta ImageConfig/aspect_ratio, se
     # cae al config normal sin romper.
-    def _make_cfg(model_name=None):
+    # RESOLUCIÓN: el modelo usa 1K por defecto — de ahí que los renders salieran
+    # con poca definición. Se pide 2K por defecto (configurable con
+    # RENDER_IMAGE_SIZE) y 4K cuando quien llama lo pide expresamente.
+    _size = (image_size or os.environ.get("RENDER_IMAGE_SIZE") or "2K").upper()
+    if _size not in ("1K", "2K", "4K"):
+        _size = "2K"
+
+    def _make_cfg(model_name=None, con_tamano=True):
         try:
+            ic_kwargs = {"aspect_ratio": "16:9"}
+            if con_tamano:
+                ic_kwargs["image_size"] = _size
             return google_genai_types.GenerateContentConfig(
                 response_modalities=["IMAGE", "TEXT"],
-                image_config=google_genai_types.ImageConfig(aspect_ratio="16:9"),
+                image_config=google_genai_types.ImageConfig(**ic_kwargs),
             )
         except Exception:
             return google_genai_types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
 
     def _sync_call(model_name):
-        cfg = _make_cfg(model_name)
-        resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
+        # Si el modelo no acepta image_size (los flash antiguos), se reintenta sin
+        # él en vez de perder el render.
+        try:
+            cfg = _make_cfg(model_name, con_tamano=True)
+            resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
+        except Exception as e:
+            if "image_size" not in str(e).lower() and "invalid" not in str(e).lower():
+                raise
+            logger.info("'%s' no admite image_size=%s; reintento sin resolución", model_name, _size)
+            cfg = _make_cfg(model_name, con_tamano=False)
+            resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
         return _extract_inline_image(resp), resp
 
     loop = asyncio.get_event_loop()
