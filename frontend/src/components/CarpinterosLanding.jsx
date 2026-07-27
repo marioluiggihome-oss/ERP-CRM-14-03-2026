@@ -611,36 +611,35 @@ const STYLES = `
    secreto: pulsar el candado manteniendo Shift (escritorio) o la tecla A
    (pensado para responsive/tablet con teclado). Un toque simple no hace nada. */
 function LockGate({ onUnlock }) {
-  const held = useRef({ shift: false, a: false });
+  const longPress = useRef(null);
+  // Escritorio: se revela pulsando Shift o la tecla A. También shift+clic en el candado.
   useEffect(() => {
     const dn = (e) => {
-      if (e.key === 'Shift') held.current.shift = true;
-      if (e.key === 'a' || e.key === 'A') held.current.a = true;
-    };
-    const up = (e) => {
-      if (e.key === 'Shift') held.current.shift = false;
-      if (e.key === 'a' || e.key === 'A') held.current.a = false;
+      if (e.key === 'Shift' || e.key === 'a' || e.key === 'A') { e.preventDefault(); onUnlock(); }
     };
     window.addEventListener('keydown', dn);
-    window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', dn); window.removeEventListener('keyup', up); };
-  }, []);
-  const attempt = (e) => {
-    if (e?.shiftKey || held.current.shift || held.current.a) onUnlock();
-  };
+    return () => window.removeEventListener('keydown', dn);
+  }, [onUnlock]);
+  const onClick = (e) => { if (e.shiftKey) onUnlock(); };
+  // Móvil/responsive (sin teclado): pulsación LARGA del candado (~800 ms) lo abre.
+  const startPress = () => { longPress.current = setTimeout(onUnlock, 800); };
+  const cancelPress = () => { if (longPress.current) { clearTimeout(longPress.current); longPress.current = null; } };
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999, background: '#F5F0E7',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18,
     }}>
       <button
-        onClick={attempt}
-        onTouchEnd={attempt}
+        onClick={onClick}
+        onPointerDown={startPress}
+        onPointerUp={cancelPress}
+        onPointerLeave={cancelPress}
         aria-label="Candado"
         style={{
           width: 96, height: 96, borderRadius: 24, border: '1px solid rgba(32,26,20,.12)',
           background: '#fff', color: '#C4622D', display: 'flex', alignItems: 'center',
           justifyContent: 'center', cursor: 'pointer', boxShadow: '0 20px 50px -24px rgba(32,26,20,.4)',
+          touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none',
         }}>
         <Lock size={44} />
       </button>
