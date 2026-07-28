@@ -1398,19 +1398,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
-          {/* Nueva pestaña: Gestión de Backups - Solo Admin Principal */}
-          {state.currentUser?.isPrimaryAdmin && (
-            <button
-              onClick={() => setActiveTab('backup-management')}
-              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
-                activeTab === 'backup-management' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <Database size={16} /> Backups DB
-              </span>
-            </button>
-          )}
+          
           {/* Medidor de consumo IA por cliente - Solo Admin */}
           {state.currentUser?.isAdmin && (
             <button
@@ -3624,7 +3612,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           )}
 
           {activeTab === 'backups' && (
-            <BackupsTab
+            <div className="space-y-8">
+              {/* Copias de la BASE DE DATOS: crear, DESCARGAR y restaurar */}
+              <BackupManagementTab />
+              {/* Copia por email/Drive y exportación a Excel */}
+              <BackupsTab
               backups={backups}
               loadingBackups={loadingBackups}
               loadBackups={loadBackups}
@@ -3633,6 +3625,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               isExportingDB={isExportingDB}
               handleExportDatabase={handleExportDatabase}
             />
+            </div>
           )}
 
           {/* Maintenance Tab Content */}
@@ -3710,11 +3703,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             <UsageReportTab />
           )}
           
-          {/* Nueva pestaña: Gestión de Backups */}
-          {activeTab === 'backup-management' && (
-            <BackupManagementTab />
-          )}
-
           {/* Suscripciones SaaS */}
           {activeTab === 'subscriptions' && (
             <SubscriptionTab />

@@ -40,6 +40,29 @@ const BackupManagementTab = () => {
   // El backup corre en SEGUNDO PLANO (un volcado completo tarda minutos y antes
   // la peticion se agotaba dando "Failed to fetch"). Aqui se lanza y se consulta
   // el progreso hasta que termina.
+  // Descarga la copia .tar.gz para guardarla FUERA del servidor (Drive, disco…).
+  // El disco del contenedor es efímero: si no te la bajas, se pierde al redesplegar.
+  const descargarBackup = async (nombre) => {
+    setMessage(null);
+    try {
+      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/download/${encodeURIComponent(nombre)}`,
+        { headers: authHeader() });
+      if (!r.ok) {
+        let d = null; try { d = await r.json(); } catch { d = null; }
+        throw new Error(d?.detail || `Error ${r.status} al descargar`);
+      }
+      const blob = await r.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = nombre;
+      document.body.appendChild(a); a.click(); a.remove();
+      window.URL.revokeObjectURL(url);
+      setMessage({ type: 'success', text: `Copia descargada: ${nombre} (${(blob.size / (1024 * 1024)).toFixed(1)} MB). Súbela a Drive para conservarla.` });
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    }
+  };
+
   const createBackup = async () => {
     setCreating(true);
     setMessage(null);
@@ -218,10 +241,28 @@ const BackupManagementTab = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => restoreBackup(backup.name)}
+                    onClick={() => descargarBackup(backup.name)}
+                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors"
+                    title="Descargar esta copia para guardarla fuera del servidor (Drive, tu equipo…)"
+                  >
+                    <Download className="w-3 h-3" />
+                    Descargar
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      // RESTAURAR es la acción más destructiva del sistema: sobrescribe
+                      // TODA la base. Solo se dispara con Shift+clic, para que sea
+                      // imposible restaurar por un clic despistado.
+                      if (!e.shiftKey) {
+                        setMessage({ type: 'error',
+                          text: '⚠️ Para restaurar mantén SHIFT y haz clic. Sobrescribe todos los datos actuales.' });
+                        return;
+                      }
+                      restoreBackup(backup.name);
+                    }}
                     disabled={restoring === backup.name}
                     className="bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors disabled:opacity-50"
-                    title="Restaurar este backup"
+                    title="Restaurar (SOBRESCRIBE todo): mantén SHIFT y haz clic"
                   >
                     {restoring === backup.name ? (
                       <>

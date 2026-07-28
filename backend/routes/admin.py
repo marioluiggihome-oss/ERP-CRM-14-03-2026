@@ -176,6 +176,34 @@ async def estado_backup(user=Depends(require_admin)):
     return {"success": True, **_ESTADO_BACKUP}
 
 
+@router.get("/backup/download/{backup_name}")
+async def download_backup(backup_name: str, user=Depends(require_admin)):
+    """Descarga un backup .tar.gz para guardarlo FUERA del servidor (solo ADMIN).
+
+    Importante: /app/backups es disco EFIMERO en Railway; el fichero se pierde en
+    el siguiente redespliegue. Bajarselo es la unica forma de conservarlo.
+    """
+    import re as _re
+    from pathlib import Path as _Path
+    from fastapi.responses import FileResponse
+
+    # Solo nombres del patron esperado: evita cualquier salto de directorio
+    # (../, rutas absolutas, etc.) sobre el sistema de ficheros del servidor.
+    if not _re.fullmatch(r"luiggi_backup_\d{8}_\d{6}\.tar\.gz", backup_name or ""):
+        raise HTTPException(status_code=400, detail="Nombre de copia no válido.")
+
+    servicio = get_backup_service()
+    if not servicio:
+        raise HTTPException(status_code=500, detail="Servicio de backup no inicializado")
+
+    ruta = (_Path(servicio.backup_dir) / backup_name).resolve()
+    base = _Path(servicio.backup_dir).resolve()
+    if base not in ruta.parents or not ruta.is_file():
+        raise HTTPException(status_code=404, detail="Esa copia ya no está en el servidor (disco efímero).")
+
+    return FileResponse(path=str(ruta), media_type="application/gzip", filename=backup_name)
+
+
 @router.get("/backup/list")
 async def list_backups(user=Depends(require_admin)):
     """Listar todos los backups disponibles (solo ADMIN)"""
