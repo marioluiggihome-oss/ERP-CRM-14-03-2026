@@ -1689,9 +1689,22 @@ async def save_ficha(payload: dict, user: dict = Depends(require_rentabilidad)):
         # Ficha con visto bueno del controller: BLOQUEADA para modificaciones.
         # Solo el master puede modificarla (la UI exige el desbloqueo con Shift).
         if (payload or {}).get("id"):
-            _prev = await db.sale_fichas.find_one({"id": fid}, {"_id": 0, "revisada": 1})
-            if _prev and _prev.get("revisada") and not _is_elevated(user):
-                raise HTTPException(status_code=403, detail="Ficha revisada por el controller: bloqueada. Solo el master puede modificarla.")
+            _prev = await db.sale_fichas.find_one(
+                {"id": fid}, {"_id": 0, "revisada": 1, "lines": 1, "ref": 1})
+            if _prev and _prev.get("revisada"):
+                if not _is_elevated(user):
+                    raise HTTPException(status_code=403, detail="Ficha revisada por el controller: bloqueada. Solo el master puede modificarla.")
+                # El master SÍ puede, pero no en silencio: una ficha revisada lleva
+                # costes de compra ya cuadrados a mano y sobrescribirlos sin querer
+                # se lleva por delante ese trabajo. Se exige confirmacion explicita.
+                if not bool((payload or {}).get("forzarRevisada")):
+                    _costes_prev = sum(abs(float(l.get("coste", 0) or 0)) for l in (_prev.get("lines") or []))
+                    raise HTTPException(
+                        status_code=409,
+                        detail=(f"La ficha {_prev.get('ref') or fid} está REVISADA y tiene "
+                                f"{_costes_prev:.2f} € de coste ya cargado. Confirma que quieres "
+                                f"sobrescribirla (se perderán los costes introducidos a mano y la "
+                                f"revisión quedará caducada)."))
         lines = payload.get("lines") or []
         norm_lines = []
         for l in lines:

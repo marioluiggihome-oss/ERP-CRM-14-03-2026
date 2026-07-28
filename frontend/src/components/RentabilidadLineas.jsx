@@ -612,20 +612,38 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
     }
     setSaving(true);
     try {
-      const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: overwriteId, ref: cleanRef(editor.ref), cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
-          docType: editor.docType,
-          // Normalizar separador decimal (coma o punto) antes de guardar
-          lines: (editor.lines || []).map(l => ({
-            ...l,
-            venta: parseDecimal(l.venta),
-            coste: parseDecimal(l.coste),
-          })),
-          createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
-        }),
+      const cuerpo = (forzar) => JSON.stringify({
+        id: overwriteId, ref: cleanRef(editor.ref), cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
+        docType: editor.docType,
+        // Normalizar separador decimal (coma o punto) antes de guardar
+        lines: (editor.lines || []).map(l => ({
+          ...l,
+          venta: parseDecimal(l.venta),
+          coste: parseDecimal(l.coste),
+        })),
+        createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
+        ...(forzar ? { forzarRevisada: true } : {}),
       });
+      let r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cuerpo(false),
+      });
+      // 409 = la ficha está REVISADA y tiene costes ya cargados. No se sobrescribe
+      // sin que el usuario lo confirme: si no, se perderían los costes de compra
+      // introducidos a mano al dar el visto bueno.
+      if (r.status === 409) {
+        const info = await r.json().catch(() => ({}));
+        const seguir = window.confirm(
+          `⚠️ ${info.detail || 'Esta ficha está revisada.'}\n\n` +
+          `Aceptar = sobrescribir de todos modos · Cancelar = no tocar nada.`);
+        if (!seguir) { setSaving(false); return; }
+        r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cuerpo(true),
+        });
+      }
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.detail || 'No se pudo guardar la ficha');
+      }
       const data = await r.json();
       const fid = data?.ficha?.id;
       if (fid) {
@@ -644,7 +662,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       }
       setEditor(null);
       load();
-    } catch { alert('Error al guardar la ficha'); }
+    } catch (e) { alert(e?.message || 'Error al guardar la ficha'); }
     finally { setSaving(false); }
   };
 
