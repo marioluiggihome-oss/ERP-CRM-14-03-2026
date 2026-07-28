@@ -560,14 +560,13 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   }, [editor]);
 
   // ── Alimentar costes desde el catálogo (coste medio ponderado por artículo) ──
-  const handleAutoCostes = async () => {
+  // Por defecto SIEMPRE respeta las líneas que ya tienen coste puesto (a mano o
+  // de una importación anterior) y solo rellena las que están a 0€. Recalcular
+  // TODO desde catálogo (sobrescribiendo lo ya puesto) es una accion aparte y
+  // deliberada (handleRecalcularTodo) — antes un simple "Aceptar" en el aviso
+  // ya sobrescribia todo, demasiado facil de pulsar sin querer.
+  const handleAutoCostes = async (force = false) => {
     if (!editor || !(editor.lines || []).length) return;
-    const hasCostes = (editor.lines || []).some(l => Number(l.coste) > 0);
-    let force = false;
-    if (hasCostes) {
-      const r = window.confirm('Algunas líneas ya tienen coste.\n\nAceptar = recalcular TODAS desde el catálogo.\nCancelar = solo rellenar las que están a 0.');
-      force = r;
-    }
     setFeeding(true);
     try {
       const r = await fetch(`${API_URL}/api/rentabilidad/apply-article-costs`, {
@@ -583,6 +582,11 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       alert(`Costes alimentados: ${data.matched} de ${editor.lines.length} líneas${rev}.${sinTxt}`);
     } catch { alert('Error al alimentar los costes'); }
     finally { setFeeding(false); }
+  };
+  const handleRecalcularTodo = () => {
+    if (!editor) return;
+    const ok = window.confirm('Esto va a RECALCULAR y SOBRESCRIBIR el coste de TODAS las líneas desde el catálogo, incluidas las que ya tienen un coste puesto a mano.\n\n¿Seguro que quieres continuar?');
+    if (ok) handleAutoCostes(true);
   };
 
   // Normaliza separador decimal: acepta tanto coma como punto
@@ -1780,11 +1784,14 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   {matching ? 'Emparejando...' : 'Subir pantallazo de costes (IA empareja · o pega con Ctrl+V)'}
                   <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleCostShot} disabled={matching} />
                 </label>
-                <button onClick={handleAutoCostes} disabled={feeding} title="Rellena el coste de cada línea con el coste medio ponderado del catálogo, casando por la referencia del artículo" className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 ${feeding ? 'bg-emerald-200 text-emerald-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+                <button onClick={() => handleAutoCostes(false)} disabled={feeding} title="Rellena SOLO las líneas con coste 0€ desde el catálogo (coste medio ponderado por artículo). No toca las líneas que ya tienen coste puesto." className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 ${feeding ? 'bg-emerald-200 text-emerald-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
                   <span className={feeding ? 'animate-pulse' : ''}>💰</span>
                   {feeding ? 'Alimentando...' : 'Alimentar costes (catálogo)'}
                 </button>
                 <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Anadir linea</button>
+                <button onClick={handleRecalcularTodo} disabled={feeding} title="Sobrescribe el coste de TODAS las líneas desde el catálogo, incluidas las que ya tienen coste puesto a mano." className="text-[11px] text-slate-400 hover:text-red-600 underline font-bold ml-1">
+                  Recalcular todo (sobrescribe)
+                </button>
               </div>
 
               {/* Tabla de lineas editable */}
