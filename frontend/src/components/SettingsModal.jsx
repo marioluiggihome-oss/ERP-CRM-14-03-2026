@@ -607,6 +607,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       if (userRoleFilter === 'tienda' && u.isTienda && !u.isCarpintero) return matchesSearch;
       if (userRoleFilter === 'colaborador' && u.isPrescriptor) return matchesSearch;
       if (userRoleFilter === 'carpintero' && u.isCarpintero) return matchesSearch;
+      if (userRoleFilter === 'controller' && u.isController) return matchesSearch;
       
       return false;
     });
@@ -1559,6 +1560,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       >
                         🪚 Carpintero ({visibleUsers.filter(u => u.isCarpintero).length})
                       </button>
+                      <button
+                        onClick={() => setUserRoleFilter('controller')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'controller' ? 'bg-emerald-600 text-white shadow' : 'text-slate-600 hover:bg-emerald-100'
+                        }`}
+                      >
+                        📊 Controller ({visibleUsers.filter(u => u.isController).length})
+                      </button>
                     </div>
                   </div>
 
@@ -1598,6 +1607,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                    user.isResponsableDelegacion ? '📍 Resp. Delegación' :
                                    user.isRepresentative ? '💼 Comercial' :
                                    user.isPrescriptor ? '🤝 Colaborador' :
+                                   user.isController ? '📊 Controller (consulta)' :
                                    user.isCarpintero ? '🪚 Carpintero/Ebanista' :
                                    user.isTienda ? '🏪 Punto de Venta' : '🏪 Tienda'}
                                 </p>
@@ -2542,11 +2552,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-emerald-600" />
                               <span className="text-xs font-bold text-slate-700">Rentabilidad</span>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors"
+                              title="Perfil CONTROLLER: SOLO consulta del informe de rentabilidad. No puede modificar nada.">
                               <input type="checkbox" checked={userForm.isController === true}
                                 onChange={(e) => setUserForm({...userForm, isController: e.target.checked})}
-                                className="w-4 h-4" />
-                              <span title="Perfil CONTROLLER: SOLO consulta del informe de rentabilidad. No puede modificar nada." className="text-xs font-bold text-slate-700">Controller (solo consulta)</span>
+                                className="w-4 h-4 rounded accent-emerald-600" />
+                              <span className="text-xs font-bold text-slate-700">📊 Controller (consulta)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input type="checkbox" checked={userForm.canAccessMando === true}
