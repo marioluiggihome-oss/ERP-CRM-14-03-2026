@@ -171,6 +171,31 @@ class BackupService:
 
             logger.info(f"Backup completado: {archive_path} ({size_mb} MB, {total_docs} docs)")
 
+            # ── SUBIDA AUTOMÁTICA A GOOGLE DRIVE ──────────────────────────────
+            # Es la única copia que sobrevive: /app/backups es disco EFÍMERO en
+            # Railway. El email no sirve para este tamaño (296 MB supera de largo
+            # el límite de adjunto), así que Drive es el destino real.
+            try:
+                from services import drive_backup
+                if drive_backup.esta_configurado():
+                    subida = await asyncio.to_thread(
+                        drive_backup.subir_fichero, archive_path, f"{backup_name}.tar.gz")
+                    result["drive"] = subida
+                    if subida.get("ok"):
+                        logger.info("☁️ Copia subida a Google Drive: %s", subida.get("enlace"))
+                        # Retención en Drive (configurable): por defecto 14 copias.
+                        conservar = int(os.environ.get("DRIVE_BACKUP_RETENER", "14"))
+                        await asyncio.to_thread(drive_backup.limpiar_antiguas, conservar)
+                    else:
+                        logger.error("No se pudo subir la copia a Drive: %s", subida.get("error"))
+                else:
+                    result["drive"] = {"ok": False, "error": "Google Drive no configurado"}
+                    logger.warning("⚠️ Copia creada pero Google Drive NO está configurado: "
+                                   "se perderá en el próximo redespliegue.")
+            except Exception as e:
+                logger.error("Copia a Drive: %s", e)
+                result["drive"] = {"ok": False, "error": str(e)}
+
             await self.send_backup_email(result, archive_path)
             await self.cleanup_old_backups()
 
