@@ -272,6 +272,35 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   };
 
   // ── Subir UN documento de venta ──
+  // Al resubir una factura que ya existe (mismo tipo+numero), conserva el coste
+  // ya puesto a mano en cada linea (emparejando por ref, o si no por concepto)
+  // en vez de perderlo bajo las lineas recien leidas por la IA (que llegan con
+  // coste 0, la IA solo lee el importe de venta). Complementa la proteccion de
+  // fichas "revisadas" (esa es un aviso 409 explicito en el guardado; esto
+  // cubre el caso general de CUALQUIER duplicado, revisado o no).
+  const mergeCostsFromDup = (newLines, dup) => {
+    const oldLines = (dup && dup.lines) || [];
+    const used = new Set();
+    return newLines.map(nl => {
+      let idx = -1;
+      const nlRef = normRef(nl.ref);
+      if (nlRef) {
+        idx = oldLines.findIndex((ol, i) => !used.has(i) && normRef(ol.ref) === nlRef);
+      }
+      if (idx < 0) {
+        const nlConcepto = (nl.concepto || '').trim().toLowerCase();
+        if (nlConcepto) {
+          idx = oldLines.findIndex((ol, i) => !used.has(i) && (ol.concepto || '').trim().toLowerCase() === nlConcepto);
+        }
+      }
+      if (idx >= 0) {
+        used.add(idx);
+        return { ...nl, coste: Number(oldLines[idx].coste) || 0 };
+      }
+      return nl;
+    });
+  };
+
   const handleSaleDoc = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
@@ -285,16 +314,24 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       if (!r.ok) { alert(`Error del servidor (${r.status}): ${r.statusText}`); return; }
       const data = await r.json();
       if (!data.success) { alert(data.error || 'No se pudo leer el documento'); return; }
+
+      const cleanedRef = cleanRef(data.data.ref || '');
+      const resolvedDocType = normDocType(data.data.docType) || docType;
+      const dup = findDup(resolvedDocType, cleanedRef, null);
+      const rawLines = data.data.lines || [];
+
       setEditor({
-        ref: cleanRef(data.data.ref || ''),
+        id: dup ? dup.id : undefined,
+        ref: cleanedRef,
         cliente: data.data.cliente || '',
         clienteCodigo: data.data.clienteCodigo || '',
         fecha: data.data.fecha || '',
-        docType: normDocType(data.data.docType) || docType,
-        lines: data.data.lines || [],
+        docType: resolvedDocType,
+        lines: dup ? mergeCostsFromDup(rawLines, dup) : rawLines,
         saleDoc: { b64, name: file.name },
         costDocs: [],
         existingDocs: [],
+        overwriteOf: dup ? { ref: dup.ref, cliente: dup.cliente } : null,
       });
     } catch (err) { alert(`Error al subir el documento: ${err?.message || err}`); }
     finally { setParsing(false); }
@@ -1709,6 +1746,11 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               <button onClick={() => !saving && setEditor(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
             </div>
             <div className="p-5 overflow-y-auto">
+              {editor.overwriteOf && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800">
+                  Ya existía «{editor.overwriteOf.ref}» ({editor.overwriteOf.cliente || 'sin cliente'}). Al guardar se actualizará ese mismo documento — los costes que ya tenías puestos a mano se han conservado en las líneas donde coincide la referencia/concepto.
+                </div>
+              )}
               {/* Cabecera editable */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">N. / Ref</label>
