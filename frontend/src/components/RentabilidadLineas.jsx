@@ -1438,11 +1438,18 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           <tbody className="divide-y divide-slate-100">
             {paginatedRows.map(f => {
               const tt = f.totals || totals(f.lines);
-              // Alerta de margen bajo (<15%) solo tiene sentido si hay venta y coste registrados.
-              const alertaMargen = tt.venta > 0 && tt.coste > 0 && tt.margenPct < 15;
-              // Los ABONOS (venta <= 0) tienen margen negativo POR NATURALEZA (nota de
-              // crédito / devolución) — no son un error, así que no se marcan en rojo.
-              const esAbono = (Number(tt.venta) || 0) <= 0;
+              // Los ABONOS (venta total <= 0) tienen margen negativo POR NATURALEZA (nota
+              // de crédito / devolución) — no son un error, así que no se marcan en rojo.
+              // También cuenta el ABONO MIXTO: una línea de abono (venta < 0) dentro de una
+              // factura con más líneas de venta normal, donde el total sigue saliendo
+              // positivo pero el margen negativo/bajo es igualmente correcto (el coste
+              // efectivo de la línea de abono resta, no suma). Antes solo se miraba el
+              // signo del total, así que un abono mixto se marcaba en rojo por error.
+              const hayAbonoMixto = (f.lines || []).some(l => (Number(l.venta) || 0) < 0);
+              const esAbono = (Number(tt.venta) || 0) <= 0 || hayAbonoMixto;
+              // Alerta de margen bajo (<15%) solo tiene sentido si hay venta y coste
+              // registrados Y no es un abono (el margen bajo/negativo ahí es esperado).
+              const alertaMargen = !esAbono && tt.venta > 0 && tt.coste > 0 && tt.margenPct < 15;
               // Margen 0 o negativo (que NO sea abono): aviso SIEMPRE visible (borde rojo +
               // icono) para no dar por bueno un documento de venta sin margen.
               const margenCero = !esAbono && (Number(tt.margen) || 0) <= 0;
