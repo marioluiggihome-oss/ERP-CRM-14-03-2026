@@ -1336,6 +1336,108 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
     return {"success": True, "article": doc, "created": prev is None}
 
 
+_ARTICLE_COSTS_IMAGE_PROMPT = """Eres un experto leyendo tablas de pedidos, presupuestos o tarifas de
+proveedor (electrodomesticos, ferreteria, herrajes, tableros...). Extrae TODAS las lineas de
+producto que veas, con estas columnas si aparecen:
+- codigo: referencia/codigo del producto (ej "ED851HQ26E")
+- nombre: descripcion/nombre del producto
+- netoUnitario: precio NETO UNITARIO (por unidad), numero decimal sin simbolo de moneda.
+  Si solo aparece un neto total y la cantidad es 1, es el mismo valor. Si la cantidad es mayor
+  que 1 y solo hay total, divide entre la cantidad.
+Responde SOLO con JSON valido:
+{"articulos": [{"codigo": "", "nombre": "", "netoUnitario": 0}]}
+"""
+
+
+def _parse_orden_articulos(instruccion: str, articulos: List[Dict[str, Any]]):
+    """Interpreta la orden en texto libre que acompaña a la captura: (a) si pide
+    aplicar un % de margen sobre el neto para calcular el coste propio, y (b) si
+    pide marcar algun articulo concreto como pendiente/"sin venderse aun",
+    emparejando por palabras del nombre mencionadas en la orden. Es solo una
+    PROPUESTA: el usuario revisa y corrige antes de guardar cada articulo."""
+    instruccion = instruccion or ""
+    pct = 0.0
+    m = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:%|por ?ciento)', instruccion, re.IGNORECASE)
+    if m:
+        pct = float(m.group(1).replace(",", "."))
+
+    marcar_trigger = bool(re.search(
+        r'sin\s+vend|no\s+(?:est[aá]|se)\s*vend|todav[ií]a\s+no|a[uú]n\s+no|pendiente\s+de\s+revis',
+        instruccion, re.IGNORECASE,
+    ))
+    palabras_instr = set(w.lower() for w in re.findall(r'[a-zA-ZñÑáéíóúÁÉÍÓÚ]{4,}', instruccion))
+
+    out = []
+    for a in articulos:
+        neto = _safe_float(a.get("netoUnitario"))
+        coste = round(neto * (1 + pct / 100), 2) if pct else round(neto, 2)
+        nombre = str(a.get("nombre") or "").strip()
+        revisar = ""
+        if marcar_trigger:
+            palabras_nombre = set(w.lower() for w in re.findall(r'[a-zA-ZñÑáéíóúÁÉÍÓÚ]{4,}', nombre))
+            if palabras_nombre & palabras_instr:
+                revisar = "Sin venderse aún"
+        out.append({
+            "codigo": str(a.get("codigo") or "").strip(),
+            "nombre": nombre,
+            "netoUnitario": round(neto, 2),
+            "costeUnitario": coste,
+            "revisar": revisar,
+        })
+    return out, pct
+
+
+@router.post("/rentabilidad/parse-article-costs")
+async def parse_article_costs_image(payload: dict):
+    """Lee una captura/foto de un pedido o tarifa de proveedor y PROPONE dar de
+    alta esos articulos en el catalogo de costes, interpretando una orden en
+    texto libre (ej. "+10% para calcular nuestro costo", "la campana sin
+    venderse aun"). Solo propone: el guardado real lo hace el front llamando a
+    POST /rentabilidad/article-costs por cada articulo que el usuario confirme."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    instruccion = str((payload or {}).get("instruccion") or "")
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    _check_doc_size(stripped)
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+        from services.llm_vision import analyze_image_with_gemini
+
+        imgs = [stripped]
+        if ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped):
+            paginas = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=6) or []
+            if paginas:
+                imgs = paginas
+
+        articulos_por_codigo = {}
+        for n, img in enumerate(imgs, start=1):
+            try:
+                resp = await analyze_image_with_gemini(
+                    image_base64=img, prompt=_ARTICLE_COSTS_IMAGE_PROMPT,
+                    session_id=f"artcosts-{uuid.uuid4().hex[:8]}-p{n}",
+                )
+                parsed = _parse_json_loose(_clean_json(resp)) or {}
+            except Exception as e:
+                logger.warning(f"parse_article_costs_image: pagina {n} fallo: {e}")
+                continue
+            for a in (parsed.get("articulos") or []):
+                cod = str(a.get("codigo") or "").strip()
+                key = _normalize_ref(cod) or f"sin-codigo-{len(articulos_por_codigo)}"
+                articulos_por_codigo.setdefault(key, a)
+
+        if not articulos_por_codigo:
+            return {"success": False, "error": "No se detectaron artículos en el documento"}
+
+        articulos, pct = _parse_orden_articulos(instruccion, list(articulos_por_codigo.values()))
+        return {"success": True, "articulos": articulos, "margenAplicado": pct}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"parse_article_costs_image error: {e}")
+        return {"success": False, "error": f"Error procesando el documento: {str(e)[:200]}"}
+
+
 # Electros SIEMENS del pedido (coste = precio neto proveedor; PVP = coste + 10%).
 _SIEMENS_ELECTROS = [
     {"codigo": "WG56G2Z1ES", "nombre": "Lavadora", "coste": 339.01, "categoria": "Lavado"},
