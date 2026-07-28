@@ -140,14 +140,20 @@ class BackupService:
                 docs = await db[coll_name].find({}).to_list(length=None)
                 total_docs += len(docs)
                 out_file = db_dir / f"{coll_name}.json"
-                with open(out_file, "w", encoding="utf-8") as f:
-                    f.write(json_util.dumps(docs, ensure_ascii=False))
+                # La serializacion y la escritura a disco son BLOQUEANTES: se hacen
+                # en un hilo aparte para no congelar el bucle de eventos (si se
+                # bloquea, el servidor deja de responder a TODO y el navegador da
+                # "Failed to fetch" incluso en peticiones que nada tienen que ver).
+                def _escribir(_docs=docs, _out=out_file):
+                    with open(_out, "w", encoding="utf-8") as f:
+                        f.write(json_util.dumps(_docs, ensure_ascii=False))
+                await asyncio.to_thread(_escribir)
             client.close()
 
-            # Comprimir el backup y eliminar el directorio sin comprimir
+            # Comprimir tambien fuera del bucle (gzip es intensivo en CPU).
             archive_path = f"{backup_path}.tar.gz"
-            shutil.make_archive(str(backup_path), 'gztar', backup_path)
-            shutil.rmtree(backup_path)
+            await asyncio.to_thread(shutil.make_archive, str(backup_path), 'gztar', str(backup_path))
+            await asyncio.to_thread(shutil.rmtree, str(backup_path))
 
             size_bytes = os.path.getsize(archive_path)
             size_mb = round(size_bytes / (1024 * 1024), 2)

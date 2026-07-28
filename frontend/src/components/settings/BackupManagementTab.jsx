@@ -37,6 +37,9 @@ const BackupManagementTab = () => {
     fetchBackups();
   }, []);
 
+  // El backup corre en SEGUNDO PLANO (un volcado completo tarda minutos y antes
+  // la peticion se agotaba dando "Failed to fetch"). Aqui se lanza y se consulta
+  // el progreso hasta que termina.
   const createBackup = async () => {
     setCreating(true);
     setMessage(null);
@@ -44,14 +47,32 @@ const BackupManagementTab = () => {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/create`, {
         method: 'POST', headers: authHeader()
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        setMessage({ type: 'success', text: `Backup creado: ${data.backup_name} (${data.size_mb} MB)` });
-        fetchBackups();
-      } else {
-        throw new Error(data.detail || data.error || 'Error creando backup');
+      let data = null;
+      try { data = await response.json(); } catch { data = null; }
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.detail || data?.error || `Error ${response.status} al iniciar el backup`);
       }
+      setMessage({ type: 'success', text: 'Backup en curso… puede tardar unos minutos.' });
+
+      // Sondeo del estado cada 5 s (máx. 20 min).
+      const limite = Date.now() + 20 * 60 * 1000;
+      while (Date.now() < limite) {
+        await new Promise(r => setTimeout(r, 5000));
+        let est = null;
+        try {
+          const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/estado`, { headers: authHeader() });
+          est = await r.json();
+        } catch { continue; }   // un fallo puntual de red no aborta el sondeo
+        if (est && !est.enCurso) {
+          if (est.error) throw new Error(est.error);
+          const res = est.resultado || {};
+          setMessage({ type: 'success',
+            text: `Backup creado: ${res.backup_name || ''} ${res.size_mb ? `(${res.size_mb} MB, ${res.documents || 0} documentos)` : ''}`.trim() });
+          fetchBackups();
+          return;
+        }
+      }
+      setMessage({ type: 'error', text: 'El backup sigue en curso: vuelve a "Actualizar" en unos minutos.' });
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {

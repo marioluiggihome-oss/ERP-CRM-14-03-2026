@@ -126,19 +126,54 @@ async def cleanup_telemetry(days: int = 90, user=Depends(require_admin)):
 
 # ==================== BACKUP ENDPOINTS ====================
 
+# Estado del backup en curso: el volcado completo puede tardar minutos y la
+# peticion HTTP se agotaba antes de terminar ("Failed to fetch"). Ahora se lanza
+# en SEGUNDO PLANO y se responde al instante; el progreso se consulta aparte.
+_ESTADO_BACKUP = {"enCurso": False, "iniciado": None, "terminado": None,
+                  "resultado": None, "error": None}
+
+
 @router.post("/backup/create")
 async def create_backup(user=Depends(require_admin)):
-    """Crear un backup manual de la base de datos (solo ADMIN)"""
+    """Lanza un backup manual de la base de datos (solo ADMIN).
+
+    Devuelve inmediatamente: el volcado corre en segundo plano. Consulta el
+    progreso en GET /api/admin/backup/estado.
+    """
+    import asyncio as _asyncio
+    from datetime import datetime as _dt
+
     backup_service = get_backup_service()
     if not backup_service:
         raise HTTPException(status_code=500, detail="Servicio de backup no inicializado")
-    
-    result = await backup_service.create_backup()
-    
-    if result["success"]:
-        return result
-    else:
-        raise HTTPException(status_code=500, detail=result.get("error", "Error creando backup"))
+    if _ESTADO_BACKUP["enCurso"]:
+        return {"success": True, "enCurso": True,
+                "message": "Ya hay un backup en curso; espera a que termine."}
+
+    async def _tarea():
+        _ESTADO_BACKUP.update({"enCurso": True, "iniciado": _dt.now().isoformat(),
+                               "terminado": None, "resultado": None, "error": None})
+        try:
+            res = await backup_service.create_backup()
+            _ESTADO_BACKUP["resultado"] = res
+            if not res.get("success"):
+                _ESTADO_BACKUP["error"] = res.get("error", "Error creando backup")
+        except Exception as e:
+            logger.error(f"backup en segundo plano: {e}")
+            _ESTADO_BACKUP["error"] = str(e)
+        finally:
+            _ESTADO_BACKUP["enCurso"] = False
+            _ESTADO_BACKUP["terminado"] = _dt.now().isoformat()
+
+    _asyncio.create_task(_tarea())
+    return {"success": True, "enCurso": True,
+            "message": "Backup iniciado. Puede tardar varios minutos; se avisa al terminar."}
+
+
+@router.get("/backup/estado")
+async def estado_backup(user=Depends(require_admin)):
+    """Progreso del backup lanzado en segundo plano (solo ADMIN)."""
+    return {"success": True, **_ESTADO_BACKUP}
 
 
 @router.get("/backup/list")
