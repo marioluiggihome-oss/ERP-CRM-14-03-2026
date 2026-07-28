@@ -221,6 +221,7 @@ async def generate_rentabilidad_report(
                     "id": ficha.get("id", ""),
                     "ref": ficha.get("ref", ""),
                     "cliente": ficha.get("cliente", ""),
+                    "clienteCodigo": str(ficha.get("clienteCodigo", "") or ""),
                     "fecha": ficha_fecha,
                     "docType": ficha.get("docType", ""),
                     "createdByName": ficha.get("createdByName", ""),
@@ -243,11 +244,30 @@ async def generate_rentabilidad_report(
                 filtered_fichas.append(ficha_copy)
         
         # Ordenar
+        # Orden NATURAL del nº de documento: 'LG26/2' va antes que 'LG26/10'. Con un
+        # orden alfabético saldría al revés, que es justo lo que confunde al revisar.
+        def _clave_ref(x):
+            r = str(x.get("ref") or "")
+            m = re.match(r'^\s*([A-Za-z]*)(\d*)\s*[-/]?\s*(\d+)', r)
+            if m:
+                return (m.group(1).upper(), int(m.group(2) or 0), int(m.group(3)))
+            return (r.upper(), 0, 0)
+
+        def _clave_cliente_cod(x):
+            cod = str(x.get("clienteCodigo") or "").strip()
+            try:
+                return (0, int(cod), "")
+            except ValueError:
+                # Sin código numérico: al final, ordenado por nombre.
+                return (1, 0, str(x.get("cliente") or "").upper())
+
         sort_key_map = {
             "fecha": lambda x: x.get("fecha", ""),
             "venta": lambda x: x["totals"]["venta"],
             "margen": lambda x: x["totals"]["margen"],
             "cliente": lambda x: x.get("cliente", ""),
+            "factura": _clave_ref,          # nº de factura (orden natural)
+            "clienteCodigo": _clave_cliente_cod,   # nº de cliente
         }
         sort_fn = sort_key_map.get(sort_by, sort_key_map["fecha"])
         filtered_fichas.sort(key=sort_fn, reverse=(sort_order == "desc"))
@@ -296,9 +316,47 @@ async def generate_rentabilidad_report(
                 })
         all_lines.sort(key=lambda x: x.get("venta", 0), reverse=True)
         
+        # Desglose POR FACTURA (nº de documento) — cada documento con su coste,
+        # venta y margen, en el orden pedido.
+        by_document = [{
+            "ref": f.get("ref", "") or "—",
+            "fecha": f.get("fecha", ""),
+            "cliente": f.get("cliente", ""),
+            "clienteCodigo": f.get("clienteCodigo", ""),
+            "docType": f.get("docType", ""),
+            "revisada": bool(f.get("revisada")),
+            "lineas": len(f.get("lines") or []),
+            "coste": round(f["totals"]["coste"], 2),
+            "venta": round(f["totals"]["venta"], 2),
+            "margen": round(f["totals"]["margen"], 2),
+            "margenPct": round(f["totals"].get("margenPct") or 0, 2),
+        } for f in filtered_fichas]
+
+        # Desglose POR CLIENTE con su CÓDIGO (nº de cliente), ordenable por código.
+        por_codigo = {}
+        for f in filtered_fichas:
+            cod = str(f.get("clienteCodigo") or "").strip()
+            clave = cod or f.get("cliente", "Sin código")
+            d = por_codigo.setdefault(clave, {"codigo": cod, "cliente": f.get("cliente", ""),
+                                              "docs": 0, "coste": 0.0, "venta": 0.0, "margen": 0.0})
+            d["docs"] += 1
+            d["coste"] += f["totals"]["coste"]
+            d["venta"] += f["totals"]["venta"]
+            d["margen"] += f["totals"]["margen"]
+        by_client_code = []
+        for d in por_codigo.values():
+            d["coste"] = round(d["coste"], 2); d["venta"] = round(d["venta"], 2)
+            d["margen"] = round(d["margen"], 2)
+            d["margenPct"] = round((d["margen"] / d["coste"] * 100) if d["coste"] > 0 else 0, 2)
+            by_client_code.append(d)
+        by_client_code.sort(key=lambda x: (0, int(x["codigo"])) if str(x["codigo"]).isdigit()
+                            else (1, 0))
+
         return {
             "success": True,
             "generatedAt": datetime.utcnow().isoformat(),
+            "byDocument": by_document,
+            "byClientCode": by_client_code,
             "filters": {
                 "fecha_desde": fecha_desde,
                 "fecha_hasta": fecha_hasta,
@@ -532,6 +590,28 @@ async def generate_rentabilidad_pdf(
         rows = [[c["cliente"], str(c["docs"]), _eur(c['coste']), _eur(c['venta']), _eur(c['margen']), _pct(c['pctTotal'])] for c in data["byClient"]]
         styled_table("Por cliente", ["Cliente", "Docs", "Coste", "Venta", "Margen", "% s/total"],
                      rows, [162, 38, 76, 76, 76, 50], margin_col=4, pct_col=5, text_cols=(0,))
+
+    # ── POR FACTURA (nº de documento) ────────────────────────────────────────
+    if data.get("byDocument"):
+        rows = [[d.get("ref", "—"), (d.get("fecha") or "")[:10], d.get("cliente", ""),
+                 str(d.get("lineas", 0)), _eur(d.get('coste', 0)), _eur(d.get('venta', 0)),
+                 _eur(d.get('margen', 0)), _pct(d.get('margenPct', 0))]
+                for d in data["byDocument"]]
+        styled_table("Por factura", ["Nº factura", "Fecha", "Cliente", "Líneas",
+                                     "Coste", "Venta", "Margen", "%"],
+                     rows, [62, 46, 122, 30, 62, 62, 62, 40],
+                     margin_col=6, pct_col=7, text_cols=(0, 1, 2))
+
+    # ── POR Nº DE CLIENTE ────────────────────────────────────────────────────
+    if data.get("byClientCode"):
+        rows = [[c.get("codigo", "") or "—", c.get("cliente", ""), str(c.get("docs", 0)),
+                 _eur(c.get('coste', 0)), _eur(c.get('venta', 0)),
+                 _eur(c.get('margen', 0)), _pct(c.get('margenPct', 0))]
+                for c in data["byClientCode"]]
+        styled_table("Por nº de cliente", ["Cód.", "Cliente", "Docs", "Coste", "Venta",
+                                           "Margen", "%"],
+                     rows, [42, 160, 34, 66, 66, 66, 42],
+                     margin_col=5, pct_col=6, text_cols=(0, 1))
 
     # Top líneas por venta
     if data["topLines"]:

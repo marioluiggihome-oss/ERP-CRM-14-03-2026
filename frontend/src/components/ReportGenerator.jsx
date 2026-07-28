@@ -379,9 +379,11 @@ const ReportGenerator = ({ onOpenDocument }) => {
                     className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                   >
                     <option value="fecha">Fecha</option>
+                    <option value="factura">Nº de factura</option>
+                    <option value="clienteCodigo">Nº de cliente</option>
                     <option value="venta">Venta</option>
                     <option value="margen">Margen</option>
-                    <option value="cliente">Cliente</option>
+                    <option value="cliente">Cliente (nombre)</option>
                   </select>
                   <button
                     onClick={() => setFilters(prev => ({ ...prev, sort_order: prev.sort_order === 'desc' ? 'asc' : 'desc' }))}
