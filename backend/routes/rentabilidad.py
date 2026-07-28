@@ -1978,12 +1978,14 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
             fic = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0, "lines": 1})
             _lineas = (fic or {}).get("lines", []) or []
             tt = _ficha_totals(_lineas)
-            # Los abonos/rectificativas (venta total <= 0) sí se pueden revisar (margen negativo correcto).
-            es_abono = (tt.get("venta") or 0) <= 0
             # ¿Hay abono MEZCLADO con ventas? (alguna línea con venta negativa). En
-            # ese caso el coste NETO puede salir negativo aunque todas las líneas
-            # tengan su coste, y eso es correcto: no es "falta de costes".
+            # ese caso el coste NETO puede salir negativo/bajo aunque todas las líneas
+            # tengan su coste, y eso es correcto: no es "falta de costes" ni un margen
+            # erroneo, aunque el TOTAL de venta de la ficha siga siendo positivo.
             hay_abono_mixto = any(float(l.get("venta", 0) or 0) < 0 for l in _lineas)
+            # Los abonos/rectificativas (venta total <= 0, o abono mezclado dentro de
+            # la factura) sí se pueden revisar (margen negativo/bajo correcto).
+            es_abono = (tt.get("venta") or 0) <= 0 or hay_abono_mixto
             # "Sin costes cargados" es que NINGUNA línea tenga coste, no que el neto
             # sea <= 0. Antes se confundían y bloqueaba facturas con abono dentro.
             sin_costes = not any(abs(float(l.get("coste", 0) or 0)) > 0 for l in _lineas)
