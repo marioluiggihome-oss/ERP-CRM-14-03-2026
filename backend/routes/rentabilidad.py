@@ -1817,6 +1817,20 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
             "revisadaAt": now if revisada else "",
             "updatedAt": now,
         }
+        # HUELLA DE LA REVISIÓN: se guarda SOBRE QUÉ se dio el visto bueno (venta,
+        # coste y nº de líneas). Antes solo se guardaba quién y cuándo, así que si
+        # las líneas cambiaban después el sello seguía puesto sobre datos distintos
+        # y nadie se enteraba. Con la huella, el sistema detecta solo que una
+        # revisión se ha quedado obsoleta.
+        if revisada:
+            _tt = _ficha_totals(_lineas)
+            upd["revisadaVenta"] = round(_tt.get("venta") or 0, 2)
+            upd["revisadaCoste"] = round(_tt.get("coste") or 0, 2)
+            upd["revisadaLineas"] = len(_lineas)
+        else:
+            upd["revisadaVenta"] = None
+            upd["revisadaCoste"] = None
+            upd["revisadaLineas"] = None
         await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
         # Auditoria de la revisión (marcar/desmarcar): quién, cuándo y sobre qué factura.
         try:
@@ -2475,3 +2489,61 @@ async def verificar_listado(payload: dict, user: dict = Depends(require_rentabil
             "faltanPorImportar": faltan, "descuadres": descuadres,
             "resumen": {"noImportadas": len(faltan), "conDescuadre": len(descuadres),
                         "importeNoRegistrado": round(sum(-d["diferencia"] for d in descuadres if d["diferencia"] < 0), 2)}}
+
+
+@router.get("/rentabilidad/auditoria-revisiones")
+async def auditoria_revisiones(user: dict = Depends(require_rentabilidad)):
+    """DIAGNÓSTICO (solo lectura, no modifica NADA) del estado de las revisiones.
+
+    Clasifica las fichas ya marcadas como revisadas en:
+      · coherente        -> los totales actuales coinciden con la huella de la revisión
+      · caducada         -> la ficha CAMBIÓ después de revisarse (venta/coste/nº líneas)
+      · sinHuella        -> se revisó antes de existir la huella: no se puede saber
+                            sobre qué se dio el visto bueno, hay que reverificarla
+    Y marca las sospechosas del fallo de coste (se cargó la tarifa BRUTA en vez del
+    neto con descuento): margen negativo con todas las líneas costeadas.
+    """
+    fichas = await db.sale_fichas.find(
+        {"revisada": True},
+        {"_id": 0, "id": 1, "ref": 1, "cliente": 1, "fecha": 1, "docType": 1,
+         "lines": 1, "revisadaPor": 1, "revisadaAt": 1,
+         "revisadaVenta": 1, "revisadaCoste": 1, "revisadaLineas": 1,
+         "convertidoAId": 1},
+    ).to_list(20000)
+
+    coherentes, caducadas, sin_huella, sospechosas = [], [], [], []
+    for f in fichas:
+        if f.get("convertidoAId"):
+            continue
+        lineas = f.get("lines") or []
+        tt = _ficha_totals(lineas)
+        base = {"id": f.get("id"), "ref": f.get("ref", ""), "cliente": f.get("cliente", ""),
+                "fecha": f.get("fecha", ""), "revisadaPor": f.get("revisadaPor", ""),
+                "revisadaAt": (f.get("revisadaAt") or "")[:10],
+                "venta": round(tt.get("venta") or 0, 2),
+                "coste": round(tt.get("coste") or 0, 2),
+                "margen": round(tt.get("margen") or 0, 2),
+                "lineas": len(lineas)}
+
+        # Sospecha del fallo de coste: margen negativo teniendo costes cargados.
+        con_coste = [l for l in lineas if abs(float(l.get("coste", 0) or 0)) > 0]
+        if (tt.get("venta") or 0) > 0 and con_coste and (tt.get("margen") or 0) < 0:
+            sospechosas.append({**base, "motivo": "margen negativo con costes cargados"})
+
+        rv, rc, rl = f.get("revisadaVenta"), f.get("revisadaCoste"), f.get("revisadaLineas")
+        if rv is None and rc is None and rl is None:
+            sin_huella.append(base)
+            continue
+        dif_v = round(base["venta"] - float(rv or 0), 2)
+        dif_c = round(base["coste"] - float(rc or 0), 2)
+        if abs(dif_v) > 0.02 or abs(dif_c) > 0.02 or (rl is not None and rl != base["lineas"]):
+            caducadas.append({**base, "revisadaVenta": rv, "revisadaCoste": rc,
+                              "revisadaLineas": rl, "difVenta": dif_v, "difCoste": dif_c})
+        else:
+            coherentes.append(base)
+
+    return {"success": True,
+            "resumen": {"revisadas": len(coherentes) + len(caducadas) + len(sin_huella),
+                        "coherentes": len(coherentes), "caducadas": len(caducadas),
+                        "sinHuella": len(sin_huella), "sospechosasCoste": len(sospechosas)},
+            "caducadas": caducadas, "sinHuella": sin_huella, "sospechosas": sospechosas}
