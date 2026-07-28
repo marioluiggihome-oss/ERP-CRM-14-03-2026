@@ -735,20 +735,37 @@ async def parse_invoice(payload: dict):
                 )
                 parsed = _parse_json_loose(_clean_json(resp))
         if parsed is None:
-            # Escaneada o imagen: usar vision sobre la primera pagina/imagen.
-            img = stripped
+            # Escaneada o imagen: visión sobre TODAS las páginas. Antes solo leía la
+            # primera (max_pages=1) y en una factura de 2 hojas el IMPORTE TOTAL —que
+            # va en la última— no se leía o se cogía un subtotal equivocado.
             image_mime = mime if mime and mime.startswith("image/") else "image/jpeg"
+            imgs = [stripped]
             if is_pdf:
-                pages = pdf_base64_to_png_base64(stripped, dpi=180, max_pages=1) or []
-                if pages:
-                    img = pages[0]
+                paginas = pdf_base64_to_png_base64(stripped, dpi=180, max_pages=8) or []
+                if paginas:
+                    imgs = paginas
                     image_mime = "image/png"
-            resp = await analyze_image_with_gemini(
-                image_base64=img, prompt=_INVOICE_PROMPT,
-                session_id=f"invoice-{uuid.uuid4().hex[:8]}", model="gemini-2.5-flash",
-                image_mime=image_mime,
-            )
-            parsed = _parse_json_loose(_clean_json(resp))
+            parsed = {}
+            for n, img in enumerate(imgs, start=1):
+                try:
+                    resp = await analyze_image_with_gemini(
+                        image_base64=img, prompt=_INVOICE_PROMPT,
+                        session_id=f"invoice-{uuid.uuid4().hex[:8]}-p{n}",
+                        model="gemini-2.5-flash", image_mime=image_mime,
+                    )
+                    pg = _parse_json_loose(_clean_json(resp)) or {}
+                except Exception as e:
+                    logger.warning(f"parse_invoice: página {n} falló: {e}")
+                    continue
+                for k, v in pg.items():
+                    # Cabecera: se queda el primer valor no vacío. Importes: gana el
+                    # de la ÚLTIMA página que lo traiga (es la del total).
+                    if k in ("importe", "total", "base"):
+                        if _safe_float(v):
+                            parsed[k] = v
+                    elif v and not parsed.get(k):
+                        parsed[k] = v
+            parsed = parsed or None
 
         if not parsed:
             return {"success": False, "error": "No se pudieron extraer datos de la factura"}
@@ -992,17 +1009,37 @@ async def parse_sale_doc(payload: dict):
                 parsed = _parse_json_loose(_clean_json(resp))
         if parsed is None:
             logger.info("parse_sale_doc: falling back to vision")
-            img = stripped
+            # TODAS las páginas, no solo la primera. Antes iba con max_pages=1: en una
+            # factura escaneada de 2 páginas se perdían LAS LÍNEAS DE LA PÁGINA 2 sin
+            # avisar, y el total y el margen salían mal.
+            imgs = [stripped]
             if is_pdf:
-                pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
-                if pages:
-                    img = pages[0]
-            resp = await analyze_image_with_gemini(
-                image_base64=img, prompt=_SALE_LINES_PROMPT,
-                session_id=f"saledoc-{uuid.uuid4().hex[:8]}",
-            )
-            logger.info(f"parse_sale_doc: vision resp len={len(resp or '')}")
-            parsed = _parse_json_loose(_clean_json(resp))
+                paginas = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=12) or []
+                if paginas:
+                    imgs = paginas
+            logger.info(f"parse_sale_doc: visión sobre {len(imgs)} página(s)")
+            todas = []
+            cabecera = {}
+            for n, img in enumerate(imgs, start=1):
+                try:
+                    resp = await analyze_image_with_gemini(
+                        image_base64=img, prompt=_SALE_LINES_PROMPT,
+                        session_id=f"saledoc-{uuid.uuid4().hex[:8]}-p{n}",
+                    )
+                    pg = _parse_json_loose(_clean_json(resp)) or {}
+                except Exception as e:
+                    logger.warning(f"parse_sale_doc: página {n} falló: {e}")
+                    continue
+                if isinstance(pg.get("lineas"), list):
+                    todas.extend(pg["lineas"])
+                # La cabecera (ref, cliente, fecha) suele venir en la 1ª página; se
+                # conserva la primera no vacía de cada campo.
+                for k in ("docType", "ref", "cliente", "clienteCodigo", "fecha"):
+                    if not cabecera.get(k) and pg.get(k):
+                        cabecera[k] = pg[k]
+            if todas:
+                parsed = {**cabecera, "lineas": todas}
+                logger.info(f"parse_sale_doc: {len(todas)} líneas de {len(imgs)} página(s)")
 
         if not parsed or not isinstance(parsed.get("lineas"), list):
             logger.warning(f"parse_sale_doc: parsed={parsed}")
@@ -1056,18 +1093,39 @@ async def match_line_costs(payload: dict):
         )
         prompt = _COST_MATCH_PROMPT_HEAD + listado
 
-        img = stripped
+        # Documento de costes MULTIPÁGINA (un albarán de proveedor suele tener
+        # varias hojas): se recorren TODAS y se acumulan las asignaciones. Antes
+        # solo se miraba la primera y los costes de las demás no se cargaban.
+        imgs = [stripped]
         if ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped):
-            pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
-            if pages:
-                img = pages[0]
+            paginas = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=8) or []
+            if paginas:
+                imgs = paginas
 
-        resp = await analyze_image_with_gemini(
-            image_base64=img, prompt=prompt,
-            session_id=f"costmatch-{uuid.uuid4().hex[:8]}",
-        )
-        parsed = _parse_json_loose(_clean_json(resp)) or {}
-        asignaciones = parsed.get("asignaciones") or []
+        asignaciones = []
+        vistos = set()
+        for n, img in enumerate(imgs, start=1):
+            try:
+                resp = await analyze_image_with_gemini(
+                    image_base64=img, prompt=prompt,
+                    session_id=f"costmatch-{uuid.uuid4().hex[:8]}-p{n}",
+                )
+                pg = _parse_json_loose(_clean_json(resp)) or {}
+            except Exception as e:
+                logger.warning(f"match_line_costs: página {n} falló: {e}")
+                continue
+            for a in (pg.get("asignaciones") or []):
+                # Una línea solo se asigna una vez (gana la primera página que la
+                # encuentre), para que una hoja de totales no pise los costes.
+                try:
+                    idx = int(a.get("indice"))
+                except Exception:
+                    continue
+                if idx in vistos:
+                    continue
+                vistos.add(idx)
+                asignaciones.append(a)
+        logger.info("match_line_costs: %s asignaciones de %s página(s)", len(asignaciones), len(imgs))
 
         # Aplicar costes sobre una copia de las lineas
         out_lines = [dict(l) for l in lines]
@@ -2318,3 +2376,84 @@ async def normalize_refs(user: dict = Depends(require_rentabilidad)):
         "skipped": skipped,
         "message": f"Normalizadas {updated} referencias. {skipped} ya estaban correctas."
     }
+
+
+# ─── VERIFICACIÓN CONTRA EL LISTADO OFICIAL DE FACTURAS ────────────────────────
+@router.post("/rentabilidad/verificar-listado")
+async def verificar_listado(payload: dict, user: dict = Depends(require_rentabilidad)):
+    """Contrasta las fichas importadas contra el LISTADO OFICIAL de facturas.
+
+    Se sube el informe de facturas (PDF con nº, fecha, cliente y BASE). Para cada
+    factura del listado se compara su base con la VENTA de la ficha importada:
+      · falta        -> la factura no está importada
+      · descuadre    -> la venta importada no coincide con la base oficial; es el
+                        sintoma tipico de una factura de VARIAS PAGINAS a la que le
+                        faltan las lineas de las paginas siguientes.
+    Devuelve el detalle para poder reimportarlas.
+    """
+    import re as _r
+    import base64 as _b64
+    b64 = (payload or {}).get("fileBase64") or ""
+    texto = (payload or {}).get("texto") or ""
+    if b64 and not texto:
+        raw = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+        try:
+            from services.pdf_utils import pdf_base64_to_text
+            texto = pdf_base64_to_text(raw) or ""
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"No se pudo leer el PDF: {e}")
+    if not texto.strip():
+        raise HTTPException(status_code=400, detail="Sube el PDF del listado de facturas (o pega su texto).")
+
+    # Parseo del listado: 'LG26-7  13/02/2026' y despues los importes de la fila.
+    lineas = [l.strip() for l in texto.split("\n") if l.strip()]
+    oficiales = []
+    for i, l in enumerate(lineas):
+        m = _r.match(r'^([A-Z]{2}\d{2})-(\d+)\s+(\d{2}/\d{2}/\d{4})$', l)
+        if not m:
+            continue
+        serie, num, fecha = m.group(1), m.group(2), m.group(3)
+        nums = []
+        for x in lineas[i + 1:i + 10]:
+            try:
+                nums.append(float(x.replace('.', '').replace(',', '.')))
+            except ValueError:
+                pass
+        if len(nums) >= 6:
+            oficiales.append({"ref": f"{serie}/{num}", "refAlt": f"{serie}-{num}",
+                              "fecha": fecha, "base": nums[2], "total": nums[5]})
+    if not oficiales:
+        raise HTTPException(status_code=422, detail="No se reconoció ninguna factura en el listado.")
+
+    fichas = await db.sale_fichas.find({}, {"_id": 0, "id": 1, "ref": 1, "cliente": 1,
+                                            "lines": 1, "convertidoAId": 1}).to_list(20000)
+    def _norm(r):
+        return _r.sub(r'[^A-Z0-9]', '', str(r or '').upper())
+    idx = {}
+    for f in fichas:
+        if f.get("convertidoAId"):
+            continue
+        idx.setdefault(_norm(f.get("ref")), f)
+
+    faltan, descuadres, ok = [], [], 0
+    TOL = 0.02   # 2 céntimos de tolerancia por redondeos
+    for o in oficiales:
+        f = idx.get(_norm(o["ref"])) or idx.get(_norm(o["refAlt"]))
+        if not f:
+            faltan.append(o)
+            continue
+        venta = sum(float(l.get("venta", 0) or 0) for l in (f.get("lines") or []))
+        dif = round(venta - o["base"], 2)
+        if abs(dif) > TOL:
+            descuadres.append({**o, "fichaId": f.get("id"), "cliente": f.get("cliente", ""),
+                               "ventaImportada": round(venta, 2), "diferencia": dif,
+                               "lineas": len(f.get("lines") or []),
+                               "sospechaPaginasPerdidas": dif < 0})
+        else:
+            ok += 1
+
+    descuadres.sort(key=lambda x: x["diferencia"])
+    return {"success": True, "enListado": len(oficiales), "correctas": ok,
+            "faltanPorImportar": faltan, "descuadres": descuadres,
+            "resumen": {"noImportadas": len(faltan), "conDescuadre": len(descuadres),
+                        "importeNoRegistrado": round(sum(-d["diferencia"] for d in descuadres if d["diferencia"] < 0), 2)}}
