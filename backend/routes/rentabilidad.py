@@ -1713,13 +1713,23 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
         # No dar el visto bueno a una factura con margen 0/negativo o sin costes cargados.
         if revisada:
             fic = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0, "lines": 1})
-            tt = _ficha_totals((fic or {}).get("lines", []))
+            _lineas = (fic or {}).get("lines", []) or []
+            tt = _ficha_totals(_lineas)
             # Los abonos/rectificativas (venta total <= 0) sí se pueden revisar (margen negativo correcto).
             es_abono = (tt.get("venta") or 0) <= 0
+            # ¿Hay abono MEZCLADO con ventas? (alguna línea con venta negativa). En
+            # ese caso el coste NETO puede salir negativo aunque todas las líneas
+            # tengan su coste, y eso es correcto: no es "falta de costes".
+            hay_abono_mixto = any(float(l.get("venta", 0) or 0) < 0 for l in _lineas)
+            # "Sin costes cargados" es que NINGUNA línea tenga coste, no que el neto
+            # sea <= 0. Antes se confundían y bloqueaba facturas con abono dentro.
+            sin_costes = not any(abs(float(l.get("coste", 0) or 0)) > 0 for l in _lineas)
             if not es_abono and (tt.get("margen") or 0) <= 0:
                 raise HTTPException(status_code=400, detail="No se puede marcar como revisada: el margen es 0 o negativo. Revisa venta/costes.")
-            if (tt.get("venta") or 0) > 0 and not (tt.get("coste") or 0) > 0:
+            if (tt.get("venta") or 0) > 0 and sin_costes:
                 raise HTTPException(status_code=400, detail="No se puede marcar como revisada: la factura no tiene costes cargados (margen no real).")
+            if (tt.get("venta") or 0) > 0 and not sin_costes and (tt.get("coste") or 0) <= 0 and not hay_abono_mixto:
+                raise HTTPException(status_code=400, detail="No se puede marcar como revisada: el coste total no es coherente. Revisa las líneas.")
         now = datetime.now(timezone.utc).isoformat()
         upd = {
             "revisada": revisada,

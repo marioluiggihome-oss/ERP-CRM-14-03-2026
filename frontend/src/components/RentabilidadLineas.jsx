@@ -253,7 +253,10 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
     const coste = (lines || []).reduce((s, l) => s + costeEfectivo(l.venta, l.coste), 0);
     const margen = venta - coste;
     // % unificado = incremento sobre el coste (margen / coste), coherente con el resto de la app
-    return { venta, coste, margen, margenPct: coste > 0 ? (margen / coste * 100) : 0 };
+    // Con coste <= 0 (p. ej. un abono que deja el coste neto negativo) el % sobre
+    // coste NO es calculable: se devuelve null para mostrar 'n/a' y no un 0% que
+    // haría pensar que no hay margen cuando sí lo hay en euros.
+    return { venta, coste, margen, margenPct: coste > 0 ? (margen / coste * 100) : null };
   };
 
   // Normaliza el tipo de documento detectado por la IA a uno de los 4 válidos.
@@ -781,7 +784,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           clean(f.cliente || '-') + (f.clienteCodigo ? ` (${f.clienteCodigo})` : ''),
           f.fecha || '-',
           eur(tt.coste), eur(tt.venta), eur(tt.margen),
-          `${(Number(tt.margenPct) || 0).toFixed(2)}%`,
+          (tt.margenPct == null ? 'n/a' : `${Number(tt.margenPct).toFixed(2)}%`),
         ];
       });
 
@@ -1776,7 +1779,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                   <div className="bg-orange-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-orange-500 font-black">Coste</p><p className="text-lg font-black text-orange-700">{eur(et.coste)}</p></div>
                   <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(et.venta)}</p></div>
-                  <div className={`${et.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${et.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Beneficio ({et.coste > 0 ? (et.margen / et.coste * 100).toFixed(1) : '0.00'}%)</p><p className={`text-lg font-black ${et.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(et.margen)}</p></div>
+                  <div className={`${et.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${et.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Beneficio ({et.coste > 0 ? `${(et.margen / et.coste * 100).toFixed(1)}%` : 'n/a'})</p><p className={`text-lg font-black ${et.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(et.margen)}</p></div>
                 </div>
               )}
             </div>
