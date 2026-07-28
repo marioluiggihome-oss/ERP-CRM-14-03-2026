@@ -29,14 +29,32 @@ try:
     from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS
 
     async def require_rentabilidad(user: dict = Depends(require_auth)):
-        if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or user.get("canAccessRentabilidad"):
+        if (any(user.get(f) for f in ADMIN_ROLE_FLAGS)
+                or user.get("canAccessRentabilidad") or user.get("isController")):
             return user
         raise HTTPException(status_code=403, detail="Sin acceso al módulo de Rentabilidad")
-    _RENTA_DEPS = [Depends(require_rentabilidad)]
+
+    async def solo_lectura_controller(request: Request, user: dict = Depends(require_auth)):
+        """El perfil CONTROLLER es de CONSULTA: puede leer el informe de
+        rentabilidad, pero no modificar nada. Se bloquea a nivel de método HTTP
+        (no solo ocultando botones), asi que ninguna llamada directa a la API
+        puede saltarselo."""
+        es_controller = bool(user.get("isController")) and not any(
+            user.get(f) for f in ADMIN_ROLE_FLAGS)
+        if es_controller and request.method.upper() not in ("GET", "HEAD", "OPTIONS"):
+            raise HTTPException(
+                status_code=403,
+                detail="Perfil de consulta: el controller puede ver el informe pero no modificar datos.")
+        return user
+
+    _RENTA_DEPS = [Depends(require_rentabilidad), Depends(solo_lectura_controller)]
 except Exception:  # pragma: no cover - fallback si no hay jwt_service
     ADMIN_ROLE_FLAGS = ()
 
     async def require_rentabilidad():
+        return {}
+
+    async def solo_lectura_controller():
         return {}
     _RENTA_DEPS = []
 

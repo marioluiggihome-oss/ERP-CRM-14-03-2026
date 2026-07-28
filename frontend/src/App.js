@@ -423,7 +423,12 @@ const App = () => {
     const _canP2 = user.canUsePresupuestador2 !== false;
     const _defaultBudgetTab = _canP2 ? 'presupuestador2' : 'budget';
     // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
-    const _landingTab = _floorOnly
+    // CONTROLLER (solo consulta): entra directo al informe de rentabilidad.
+    const _soloController = !!user.isController && !(user.isAdmin || user.isGerente
+      || user.isDirectorComercial || user.isDirectorFabrica || user.isResponsableDelegacion);
+    const _landingTab = _soloController
+      ? 'rentabilidad'
+      : _floorOnly
       ? 'luiggifloor'
       : _crmOnly
         ? 'crm-calendar'
@@ -795,6 +800,34 @@ const App = () => {
     _u.canUseDigitalizador || _u.canAccessMontajes || (_u.allowedModules && _u.allowedModules.length > 0) ||
     _u.canManageCarpinteroUsers  // Admin de división carpinteros: entra a la app completa con panel Master
   );
+  // CONTROLLER en modo consulta: SOLO el informe de rentabilidad, sin barra de
+  // módulos ni acceso al resto de la aplicación.
+  const _soloControllerUI = !!_u.isController && !(_u.isAdmin || _u.isGerente
+    || _u.isDirectorComercial || _u.isDirectorFabrica || _u.isResponsableDelegacion) && !_hasOtherAccess;
+  if (_soloControllerUI) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between">
+          <span className="text-xs font-black uppercase tracking-widest">
+            Informe de rentabilidad · <span className="text-emerald-400">Consulta</span>
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-slate-300">{_u.clientName || _u.username}</span>
+            <button onClick={async () => { await authLogout(); setState(p => ({ ...p, currentUser: null })); }}
+              className="text-[11px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg">
+              Salir
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={<div className="p-6 text-slate-400">Cargando…</div>}>
+            <RentabilidadPanel currentUser={state.currentUser} />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
+
   if (state.currentUser?.isPrescriptor && !_hasOtherAccess) {
     return (
       <div className="min-h-screen bg-slate-950">

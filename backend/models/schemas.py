@@ -101,6 +101,8 @@ class UserModelInternal(BaseModel):
     canAccessMontajes: bool = False  # Acceso a la agenda de montajes
     canManageOrders: bool = False  # Gestión de órdenes de fabricación
     canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
+    # Perfil CONTROLLER: SOLO consulta del informe de rentabilidad (sin escritura).
+    isController: bool = False
     canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
@@ -144,6 +146,8 @@ class UserResponse(BaseModel):
     canAccessFabrica: bool = False  # Acceso al portal de fábrica
     canManageOrders: bool = False  # Gestión de órdenes de fabricación
     canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
+    # Perfil CONTROLLER: SOLO consulta del informe de rentabilidad (sin escritura).
+    isController: bool = False
     canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
@@ -187,6 +191,8 @@ class UserCreate(BaseModel):
     canAccessFabrica: bool = False  # Acceso al portal de fábrica
     canManageOrders: bool = False  # Gestión de órdenes de fabricación
     canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
+    # Perfil CONTROLLER: SOLO consulta del informe de rentabilidad (sin escritura).
+    isController: bool = False
     canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False

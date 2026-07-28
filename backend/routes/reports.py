@@ -21,7 +21,10 @@ try:
     from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS
 
     async def require_reports_access(user: dict = Depends(require_auth)):
-        if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or user.get("canAccessRentabilidad"):
+        # El perfil CONTROLLER entra aqui: los informes son de solo lectura (GET),
+        # que es justo lo que debe poder consultar.
+        if (any(user.get(f) for f in ADMIN_ROLE_FLAGS)
+                or user.get("canAccessRentabilidad") or user.get("isController")):
             return user
         raise HTTPException(status_code=403, detail="Sin acceso a los informes de rentabilidad")
     _REPORTS_DEPS = [Depends(require_reports_access)]

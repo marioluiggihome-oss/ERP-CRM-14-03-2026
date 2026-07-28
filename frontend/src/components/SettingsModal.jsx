@@ -22,7 +22,7 @@ const CAPABILITY_KEYS = [
   'canAccessCRM', 'canAccessGastos', 'canAccessFabrica', 'canAccessMontajes', 'isMontador',
   'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
-  'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
+  'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando', 'isController',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
   'canUseRender360', 'canUse4K', 'canUseAmueblado',
 ];
@@ -2541,6 +2541,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canAccessRentabilidad: e.target.checked})}
                                 className="w-4 h-4 rounded accent-emerald-600" />
                               <span className="text-xs font-bold text-slate-700">Rentabilidad</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="checkbox" checked={userForm.isController === true}
+                                onChange={(e) => setUserForm({...userForm, isController: e.target.checked})}
+                                className="w-4 h-4" />
+                              <span title="Perfil CONTROLLER: SOLO consulta del informe de rentabilidad. No puede modificar nada." className="text-xs font-bold text-slate-700">Controller (solo consulta)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input type="checkbox" checked={userForm.canAccessMando === true}
