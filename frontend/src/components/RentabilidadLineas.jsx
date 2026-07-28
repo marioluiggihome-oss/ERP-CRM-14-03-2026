@@ -6,6 +6,7 @@ import {
   Lock, Unlock
 } from 'lucide-react';
 import { clientsAPI, authHeaders } from '../services/api';
+import ArticleCostsIAModal from './ArticleCostsIAModal';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -74,6 +75,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   const [matching, setMatching] = useState(false);
   const [feeding, setFeeding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showArticleCostsIA, setShowArticleCostsIA] = useState(false);
 
   // Filtros por columna
   const [columnFilters, setColumnFilters] = useState({
@@ -499,6 +501,9 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   };
 
   // ── Subir pantallazo de costes (archivo o pegado con Ctrl+V) ──
+  // costShotInstruccion: orden en texto libre opcional (ej. "mete un 10% para
+  // calcular nuestro costo"), se aplica sobre el coste leido de cada linea.
+  const [costShotInstruccion, setCostShotInstruccion] = useState('');
   const procesarCostShot = async (file) => {
     if (!file || !editor) return;
     setMatching(true);
@@ -506,7 +511,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       const b64 = await fileToB64(file);
       const r = await fetch(`${API_URL}/api/rentabilidad/match-line-costs`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileBase64: b64, lines: editor.lines }),
+        body: JSON.stringify({ fileBase64: b64, lines: editor.lines, instruccion: costShotInstruccion }),
       });
       const data = await r.json();
       if (!data.success) { alert(data.error || 'No se pudo leer el pantallazo'); return; }
@@ -1778,7 +1783,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               </div>
 
               {/* Acciones de coste */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <label className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer ${matching ? 'bg-blue-200 text-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   <Sparkles size={14} className={matching ? 'animate-pulse' : ''} />
                   {matching ? 'Emparejando...' : 'Subir pantallazo de costes (IA empareja · o pega con Ctrl+V)'}
@@ -1789,9 +1794,21 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   {feeding ? 'Alimentando...' : 'Alimentar costes (catálogo)'}
                 </button>
                 <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Anadir linea</button>
+                <button onClick={() => setShowArticleCostsIA(true)} title="Dar de alta artículos nuevos en el catálogo de costes (captura, PDF o Excel + orden en texto libre), sin salir de esta factura." className="px-3 py-1.5 bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                  <Sparkles size={14} /> Costes de artículos (IA)
+                </button>
                 <button onClick={handleRecalcularTodo} disabled={feeding} title="Sobrescribe el coste de TODAS las líneas desde el catálogo, incluidas las que ya tienen coste puesto a mano." className="text-[11px] text-slate-400 hover:text-red-600 underline font-bold ml-1">
                   Recalcular todo (sobrescribe)
                 </button>
+              </div>
+              <div className="mb-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Orden para el pantallazo de costes (texto libre, opcional)</label>
+                <input
+                  value={costShotInstruccion}
+                  onChange={e => setCostShotInstruccion(e.target.value)}
+                  placeholder='Ej: "mete un 10% para calcular nuestro costo"'
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
+                />
               </div>
 
               {/* Tabla de lineas editable */}
@@ -2036,6 +2053,10 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
             </div>
           </div>
         </div>
+      )}
+
+      {showArticleCostsIA && (
+        <ArticleCostsIAModal onClose={() => setShowArticleCostsIA(false)} />
       )}
     </div>
   );

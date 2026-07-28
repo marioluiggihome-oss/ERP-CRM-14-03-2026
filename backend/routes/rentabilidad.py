@@ -1092,13 +1092,18 @@ async def parse_sale_doc(payload: dict):
 
 @router.post("/rentabilidad/match-line-costs")
 async def match_line_costs(payload: dict):
-    """Lee un pantallazo de costes y lo empareja con las lineas de venta dadas."""
+    """Lee un pantallazo de costes y lo empareja con las lineas de venta dadas.
+    Acepta una orden en texto libre opcional (ej. "mete un 10% para calcular
+    nuestro costo"): si menciona un porcentaje, se aplica sobre el coste leido
+    de cada linea emparejada antes de devolverlas."""
     b64 = (payload or {}).get("fileBase64") or ""
     lines = (payload or {}).get("lines") or []
+    instruccion = str((payload or {}).get("instruccion") or "")
     if not b64:
         raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
     if not lines:
         raise HTTPException(status_code=400, detail="Faltan las lineas de venta")
+    margen_pct = _extraer_margen_pct(instruccion)
     stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
     try:
         from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
@@ -1176,12 +1181,14 @@ async def match_line_costs(payload: dict):
                             a["confianza"] = "media"
                 except (TypeError, ValueError):
                     pass
+                if margen_pct:
+                    coste = coste * (1 + margen_pct / 100)
                 out_lines[idx]["coste"] = round(coste, 2)
                 out_lines[idx]["_match"] = a.get("confianza", "media")
                 applied += 1
 
         return {"success": True, "lines": out_lines, "matched": applied,
-                "totals": _ficha_totals(out_lines)}
+                "margenAplicado": margen_pct, "totals": _ficha_totals(out_lines)}
     except Exception as e:
         logger.error(f"Match line costs error: {e}")
         return {"success": False, "error": "No se pudo leer el pantallazo de costes. Intentalo de nuevo."}
@@ -1349,6 +1356,13 @@ Responde SOLO con JSON valido:
 """
 
 
+def _extraer_margen_pct(instruccion: str) -> float:
+    """Busca un porcentaje mencionado en una orden en texto libre (ej. 'mete un
+    10% para calcular nuestro costo'). Devuelve 0.0 si no encuentra ninguno."""
+    m = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:%|por ?ciento)', instruccion or "", re.IGNORECASE)
+    return float(m.group(1).replace(",", ".")) if m else 0.0
+
+
 def _parse_orden_articulos(instruccion: str, articulos: List[Dict[str, Any]]):
     """Interpreta la orden en texto libre que acompaña a la captura: (a) si pide
     aplicar un % de margen sobre el neto para calcular el coste propio, y (b) si
@@ -1356,10 +1370,7 @@ def _parse_orden_articulos(instruccion: str, articulos: List[Dict[str, Any]]):
     emparejando por palabras del nombre mencionadas en la orden. Es solo una
     PROPUESTA: el usuario revisa y corrige antes de guardar cada articulo."""
     instruccion = instruccion or ""
-    pct = 0.0
-    m = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:%|por ?ciento)', instruccion, re.IGNORECASE)
-    if m:
-        pct = float(m.group(1).replace(",", "."))
+    pct = _extraer_margen_pct(instruccion)
 
     marcar_trigger = bool(re.search(
         r'sin\s+vend|no\s+(?:est[aá]|se)\s*vend|todav[ií]a\s+no|a[uú]n\s+no|pendiente\s+de\s+revis',
@@ -1387,49 +1398,110 @@ def _parse_orden_articulos(instruccion: str, articulos: List[Dict[str, Any]]):
     return out, pct
 
 
+def _excel_col_pick(columns, keywords):
+    """Busca en las cabeceras de un Excel la primera columna cuyo nombre
+    contenga alguna de las palabras clave (sin acentos, insensible a mayus).
+    Cada proveedor llama distinto a sus columnas, no se asume un formato fijo."""
+    def _norm(s):
+        s = str(s or "").lower()
+        for a, b in (("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ñ", "n")):
+            s = s.replace(a, b)
+        return s
+    for col in columns:
+        nc = _norm(col)
+        if any(k in nc for k in keywords):
+            return col
+    return None
+
+
+def _read_excel_articulos(raw_bytes: bytes) -> List[Dict[str, Any]]:
+    """Lee un Excel de tarifa/pedido de proveedor y extrae codigo/nombre/neto
+    unitario por fila, detectando las columnas por su cabecera."""
+    import pandas as pd
+    import io as _io
+    xls = pd.ExcelFile(_io.BytesIO(raw_bytes))
+    articulos = []
+    for sheet in xls.sheet_names:
+        try:
+            df = xls.parse(sheet)
+        except Exception:
+            continue
+        if df.empty:
+            continue
+        col_codigo = _excel_col_pick(df.columns, ["codigo", "cod.", "referencia", "ref"])
+        col_nombre = _excel_col_pick(df.columns, ["nombre", "descripcion", "producto", "articulo"])
+        col_neto = _excel_col_pick(df.columns, ["neto unit", "precio unit", "coste unit", "neto", "precio", "importe"])
+        if not col_codigo or not col_neto:
+            continue
+        for _, row in df.iterrows():
+            cod = str(row.get(col_codigo) or "").strip()
+            if not cod or cod.lower() == "nan":
+                continue
+            articulos.append({
+                "codigo": cod,
+                "nombre": str(row.get(col_nombre) or "").strip() if col_nombre else "",
+                "netoUnitario": _safe_float(row.get(col_neto)),
+            })
+    return articulos
+
+
 @router.post("/rentabilidad/parse-article-costs")
 async def parse_article_costs_image(payload: dict):
-    """Lee una captura/foto de un pedido o tarifa de proveedor y PROPONE dar de
-    alta esos articulos en el catalogo de costes, interpretando una orden en
-    texto libre (ej. "+10% para calcular nuestro costo", "la campana sin
-    venderse aun"). Solo propone: el guardado real lo hace el front llamando a
-    POST /rentabilidad/article-costs por cada articulo que el usuario confirme."""
+    """Lee una captura/foto/PDF o un Excel de un pedido o tarifa de proveedor y
+    PROPONE dar de alta esos articulos en el catalogo de costes, interpretando
+    una orden en texto libre (ej. "+10% para calcular nuestro costo", "la
+    campana sin venderse aun"). Solo propone: el guardado real lo hace el
+    front llamando a POST /rentabilidad/article-costs por cada articulo que el
+    usuario confirme."""
     b64 = (payload or {}).get("fileBase64") or ""
     instruccion = str((payload or {}).get("instruccion") or "")
+    filename = str((payload or {}).get("filename") or "")
     if not b64:
         raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    mime = _data_url_mime(b64)
     stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
     _check_doc_size(stripped)
     try:
-        from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
-        from services.llm_vision import analyze_image_with_gemini
+        es_excel = (
+            "spreadsheet" in mime or "excel" in mime or "ms-excel" in mime
+            or filename.lower().endswith((".xlsx", ".xls"))
+        )
+        if es_excel:
+            import base64 as _b64
+            articulos_raw = _read_excel_articulos(_b64.b64decode(stripped))
+            if not articulos_raw:
+                return {"success": False, "error": "No se detectaron columnas de código/neto en el Excel. Revisa que tenga cabeceras (Código, Nombre, Neto…)."}
+        else:
+            from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+            from services.llm_vision import analyze_image_with_gemini
 
-        imgs = [stripped]
-        if ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped):
-            paginas = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=6) or []
-            if paginas:
-                imgs = paginas
+            imgs = [stripped]
+            if ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped):
+                paginas = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=6) or []
+                if paginas:
+                    imgs = paginas
 
-        articulos_por_codigo = {}
-        for n, img in enumerate(imgs, start=1):
-            try:
-                resp = await analyze_image_with_gemini(
-                    image_base64=img, prompt=_ARTICLE_COSTS_IMAGE_PROMPT,
-                    session_id=f"artcosts-{uuid.uuid4().hex[:8]}-p{n}",
-                )
-                parsed = _parse_json_loose(_clean_json(resp)) or {}
-            except Exception as e:
-                logger.warning(f"parse_article_costs_image: pagina {n} fallo: {e}")
-                continue
-            for a in (parsed.get("articulos") or []):
-                cod = str(a.get("codigo") or "").strip()
-                key = _normalize_ref(cod) or f"sin-codigo-{len(articulos_por_codigo)}"
-                articulos_por_codigo.setdefault(key, a)
+            articulos_por_codigo = {}
+            for n, img in enumerate(imgs, start=1):
+                try:
+                    resp = await analyze_image_with_gemini(
+                        image_base64=img, prompt=_ARTICLE_COSTS_IMAGE_PROMPT,
+                        session_id=f"artcosts-{uuid.uuid4().hex[:8]}-p{n}",
+                    )
+                    parsed = _parse_json_loose(_clean_json(resp)) or {}
+                except Exception as e:
+                    logger.warning(f"parse_article_costs_image: pagina {n} fallo: {e}")
+                    continue
+                for a in (parsed.get("articulos") or []):
+                    cod = str(a.get("codigo") or "").strip()
+                    key = _normalize_ref(cod) or f"sin-codigo-{len(articulos_por_codigo)}"
+                    articulos_por_codigo.setdefault(key, a)
+            articulos_raw = list(articulos_por_codigo.values())
 
-        if not articulos_por_codigo:
+        if not articulos_raw:
             return {"success": False, "error": "No se detectaron artículos en el documento"}
 
-        articulos, pct = _parse_orden_articulos(instruccion, list(articulos_por_codigo.values()))
+        articulos, pct = _parse_orden_articulos(instruccion, articulos_raw)
         return {"success": True, "articulos": articulos, "margenAplicado": pct}
     except HTTPException:
         raise
