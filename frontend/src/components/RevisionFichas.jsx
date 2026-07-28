@@ -51,6 +51,89 @@ export default function RevisionFichas({ onOpenDocument }) {
     } catch (e) { setError(e.message); } finally { setSubiendo(false); }
   };
 
+  // Informe imprimible de la revisión (jsPDF, con el mismo formato español).
+  const exportarPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth();
+    const M = 12;
+    let y = 16;
+    const money = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`;
+
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(15);
+    pdf.text('Informe de revisión de fichas', M, y);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(110);
+    y += 5; pdf.text(`Generado ${new Date().toLocaleString('es-ES')}`, M, y);
+    pdf.setTextColor(0); y += 8;
+
+    if (aud) {
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10);
+      pdf.text('Estado de las revisiones', M, y); y += 5;
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
+      pdf.text(`Coherentes: ${aud.resumen.coherentes}   ·   Caducadas: ${aud.resumen.caducadas}   ·   `
+        + `Sin huella: ${aud.resumen.sinHuella}   ·   Coste sospechoso: ${aud.resumen.sospechosasCoste}`, M, y);
+      y += 8;
+    }
+
+    const tabla = (titulo, cabeceras, anchos, filas) => {
+      if (!filas.length) return;
+      if (y > 175) { pdf.addPage(); y = 16; }
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10);
+      pdf.text(titulo, M, y); y += 5;
+      pdf.setFillColor(30, 41, 59); pdf.rect(M, y - 4, W - 2 * M, 6, 'F');
+      pdf.setTextColor(255); pdf.setFontSize(8);
+      let x = M + 2;
+      cabeceras.forEach((c, i) => { pdf.text(String(c), x, y); x += anchos[i]; });
+      pdf.setTextColor(0); pdf.setFont('helvetica', 'normal'); y += 6;
+      filas.forEach((fila, idx) => {
+        if (y > 195) { pdf.addPage(); y = 16; }
+        if (idx % 2) { pdf.setFillColor(248, 250, 252); pdf.rect(M, y - 4, W - 2 * M, 5.5, 'F'); }
+        let cx = M + 2;
+        fila.forEach((c, i) => { pdf.text(String(c ?? ''), cx, y, { maxWidth: anchos[i] - 3 }); cx += anchos[i]; });
+        y += 5.5;
+      });
+      y += 6;
+    };
+
+    if (listado) {
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10);
+      pdf.text('Contraste con el listado oficial', M, y); y += 5;
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
+      pdf.text(`En el listado: ${listado.enListado}   ·   Correctas: ${listado.correctas}   ·   `
+        + `No importadas: ${listado.resumen.noImportadas}   ·   Descuadran: ${listado.resumen.conDescuadre}`
+        + `   ·   Sin registrar: ${money(listado.resumen.importeNoRegistrado)}`, M, y);
+      y += 8;
+      tabla('Facturas que descuadran',
+        ['Factura', 'Cliente', 'Base oficial', 'Importado', 'Diferencia', 'Líneas'],
+        [30, 90, 34, 34, 34, 18],
+        (listado.descuadres || []).map(d => [d.ref, (d.cliente || '').slice(0, 42),
+          money(d.base), money(d.ventaImportada), money(d.diferencia) + (d.sospechaPaginasPerdidas ? ' (!)' : ''), d.lineas]));
+      if ((listado.faltanPorImportar || []).length) {
+        tabla('No importadas', ['Factura', 'Fecha', 'Base'], [34, 34, 40],
+          listado.faltanPorImportar.map(f => [f.ref, f.fecha, money(f.base)]));
+      }
+    }
+
+    if (aud?.sospechosas?.length) {
+      tabla('Margen negativo con costes cargados',
+        ['Factura', 'Cliente', 'Venta', 'Coste', 'Margen'], [30, 90, 34, 34, 34],
+        aud.sospechosas.map(f => [f.ref, (f.cliente || '').slice(0, 42), money(f.venta), money(f.coste), money(f.margen)]));
+    }
+    if (aud?.caducadas?.length) {
+      tabla('Revisiones caducadas',
+        ['Factura', 'Cliente', 'Venta', 'Coste', 'Dif. venta'], [30, 90, 34, 34, 34],
+        aud.caducadas.map(f => [f.ref, (f.cliente || '').slice(0, 42), money(f.venta), money(f.coste), money(f.difVenta)]));
+    }
+    if (aud?.sinHuella?.length) {
+      tabla('Revisadas sin huella (reverificar)',
+        ['Factura', 'Cliente', 'Fecha', 'Venta', 'Coste', 'Revisó'], [30, 76, 24, 30, 30, 34],
+        aud.sinHuella.map(f => [f.ref, (f.cliente || '').slice(0, 36), (f.fecha || '').slice(0, 10),
+          money(f.venta), money(f.coste), (f.revisadaPor || '').slice(0, 18)]));
+    }
+
+    pdf.save(`revision_fichas_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   const Tarjeta = ({ icono: Ic, color, titulo, valor, nota }) => (
     <div className="bg-white rounded-2xl border border-slate-200 p-4">
       <div className={`flex items-center gap-2 ${color}`}><Ic size={16} />
@@ -84,10 +167,17 @@ export default function RevisionFichas({ onOpenDocument }) {
           </h3>
           <p className="text-xs text-slate-500">Comprobación de solo lectura: no modifica ningún dato.</p>
         </div>
-        <button onClick={cargarAuditoria} disabled={cargando}
-          className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs disabled:opacity-50">
-          <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} /> Actualizar
-        </button>
+        <div className="flex gap-2">
+          <button onClick={exportarPDF} disabled={!aud && !listado}
+            title="Imprimir el informe de revisión (PDF)"
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs disabled:opacity-50">
+            <FileText size={14} /> PDF
+          </button>
+          <button onClick={cargarAuditoria} disabled={cargando}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs disabled:opacity-50">
+            <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} /> Actualizar
+          </button>
+        </div>
       </div>
 
       {error && <div className="text-sm px-3 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>}

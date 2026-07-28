@@ -447,6 +447,20 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
     }
   };
 
+  // Diálogo para elegir qué líneas actualizar cuando un documento nuevo pisaría
+  // costes ya cargados.
+  const [seleccionCostes, setSeleccionCostes] = useState(null);
+
+  const aplicarSeleccionCostes = (indices) => {
+    if (!seleccionCostes || !editor) return;
+    const set = new Set(indices);
+    const lines = (editor.lines || []).map((l, i) =>
+      set.has(i) ? { ...l, coste: seleccionCostes.nuevas[i]?.coste ?? l.coste,
+                     _match: seleccionCostes.nuevas[i]?._match } : l);
+    setEditor({ ...editor, lines, costDocs: [...editor.costDocs, seleccionCostes.doc] });
+    setSeleccionCostes(null);
+  };
+
   // ── Subir pantallazo de costes (archivo o pegado con Ctrl+V) ──
   const procesarCostShot = async (file) => {
     if (!file || !editor) return;
@@ -459,11 +473,31 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       });
       const data = await r.json();
       if (!data.success) { alert(data.error || 'No se pudo leer el pantallazo'); return; }
-      setEditor({
-        ...editor,
-        lines: data.lines,
-        costDocs: [...editor.costDocs, { b64, name: file.name || 'pegado.png' }],
-      });
+
+      // ¿Qué líneas cambiarían y cuáles YA tenían coste? Un documento nuevo no debe
+      // pisar en silencio costes ya cuadrados a mano: se pregunta qué actualizar.
+      const propuestas = (data.lines || []).map((nl, i) => {
+        const anterior = Number(editor.lines?.[i]?.coste) || 0;
+        const nuevo = Number(nl.coste) || 0;
+        return { i, concepto: nl.concepto || editor.lines?.[i]?.concepto || '', anterior, nuevo,
+                 cambia: Math.abs(nuevo - anterior) > 0.005, teniaCoste: anterior > 0 };
+      }).filter(p => p.cambia);
+      const pisaExistentes = propuestas.some(p => p.teniaCoste);
+
+      const doc = { b64, name: file.name || 'pegado.png' };
+      if (!propuestas.length) {
+        alert('El documento no aporta costes nuevos: no se ha cambiado ninguna línea.');
+        setEditor({ ...editor, costDocs: [...editor.costDocs, doc] });
+        return;
+      }
+      if (!pisaExistentes) {
+        // Solo rellena huecos: se aplica sin preguntar.
+        setEditor({ ...editor, lines: data.lines, costDocs: [...editor.costDocs, doc] });
+        return;
+      }
+      // Hay costes que se sobrescribirían: que el usuario decida cuáles.
+      setSeleccionCostes({ propuestas, nuevas: data.lines, doc,
+                           marcadas: propuestas.filter(p => !p.teniaCoste).map(p => p.i) });
     } catch { alert('Error al leer el pantallazo'); }
     finally { setMatching(false); }
   };
@@ -1883,6 +1917,73 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   Este proyecto ya tiene {eur(viewing.costesProyecto)} de coste registrado en Rentabilidad &gt; Costes por proyecto — revisa si coincide con el coste de estas líneas antes de dar el margen por bueno.
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Qué líneas actualizar con el documento de costes recién adjuntado.
+          Solo aparece cuando el documento pisaría costes YA cargados. */}
+      {seleccionCostes && (
+        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-3"
+          onClick={() => setSeleccionCostes(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 bg-amber-500 text-white">
+              <h3 className="font-black">Este documento cambia costes ya cargados</h3>
+              <p className="text-[11px] text-amber-50">
+                Marca las líneas que quieras actualizar. Las que ya tenían coste vienen
+                DESMARCADAS para no perder lo que cuadraste a mano.
+              </p>
+            </div>
+            <div className="px-5 py-2 flex gap-2 border-b border-slate-100">
+              <button onClick={() => setSeleccionCostes(sc => ({ ...sc, marcadas: sc.propuestas.map(p => p.i) }))}
+                className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold">Todas</button>
+              <button onClick={() => setSeleccionCostes(sc => ({ ...sc, marcadas: sc.propuestas.filter(p => !p.teniaCoste).map(p => p.i) }))}
+                className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold">Solo las vacías</button>
+              <button onClick={() => setSeleccionCostes(sc => ({ ...sc, marcadas: [] }))}
+                className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold">Ninguna</button>
+            </div>
+            <div className="px-5 py-3 overflow-y-auto flex-1">
+              <table className="w-full text-sm">
+                <thead><tr className="text-[10px] uppercase text-slate-400 border-b">
+                  <th className="w-8"></th><th className="text-left py-1">Concepto</th>
+                  <th className="text-right">Coste actual</th><th className="text-right">Nuevo</th></tr></thead>
+                <tbody>
+                  {seleccionCostes.propuestas.map(p => {
+                    const marcada = seleccionCostes.marcadas.includes(p.i);
+                    return (
+                      <tr key={p.i} className="border-b border-slate-100">
+                        <td className="py-1.5">
+                          <input type="checkbox" checked={marcada} className="w-4 h-4"
+                            onChange={() => setSeleccionCostes(sc => ({
+                              ...sc,
+                              marcadas: marcada ? sc.marcadas.filter(x => x !== p.i) : [...sc.marcadas, p.i],
+                            }))} />
+                        </td>
+                        <td className="text-slate-700 text-xs">{(p.concepto || '').slice(0, 52)}</td>
+                        <td className={`text-right ${p.teniaCoste ? 'text-amber-700 font-bold' : 'text-slate-300'}`}>
+                          {p.teniaCoste ? eur(p.anterior) : '—'}
+                        </td>
+                        <td className="text-right font-bold text-emerald-700">{eur(p.nuevo)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                {seleccionCostes.marcadas.length} de {seleccionCostes.propuestas.length} líneas
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setSeleccionCostes(null)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-bold text-sm">Cancelar</button>
+                <button onClick={() => aplicarSeleccionCostes(seleccionCostes.marcadas)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-sm">
+                  Aplicar a {seleccionCostes.marcadas.length}
+                </button>
+              </div>
             </div>
           </div>
         </div>
