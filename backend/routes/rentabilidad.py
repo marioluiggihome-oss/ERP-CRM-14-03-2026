@@ -843,14 +843,37 @@ _COST_MATCH_PROMPT_HEAD = """Eres un experto en costes de muebles/cocinas. Te do
 1) Una lista de LINEAS de un documento de venta (cada una con un indice).
 2) Una imagen/pantallazo con COSTES (factura de proveedor, lista de precios, portal...).
 Lee los costes de la imagen y EMPAREJA cada coste con la linea de venta que le corresponde
-(por referencia o por nombre del producto). Responde SOLO con JSON valido:
+(por referencia o por nombre del producto).
+
+QUE COLUMNA ES EL COSTE (CRITICO, es el error mas grave posible):
+- El coste es el importe NETO de la linea, es decir la columna TOTAL / IMPORTE /
+  NETO, la que YA TIENE LOS DESCUENTOS APLICADOS.
+- NUNCA uses la columna PRECIO / PVP / TARIFA / P.V.P.: esa es la tarifa BRUTA
+  antes de descuento. Si la usas, el coste sale al doble y la rentabilidad
+  aparece negativa cuando en realidad es positiva.
+- Si hay una columna de descuento (DTOS / DTO / % DTO), comprueba tu lectura:
+  TOTAL debe ser igual a PRECIO x CANTIDAD x (1 - dto/100). Ejemplo real:
+  PRECIO 46,62 con DTOS 50% y CANTIDAD 1 -> el coste es 23,31 (NO 46,62).
+  PRECIO 31,52 con DTOS 50% y CANTIDAD 2 -> el coste de la linea es 31,52.
+- Si en la imagen NO hay columna de descuento ni de total, entonces si puedes
+  usar el precio, multiplicado por la cantidad.
+
+QUE VALOR DEVOLVER:
+- Devuelve el coste TOTAL DE LA LINEA (el importe neto de esa fila completa,
+  para todas sus unidades), NO el coste por unidad. El sistema ya divide entre
+  la cantidad para mostrar el coste unitario.
+
+Responde SOLO con JSON valido:
 {
   "asignaciones": [
-    { "indice": 0, "coste": 0.0, "confianza": "alta|media|baja" }
+    { "indice": 0, "coste": 0.0, "precio_bruto": 0.0, "dto_pct": 0.0,
+      "cantidad_doc": 1.0, "confianza": "alta|media|baja" }
   ]
 }
-Solo incluye las lineas para las que encuentres un coste en la imagen. El "indice" es el
-de la lista que te paso. Numeros con punto decimal, sin simbolo de moneda.
+Rellena tambien precio_bruto, dto_pct y cantidad_doc con lo que leas en la imagen
+(0 si no aparecen): sirven para comprobar automaticamente que el coste neto es
+correcto. Solo incluye las lineas para las que encuentres un coste en la imagen.
+El "indice" es el de la lista que te paso. Numeros con punto decimal, sin moneda.
 
 LINEAS DE VENTA:
 """
@@ -1055,7 +1078,29 @@ async def match_line_costs(payload: dict):
             except Exception:
                 continue
             if 0 <= idx < len(out_lines):
-                out_lines[idx]["coste"] = round(float(a.get("coste") or 0), 2)
+                coste = float(a.get("coste") or 0)
+                # VERIFICACIÓN DETERMINISTA del neto. El fallo clásico es leer la
+                # columna PRECIO (tarifa bruta) en vez de TOTAL (neto con
+                # descuento): el coste sale al doble y la rentabilidad aparece
+                # negativa. Si la IA nos da precio bruto y descuento, recalculamos
+                # el neto y, si no cuadra con lo que dijo, mandamos el calculado.
+                try:
+                    bruto = float(a.get("precio_bruto") or 0)
+                    dto = float(a.get("dto_pct") or 0)
+                    cant_doc = float(a.get("cantidad_doc") or 0) or 1.0
+                    if bruto > 0 and 0 < dto < 100:
+                        neto = bruto * cant_doc * (1 - dto / 100.0)
+                        # tolerancia del 2% por redondeos del proveedor
+                        if neto > 0 and abs(coste - neto) / neto > 0.02:
+                            logger.warning(
+                                "coste corregido en linea %s: la IA dijo %.2f pero "
+                                "%.2f x %.2f x (1-%.0f%%) = %.2f",
+                                idx, coste, bruto, cant_doc, dto, neto)
+                            coste = neto
+                            a["confianza"] = "media"
+                except (TypeError, ValueError):
+                    pass
+                out_lines[idx]["coste"] = round(coste, 2)
                 out_lines[idx]["_match"] = a.get("confianza", "media")
                 applied += 1
 
