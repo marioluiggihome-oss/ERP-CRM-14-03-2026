@@ -4,7 +4,7 @@ guarda los pedidos de cascos por usuario. El catálogo vive en el frontend
 (generado desde la tarifa oficial).
 """
 from fastapi import APIRouter, HTTPException, Depends
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import logging
 import os
@@ -127,29 +127,146 @@ def _es_master(user: Optional[dict]) -> bool:
     return bool(user and any(user.get(f) for f in ADMIN_ROLE_FLAGS + ["isPrimaryAdmin"]))
 
 
+_TAREAS_PROFORMA = set()
+
+_PROMPT_PROFORMA = (
+    "Esta imagen es una página de una PROFORMA de muebles de cocina (cascos). "
+    "Extrae la tabla de artículos. Devuelve SOLO un JSON: {\"items\":[{\"n\":1,"
+    "\"cod\":\"80GF/1P1GIN\",\"descripcion\":\"...\",\"material\":\"MELAMINA ... ZENIT - MERIVOBOX\","
+    "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73}]}. "
+    "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual. "
+    "La página puede estar girada 90º: léela en la orientación en que el texto tenga sentido. "
+    "Copia los números EXACTAMENTE como aparecen; si un dato no se lee, pon null. NO lo inventes."
+)
+
+
+def _filas_a_items(allrows: list) -> list:
+    """Enriquece las filas crudas de la IA con color/herraje/frentes/tipo."""
+    from services.proforma_cascos import _color_y_herraje, _cuenta_frentes, _tipo_mueble
+    items = []
+    for r in allrows:
+        material = r.get("material") or ""
+        color, blum = _color_y_herraje(material)
+        desc = r.get("descripcion") or ""
+        fr = _cuenta_frentes(desc)
+        items.append({
+            "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": desc,
+            "material": material, "color": color, "herrajeBlum": blum,
+            "largo": r.get("largo"), "ancho": r.get("ancho"), "grueso": r.get("grueso"),
+            "cantidad": r.get("cantidad") or 1.0, "pvp": r.get("pvp"), "total": r.get("pvp"),
+            "puertas": fr["puertas"], "cajones": fr["cajones"], "gavetas": fr["gavetas"],
+            "tipo": _tipo_mueble(desc), "esMueble": True,
+        })
+    return items
+
+
+async def _proforma_pagina_ia(idx: int, pg: str, timeout: float) -> tuple:
+    """Lee una página con visión IA. Si el modelo 'pro' falla o tarda, reintenta
+    con 'flash', que es bastante más rápido. Devuelve (idx, filas)."""
+    import asyncio as _asyncio, re as _re, json as _json
+    from services.llm_vision import analyze_image_with_gemini
+    for modelo in ("gemini-2.5-pro", "gemini-2.5-flash"):
+        try:
+            t = await _asyncio.wait_for(
+                analyze_image_with_gemini(image_base64=pg, prompt=_PROMPT_PROFORMA,
+                                          model=modelo, image_mime="image/png"),
+                timeout=timeout,
+            )
+            mm = _re.search(r"\{[\s\S]*\}", t or "")
+            if mm:
+                filas = (_json.loads(mm.group()).get("items")) or []
+                if filas:
+                    return idx, filas
+        except _asyncio.TimeoutError:
+            logger.warning("proforma visión: página %d agotó %ss con %s", idx + 1, timeout, modelo)
+        except Exception as e:
+            logger.warning("proforma visión página %d (%s): %s", idx + 1, modelo, e)
+    return idx, []
+
+
+async def _proforma_job(job_id: str, pdf_bytes: bytes):
+    """Procesa la proforma en segundo plano y va dejando el estado en Mongo.
+
+    El trabajo se saca de la petición HTTP a propósito: leer varias páginas con
+    visión IA puede tardar minutos y ninguna pasarela aguanta una petición
+    abierta tanto rato — de ahí el "Failed to fetch" del navegador. El frontend
+    arranca el trabajo, recibe un id al instante y va preguntando por el estado.
+    """
+    import asyncio as _asyncio
+    from services.proforma_cascos import pdf_pages_to_png_b64
+    try:
+        pages = await _asyncio.get_event_loop().run_in_executor(
+            None, pdf_pages_to_png_b64, pdf_bytes)
+        if not pages:
+            await _job_set(job_id, estado="error", error="El PDF no tiene páginas legibles.")
+            return
+        await _job_set(job_id, total=len(pages))
+
+        allrows, hechas = [], 0
+        tareas = [_asyncio.ensure_future(_proforma_pagina_ia(i, pg, 90.0))
+                  for i, pg in enumerate(pages)]
+        resultados = []
+        for fut in _asyncio.as_completed(tareas):
+            try:
+                resultados.append(await fut)
+            except Exception as e:
+                logger.warning("proforma job %s: página perdida: %s", job_id, e)
+            hechas += 1
+            await _job_set(job_id, hechas=hechas)
+        for _idx, filas in sorted(resultados, key=lambda x: x[0]):
+            allrows.extend(filas)
+
+        items = _filas_a_items(allrows)
+        if items:
+            await _job_set(job_id, estado="listo", items=items, count=len(items))
+        else:
+            await _job_set(job_id, estado="error",
+                           error="La IA no consiguió leer ninguna línea de artículos en el PDF.")
+    except Exception as e:
+        logger.error("proforma job %s: %s", job_id, e)
+        await _job_set(job_id, estado="error", error=f"Error al analizar el PDF: {e}")
+
+
+async def _job_set(job_id: str, **campos):
+    """Actualiza el estado del trabajo. Va en Mongo (y no en memoria) para que el
+    sondeo funcione aunque lo atienda otro worker del servidor."""
+    try:
+        await db.cascos_proforma_jobs.update_one(
+            {"id": job_id},
+            {"$set": {**campos, "updatedAt": datetime.now(timezone.utc).isoformat()}},
+        )
+    except Exception as e:
+        logger.warning("proforma job %s: no se pudo guardar el estado: %s", job_id, e)
+
+
 @router.post("/cascos/proforma")
 async def importar_proforma(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Detecta los muebles de un PDF de proforma de proveedor (multipágina).
     Solo MASTER. Devuelve la relación de muebles con código, descripción, color,
     herraje, medidas, cantidad, PVP proveedor y recuento de puertas/cajones/gavetas.
-    Lee la capa de texto si existe; si el PDF es imagen, usa visión IA de respaldo."""
+
+    Si el PDF trae capa de texto se resuelve al momento (`estado: 'listo'`). Si es
+    un PDF de imagen o de texto vectorizado hay que pasar por visión IA, que tarda
+    demasiado para una petición HTTP: se lanza un trabajo en segundo plano y se
+    devuelve `estado: 'procesando'` con un `jobId` que el frontend va sondeando.
+    """
     if not _es_master(current_user):
         raise HTTPException(status_code=403, detail="Solo el master puede importar proformas de proveedor.")
-    import base64 as _b64, re as _re
+    import base64 as _b64, re as _re, asyncio as _asyncio
     raw = (payload or {}).get("pdfBase64") or (payload or {}).get("pdf") or ""
     if not raw:
         raise HTTPException(status_code=400, detail="Falta el PDF de la proforma.")
     m = _re.match(r"^data:[^;]+;base64,(.*)$", raw, _re.DOTALL)
     b64 = m.group(1) if m else raw
+    if len(b64) > 40 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El PDF es demasiado grande (máximo unos 30 MB).")
     try:
         pdf_bytes = _b64.b64decode(b64)
     except Exception:
         raise HTTPException(status_code=400, detail="PDF no válido.")
 
-    from services.proforma_cascos import (
-        parse_proforma_text, extract_pdf_text_all_pages, pdf_pages_to_png_b64,
-    )
-    # 1) Intento por CAPA DE TEXTO (rápido y exacto).
+    from services.proforma_cascos import parse_proforma_text, extract_pdf_text_all_pages
+    # 1) Intento por CAPA DE TEXTO (rápido y exacto): se responde en el acto.
     items = []
     try:
         txt = extract_pdf_text_all_pages(pdf_bytes)
@@ -157,82 +274,51 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
             items = parse_proforma_text(txt)
     except Exception as e:
         logger.warning("proforma: fallo lectura de texto: %s", e)
+    if items:
+        return {"success": True, "estado": "listo", "items": items, "count": len(items)}
 
-    # 2) Respaldo por VISIÓN IA (PDF escaneado/imagen sin texto).
-    if not items:
-        try:
-            from services.llm_vision import analyze_image_with_gemini, is_vision_available
-            import json as _json
-            if not is_vision_available():
-                raise HTTPException(status_code=503, detail="El PDF es una imagen y la IA de visión no está configurada.")
-            prompt = (
-                "Esta imagen es una página de una PROFORMA de muebles de cocina (cascos). "
-                "Extrae la tabla de artículos. Devuelve SOLO un JSON: {\"items\":[{\"n\":1,"
-                "\"cod\":\"80GF/1P1GIN\",\"descripcion\":\"...\",\"material\":\"MELAMINA ... ZENIT - MERIVOBOX\","
-                "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73}]}. "
-                "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual."
-            )
-            import asyncio as _asyncio
-            # pdf_pages_to_png_b64 ya descarta las páginas de vista 3D/plano y
-            # limita a MAX_PAGES, así que aquí solo llegan páginas con tabla.
-            pages = pdf_pages_to_png_b64(pdf_bytes)
-            allrows = []
-            TIMEOUT_PAGINA = 90   # una página colgada no puede bloquear la petición
-            DEADLINE = 150        # el endpoint SIEMPRE responde antes que el gateway
+    # 2) Sin capa de texto -> visión IA en segundo plano.
+    from services.llm_vision import is_vision_available
+    if not is_vision_available():
+        raise HTTPException(status_code=503, detail="El PDF es una imagen y la IA de visión no está configurada.")
 
-            async def _una_pagina(idx, pg):
-                try:
-                    # El PNG se manda como PNG: declararlo como JPEG hacía que
-                    # Gemini rechazase la imagen y se reintentase con todos los
-                    # modelos de respaldo, multiplicando el tiempo por página.
-                    t = await _asyncio.wait_for(
-                        analyze_image_with_gemini(image_base64=pg, prompt=prompt,
-                                                  model="gemini-2.5-pro", image_mime="image/png"),
-                        timeout=TIMEOUT_PAGINA,
-                    )
-                    mm = _re.search(r"\{[\s\S]*\}", t or "")
-                    if mm:
-                        return idx, (_json.loads(mm.group()).get("items")) or []
-                except _asyncio.TimeoutError:
-                    logger.warning("proforma visión: página %d agotó %ss", idx + 1, TIMEOUT_PAGINA)
-                except Exception as e:
-                    logger.warning("proforma visión página %d: %s", idx + 1, e)
-                return idx, []
+    job_id = f"prof-{uuid.uuid4().hex[:12]}"
+    ahora = datetime.now(timezone.utc).isoformat()
+    await db.cascos_proforma_jobs.insert_one({
+        "id": job_id, "estado": "procesando", "hechas": 0, "total": 0,
+        "items": [], "error": "", "userId": (current_user or {}).get("id") or "",
+        "createdAt": ahora, "updatedAt": ahora,
+    })
+    # Limpieza oportunista de trabajos viejos (no bloquea la respuesta).
+    try:
+        limite = (datetime.now(timezone.utc) - timedelta(hours=6)).isoformat()
+        await db.cascos_proforma_jobs.delete_many({"createdAt": {"$lt": limite}})
+    except Exception:
+        pass
+    # Se guarda la referencia: una tarea suelta puede llevársela el recolector.
+    tarea = _asyncio.ensure_future(_proforma_job(job_id, pdf_bytes))
+    _TAREAS_PROFORMA.add(tarea)
+    tarea.add_done_callback(_TAREAS_PROFORMA.discard)
+    return {"success": True, "estado": "procesando", "jobId": job_id}
 
-            # Concurrente: el tiempo de pared es el de la página más lenta, no la suma.
-            tareas = [_asyncio.ensure_future(_una_pagina(i, pg)) for i, pg in enumerate(pages)]
-            hechas, pendientes = await _asyncio.wait(tareas, timeout=DEADLINE)
-            for t in pendientes:
-                t.cancel()
-            if pendientes:
-                logger.error("proforma visión: %d de %d páginas sin terminar en %ss",
-                             len(pendientes), len(pages), DEADLINE)
-            # Se devuelve lo que haya llegado, en el orden original de las páginas.
-            for idx, rows in sorted(t.result() for t in hechas if not t.cancelled()):
-                allrows.extend(rows)
-            # Reutiliza los enriquecedores del parser de texto para color/herraje/frentes.
-            from services.proforma_cascos import _color_y_herraje, _cuenta_frentes, _tipo_mueble
-            for r in allrows:
-                material = r.get("material") or ""
-                color, blum = _color_y_herraje(material)
-                desc = r.get("descripcion") or ""
-                fr = _cuenta_frentes(desc)
-                items.append({
-                    "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": desc,
-                    "material": material, "color": color, "herrajeBlum": blum,
-                    "largo": r.get("largo"), "ancho": r.get("ancho"), "grueso": r.get("grueso"),
-                    "cantidad": r.get("cantidad") or 1.0, "pvp": r.get("pvp"), "total": r.get("pvp"),
-                    "puertas": fr["puertas"], "cajones": fr["cajones"], "gavetas": fr["gavetas"],
-                    "tipo": _tipo_mueble(desc), "esMueble": True,
-                })
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("proforma visión: %s", e)
 
-    if not items:
-        raise HTTPException(status_code=422, detail="No se pudieron detectar muebles en la proforma.")
-    return {"success": True, "items": items, "count": len(items)}
+@router.get("/cascos/proforma/job/{job_id}")
+async def estado_proforma(job_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Estado de un trabajo de importación de proforma (sondeo del frontend)."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede importar proformas de proveedor.")
+    job = await db.cascos_proforma_jobs.find_one({"id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="El análisis ha caducado. Vuelve a subir el PDF.")
+    return {
+        "success": job.get("estado") != "error",
+        "estado": job.get("estado") or "procesando",
+        "hechas": job.get("hechas") or 0,
+        "total": job.get("total") or 0,
+        "items": job.get("items") or [],
+        "count": len(job.get("items") or []),
+        "detail": job.get("error") or "",
+    }
 
 
 # ─── Tarifa MV (puntos) para el módulo de Rentabilidad ──────────────────────────

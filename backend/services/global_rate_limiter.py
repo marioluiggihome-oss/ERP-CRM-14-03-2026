@@ -51,6 +51,10 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
             ("/api/export", None, 10),            # exports masivos (clientes/presupuestos/crm/usuarios)
             ("/api/backup", None, 5),
             ("/api/admin", None, 20),
+            # Sondeo del análisis de proforma: es una lectura de un solo documento
+            # y se repite cada pocos segundos mientras dura el trabajo. Va en su
+            # propia categoría para no gastar el cupo general del usuario.
+            ("/api/cascos/proforma/job", "GET", 120),
         ]
         # Whitelist - rutas que no se limitan
         self.whitelist = [

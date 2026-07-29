@@ -74,6 +74,7 @@ const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDig
 
 export default function ProformaImporter({ esMaster }) {
   const [cargando, setCargando] = useState(false);
+  const [progreso, setProgreso] = useState('');
   const [error, setError] = useState(null);
   const [items, setItems] = useState([]);
   const fileRef = useRef(null);
@@ -97,31 +98,43 @@ export default function ProformaImporter({ esMaster }) {
 
   const importar = async (file) => {
     if (!file) return;
-    setCargando(true); setError(null); setItems([]);
+    setCargando(true); setError(null); setItems([]); setProgreso('');
     try {
       const b64 = await new Promise((res, rej) => {
         const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
       });
-      // El servidor corta a los 150 s; se espera algo más para poder mostrar su
-      // respuesta en vez de un "Failed to fetch" sin explicación.
-      const ac = new AbortController();
-      const corte = setTimeout(() => ac.abort(), 210000);
-      let r;
-      try {
-        r = await fetch(`${API_URL}/api/cascos/proforma`, {
-          method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ pdfBase64: b64 }), signal: ac.signal,
-        });
-      } finally { clearTimeout(corte); }
+      // El arranque responde en el acto: o devuelve los muebles (PDF con capa de
+      // texto) o un jobId que se va sondeando. Así ninguna petición se queda
+      // abierta minutos esperando a la IA, que es lo que cortaba la conexión.
+      const r = await fetch(`${API_URL}/api/cascos/proforma`, {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ pdfBase64: b64 }),
+      });
       let d = {}; try { d = await r.json(); } catch { d = {}; }
-      if (!r.ok) { setError(d.detail || d.error || `El servidor devolvió un error (${r.status}). Si el PDF es escaneado, la detección tarda más; reinténtalo.`); return; }
+      if (!r.ok) { setError(d.detail || d.error || `El servidor devolvió un error (${r.status}).`); return; }
+
+      if (d.estado === 'procesando' && d.jobId) {
+        setProgreso('Leyendo el PDF…');
+        const inicio = Date.now();
+        // Sondeo cada 3 s, hasta 10 min. Cada petición es instantánea.
+        while (Date.now() - inicio < 600000) {
+          await new Promise(res => setTimeout(res, 3000));
+          const q = await fetch(`${API_URL}/api/cascos/proforma/job/${d.jobId}`, { headers: getAuthHeaders() });
+          let j = {}; try { j = await q.json(); } catch { j = {}; }
+          if (!q.ok) { setError(j.detail || `El servidor devolvió un error (${q.status}).`); return; }
+          if (j.total) setProgreso(`Analizando página ${Math.min(j.hechas + 1, j.total)} de ${j.total}…`);
+          if (j.estado === 'listo') { setItems(j.items || []); return; }
+          if (j.estado === 'error') { setError(j.detail || 'No se pudieron detectar los muebles.'); return; }
+        }
+        setError('El análisis está tardando demasiado. Prueba a subir solo las páginas con la tabla de partidas.');
+        return;
+      }
+
       if (d.success) setItems(d.items || []);
       else setError(d.detail || d.error || 'No se pudieron detectar los muebles.');
     } catch (e) {
-      setError(e?.name === 'AbortError'
-        ? 'El PDF ha tardado demasiado en analizarse. Suele pasar con presupuestos escaneados de muchas páginas: prueba a subir solo las páginas con la tabla de partidas.'
-        : `No se pudo conectar para analizar el PDF (${e?.message || 'error de red'}). Si el PDF es escaneado tarda más; reinténtalo.`);
+      setError(`No se pudo conectar para analizar el PDF (${e?.message || 'error de red'}). Reinténtalo.`);
     }
-    finally { setCargando(false); }
+    finally { setCargando(false); setProgreso(''); }
   };
 
   const calc = useMemo(() => {
@@ -168,7 +181,7 @@ export default function ProformaImporter({ esMaster }) {
             <button onClick={() => fileRef.current?.click()} disabled={cargando}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-sm text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50">
               {cargando ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
-              {cargando ? 'Detectando muebles…' : 'Importar presupuesto de venta (PDF)'}
+              {cargando ? (progreso || 'Detectando muebles…') : 'Importar presupuesto de venta (PDF)'}
             </button>
             <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => importar(e.target.files?.[0])} />
             {items.length > 0 && <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><FileText size={13} /> {items.length} líneas detectadas</span>}
