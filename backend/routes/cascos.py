@@ -195,7 +195,7 @@ async def _proforma_job(job_id: str, pdf_bytes: bytes):
     import asyncio as _asyncio
     from services.proforma_cascos import pdf_pages_to_png_b64
     try:
-        pages = await _asyncio.get_event_loop().run_in_executor(
+        pages = await _asyncio.get_running_loop().run_in_executor(
             None, pdf_pages_to_png_b64, pdf_bytes)
         if not pages:
             await _job_set(job_id, estado="error", error="El PDF no tiene páginas legibles.")
@@ -267,9 +267,12 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
 
     from services.proforma_cascos import parse_proforma_text, extract_pdf_text_all_pages
     # 1) Intento por CAPA DE TEXTO (rápido y exacto): se responde en el acto.
+    # Va al executor porque PyMuPDF es código nativo bloqueante y el servidor
+    # corre con una sola réplica: un PDF pesado congelaría a todos los usuarios.
     items = []
     try:
-        txt = extract_pdf_text_all_pages(pdf_bytes)
+        txt = await _asyncio.get_running_loop().run_in_executor(
+            None, extract_pdf_text_all_pages, pdf_bytes)
         if txt and len(txt.strip()) > 40:
             items = parse_proforma_text(txt)
     except Exception as e:

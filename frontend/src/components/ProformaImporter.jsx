@@ -82,26 +82,33 @@ const _diagnostico = async (e) => {
   if (window.location.protocol === 'https:' && String(API_URL).startsWith('http:')) {
     return `El navegador bloquea la llamada: la web va por HTTPS y el servidor está configurado en HTTP (${API_URL}). Avisa al administrador.`;
   }
-  try {
-    const ping = await fetch(`${API_URL}/api/`, { method: 'GET' });
-    if (!(ping.ok || ping.status === 401 || ping.status === 403)) {
-      return `El servidor ha contestado ${ping.status} a una comprobación básica. Está caído o desplegándose; espera un minuto y reinténtalo.`;
-    }
-    // El servidor responde. ¿Tiene ya la versión con análisis en segundo plano?
-    // Si la ruta del sondeo no existe, el backend va por detrás del frontend:
-    // son dos servicios distintos en Railway y no se despliegan a la vez.
+  // Se prueban tres cosas y se informa del resultado de cada una, porque cada
+  // combinación apunta a una causa distinta y "Failed to fetch" no distingue.
+  const probar = async (url, opts) => {
     try {
-      const v = await fetch(`${API_URL}/api/cascos/proforma/job/_ping`, { headers: getAuthHeaders() });
-      let vd = {}; try { vd = await v.json(); } catch { vd = {}; }
-      const rutaNoExiste = v.status === 404 && /not found/i.test(vd.detail || '');
-      if (rutaNoExiste) {
-        return 'El backend todavía está sirviendo la versión anterior: por eso la petición se queda colgada hasta que se corta. Espera a que termine de desplegarse el servicio del backend en Railway y vuelve a probar.';
-      }
-    } catch { /* si el sondeo tampoco va, se cae al mensaje general */ }
-    return `El servidor responde, pero ha rechazado esta petición concreta (${motivo}). Espera un minuto por si está reiniciando y reinténtalo.`;
-  } catch {
+      const r = await fetch(url, opts);
+      let d = {}; try { d = await r.json(); } catch { d = {}; }
+      return { estado: r.status, detail: d.detail || '' };
+    } catch (err) { return { estado: 0, detail: err?.message || 'error de red' }; }
+  };
+
+  const ping = await probar(`${API_URL}/api/`, { method: 'GET' });
+  if (ping.estado === 0) {
     return `El servidor no responde (${motivo}). Está caído o terminando de desplegarse: espera un minuto y reinténtalo. Si sigue igual, revisa el despliegue del backend en Railway.`;
   }
+
+  // ¿Existe ya la ruta del análisis en segundo plano? Frontend y backend son
+  // servicios distintos en Railway y no se despliegan a la vez.
+  const sondeo = await probar(`${API_URL}/api/cascos/proforma/job/_ping`, { headers: getAuthHeaders() });
+  if (sondeo.estado === 404 && /not found/i.test(sondeo.detail)) {
+    return 'El backend todavía sirve la versión anterior: por eso la petición se queda colgada hasta que se corta. Espera a que termine de desplegarse el backend en Railway y vuelve a probar.';
+  }
+  if (sondeo.estado === 0) {
+    return `Falla cualquier petición con cabecera de sesión: el servidor contesta a una consulta simple (${ping.estado}) pero rechaza las autenticadas (${sondeo.detail}). Suele ser un problema de CORS o de sesión caducada: vuelve a entrar en el ERP y reinténtalo.`;
+  }
+  // El servidor está vivo y acepta peticiones autenticadas: el que revienta es
+  // el envío del PDF. Lo más probable es que el proceso se caiga al recibirlo.
+  return `El envío del PDF corta la conexión (${motivo}), aunque el servidor responde bien a lo demás (comprobación ${ping.estado}, sondeo ${sondeo.estado}). Avisa: hay que mirar los logs del backend en Railway justo al reproducirlo.`;
 };
 
 export default function ProformaImporter({ esMaster }) {
