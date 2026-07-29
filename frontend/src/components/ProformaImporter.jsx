@@ -84,10 +84,21 @@ const _diagnostico = async (e) => {
   }
   try {
     const ping = await fetch(`${API_URL}/api/`, { method: 'GET' });
-    if (ping.ok || ping.status === 401 || ping.status === 403) {
-      return `El servidor responde, pero ha rechazado esta petición concreta (${motivo}). Suele ser que el backend se está reiniciando tras un despliegue: espera un minuto y reinténtalo.`;
+    if (!(ping.ok || ping.status === 401 || ping.status === 403)) {
+      return `El servidor ha contestado ${ping.status} a una comprobación básica. Está caído o desplegándose; espera un minuto y reinténtalo.`;
     }
-    return `El servidor ha contestado ${ping.status} a una comprobación básica. Está caído o desplegándose; espera un minuto y reinténtalo.`;
+    // El servidor responde. ¿Tiene ya la versión con análisis en segundo plano?
+    // Si la ruta del sondeo no existe, el backend va por detrás del frontend:
+    // son dos servicios distintos en Railway y no se despliegan a la vez.
+    try {
+      const v = await fetch(`${API_URL}/api/cascos/proforma/job/_ping`, { headers: getAuthHeaders() });
+      let vd = {}; try { vd = await v.json(); } catch { vd = {}; }
+      const rutaNoExiste = v.status === 404 && /not found/i.test(vd.detail || '');
+      if (rutaNoExiste) {
+        return 'El backend todavía está sirviendo la versión anterior: por eso la petición se queda colgada hasta que se corta. Espera a que termine de desplegarse el servicio del backend en Railway y vuelve a probar.';
+      }
+    } catch { /* si el sondeo tampoco va, se cae al mensaje general */ }
+    return `El servidor responde, pero ha rechazado esta petición concreta (${motivo}). Espera un minuto por si está reiniciando y reinténtalo.`;
   } catch {
     return `El servidor no responde (${motivo}). Está caído o terminando de desplegarse: espera un minuto y reinténtalo. Si sigue igual, revisa el despliegue del backend en Railway.`;
   }
