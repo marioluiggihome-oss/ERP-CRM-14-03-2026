@@ -72,6 +72,27 @@ const _match_acb = (it) => {
 // quieres ganar. Si el margen es 0, el resultado es tu coste.
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
+// Ante un fallo de red, distingue "el servidor no responde" de "falla solo esta
+// ruta". Sin esto, "Failed to fetch" obliga a adivinar dónde está el problema.
+const _diagnostico = async (e) => {
+  const motivo = e?.message || 'error de red';
+  if (!API_URL) {
+    return 'La aplicación no tiene configurada la dirección del servidor (REACT_APP_BACKEND_URL). Avisa al administrador.';
+  }
+  if (window.location.protocol === 'https:' && String(API_URL).startsWith('http:')) {
+    return `El navegador bloquea la llamada: la web va por HTTPS y el servidor está configurado en HTTP (${API_URL}). Avisa al administrador.`;
+  }
+  try {
+    const ping = await fetch(`${API_URL}/api/`, { method: 'GET' });
+    if (ping.ok || ping.status === 401 || ping.status === 403) {
+      return `El servidor responde, pero ha rechazado esta petición concreta (${motivo}). Suele ser que el backend se está reiniciando tras un despliegue: espera un minuto y reinténtalo.`;
+    }
+    return `El servidor ha contestado ${ping.status} a una comprobación básica. Está caído o desplegándose; espera un minuto y reinténtalo.`;
+  } catch {
+    return `El servidor no responde (${motivo}). Está caído o terminando de desplegarse: espera un minuto y reinténtalo. Si sigue igual, revisa el despliegue del backend en Railway.`;
+  }
+};
+
 export default function ProformaImporter({ esMaster }) {
   const [cargando, setCargando] = useState(false);
   const [progreso, setProgreso] = useState('');
@@ -132,7 +153,10 @@ export default function ProformaImporter({ esMaster }) {
       if (d.success) setItems(d.items || []);
       else setError(d.detail || d.error || 'No se pudieron detectar los muebles.');
     } catch (e) {
-      setError(`No se pudo conectar para analizar el PDF (${e?.message || 'error de red'}). Reinténtalo.`);
+      // "Failed to fetch" no dice NADA por sí solo: puede ser el servidor caído,
+      // un despliegue a medias o un problema solo de esta ruta. Se comprueba el
+      // servidor con una petición mínima para dar un diagnóstico de verdad.
+      setError(await _diagnostico(e));
     }
     finally { setCargando(false); setProgreso(''); }
   };
