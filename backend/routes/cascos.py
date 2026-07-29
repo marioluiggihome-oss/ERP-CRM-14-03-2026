@@ -172,29 +172,43 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
                 "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73}]}. "
                 "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual."
             )
+            import asyncio as _asyncio
+            # pdf_pages_to_png_b64 ya descarta las páginas de vista 3D/plano y
+            # limita a MAX_PAGES, así que aquí solo llegan páginas con tabla.
             pages = pdf_pages_to_png_b64(pdf_bytes)
-            # Cap de páginas para no exceder el timeout del gateway (una proforma
-            # suele tener pocas páginas; si trae muchas, procesamos las primeras).
-            MAX_PAGES = 12
-            if len(pages) > MAX_PAGES:
-                logger.warning("proforma visión: %d páginas, se procesan las primeras %d", len(pages), MAX_PAGES)
-                pages = pages[:MAX_PAGES]
             allrows = []
+            TIMEOUT_PAGINA = 90   # una página colgada no puede bloquear la petición
+            DEADLINE = 150        # el endpoint SIEMPRE responde antes que el gateway
 
-            async def _una_pagina(pg):
+            async def _una_pagina(idx, pg):
                 try:
-                    t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt, model="gemini-2.5-pro")
+                    # El PNG se manda como PNG: declararlo como JPEG hacía que
+                    # Gemini rechazase la imagen y se reintentase con todos los
+                    # modelos de respaldo, multiplicando el tiempo por página.
+                    t = await _asyncio.wait_for(
+                        analyze_image_with_gemini(image_base64=pg, prompt=prompt,
+                                                  model="gemini-2.5-pro", image_mime="image/png"),
+                        timeout=TIMEOUT_PAGINA,
+                    )
                     mm = _re.search(r"\{[\s\S]*\}", t or "")
                     if mm:
-                        return (_json.loads(mm.group()).get("items")) or []
+                        return idx, (_json.loads(mm.group()).get("items")) or []
+                except _asyncio.TimeoutError:
+                    logger.warning("proforma visión: página %d agotó %ss", idx + 1, TIMEOUT_PAGINA)
                 except Exception as e:
-                    logger.warning("proforma visión página: %s", e)
-                return []
+                    logger.warning("proforma visión página %d: %s", idx + 1, e)
+                return idx, []
 
-            # Concurrente: reduce el tiempo de pared de N×t a ~t y evita el corte de red.
-            import asyncio as _asyncio
-            resultados = await _asyncio.gather(*[_una_pagina(pg) for pg in pages])
-            for rows in resultados:
+            # Concurrente: el tiempo de pared es el de la página más lenta, no la suma.
+            tareas = [_asyncio.ensure_future(_una_pagina(i, pg)) for i, pg in enumerate(pages)]
+            hechas, pendientes = await _asyncio.wait(tareas, timeout=DEADLINE)
+            for t in pendientes:
+                t.cancel()
+            if pendientes:
+                logger.error("proforma visión: %d de %d páginas sin terminar en %ss",
+                             len(pendientes), len(pages), DEADLINE)
+            # Se devuelve lo que haya llegado, en el orden original de las páginas.
+            for idx, rows in sorted(t.result() for t in hechas if not t.cancelled()):
                 allrows.extend(rows)
             # Reutiliza los enriquecedores del parser de texto para color/herraje/frentes.
             from services.proforma_cascos import _color_y_herraje, _cuenta_frentes, _tipo_mueble
@@ -283,7 +297,8 @@ async def mv_detectar_pdf(payload: dict, current_user: Optional[dict] = Depends(
                           "Devuelve un JSON: {\"lineas\":[{\"cod\":\"B60\",\"cant\":1}]}.")
                 import json as _json
                 for pg in pages:
-                    t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt, model="gemini-2.5-flash")
+                    t = await analyze_image_with_gemini(image_base64=pg, prompt=prompt,
+                                                        model="gemini-2.5-flash", image_mime="image/png")
                     mm = _re.search(r"\{[\s\S]*\}", t or "")
                     if mm:
                         text += " " + " ".join(f"{it.get('cod','')} x{it.get('cant',1)}" for it in (_json.loads(mm.group()).get("lineas") or []))

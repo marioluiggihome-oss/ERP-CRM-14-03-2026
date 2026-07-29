@@ -102,14 +102,25 @@ export default function ProformaImporter({ esMaster }) {
       const b64 = await new Promise((res, rej) => {
         const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
       });
-      const r = await fetch(`${API_URL}/api/cascos/proforma`, {
-        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ pdfBase64: b64 }),
-      });
+      // El servidor corta a los 150 s; se espera algo más para poder mostrar su
+      // respuesta en vez de un "Failed to fetch" sin explicación.
+      const ac = new AbortController();
+      const corte = setTimeout(() => ac.abort(), 210000);
+      let r;
+      try {
+        r = await fetch(`${API_URL}/api/cascos/proforma`, {
+          method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ pdfBase64: b64 }), signal: ac.signal,
+        });
+      } finally { clearTimeout(corte); }
       let d = {}; try { d = await r.json(); } catch { d = {}; }
       if (!r.ok) { setError(d.detail || d.error || `El servidor devolvió un error (${r.status}). Si el PDF es escaneado, la detección tarda más; reinténtalo.`); return; }
       if (d.success) setItems(d.items || []);
       else setError(d.detail || d.error || 'No se pudieron detectar los muebles.');
-    } catch (e) { setError(`No se pudo conectar para analizar el PDF (${e?.message || 'error de red'}). Si el PDF es escaneado tarda más; reinténtalo.`); }
+    } catch (e) {
+      setError(e?.name === 'AbortError'
+        ? 'El PDF ha tardado demasiado en analizarse. Suele pasar con presupuestos escaneados de muchas páginas: prueba a subir solo las páginas con la tabla de partidas.'
+        : `No se pudo conectar para analizar el PDF (${e?.message || 'error de red'}). Si el PDF es escaneado tarda más; reinténtalo.`);
+    }
     finally { setCargando(false); }
   };
 

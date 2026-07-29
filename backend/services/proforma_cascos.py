@@ -158,11 +158,28 @@ def extract_pdf_text_all_pages(pdf_bytes: bytes) -> str:
 
 
 def pdf_pages_to_png_b64(pdf_bytes: bytes, max_pages: int = 12) -> List[str]:
-    """Renderiza cada página a PNG base64 (para el respaldo por visión IA)."""
+    """Renderiza a PNG base64 las páginas con tabla de artículos (respaldo visión IA).
+
+    Los presupuestos generados con "Microsoft: Print To PDF" no llevan capa de
+    texto: las letras van como trazos vectoriales. Eso permite separar una página
+    de tabla (miles de trazos) de una vista 3D o un plano (una imagen y apenas
+    trazos) y ahorrar una llamada de visión por cada página irrelevante — que es
+    lo que hacía que un presupuesto de 10 páginas tardase tanto que se cortaba la
+    conexión. El filtro solo actúa si el documento es de ese tipo (alguna página
+    con muchos trazos); en un PDF escaneado de verdad se queda inerte.
+    """
     import fitz, base64
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    paginas = list(doc)[:max_pages]
+    trazos = [len(pg.get_drawings()) for pg in paginas]
+    utiles = paginas
+    if trazos and max(trazos) >= 400:
+        umbral = max(trazos) * 0.2
+        con_tabla = [pg for pg, n in zip(paginas, trazos) if n >= umbral]
+        if con_tabla:
+            utiles = con_tabla
     out = []
-    for pg in list(doc)[:max_pages]:
+    for pg in utiles:
         pix = pg.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))
         out.append(base64.b64encode(pix.tobytes("png")).decode("utf-8"))
     return out
