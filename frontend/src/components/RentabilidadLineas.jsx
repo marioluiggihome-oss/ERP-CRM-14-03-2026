@@ -20,6 +20,17 @@ const TABS = [
 const NEXT_DOC_TYPE = { presupuesto: 'pedido', pedido: 'albaran', albaran: 'factura' };
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
+// "Sin costes cargados" es que NINGUNA linea tenga coste, no que el coste TOTAL
+// sea <= 0. En un ABONO el coste efectivo va en negativo, asi que el total puede
+// salir bajo o negativo aunque todas las lineas tengan su coste puesto: mirando
+// solo el total se bloqueaban abonos perfectamente correctos. Es la misma
+// definicion que usa el backend en toggle_revision.
+const sinCostesCargados = (f) =>
+  !(f.lines || []).some(l => Math.abs(Number(l.coste) || 0) > 0)
+  && !((f.costesProyecto || 0) > 0);
+// Abono MIXTO: una linea de abono (venta < 0) dentro de una factura cuyo total
+// de venta sigue siendo positivo.
+const tieneAbonoMixto = (f) => (f.lines || []).some(l => (Number(l.venta) || 0) < 0);
 const normRef = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 // Limpia la referencia visible: elimina espacios alrededor de '/' y al inicio/fin
 // para que 'LG26 / 57' se guarde y filtre como 'LG26/57'
@@ -121,8 +132,8 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
     // Los ABONOS/rectificativas (venta total ≤ 0) sí se pueden revisar (su margen negativo es correcto).
     if (!yaRevisada) {
       const tt = f.totals || totals(f.lines);
-      const esAbono = (Number(tt.venta) || 0) <= 0;
-      const faltanCostes = (tt.venta > 0) && !(tt.coste > 0) && !((f.costesProyecto || 0) > 0);
+      const esAbono = (Number(tt.venta) || 0) <= 0 || tieneAbonoMixto(f);
+      const faltanCostes = (tt.venta > 0) && sinCostesCargados(f);
       if (!esAbono && (Number(tt.margen) || 0) <= 0) {
         alert(`No se puede marcar como REVISADA: el margen es ${eur(tt.margen)} (0 o negativo).\n\nRevisa/corrige la venta o el coste de las líneas antes de dar el visto bueno.`);
         return;
@@ -1445,8 +1456,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               // positivo pero el margen negativo/bajo es igualmente correcto (el coste
               // efectivo de la línea de abono resta, no suma). Antes solo se miraba el
               // signo del total, así que un abono mixto se marcaba en rojo por error.
-              const hayAbonoMixto = (f.lines || []).some(l => (Number(l.venta) || 0) < 0);
-              const esAbono = (Number(tt.venta) || 0) <= 0 || hayAbonoMixto;
+              const esAbono = (Number(tt.venta) || 0) <= 0 || tieneAbonoMixto(f);
               // Alerta de margen bajo (<15%) solo tiene sentido si hay venta y coste
               // registrados Y no es un abono (el margen bajo/negativo ahí es esperado).
               const alertaMargen = !esAbono && tt.venta > 0 && tt.coste > 0 && tt.margenPct < 15;
@@ -1476,7 +1486,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   <td className="p-3 text-right font-mono text-orange-600">
                     {eur(tt.coste)}
                     {/* Aviso: hay venta pero ningún coste emparejado (ni en líneas ni en costes de proyecto) */}
-                    {tt.venta > 0 && !(tt.coste > 0) && !((f.costesProyecto || 0) > 0) && (
+                    {tt.venta > 0 && sinCostesCargados(f) && (
                       <span title="Esta ficha no tiene costes emparejados: el margen mostrado no es real."
                         className="block mt-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 inline-block">⚠ Faltan costes</span>
                     )}
