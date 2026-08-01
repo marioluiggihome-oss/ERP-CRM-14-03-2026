@@ -2349,32 +2349,6 @@ export default function AIRenderStudio({ state, setState }) {
                 <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
               </div>
 
-              {/* Precio orientativo (estimación, no presupuesto) */}
-              {(() => { const e = estimarPrecio(); return (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black text-emerald-700 uppercase tracking-wider">Precio orientativo</p>
-                    <p className="text-sm font-black text-emerald-700">{eur0(e.min)} – {eur0(e.max)}</p>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l.{e.sinMedidas ? ' (por defecto — pon ancho/fondo)' : ''} · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">{e.deCatalogo ? `Muebles ≈ ${eur0(e.precioMuebleMl)}/m.l. (librería ${e.lib}, bloque ${e.group}) según tu catálogo del Presupuestador 1.` : 'Precios medios orientativos (activa un catálogo en el Presupuestador 1 para usar tus tarifas).'} El precio exacto se cierra en el Presupuestador 1, mueble a mueble.</p>
-                  {setState && (
-                    <button onClick={() => {
-                      // Si el usuario tiene Cocina Desmontada (Cascos), preguntar destino.
-                      const tieneDesmontada = state?.currentUser?.canUseCascos === true;
-                      let destino = 'presupuestador2';
-                      if (tieneDesmontada) {
-                        const montada = window.confirm('¿A DÓNDE VOLCAMOS EL DISEÑO?\n\n✔ Aceptar → PRESUPUESTADOR 1 · COCINA MONTADA\n✖ Cancelar → DESPIECE · COCINA DESMONTADA (cascos + herraje)');
-                        destino = montada ? 'presupuestador2' : 'cascos';
-                      }
-                      setState(p => ({ ...p, currentTab: destino, renderReturn: true }));
-                    }}
-                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">
-                      <FileText size={14} /> Presupuestar {state?.currentUser?.canUseCascos === true ? '(Montada / Desmontada)' : 'en Presupuestador 1'}
-                    </button>
-                  )}
-                </div>
-              ); })()}
 
               {/* Plan de Instalaciones */}
               {currentImage() && (
