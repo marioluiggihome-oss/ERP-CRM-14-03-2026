@@ -572,6 +572,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     if (state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) {
       // Director Comercial / Gerente ve todos los usuarios
       return state.users;
+    } else if (state.currentUser?.canManageCarpinteroUsers && !state.currentUser?.isAdmin) {
+      // Admin de división Carpintero: solo ve sus propios usuarios vinculados + a sí mismo
+      return state.users.filter(u =>
+        u.id === state.currentUser.id ||
+        u.linkedCarpinteroAdminId === state.currentUser.id
+      );
     } else if (state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) {
       // Responsable Delegación ve comerciales y tiendas de su delegación
       return state.users.filter(u => 
@@ -1584,7 +1590,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               </div>
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-3 mt-3">
+                            {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && <div className="grid grid-cols-3 gap-3 mt-3">
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
                                 <p className="text-xs font-bold text-slate-900">
@@ -1624,10 +1630,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   {user.allowedLibraries?.join(', ') || 'ZC'}
                                 </p>
                               </div>
-                            </div>
-
-                            {/* Capabilities badges */}
-                            <div className="flex flex-wrap gap-1 mt-3">
+                                                        </div>}
+                            {/* Capabilities badges - solo visible para admins */}
+                            {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && <div className="flex flex-wrap gap-1 mt-3">
                               {user.canAuthorizePermissions && <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[9px] font-black">AUTORIZA</span>}
                               {user.canAccessArmarios && <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-[9px] font-black">ARMARIOS</span>}
                               {user.canUseAIAnalysis && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">IA LAB</span>}
@@ -1649,7 +1654,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.isMontador && <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black">MONTADOR</span>}
                               {user.isCarpintero && <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-[9px] font-black">CARPINTERO</span>}
                               {user.useCustomBranding && <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-[9px] font-black">PERSONALIZAR</span>}
-                            </div>
+                            </div>}
                           </div>
 
                           <div className="flex gap-2">
