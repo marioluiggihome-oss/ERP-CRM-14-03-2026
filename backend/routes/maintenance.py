@@ -23,7 +23,7 @@ router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 # Database connection
 MONGO_URL = os.environ.get("MONGO_URL")
 DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL)
+client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
 db = client[DB_NAME]
 
 # Global maintenance state (synced with DB)

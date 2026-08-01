@@ -14,8 +14,18 @@ load_dotenv(ROOT_DIR / '.env')
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'test_database')
 
-# Inicializar cliente MongoDB
-client = AsyncIOMotorClient(MONGO_URL)
+# Inicializar cliente MongoDB.
+# serverSelectionTimeoutMS=5000: si el cluster tarda más de 5 s en dar conexión,
+# la operación falla con un error claro en lugar de quedarse colgada hasta que
+# la pasarela de Railway corta la petición con un "Failed to fetch" opaco.
+# connectTimeoutMS=10000: tiempo máximo para abrir el socket TCP.
+# maxPoolSize=20: limita las conexiones concurrentes para no saturar el cluster.
+client = AsyncIOMotorClient(
+    MONGO_URL,
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=10000,
+    maxPoolSize=20,
+)
 db = client[DB_NAME]
 
 # Collections

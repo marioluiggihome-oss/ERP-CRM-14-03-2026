@@ -16,7 +16,7 @@ import asyncio
 # MongoDB
 from motor.motor_asyncio import AsyncIOMotorClient
 mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
 db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
 # Gemini Vision para análisis de PDF

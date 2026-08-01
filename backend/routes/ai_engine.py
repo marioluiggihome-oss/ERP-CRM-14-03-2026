@@ -41,7 +41,7 @@ logger = logging.getLogger("luiggi_ai.router")
 
 ai_engine_router = APIRouter(prefix="/ai-engine", tags=["LuiggiAI Engine"])
 
-_db = AsyncIOMotorClient(os.environ.get('MONGO_URL'))[os.environ.get('DB_NAME', 'luiggi_home')]
+_db = AsyncIOMotorClient(os.environ.get('MONGO_URL'), serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)[os.environ.get('DB_NAME', 'luiggi_home')]
 
 
 # ─── Proyectos de render 3D (guardar / historial persistente) ─────────────────

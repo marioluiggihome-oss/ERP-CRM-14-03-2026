@@ -20,7 +20,7 @@ except Exception:  # pragma: no cover
     _DEPS = []
 
 logger = logging.getLogger(__name__)
-_client = AsyncIOMotorClient(os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
+_client = AsyncIOMotorClient(os.environ.get("MONGO_URL", "mongodb://localhost:27017"), serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
 _db = _client[os.environ.get("DB_NAME", "luiggi_home")]
 
 router = APIRouter(tags=["audit"], dependencies=_DEPS)

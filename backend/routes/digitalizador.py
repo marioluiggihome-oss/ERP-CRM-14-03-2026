@@ -32,7 +32,7 @@ router = APIRouter(tags=["digitalizador"], dependencies=_DIGITALIZADOR_DEPS)
 # Database connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL)
+client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
 db = client[DB_NAME]
 
 

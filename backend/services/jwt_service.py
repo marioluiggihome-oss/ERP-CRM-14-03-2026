@@ -214,7 +214,7 @@ def _users_collection():
     if _users_db is None:
         mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
         db_name = os.environ.get('DB_NAME', 'luiggi_home')
-        _users_client = AsyncIOMotorClient(mongo_url)
+        _users_client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
         _users_db = _users_client[db_name]
     return _users_db.users
 

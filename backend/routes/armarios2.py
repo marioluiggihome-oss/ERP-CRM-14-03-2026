@@ -27,7 +27,7 @@ except Exception:
 
 router = APIRouter(tags=["armarios2"], dependencies=_DEPS)
 
-_client = AsyncIOMotorClient(os.environ.get('MONGO_URL'))
+_client = AsyncIOMotorClient(os.environ.get('MONGO_URL'), serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
 _db = _client[os.environ.get('DB_NAME', 'luiggi_home')]
 
 

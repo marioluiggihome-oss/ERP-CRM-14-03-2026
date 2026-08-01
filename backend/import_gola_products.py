@@ -159,7 +159,7 @@ def generate_product_name(code, category):
 
 async def import_products():
     """Importa productos desde el archivo de texto extraído."""
-    client = AsyncIOMotorClient(MONGO_URL)
+    client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
     db = client[DB_NAME]
     products_collection = db['products']
     

@@ -93,7 +93,7 @@ def build_user_doc(c):
 
 
 async def main():
-    client = AsyncIOMotorClient(MONGO_URL)
+    client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
     db = client[DB_NAME]
 
     print(f"Conectado a DB: {DB_NAME}")

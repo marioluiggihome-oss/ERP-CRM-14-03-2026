@@ -33,7 +33,7 @@ logger = logging.getLogger("kitchen_projects")
 
 MONGO_URL = os.environ.get("MONGO_URL")
 DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-_client = AsyncIOMotorClient(MONGO_URL)
+_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
 db = _client[DB_NAME]
 
 kitchen_projects_router = APIRouter(prefix="/kitchen-projects", tags=["Kitchen 3D Projects"])
