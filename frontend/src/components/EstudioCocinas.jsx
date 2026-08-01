@@ -491,6 +491,7 @@ export default function EstudioCocinas({ state, setState }) {
   // Panel lateral redimensionable/ocultable (solo pantallas grandes).
   const [panelW, setPanelW] = useState(224);
   const [panelHidden, setPanelHidden] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Sidebar overlay en mobile
   const resizingPanel = useRef(false);
   const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
   useEffect(() => {
@@ -1039,36 +1040,66 @@ export default function EstudioCocinas({ state, setState }) {
     <div className={`flex flex-col h-full overflow-hidden transition-colors duration-200 ${t.root}`}>
 
       {/* Header */}
-      <div className={`flex items-center gap-3 px-6 py-3 flex-shrink-0 ${t.header}`}>
-        <div className="p-2 rounded-xl bg-amber-600/20">
-          <ChefHat size={18} className="text-amber-500" />
+      <div className={`flex items-center gap-2 px-3 md:px-6 py-2.5 flex-shrink-0 ${t.header}`}>
+        {/* Hamburguesa mobile */}
+        <button onClick={() => setMobileMenuOpen(v => !v)}
+          className={`lg:hidden flex items-center justify-center w-8 h-8 rounded-lg transition-all ${mobileMenuOpen ? 'bg-amber-600 text-white' : t.dlBtn}`}
+          title="Abrir panel de proyecto">
+          <LayoutGrid size={15}/>
+        </button>
+        <div className="p-1.5 rounded-xl bg-amber-600/20 hidden sm:flex">
+          <ChefHat size={16} className="text-amber-500" />
         </div>
-        <div className="flex-1">
-          <h1 className={`text-xs font-black uppercase tracking-widest ${t.title}`}>3D Estudio</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className={`text-xs font-black uppercase tracking-widest truncate ${t.title}`}>3D Estudio</h1>
+          {proy.nombre_cliente && <p className={`text-[9px] truncate ${t.subtext}`}>{proy.nombre_cliente}</p>}
         </div>
         {/* Botones de proyecto */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button onClick={openProjectList} title="Abrir proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-            <FolderOpen size={12}/> <span className="hidden md:inline">Proyectos</span>
+            <FolderOpen size={12}/> <span className="hidden lg:inline">Proyectos</span>
           </button>
-          <button onClick={generarDossier} disabled={dossierBusy || !render.imageUrl} title="Generar dossier PDF (portada + render + planta + alzados + ficha)" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50">
-            {dossierBusy ? <Loader2 size={12} className="animate-spin"/> : <FileText size={12}/>} <span className="hidden md:inline">Dossier PDF</span>
+          <button onClick={generarDossier} disabled={dossierBusy || !render.imageUrl} title="Generar dossier PDF" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50">
+            {dossierBusy ? <Loader2 size={12} className="animate-spin"/> : <FileText size={12}/>} <span className="hidden lg:inline">Dossier</span>
           </button>
           <button onClick={saveProject} disabled={busySave} title="Guardar proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${savedId ? 'bg-emerald-600 text-white' : t.dlBtn}`}>
-            {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} <span className="hidden md:inline">{savedId ? 'Guardado' : 'Guardar'}</span>
+            {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} <span className="hidden lg:inline">{savedId ? 'Guardado' : 'Guardar'}</span>
           </button>
           <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }} title="Nuevo proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-            <Plus size={12}/> <span className="hidden md:inline">Nuevo</span>
+            <Plus size={12}/> <span className="hidden lg:inline">Nuevo</span>
           </button>
         </div>
         <ThemeSelector mode={themeMode} onChange={handleThemeChange} t={t} />
       </div>
 
+      {/* Overlay mobile para cerrar el sidebar al tocar fuera */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
       <div className="flex flex-1 overflow-hidden min-h-0">
 
-        {/* Sidebar */}
-        <div className={`${panelHidden ? 'lg:hidden' : ''} w-56 lg:w-auto flex-shrink-0 min-h-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin transition-colors duration-200 ${t.sidebar}`} style={{overflowY:'auto', overflowX:'hidden', ...(isWide() && !panelHidden ? { width: panelW } : {})}}>
-          <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
+        {/* Sidebar — overlay en mobile, fijo en desktop */}
+        <div className={`
+          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${panelHidden ? 'lg:hidden' : ''}
+          fixed lg:relative z-40 lg:z-auto
+          top-0 left-0 h-full lg:h-auto
+          w-72 lg:w-auto
+          flex-shrink-0 min-h-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin
+          transition-transform duration-300 ease-in-out
+          shadow-2xl lg:shadow-none
+          ${t.sidebar}
+        `} style={{overflowY:'auto', overflowX:'hidden', ...(isWide() && !panelHidden ? { width: panelW } : {})}}>
+          {/* Cabecera del sidebar con botón de cierre en mobile */}
+          <div className="flex items-center justify-between mb-1">
+            <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
+            <button onClick={() => setMobileMenuOpen(false)}
+              className={`lg:hidden flex items-center justify-center w-7 h-7 rounded-lg transition-all ${t.dlBtn}`}
+              title="Cerrar panel">
+              <X size={14}/>
+            </button>
+          </div>
 
           {/* Campos reordenables */}
           {sidebarOrder.map((fieldId) => {
@@ -1254,44 +1285,48 @@ export default function EstudioCocinas({ state, setState }) {
           )}
         </div>
 
-        {/* Divisor redimensionable + ocultar panel (pantallas grandes) */}
+        {/* Divisor redimensionable + ocultar panel (solo pantallas grandes) */}
         {!panelHidden ? (
           <div className="hidden lg:flex shrink-0 relative items-stretch">
             <div onMouseDown={() => { resizingPanel.current = true; document.body.style.userSelect = 'none'; }}
-              title="Arrastra para redimensionar"
-              className="w-1.5 cursor-ew-resize bg-slate-200/60 hover:bg-amber-400 transition-colors" />
-            <button onClick={() => setPanelHidden(true)} title="Ocultar panel"
-              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-amber-600 shadow">
-              <ChevronLeft size={15} />
+              title="Arrastra para redimensionar el panel"
+              className="w-2 cursor-ew-resize bg-slate-200/40 hover:bg-amber-400/60 transition-colors duration-150 group">
+              <div className="w-0.5 h-8 bg-slate-300 group-hover:bg-amber-500 rounded-full mx-auto mt-[calc(50%-1rem)] transition-colors"/>
+            </div>
+            <button onClick={() => setPanelHidden(true)} title="Ocultar panel lateral"
+              className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-10 w-7 h-14 bg-white border border-slate-200 rounded-r-xl flex items-center justify-center text-slate-400 hover:text-amber-600 hover:border-amber-400 shadow-md transition-all">
+              <ChevronLeft size={14} />
             </button>
           </div>
         ) : (
-          <button onClick={() => setPanelHidden(false)} title="Mostrar panel"
-            className="hidden lg:flex shrink-0 self-stretch items-center px-1 bg-white border-r border-slate-200 text-slate-400 hover:text-amber-600">
-            <ChevronRight size={18} />
+          <button onClick={() => setPanelHidden(false)} title="Mostrar panel lateral"
+            className="hidden lg:flex shrink-0 self-stretch items-center px-1.5 border-r border-slate-200 text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all">
+            <ChevronRight size={16} />
           </button>
         )}
 
         {/* Main */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-          {/* Tabs */}
-          <div className={`flex px-4 pt-2 gap-1 flex-shrink-0 transition-colors duration-200 ${t.tabBar}`}>
+          {/* Tabs — scroll horizontal en mobile, iconos + labels en desktop */}
+          <div className={`flex px-2 md:px-4 pt-2 gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-none transition-colors duration-200 ${t.tabBar}`}
+            style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
             {TABS.map(tb => (
               <button key={tb.id} onClick={() => setTab(tb.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                className={`flex items-center gap-1 px-2 md:px-3 py-2 rounded-t-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 ${
                   tab === tb.id ? t.tabActive : t.tabInactive
                 }`}>
-                {tb.icon} {tb.label}
+                {tb.icon}
+                <span className="hidden sm:inline">{tb.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-5">
+          <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-5">
 
             {/* ── RENDER MANUS ── */}
             {tab === 'render' && (
-              <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              <div className="flex flex-col gap-4 max-w-2xl xl:max-w-3xl mx-auto">
                 <div>
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Render fotorrealista 3D</h2>
                   <p className={`text-xs ${t.subtext}`}>Elige un estilo rápido o escribe tu propia descripción. Sube un croquis para mayor precisión.</p>
@@ -1303,14 +1338,14 @@ export default function EstudioCocinas({ state, setState }) {
                     <Wand2 size={13} className="text-amber-500"/>
                     <p className={`text-[10px] font-black uppercase tracking-widest text-amber-500`}>Estilos Rápidos</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-6 gap-2">
                     {ESTILOS_RAPIDOS.map(s => (
                       <button key={s.id} onClick={() => applyStyle(s)}
                         className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                           selectedStyle === s.id ? t.styleBtnAct : t.styleBtn
                         }`}>
                         <span className="text-base">{s.emoji}</span>
-                        <span>{s.label}</span>
+                        <span className="text-center leading-tight">{s.label}</span>
                       </button>
                     ))}
                   </div>
@@ -1374,7 +1409,7 @@ export default function EstudioCocinas({ state, setState }) {
                 {render.imageUrl && (
                   <>
                     {/* Barra de acciones del render */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <button onClick={downloadWithWatermark}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
                         <Download size={11}/> PNG
@@ -1428,7 +1463,7 @@ export default function EstudioCocinas({ state, setState }) {
 
                     {/* Comparativa croquis vs render */}
                     {compareOn && render.croquisPrev ? (
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className={`rounded-xl overflow-hidden border ${t.cardBorder} relative`}>
                           <img src={render.croquisPrev} alt="Croquis original" className="w-full object-contain" />
                           <span className={`absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[9px] font-black text-white uppercase tracking-widest`}>Croquis</span>
@@ -1477,7 +1512,7 @@ export default function EstudioCocinas({ state, setState }) {
 
             {/* ── PLANO 2D ── */}
             {tab === 'plano' && (
-              <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              <div className="flex flex-col gap-4 max-w-2xl xl:max-w-3xl mx-auto">
                 <div>
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Plano técnico acotado</h2>
                   <p className={`text-xs ${t.subtext}`}>Usa las medidas del panel izquierdo. Formato: <code className={`px-1 rounded ${t.code}`}>400x350cm isla 200x100cm</code></p>
@@ -1546,7 +1581,7 @@ export default function EstudioCocinas({ state, setState }) {
 
             {/* ── FICHA TÉCNICA ── */}
             {tab === 'ficha' && (
-              <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              <div className="flex flex-col gap-4 max-w-2xl xl:max-w-3xl mx-auto">
                 <div>
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Ficha técnica del proyecto</h2>
                   <p className={`text-xs ${t.subtext}`}>Genera una ficha con materiales, electrodomésticos, instalaciones y plazos.</p>
@@ -1570,7 +1605,7 @@ export default function EstudioCocinas({ state, setState }) {
 
             {/* ── PRESENTACIÓN ── */}
             {tab === 'pres' && (
-              <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              <div className="flex flex-col gap-4 max-w-2xl xl:max-w-4xl mx-auto">
                 <div>
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Presentación para cliente</h2>
                   <p className={`text-xs ${t.subtext}`}>Genera una presentación HTML de alta calidad lista para mostrar en pantalla o imprimir como PDF.</p>
@@ -1588,7 +1623,7 @@ export default function EstudioCocinas({ state, setState }) {
                         <button onClick={() => dl(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.html`, 'text/html')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}><Download size={11}/> HTML</button>
                       </>} />
                     {pres.preview && (
-                      <div className={`rounded-xl overflow-hidden border ${t.cardBorder}`} style={{ height: '560px' }}>
+                      <div className={`rounded-xl overflow-hidden border ${t.cardBorder}`} style={{ height: 'clamp(480px, 60vh, 800px)' }}>
                         <iframe srcDoc={pres.html} title="Presentación" className="w-full h-full" sandbox="allow-same-origin" />
                       </div>
                     )}
@@ -1599,7 +1634,7 @@ export default function EstudioCocinas({ state, setState }) {
 
             {/* ── INSTALACIONES ── */}
             {tab === 'inst' && (
-              <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              <div className="flex flex-col gap-4 max-w-2xl xl:max-w-3xl mx-auto">
                 <div>
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Plan de instalaciones</h2>
                   <p className={`text-xs ${t.subtext}`}>Genera el plan de puntos eléctricos, agua, desagüe y gas según la distribución de la cocina.</p>
@@ -1696,7 +1731,7 @@ export default function EstudioCocinas({ state, setState }) {
                 )}
                 {!galeria.loading && galeria.renders.length > 0 && (
                   <>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                       {galeria.renders.map(r => (
                         <div key={r._id} className={`relative group rounded-xl overflow-hidden border ${t.cardBorder} transition-shadow hover:shadow-lg`}>
                           <img src={imgSrc(r.image_url)} alt={r.cliente || 'Render'} className="w-full h-40 object-cover cursor-pointer"
