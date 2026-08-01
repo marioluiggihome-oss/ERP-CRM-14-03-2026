@@ -5,10 +5,10 @@ Gestiona productos de fabricantes como ALVIC con parámetros específicos
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field, field_validator
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 import os
 import uuid
+from services.db_client import get_db as _get_db
 
 # Seguridad: el modulo no exigia ningun token. No hay un permiso granular
 # especifico para este presupuestador (a diferencia de Gastos/Fabrica), asi
@@ -22,9 +22,6 @@ except Exception:  # pragma: no cover - fallback si no hay jwt_service
 router = APIRouter(prefix="/despiece-budgeter", tags=["despiece-budgeter"], dependencies=_DESPIECE_DEPS)
 
 # MongoDB connection
-mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[os.environ.get('DB_NAME')]
 
 # ============================================
 # MODELOS
@@ -203,7 +200,7 @@ async def get_despiece_products(
             {"colorCode": {"$regex": search, "$options": "i"}}
         ]
     
-    products = await db.despiece_products.find(query, {"_id": 0}).sort([("type", 1), ("collection", 1), ("height", 1), ("width", 1)]).limit(limit).to_list(limit)
+    products = await _get_db().despiece_products.find(query, {"_id": 0}).sort([("type", 1), ("collection", 1), ("height", 1), ("width", 1)]).limit(limit).to_list(limit)
     return products
 
 
@@ -220,10 +217,10 @@ async def get_despiece_filters(manufacturer: str = None, collection: str = None)
         base_filter["collection"] = collection
     
     # Obtener valores únicos de cada campo
-    manufacturers = await db.despiece_products.distinct("manufacturer")
+    manufacturers = await _get_db().despiece_products.distinct("manufacturer")
     
     # Colecciones filtradas por fabricante si se especifica
-    collections = await db.despiece_products.distinct("collection", base_filter if manufacturer else {})
+    collections = await _get_db().despiece_products.distinct("collection", base_filter if manufacturer else {})
     
     # Colores filtrados por fabricante y/o colección
     color_filter = {}
@@ -231,12 +228,12 @@ async def get_despiece_filters(manufacturer: str = None, collection: str = None)
         color_filter["manufacturer"] = manufacturer
     if collection:
         color_filter["collection"] = collection
-    colors = await db.despiece_products.distinct("color", color_filter if color_filter else {})
+    colors = await _get_db().despiece_products.distinct("color", color_filter if color_filter else {})
     
     # Otros filtros
-    finishes = await db.despiece_products.distinct("finish", base_filter if manufacturer else {})
-    thicknesses = await db.despiece_products.distinct("thickness", base_filter if manufacturer else {})
-    categories = await db.despiece_products.distinct("category", base_filter if manufacturer else {})
+    finishes = await _get_db().despiece_products.distinct("finish", base_filter if manufacturer else {})
+    thicknesses = await _get_db().despiece_products.distinct("thickness", base_filter if manufacturer else {})
+    categories = await _get_db().despiece_products.distinct("category", base_filter if manufacturer else {})
     
     return {
         "manufacturers": sorted([m for m in manufacturers if m]),
@@ -251,7 +248,7 @@ async def get_despiece_filters(manufacturer: str = None, collection: str = None)
 @router.get("/products/{product_id}")
 async def get_despiece_product(product_id: str):
     """Obtener un producto de despiece por ID"""
-    product = await db.despiece_products.find_one({"id": product_id}, {"_id": 0})
+    product = await _get_db().despiece_products.find_one({"id": product_id}, {"_id": 0})
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return product
@@ -264,7 +261,7 @@ async def create_despiece_product(product: DespieceProductCreate):
     product_data["id"] = f"desp-{uuid.uuid4().hex[:8]}"
     product_data["createdAt"] = datetime.now(timezone.utc).isoformat()
     
-    await db.despiece_products.insert_one(product_data)
+    await _get_db().despiece_products.insert_one(product_data)
     product_data.pop("_id", None)
     return product_data
 
@@ -284,7 +281,7 @@ async def create_despiece_products_bulk(products: List[Dict]):
                 continue
             
             # Verificar si ya existe
-            existing = await db.despiece_products.find_one({"code": code})
+            existing = await _get_db().despiece_products.find_one({"code": code})
             
             product_data = {
                 "id": f"desp-{uuid.uuid4().hex[:8]}" if not existing else existing.get("id"),
@@ -314,10 +311,10 @@ async def create_despiece_products_bulk(products: List[Dict]):
             }
             
             if existing:
-                await db.despiece_products.update_one({"code": code}, {"$set": product_data})
+                await _get_db().despiece_products.update_one({"code": code}, {"$set": product_data})
                 updated += 1
             else:
-                await db.despiece_products.insert_one(product_data)
+                await _get_db().despiece_products.insert_one(product_data)
                 created += 1
                 
         except Exception as e:
@@ -334,7 +331,7 @@ async def create_despiece_products_bulk(products: List[Dict]):
 @router.delete("/products/{product_id}")
 async def delete_despiece_product(product_id: str):
     """Eliminar un producto de despiece"""
-    result = await db.despiece_products.delete_one({"id": product_id})
+    result = await _get_db().despiece_products.delete_one({"id": product_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return {"message": "Producto eliminado"}
@@ -357,14 +354,14 @@ async def get_despiece_budgets(
     if status:
         query["status"] = status
     
-    budgets = await db.despiece_budgets.find(query, {"_id": 0}).sort("createdAt", -1).limit(limit).to_list(limit)
+    budgets = await _get_db().despiece_budgets.find(query, {"_id": 0}).sort("createdAt", -1).limit(limit).to_list(limit)
     return budgets
 
 
 @router.get("/budgets/{budget_id}")
 async def get_despiece_budget(budget_id: str):
     """Obtener un presupuesto de despiece por ID"""
-    budget = await db.despiece_budgets.find_one({"id": budget_id}, {"_id": 0})
+    budget = await _get_db().despiece_budgets.find_one({"id": budget_id}, {"_id": 0})
     if not budget:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
     return budget
@@ -394,7 +391,7 @@ async def create_despiece_budget(budget: dict):
         "updatedAt": datetime.now(timezone.utc).isoformat()
     }
     
-    await db.despiece_budgets.insert_one(budget_data)
+    await _get_db().despiece_budgets.insert_one(budget_data)
     budget_data.pop("_id", None)
     return budget_data
 
@@ -402,22 +399,22 @@ async def create_despiece_budget(budget: dict):
 @router.put("/budgets/{budget_id}")
 async def update_despiece_budget(budget_id: str, budget: dict):
     """Actualizar un presupuesto de despiece"""
-    existing = await db.despiece_budgets.find_one({"id": budget_id}, {"_id": 0})
+    existing = await _get_db().despiece_budgets.find_one({"id": budget_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
     
     update_data = {k: v for k, v in budget.items() if v is not None}
     update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     
-    await db.despiece_budgets.update_one({"id": budget_id}, {"$set": update_data})
-    updated = await db.despiece_budgets.find_one({"id": budget_id}, {"_id": 0})
+    await _get_db().despiece_budgets.update_one({"id": budget_id}, {"$set": update_data})
+    updated = await _get_db().despiece_budgets.find_one({"id": budget_id}, {"_id": 0})
     return updated
 
 
 @router.delete("/budgets/{budget_id}")
 async def delete_despiece_budget(budget_id: str):
     """Eliminar un presupuesto de despiece"""
-    result = await db.despiece_budgets.delete_one({"id": budget_id})
+    result = await _get_db().despiece_budgets.delete_one({"id": budget_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
     return {"message": "Presupuesto eliminado"}
@@ -466,15 +463,15 @@ async def seed_alvic_products():
     updated = 0
     
     for prod in sample_products:
-        existing = await db.despiece_products.find_one({"code": prod["code"]})
+        existing = await _get_db().despiece_products.find_one({"code": prod["code"]})
         prod["id"] = existing.get("id") if existing else f"desp-{uuid.uuid4().hex[:8]}"
         prod["createdAt"] = existing.get("createdAt") if existing else datetime.now(timezone.utc).isoformat()
         
         if existing:
-            await db.despiece_products.update_one({"code": prod["code"]}, {"$set": prod})
+            await _get_db().despiece_products.update_one({"code": prod["code"]}, {"$set": prod})
             updated += 1
         else:
-            await db.despiece_products.insert_one(prod)
+            await _get_db().despiece_products.insert_one(prod)
             created += 1
     
     return {
@@ -488,10 +485,10 @@ async def seed_alvic_products():
 @router.get("/stats")
 async def get_despiece_stats():
     """Obtener estadísticas del módulo despiece"""
-    total_products = await db.despiece_products.count_documents({})
-    total_budgets = await db.despiece_budgets.count_documents({})
-    manufacturers = await db.despiece_products.distinct("manufacturer")
-    collections = await db.despiece_products.distinct("collection")
+    total_products = await _get_db().despiece_products.count_documents({})
+    total_budgets = await _get_db().despiece_budgets.count_documents({})
+    manufacturers = await _get_db().despiece_products.distinct("manufacturer")
+    collections = await _get_db().despiece_products.distinct("collection")
     
     return {
         "totalProducts": total_products,
@@ -575,15 +572,15 @@ async def seed_syncron_products():
                     "category": cat_info['category']
                 }
                 
-                existing = await db.despiece_products.find_one({"code": code})
+                existing = await _get_db().despiece_products.find_one({"code": code})
                 product_data["id"] = existing.get("id") if existing else f"desp-{uuid.uuid4().hex[:8]}"
                 product_data["createdAt"] = existing.get("createdAt") if existing else datetime.now(timezone.utc).isoformat()
                 
                 if existing:
-                    await db.despiece_products.update_one({"code": code}, {"$set": product_data})
+                    await _get_db().despiece_products.update_one({"code": code}, {"$set": product_data})
                     updated += 1
                 else:
-                    await db.despiece_products.insert_one(product_data)
+                    await _get_db().despiece_products.insert_one(product_data)
                     created += 1
     
     return {

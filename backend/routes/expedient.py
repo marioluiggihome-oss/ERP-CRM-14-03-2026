@@ -7,8 +7,8 @@ from datetime import datetime
 import logging
 import os
 
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from services.db_client import get_db as _get_db
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -16,10 +16,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/expedient", tags=["expedient"])
 
 # Database connection
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 @router.get("/next")
@@ -38,7 +34,7 @@ async def get_next_expedient_number(client_code: str = None):
             counter_key = f"expedient_{year}_{client_code}"
             
             # Obtener o crear el contador para este cliente
-            counter = await db.system_counters.find_one({"key": counter_key})
+            counter = await _get_db().system_counters.find_one({"key": counter_key})
             
             if not counter:
                 counter = {
@@ -47,10 +43,10 @@ async def get_next_expedient_number(client_code: str = None):
                     "year": year,
                     "clientCode": client_code
                 }
-                await db.system_counters.insert_one(counter)
+                await _get_db().system_counters.insert_one(counter)
             
             # Incrementar el contador atómicamente
-            result = await db.system_counters.find_one_and_update(
+            result = await _get_db().system_counters.find_one_and_update(
                 {"key": counter_key},
                 {"$inc": {"value": 1}},
                 return_document=True
@@ -69,7 +65,7 @@ async def get_next_expedient_number(client_code: str = None):
         else:
             # Formato legacy (sin código de cliente)
             counter_key = f"expedient_{year}"
-            counter = await db.system_counters.find_one({"key": counter_key})
+            counter = await _get_db().system_counters.find_one({"key": counter_key})
             
             if not counter:
                 counter = {
@@ -77,9 +73,9 @@ async def get_next_expedient_number(client_code: str = None):
                     "value": 0,
                     "year": year
                 }
-                await db.system_counters.insert_one(counter)
+                await _get_db().system_counters.insert_one(counter)
             
-            result = await db.system_counters.find_one_and_update(
+            result = await _get_db().system_counters.find_one_and_update(
                 {"key": counter_key},
                 {"$inc": {"value": 1}},
                 return_document=True
@@ -104,7 +100,7 @@ async def get_current_expedient_info():
     """Obtener información del contador de expedientes actual"""
     try:
         year = datetime.now().year
-        counter = await db.system_counters.find_one({"key": f"expedient_{year}"})
+        counter = await _get_db().system_counters.find_one({"key": f"expedient_{year}"})
         
         current = counter["value"] if counter else 0
         
@@ -124,7 +120,7 @@ async def get_all_counters():
     """Obtener todos los contadores de expedientes (por cliente)"""
     try:
         year = datetime.now().year
-        counters = await db.system_counters.find(
+        counters = await _get_db().system_counters.find(
             {"key": {"$regex": f"^expedient_{year}"}},
             {"_id": 0}
         ).to_list(1000)

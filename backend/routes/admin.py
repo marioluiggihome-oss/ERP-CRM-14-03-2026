@@ -11,7 +11,6 @@ import logging
 import os
 import uuid
 
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.backup_service import get_backup_service
 from services.activity_tracker import get_tracker, ActivityType
@@ -22,10 +21,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 # Conexión a BD (mismo patrón que el resto de routers)
-_MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-_DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-_admin_client = AsyncIOMotorClient(_MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-_db = _admin_client[_DB_NAME]
 
 
 # ==================== DIAGNÓSTICO DE BASE DE DATOS ====================
@@ -40,7 +35,7 @@ async def db_health(user=Depends(require_admin)):
     """
     out = {"ok": True}
     try:
-        stats = await _db.command("dbStats", scale=1024 * 1024)  # MB
+        stats = await _get_db().command("dbStats", scale=1024 * 1024)  # MB
         out["storage"] = {
             "dataSize_MB": round(stats.get("dataSize", 0), 2),
             "storageSize_MB": round(stats.get("storageSize", 0), 2),
@@ -49,9 +44,9 @@ async def db_health(user=Depends(require_admin)):
         }
         # Colecciones más grandes por nº de documentos
         sizes = {}
-        for name in await _db.list_collection_names():
+        for name in await _get_db().list_collection_names():
             try:
-                sizes[name] = await _db[name].estimated_document_count()
+                sizes[name] = await _get_db()[name].estimated_document_count()
             except Exception:
                 pass
         out["top_collections"] = dict(sorted(sizes.items(), key=lambda x: -x[1])[:10])
@@ -66,8 +61,8 @@ async def db_health(user=Depends(require_admin)):
         try:
             doc = {"id": f"_diag-{datetime.utcnow().timestamp()}", "_diag": True,
                    "name": "DIAG TEST", "ts": datetime.utcnow()}
-            res = await _db[coll].insert_one(doc)
-            await _db[coll].delete_one({"_id": res.inserted_id})
+            res = await _get_db()[coll].insert_one(doc)
+            await _get_db()[coll].delete_one({"_id": res.inserted_id})
             writes[coll] = "OK"
         except Exception as e:
             writes[coll] = f"FALLO: {e}"
@@ -80,7 +75,7 @@ async def db_health(user=Depends(require_admin)):
     idx = {}
     for coll in ["contacts", "calendar_events", "projects"]:
         try:
-            info = await _db[coll].index_information()
+            info = await _get_db()[coll].index_information()
             idx[coll] = {name: {"keys": v.get("key"), "unique": v.get("unique", False)}
                          for name, v in info.items()}
         except Exception as e:
@@ -99,7 +94,7 @@ async def recent_errors(limit: int = 20, user=Depends(require_admin)):
     en la app y luego abre esta URL.
     """
     try:
-        docs = await _db.error_log.find({}, {"_id": 0}).sort("ts", -1).to_list(limit)
+        docs = await _get_db().error_log.find({}, {"_id": 0}).sort("ts", -1).to_list(limit)
         return {"count": len(docs), "errors": docs}
     except Exception as e:
         return {"count": 0, "errors": [], "error": str(e)}
@@ -117,7 +112,7 @@ async def cleanup_telemetry(days: int = 90, user=Depends(require_admin)):
     # user_activity usa 'timestamp'; telemetry_audit puede usar 'timestamp' o 'createdAt'.
     for coll, field in [("user_activity", "timestamp"), ("telemetry_audit", "timestamp")]:
         try:
-            r = await _db[coll].delete_many({field: {"$lt": cutoff}})
+            r = await _get_db()[coll].delete_many({field: {"$lt": cutoff}})
             deleted[coll] = r.deleted_count
         except Exception as e:
             deleted[coll] = f"error: {e}"
@@ -312,6 +307,7 @@ async def get_activity_by_type(days: int = 30, user=Depends(require_admin)):
 
 # ─── Consumo de IA (contador + umbral + coste estimado), solo master ─────────
 from services.ai_usage import get_usage_summary, set_config
+from services.db_client import get_db as _get_db
 
 
 @router.get("/ai-usage")

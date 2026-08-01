@@ -210,17 +210,12 @@ def _users_collection():
     nivel de modulo). No reutiliza services/database.py porque ese modulo no
     se usa en ningun otro sitio del backend y exige las variables de entorno
     sin fallback, un camino no probado que no conviene meter en el auth."""
-    global _users_client, _users_db
-    if _users_db is None:
-        mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-        db_name = os.environ.get('DB_NAME', 'luiggi_home')
-        _users_client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-        _users_db = _users_client[db_name]
-    return _users_db.users
+    from services.db_client import get_db as _get_db
+    return _get_db().users
 
 
-_users_client = None
-_users_db = None
+_users_client = None  # mantenido por compatibilidad, ya no se usa
+_users_db = None      # mantenido por compatibilidad, ya no se usa
 
 
 def require_module_access(flag_name: str):

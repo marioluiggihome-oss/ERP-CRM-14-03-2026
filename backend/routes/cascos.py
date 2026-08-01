@@ -9,7 +9,6 @@ from typing import Optional
 import logging
 import os
 import uuid
-from motor.motor_asyncio import AsyncIOMotorClient
 
 try:
     from services.jwt_service import get_current_user, require_auth, ADMIN_ROLE_FLAGS
@@ -31,7 +30,6 @@ def _safe_float(v, default=0.0):
     except (TypeError, ValueError):
         return default
 
-mongo_url = os.environ.get('MONGO_URL')
 # Este backend abre un cliente de Mongo por modulo (unos 40 en total), cada uno
 # con su propio pool. Un modulo poco usado como este tiene que abrir conexion
 # nueva cuando se le llama y, si el cluster va justo de conexiones, la peticion
@@ -39,8 +37,6 @@ mongo_url = os.environ.get('MONGO_URL')
 # pasarela: en el navegador eso se ve como un "Failed to fetch" sin explicacion.
 # Con 5 s falla rapido y con un error legible, y el pool se limita para no
 # acaparar conexiones del cluster.
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, maxPoolSize=10)
-db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
 
 @router.post("/cascos/orders")
@@ -50,7 +46,7 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
         uid = (current_user or {}).get("id") or "anonymous"
         oid = (payload or {}).get("id") or f"casco-{uuid.uuid4().hex[:10]}"
         now = datetime.now(timezone.utc).isoformat()
-        existing = await db.cascos_orders.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+        existing = await _get_db().cascos_orders.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
         # Al re-guardar por id, comprobar propiedad (evita pisar el pedido de otro).
         if existing and not _can_access(existing, current_user):
             raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
@@ -69,7 +65,7 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "createdAt": (existing or {}).get("createdAt") or now,
             "updatedAt": now,
         }
-        await db.cascos_orders.update_one({"id": oid}, {"$set": doc}, upsert=True)
+        await _get_db().cascos_orders.update_one({"id": oid}, {"$set": doc}, upsert=True)
         doc.pop("_id", None)
         return {"success": True, "order": doc}
     except HTTPException:
@@ -94,7 +90,7 @@ async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = 
                 query["userId"] = current_user["id"]
         elif userId:
             query["userId"] = userId
-        orders = await db.cascos_orders.find(query, {"_id": 0}).sort("createdAt", -1).to_list(500)
+        orders = await _get_db().cascos_orders.find(query, {"_id": 0}).sort("createdAt", -1).to_list(500)
         return {"success": True, "orders": orders}
     except Exception as e:
         logger.error(f"List casco orders error: {e}")
@@ -112,7 +108,7 @@ def _can_access(order: dict, current_user: Optional[dict]) -> bool:
 
 @router.get("/cascos/orders/{order_id}")
 async def get_casco_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    o = await db.cascos_orders.find_one({"id": order_id}, {"_id": 0})
+    o = await _get_db().cascos_orders.find_one({"id": order_id}, {"_id": 0})
     if not o:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     if not _can_access(o, current_user):
@@ -122,16 +118,16 @@ async def get_casco_order(order_id: str, current_user: Optional[dict] = Depends(
 
 @router.delete("/cascos/orders/{order_id}")
 async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    o = await db.cascos_orders.find_one({"id": order_id}, {"_id": 0, "userId": 1})
+    o = await _get_db().cascos_orders.find_one({"id": order_id}, {"_id": 0, "userId": 1})
     if o and not _can_access(o, current_user):
         raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
-    await db.cascos_orders.delete_one({"id": order_id})
+    await _get_db().cascos_orders.delete_one({"id": order_id})
     return {"success": True}
 
 
 # ─── IMPORTADOR DE PROFORMA DE PROVEEDOR (solo MASTER) ──────────────────────────
 def _es_master(user: Optional[dict]) -> bool:
-    return bool(user and any(user.get(f) for f in ADMIN_ROLE_FLAGS + ["isPrimaryAdmin"]))
+    return bool(user and any(user.get(f) for f in list(ADMIN_ROLE_FLAGS) + ["isPrimaryAdmin"]))
 
 
 _TAREAS_PROFORMA = set()
@@ -361,6 +357,7 @@ async def estado_proforma(job_id: str, current_user: Optional[dict] = Depends(ge
 
 # ─── Tarifa MV (puntos) para el módulo de Rentabilidad ──────────────────────────
 import json as _mvjson, os as _mvos
+from services.db_client import get_db as _get_db
 _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
 

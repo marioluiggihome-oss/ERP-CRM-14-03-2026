@@ -9,7 +9,6 @@ from typing import Optional, List
 import logging
 import os
 
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,13 +18,10 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 security = HTTPBearer(auto_error=False)  # JWT opcional (compat con frontend viejo)
 
 # Database connection
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 # Authentication dependency
 from services.jwt_service import get_current_user as _get_current_user, require_admin
+from services.db_client import get_db as _get_db
 
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """JWT opcional: si hay token lo valida, si no devuelve dict vacío (modo compatibilidad)."""
@@ -108,7 +104,7 @@ class SettingsUpdate(BaseModel):
 @router.get("")
 async def get_settings(current_user: dict = Depends(get_current_user)):
     """Obtener configuración global"""
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not settings:
         return {}
     # No exponer secretos al frontend: solo indicar si están configurados.
@@ -125,13 +121,13 @@ async def update_settings(settings: SettingsUpdate, current_user: dict = Depends
     update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
     
     if update_data:
-        await db.settings.update_one(
+        await _get_db().settings.update_one(
             {"id": "global-settings"}, 
             {"$set": update_data},
             upsert=True
         )
     
-    updated = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
+    updated = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not updated:
         return {}
     # No reflejar secretos en la respuesta (igual que en GET)
@@ -149,7 +145,7 @@ async def get_public_logo():
     Devuelve únicamente el logo global (el que se muestra antes de iniciar
     sesión). No expone ningún otro ajuste sensible (email, claves, etc.).
     """
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1, "marcaBlanca": 1, "companyName": 1})
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1, "marcaBlanca": 1, "companyName": 1})
     settings = settings or {}
     return {
         "logo": settings.get("logo"),
@@ -164,10 +160,10 @@ async def get_logo(current_user: dict = Depends(get_current_user)):
     (useCustomBranding) y ha subido uno; en caso contrario, el logo global."""
     uid = current_user.get("id") if current_user else None
     if uid:
-        user = await db.users.find_one({"id": uid}, {"_id": 0, "logo": 1, "useCustomBranding": 1})
+        user = await _get_db().users.find_one({"id": uid}, {"_id": 0, "logo": 1, "useCustomBranding": 1})
         if user and user.get("useCustomBranding") and user.get("logo"):
             return {"logo": user["logo"], "scope": "user"}
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1})
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1})
     return {"logo": settings.get("logo") if settings else None, "scope": "global"}
 
 
@@ -185,7 +181,7 @@ async def update_logo(payload: dict, current_user: dict = Depends(get_current_us
     logo = payload.get("logo") or ""  # "" = borrar el logo
 
     uid = current_user.get("id") if current_user else None
-    user = await db.users.find_one({"id": uid}, {"_id": 0}) if uid else None
+    user = await _get_db().users.find_one({"id": uid}, {"_id": 0}) if uid else None
     is_admin = bool(current_user.get("isAdmin") or (user and user.get("isAdmin")))
     can_brand = bool(user and (user.get("canChangeLogo") or user.get("useCustomBranding")))
 
@@ -194,13 +190,13 @@ async def update_logo(payload: dict, current_user: dict = Depends(get_current_us
 
     if can_brand:
         # Logo propio del usuario (marca personalizada activada)
-        await db.users.update_one(
+        await _get_db().users.update_one(
             {"id": uid}, {"$set": {"logo": logo, "useCustomBranding": True}}
         )
         return {"success": True, "scope": "user", "message": "Logo personal actualizado"}
 
     # Admin sin marca propia → logo global por defecto
-    await db.settings.update_one(
+    await _get_db().settings.update_one(
         {"id": "global-settings"}, {"$set": {"logo": logo}}, upsert=True
     )
     return {"success": True, "scope": "global", "message": "Logo global actualizado"}

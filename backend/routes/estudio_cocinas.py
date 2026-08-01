@@ -1287,13 +1287,10 @@ async def generar_instalaciones(payload: InstalacionesInput):
 
 # ─── Galería de renders ────────────────────────────────────────────────────────
 
-from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
 from bson import ObjectId as _ObjectId
+from services.db_client import get_db as _get_db
 
-_MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-_DB_NAME   = os.environ.get("DB_NAME", "luiggi_home")
-_mongo_client = _MotorClient(_MONGO_URL)
-_galeria_db   = _mongo_client[_DB_NAME]["renders_galeria"]
+_galeria_db = _get_db()["renders_galeria"]  # colección compartida (singleton)
 
 
 class GaleriaGuardarPayload(BaseModel):

@@ -18,7 +18,7 @@ import uuid
 import base64
 import unicodedata
 from urllib.parse import quote
-from motor.motor_asyncio import AsyncIOMotorClient
+from services.db_client import get_db as _get_db
 
 try:
     from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
@@ -35,10 +35,6 @@ FLOOR_ORDER_STATES = ("presupuestado", "reservado", "entregado")
 # Estados que descuentan stock (reservado y entregado retiran material del almacén)
 _DEDUCT_STATES = ("reservado", "entregado")
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 M2_PER_PACKAGE = 2.787
 
@@ -53,11 +49,11 @@ _SEED = [
 
 
 async def _ensure_seed():
-    n = await db.floor_products.count_documents({})
+    n = await _get_db().floor_products.count_documents({})
     if n == 0:
         now = datetime.now(timezone.utc).isoformat()
         for s in _SEED:
-            await db.floor_products.insert_one({
+            await _get_db().floor_products.insert_one({
                 "id": f"floor-{s['key']}",
                 "key": s["key"],
                 "name": s["name"],
@@ -77,7 +73,7 @@ async def _ensure_seed():
 async def list_floor_products():
     """Lista los 3 colores de suelo (los crea la primera vez)."""
     await _ensure_seed()
-    items = await db.floor_products.find({}, {"_id": 0}).to_list(50)
+    items = await _get_db().floor_products.find({}, {"_id": 0}).to_list(50)
     # Orden fijo: volare, fusion, vera
     order = {"volare": 0, "fusion": 1, "vera": 2}
     items.sort(key=lambda x: order.get(x.get("key"), 9))
@@ -100,10 +96,10 @@ async def update_floor_product(product_id: str, payload: dict):
     if not update:
         raise HTTPException(status_code=400, detail="Nada que actualizar")
     update["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    res = await db.floor_products.update_one({"id": product_id}, {"$set": update})
+    res = await _get_db().floor_products.update_one({"id": product_id}, {"$set": update})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Color no encontrado")
-    doc = await db.floor_products.find_one({"id": product_id}, {"_id": 0})
+    doc = await _get_db().floor_products.find_one({"id": product_id}, {"_id": 0})
     return {"success": True, "product": doc}
 
 
@@ -114,11 +110,11 @@ async def adjust_floor_stock(product_id: str, payload: dict):
         delta = float((payload or {}).get("delta") or 0)
     except Exception:
         delta = 0
-    doc = await db.floor_products.find_one({"id": product_id}, {"_id": 0})
+    doc = await _get_db().floor_products.find_one({"id": product_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Color no encontrado")
     nuevo = round(max(0.0, float(doc.get("stockPackages", 0) or 0) + delta), 3)
-    await db.floor_products.update_one(
+    await _get_db().floor_products.update_one(
         {"id": product_id},
         {"$set": {"stockPackages": nuevo, "updatedAt": datetime.now(timezone.utc).isoformat()}},
     )
@@ -158,7 +154,7 @@ async def upload_floor_doc(payload: dict):
         "createdAt": datetime.now(timezone.utc).isoformat(),
     }
     try:
-        await db.floor_docs.insert_one(doc)
+        await _get_db().floor_docs.insert_one(doc)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo guardar el archivo: {e}")
     return {"success": True, "id": doc["id"], "name": doc["name"], "mime": mime, "size": size}
@@ -167,14 +163,14 @@ async def upload_floor_doc(payload: dict):
 @router.get("/floor/docs")
 async def list_floor_docs():
     """Lista de catálogos (solo metadatos, sin el base64)."""
-    items = await db.floor_docs.find({}, {"_id": 0, "dataBase64": 0}).sort("createdAt", -1).to_list(200)
+    items = await _get_db().floor_docs.find({}, {"_id": 0, "dataBase64": 0}).sort("createdAt", -1).to_list(200)
     return {"items": items}
 
 
 @router.get("/floor/docs/{doc_id}/file")
 async def get_floor_doc_file(doc_id: str, download: bool = False):
     """Devuelve el archivo (público, para descargar/compartir con clientes)."""
-    d = await db.floor_docs.find_one({"id": doc_id}, {"_id": 0})
+    d = await _get_db().floor_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     try:
@@ -196,7 +192,7 @@ async def get_floor_doc_file(doc_id: str, download: bool = False):
 
 @router.delete("/floor/docs/{doc_id}")
 async def delete_floor_doc(doc_id: str):
-    await db.floor_docs.delete_one({"id": doc_id})
+    await _get_db().floor_docs.delete_one({"id": doc_id})
     return {"success": True}
 
 
@@ -207,7 +203,7 @@ async def delete_floor_doc(doc_id: str):
 
 @router.get("/floor/settings")
 async def get_floor_settings():
-    s = await db.floor_settings.find_one({"id": "floor-settings"}, {"_id": 0})
+    s = await _get_db().floor_settings.find_one({"id": "floor-settings"}, {"_id": 0})
     return s or {"id": "floor-settings", "logo": ""}
 
 
@@ -218,7 +214,7 @@ async def get_floor_public_logo():
     Expone únicamente el logo de Luiggi Floor (el que se muestra antes de iniciar
     sesión, como acceso directo a la división de suelo). No revela ningún otro ajuste.
     """
-    s = await db.floor_settings.find_one({"id": "floor-settings"}, {"_id": 0, "logo": 1})
+    s = await _get_db().floor_settings.find_one({"id": "floor-settings"}, {"_id": 0, "logo": 1})
     return {"logo": s.get("logo") if s else None}
 
 
@@ -230,7 +226,7 @@ async def update_floor_settings(payload: dict):
     if not update:
         raise HTTPException(status_code=400, detail="Nada que actualizar")
     update["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    await db.floor_settings.update_one(
+    await _get_db().floor_settings.update_one(
         {"id": "floor-settings"}, {"$set": {"id": "floor-settings", **update}}, upsert=True
     )
     return {"success": True}
@@ -267,11 +263,11 @@ async def _apply_stock_for_state(order: dict, new_state: str):
             paquetes = 0.0
         if not pid or paquetes <= 0:
             continue
-        prod = await db.floor_products.find_one({"id": pid}, {"_id": 0})
+        prod = await _get_db().floor_products.find_one({"id": pid}, {"_id": 0})
         if not prod:
             continue
         nuevo = round(max(0.0, float(prod.get("stockPackages", 0) or 0) + sign * paquetes), 3)
-        await db.floor_products.update_one(
+        await _get_db().floor_products.update_one(
             {"id": pid},
             {"$set": {"stockPackages": nuevo, "updatedAt": datetime.now(timezone.utc).isoformat()}},
         )
@@ -307,7 +303,7 @@ async def create_floor_order(payload: dict, current_user: Optional[dict] = Depen
         "updatedAt": now,
     }
     order["stockDeducted"] = await _apply_stock_for_state(order, estado)
-    await db.floor_orders.insert_one(dict(order))
+    await _get_db().floor_orders.insert_one(dict(order))
     order.pop("_id", None)
     return {"success": True, "order": order}
 
@@ -321,7 +317,7 @@ async def list_floor_orders(estado: Optional[str] = None,
         query["estado"] = estado
     if not _is_elevated(current_user) and current_user and current_user.get("id"):
         query["createdByUserId"] = current_user["id"]
-    items = await db.floor_orders.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+    items = await _get_db().floor_orders.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
     return {"items": items, "isAdmin": _is_elevated(current_user)}
 
 
@@ -332,7 +328,7 @@ async def update_floor_order(order_id: str, payload: dict,
     stock; volver a 'presupuestado' lo devuelve. Sólo admin/dirección puede
     cambiar estado o editar pedidos ajenos; el dueño puede editar los suyos en
     estado 'presupuestado'."""
-    order = await db.floor_orders.find_one({"id": order_id}, {"_id": 0})
+    order = await _get_db().floor_orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     elevated = _is_elevated(current_user)
@@ -375,8 +371,8 @@ async def update_floor_order(order_id: str, payload: dict,
     if not update:
         raise HTTPException(status_code=400, detail="Nada que actualizar")
     update["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    await db.floor_orders.update_one({"id": order_id}, {"$set": update})
-    doc = await db.floor_orders.find_one({"id": order_id}, {"_id": 0})
+    await _get_db().floor_orders.update_one({"id": order_id}, {"$set": update})
+    doc = await _get_db().floor_orders.find_one({"id": order_id}, {"_id": 0})
     return {"success": True, "order": doc}
 
 
@@ -384,7 +380,7 @@ async def update_floor_order(order_id: str, payload: dict,
 async def delete_floor_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
     """Elimina un pedido (devolviendo stock si estaba reservado). Admin o dueño
     (si está en 'presupuestado')."""
-    order = await db.floor_orders.find_one({"id": order_id}, {"_id": 0})
+    order = await _get_db().floor_orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     elevated = _is_elevated(current_user)
@@ -394,5 +390,5 @@ async def delete_floor_order(order_id: str, current_user: Optional[dict] = Depen
     # Devolver stock si estaba descontado
     if order.get("stockDeducted"):
         await _apply_stock_for_state(order, "presupuestado")
-    await db.floor_orders.delete_one({"id": order_id})
+    await _get_db().floor_orders.delete_one({"id": order_id})
     return {"success": True}

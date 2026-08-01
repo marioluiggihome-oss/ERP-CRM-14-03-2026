@@ -3,7 +3,6 @@ Armarios Router - Proyectos de Armarios con IA
 Endpoints para gestionar proyectos de armarios empotrados con configuración e IA
 """
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
@@ -13,6 +12,7 @@ import json
 import re
 
 from models.schemas import (
+from services.db_client import get_db as _get_db
     ArmarioModuleConfig, ArmarioProject, ArmarioProjectCreate, ArmarioProjectUpdate,
     IAConfigRequest, IARenderRequest, IALayoutRequest,
     ContactModel, OpportunityModel
@@ -37,10 +37,6 @@ def _is_admin(user) -> bool:
 router = APIRouter(tags=["armarios"], dependencies=_DEPS)
 
 # Database connection
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 # ============================================
@@ -57,7 +53,7 @@ async def create_armario_project(project: ArmarioProjectCreate, current_user: Op
         project_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
         project_dict["updatedAt"] = datetime.now(timezone.utc).isoformat()
 
-        await db.armario_projects.insert_one(project_dict)
+        await _get_db().armario_projects.insert_one(project_dict)
         project_dict.pop("_id", None)
         return {"success": True, "project": project_dict}
     except Exception as e:
@@ -70,7 +66,7 @@ async def get_armario_projects(current_user: Optional[dict] = Depends(get_curren
     """Lista de proyectos del usuario autenticado (admin ve todos)."""
     try:
         query = {} if _is_admin(current_user) else {"userId": (current_user or {}).get("id") or "anonymous"}
-        projects = await db.armario_projects.find(
+        projects = await _get_db().armario_projects.find(
             query,
             {"_id": 0}
         ).sort("updatedAt", -1).to_list(100)
@@ -82,7 +78,7 @@ async def get_armario_projects(current_user: Optional[dict] = Depends(get_curren
 
 async def _load_owned_project(project_id: str, current_user: Optional[dict], fields=None):
     """Carga un proyecto y verifica que el usuario es propietario o admin."""
-    project = await db.armario_projects.find_one({"id": project_id}, fields if fields is not None else {"_id": 0})
+    project = await _get_db().armario_projects.find_one({"id": project_id}, fields if fields is not None else {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     owner = project.get("userId")
@@ -113,8 +109,8 @@ async def update_armario_project(project_id: str, update: ArmarioProjectUpdate, 
         update_data.pop("userId", None)  # la propiedad no se cambia desde el cliente
         update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
 
-        await db.armario_projects.update_one({"id": project_id}, {"$set": update_data})
-        updated_project = await db.armario_projects.find_one({"id": project_id}, {"_id": 0})
+        await _get_db().armario_projects.update_one({"id": project_id}, {"$set": update_data})
+        updated_project = await _get_db().armario_projects.find_one({"id": project_id}, {"_id": 0})
         return {"success": True, "project": updated_project}
     except HTTPException:
         raise
@@ -128,7 +124,7 @@ async def delete_armario_project(project_id: str, current_user: Optional[dict] =
     """Eliminar un proyecto de armario (solo propietario o admin)."""
     try:
         await _load_owned_project(project_id, current_user, {"_id": 0, "userId": 1})
-        await db.armario_projects.delete_one({"id": project_id})
+        await _get_db().armario_projects.delete_one({"id": project_id})
         return {"success": True, "message": "Proyecto eliminado"}
     except HTTPException:
         raise
@@ -142,7 +138,7 @@ async def create_opportunity_from_armario(project_id: str):
     """Create a CRM opportunity from an armario project"""
     try:
         # Get the armario project
-        project = await db.armario_projects.find_one({"id": project_id}, {"_id": 0})
+        project = await _get_db().armario_projects.find_one({"id": project_id}, {"_id": 0})
         if not project:
             raise HTTPException(status_code=404, detail="Proyecto de armario no encontrado")
         
@@ -153,7 +149,7 @@ async def create_opportunity_from_armario(project_id: str):
         customer_name = project.get("customerName", project.get("name", "Cliente sin nombre"))
         
         # Check if contact exists or create one
-        contact = await db.contacts.find_one({"name": customer_name}, {"_id": 0})
+        contact = await _get_db().contacts.find_one({"name": customer_name}, {"_id": 0})
         
         if not contact:
             # Create new contact
@@ -163,7 +159,7 @@ async def create_opportunity_from_armario(project_id: str):
             ).model_dump()
             contact['createdAt'] = contact['createdAt'].isoformat()
             contact['updatedAt'] = contact['updatedAt'].isoformat()
-            await db.contacts.insert_one(contact)
+            await _get_db().contacts.insert_one(contact)
         
         contact_id = contact.get("id")
         
@@ -183,10 +179,10 @@ async def create_opportunity_from_armario(project_id: str):
         opp['createdAt'] = opp['createdAt'].isoformat()
         opp['updatedAt'] = opp['updatedAt'].isoformat()
         
-        await db.opportunities.insert_one(opp)
+        await _get_db().opportunities.insert_one(opp)
         
         # Update contact with businessTypes
-        await db.contacts.update_one(
+        await _get_db().contacts.update_one(
             {"id": contact_id},
             {"$addToSet": {"businessTypes": "armarios"}}
         )

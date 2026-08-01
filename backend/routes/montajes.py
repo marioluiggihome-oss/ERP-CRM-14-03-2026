@@ -3,7 +3,6 @@ Montajes (Instalaciones) Router
 Endpoints para gestionar montadores e instalaciones
 """
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
@@ -11,6 +10,7 @@ import logging
 import os
 
 from models.schemas import (
+from services.db_client import get_db as _get_db
     MontadorCreate, MontadorUpdate, MontadorResponse,
     MontajeCreate, MontajeUpdate, MontajeResponse
 )
@@ -27,10 +27,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["montajes"])
 
 # Database connection
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 def _is_elevated(user: Optional[dict]) -> bool:
@@ -60,11 +56,11 @@ async def get_montadores(status: str = None, user_id: str = None,
         if status:
             query["status"] = status
 
-        montadores = await db.montadores.find(query, {"_id": 0}).sort("name", 1).to_list(500)
+        montadores = await _get_db().montadores.find(query, {"_id": 0}).sort("name", 1).to_list(500)
 
         # Añadir conteo de montajes por montador
         for m in montadores:
-            count = await db.montajes.count_documents({"montadorId": m.get("id", "")})
+            count = await _get_db().montajes.count_documents({"montadorId": m.get("id", "")})
             m["totalMontajes"] = count
 
         return montadores
@@ -78,14 +74,14 @@ async def get_montador(montador_id: str,
                        current_user: Optional[dict] = Depends(get_current_user)):
     """Get a specific montador by ID (respetando la privacidad por usuario)."""
     try:
-        montador = await db.montadores.find_one({"id": montador_id}, {"_id": 0})
+        montador = await _get_db().montadores.find_one({"id": montador_id}, {"_id": 0})
         if not montador:
             raise HTTPException(status_code=404, detail="Montador no encontrado")
         if not _is_elevated(current_user) and montador.get("createdByUserId") != (current_user or {}).get("id"):
             raise HTTPException(status_code=404, detail="Montador no encontrado")
 
         # Añadir conteo de montajes
-        montador["totalMontajes"] = await db.montajes.count_documents({"montadorId": montador_id})
+        montador["totalMontajes"] = await _get_db().montajes.count_documents({"montadorId": montador_id})
 
         return montador
     except HTTPException:
@@ -110,7 +106,7 @@ async def create_montador(montador: MontadorCreate,
             "updatedAt": now
         }
 
-        await db.montadores.insert_one(montador_data)
+        await _get_db().montadores.insert_one(montador_data)
         if "_id" in montador_data:
             del montador_data["_id"]
 
@@ -125,7 +121,7 @@ async def update_montador(montador_id: str, montador: MontadorUpdate,
                           current_user: Optional[dict] = Depends(get_current_user)):
     """Update a montador (solo el dueño o el master)."""
     try:
-        existing = await db.montadores.find_one({"id": montador_id}, {"_id": 0})
+        existing = await _get_db().montadores.find_one({"id": montador_id}, {"_id": 0})
         if not existing:
             raise HTTPException(status_code=404, detail="Montador no encontrado")
         if not _is_elevated(current_user) and existing.get("createdByUserId") != (current_user or {}).get("id"):
@@ -134,9 +130,9 @@ async def update_montador(montador_id: str, montador: MontadorUpdate,
         update_data = {k: v for k, v in montador.model_dump().items() if v is not None}
         update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
 
-        await db.montadores.update_one({"id": montador_id}, {"$set": update_data})
+        await _get_db().montadores.update_one({"id": montador_id}, {"$set": update_data})
 
-        updated = await db.montadores.find_one({"id": montador_id}, {"_id": 0})
+        updated = await _get_db().montadores.find_one({"id": montador_id}, {"_id": 0})
         return updated
     except HTTPException:
         raise
@@ -150,12 +146,12 @@ async def delete_montador(montador_id: str,
                           current_user: Optional[dict] = Depends(get_current_user)):
     """Delete a montador (solo el dueño o el master)."""
     try:
-        existing = await db.montadores.find_one({"id": montador_id}, {"_id": 0})
+        existing = await _get_db().montadores.find_one({"id": montador_id}, {"_id": 0})
         if not existing:
             raise HTTPException(status_code=404, detail="Montador no encontrado")
         if not _is_elevated(current_user) and existing.get("createdByUserId") != (current_user or {}).get("id"):
             raise HTTPException(status_code=403, detail="No autorizado")
-        await db.montadores.delete_one({"id": montador_id})
+        await _get_db().montadores.delete_one({"id": montador_id})
         return {"success": True, "message": "Montador eliminado"}
     except HTTPException:
         raise
@@ -190,7 +186,7 @@ async def get_montajes(
         elif end_date:
             query["scheduledDate"] = {"$lte": end_date}
 
-        montajes = await db.montajes.find(query, {"_id": 0}).sort("scheduledDate", 1).to_list(500)
+        montajes = await _get_db().montajes.find(query, {"_id": 0}).sort("scheduledDate", 1).to_list(500)
         return montajes
     except Exception as e:
         logger.error(f"Get montajes error: {e}")
@@ -202,7 +198,7 @@ async def get_montaje(montaje_id: str,
                       current_user: Optional[dict] = Depends(get_current_user)):
     """Get a specific montaje by ID (respetando la privacidad por usuario)."""
     try:
-        montaje = await db.montajes.find_one({"id": montaje_id}, {"_id": 0})
+        montaje = await _get_db().montajes.find_one({"id": montaje_id}, {"_id": 0})
         if not montaje:
             raise HTTPException(status_code=404, detail="Montaje no encontrado")
         if not _is_elevated(current_user) and montaje.get("createdByUserId") != (current_user or {}).get("id"):
@@ -225,7 +221,7 @@ async def create_montaje(montaje: MontajeCreate,
         # Obtener nombre del montador si no viene
         montador_name = montaje.montadorName
         if not montador_name and montaje.montadorId:
-            montador = await db.montadores.find_one({"id": montaje.montadorId}, {"_id": 0, "name": 1})
+            montador = await _get_db().montadores.find_one({"id": montaje.montadorId}, {"_id": 0, "name": 1})
             if montador:
                 montador_name = montador.get("name", "")
 
@@ -239,7 +235,7 @@ async def create_montaje(montaje: MontajeCreate,
             "updatedAt": now
         }
 
-        await db.montajes.insert_one(montaje_data)
+        await _get_db().montajes.insert_one(montaje_data)
         if "_id" in montaje_data:
             del montaje_data["_id"]
 
@@ -254,7 +250,7 @@ async def update_montaje(montaje_id: str, montaje: MontajeUpdate,
                          current_user: Optional[dict] = Depends(get_current_user)):
     """Update a montaje (solo el dueño o el master)."""
     try:
-        existing = await db.montajes.find_one({"id": montaje_id}, {"_id": 0})
+        existing = await _get_db().montajes.find_one({"id": montaje_id}, {"_id": 0})
         if not existing:
             raise HTTPException(status_code=404, detail="Montaje no encontrado")
         if not _is_elevated(current_user) and existing.get("createdByUserId") != (current_user or {}).get("id"):
@@ -265,13 +261,13 @@ async def update_montaje(montaje_id: str, montaje: MontajeUpdate,
 
         # Actualizar nombre del montador si cambió el ID
         if "montadorId" in update_data:
-            montador = await db.montadores.find_one({"id": update_data["montadorId"]}, {"_id": 0, "name": 1})
+            montador = await _get_db().montadores.find_one({"id": update_data["montadorId"]}, {"_id": 0, "name": 1})
             if montador:
                 update_data["montadorName"] = montador.get("name", "")
 
-        await db.montajes.update_one({"id": montaje_id}, {"$set": update_data})
+        await _get_db().montajes.update_one({"id": montaje_id}, {"$set": update_data})
 
-        updated = await db.montajes.find_one({"id": montaje_id}, {"_id": 0})
+        updated = await _get_db().montajes.find_one({"id": montaje_id}, {"_id": 0})
         return updated
     except HTTPException:
         raise
@@ -285,12 +281,12 @@ async def delete_montaje(montaje_id: str,
                          current_user: Optional[dict] = Depends(get_current_user)):
     """Delete a montaje (solo el dueño o el master)."""
     try:
-        existing = await db.montajes.find_one({"id": montaje_id}, {"_id": 0})
+        existing = await _get_db().montajes.find_one({"id": montaje_id}, {"_id": 0})
         if not existing:
             raise HTTPException(status_code=404, detail="Montaje no encontrado")
         if not _is_elevated(current_user) and existing.get("createdByUserId") != (current_user or {}).get("id"):
             raise HTTPException(status_code=403, detail="No autorizado")
-        await db.montajes.delete_one({"id": montaje_id})
+        await _get_db().montajes.delete_one({"id": montaje_id})
         return {"success": True, "message": "Montaje eliminado"}
     except HTTPException:
         raise
@@ -310,7 +306,7 @@ async def get_montajes_by_montador(montador_id: str, status: str = None,
         if not _is_elevated(current_user):
             query["createdByUserId"] = (current_user or {}).get("id") or "__none__"
 
-        montajes = await db.montajes.find(query, {"_id": 0}).sort("scheduledDate", 1).to_list(100)
+        montajes = await _get_db().montajes.find(query, {"_id": 0}).sort("scheduledDate", 1).to_list(100)
         return montajes
     except Exception as e:
         logger.error(f"Get montajes by montador error: {e}")

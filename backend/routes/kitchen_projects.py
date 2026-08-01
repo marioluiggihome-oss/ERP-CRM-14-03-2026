@@ -23,18 +23,14 @@ import math
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field, field_validator
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from services.jwt_service import require_auth
 from services.luiggi_ai import get_render_service
+from services.db_client import get_db as _get_db
 
 load_dotenv()
 logger = logging.getLogger("kitchen_projects")
 
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = _client[DB_NAME]
 
 kitchen_projects_router = APIRouter(prefix="/kitchen-projects", tags=["Kitchen 3D Projects"])
 
@@ -139,12 +135,12 @@ def _validate_base64_image_size(data: Optional[str], label: str):
 # ─── Almacenamiento persistente (MongoDB, colección kitchen_projects) ────────
 
 async def _get_user_projects(user_id: str) -> list:
-    cursor = db.kitchen_projects.find({"user_id": user_id}, {"_id": 0}).sort("created_at", 1)
+    cursor = _get_db().kitchen_projects.find({"user_id": user_id}, {"_id": 0}).sort("created_at", 1)
     return await cursor.to_list(length=None)
 
 
 async def _find_project(user_id: str, project_id: str):
-    return await db.kitchen_projects.find_one({"id": project_id, "user_id": user_id}, {"_id": 0})
+    return await _get_db().kitchen_projects.find_one({"id": project_id, "user_id": user_id}, {"_id": 0})
 
 
 def _get_user_id(user):
@@ -383,7 +379,7 @@ async def create_project(data: KitchenProjectCreate, user=Depends(require_auth))
         "updated_at": time.time(),
     }
 
-    await db.kitchen_projects.insert_one(dict(project))
+    await _get_db().kitchen_projects.insert_one(dict(project))
     return {"project": project}
 
 
@@ -401,11 +397,11 @@ async def save_wizard(data: dict, user=Depends(require_auth)):
         "thumb": data.get("thumb") or "",
         "updated_at": time.time(),
     }
-    existing = await db.kitchen_wizard_projects.find_one(
+    existing = await _get_db().kitchen_wizard_projects.find_one(
         {"id": wid, "user_id": user_id}, {"_id": 0, "created_at": 1}
     )
     doc["created_at"] = (existing or {}).get("created_at") or doc["updated_at"]
-    await db.kitchen_wizard_projects.update_one(
+    await _get_db().kitchen_wizard_projects.update_one(
         {"id": wid, "user_id": user_id}, {"$set": doc}, upsert=True
     )
     return {"id": wid, "name": doc["name"]}
@@ -415,7 +411,7 @@ async def save_wizard(data: dict, user=Depends(require_auth)):
 async def list_wizard(user=Depends(require_auth)):
     """Lista los proyectos del asistente guardados (sin el estado pesado)."""
     user_id = _get_user_id(user)
-    items = await db.kitchen_wizard_projects.find(
+    items = await _get_db().kitchen_wizard_projects.find(
         {"user_id": user_id}, {"_id": 0, "wizard": 0}
     ).sort("updated_at", -1).to_list(300)
     return {"projects": items}
@@ -424,7 +420,7 @@ async def list_wizard(user=Depends(require_auth)):
 @kitchen_projects_router.get("/wizard/{wid}")
 async def get_wizard(wid: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    doc = await db.kitchen_wizard_projects.find_one({"id": wid, "user_id": user_id}, {"_id": 0})
+    doc = await _get_db().kitchen_wizard_projects.find_one({"id": wid, "user_id": user_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return doc
@@ -433,7 +429,7 @@ async def get_wizard(wid: str, user=Depends(require_auth)):
 @kitchen_projects_router.delete("/wizard/{wid}")
 async def delete_wizard(wid: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    await db.kitchen_wizard_projects.delete_one({"id": wid, "user_id": user_id})
+    await _get_db().kitchen_wizard_projects.delete_one({"id": wid, "user_id": user_id})
     return {"success": True}
 
 
@@ -455,7 +451,7 @@ async def update_project(project_id: str, data: KitchenProjectUpdate, user=Depen
 
     update_data = data.model_dump(exclude_none=True)
     update_data["updated_at"] = time.time()
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id}, {"$set": update_data}
     )
     project.update(update_data)
@@ -468,7 +464,7 @@ async def delete_project(project_id: str, user=Depends(require_auth)):
     project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    await db.kitchen_projects.delete_one({"id": project_id, "user_id": user_id})
+    await _get_db().kitchen_projects.delete_one({"id": project_id, "user_id": user_id})
     return {"success": True, "message": "Proyecto eliminado"}
 
 
@@ -519,7 +515,7 @@ async def upload_file(
         "uploaded_at": time.time(),
     }
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id},
         {"$push": {"files": file_entry}, "$set": {"updated_at": time.time()}}
     )
@@ -560,7 +556,7 @@ async def delete_file(project_id: str, file_id: str, user=Depends(require_auth))
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     if not any(f.get("id") == file_id for f in project.get("files", [])):
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id},
         {"$pull": {"files": {"id": file_id}}, "$set": {"updated_at": time.time()}}
     )
@@ -583,7 +579,7 @@ async def add_measurement(project_id: str, data: MeasurementCreate, user=Depends
         "created_at": time.time(),
     }
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id},
         {"$push": {"measurements": measurement}, "$set": {"updated_at": time.time()}}
     )
@@ -615,7 +611,7 @@ async def add_cabinet(project_id: str, data: CabinetCreate, user=Depends(require
         "created_at": time.time(),
     }
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id},
         {"$push": {"cabinets": cabinet}, "$set": {"updated_at": time.time()}}
     )
@@ -629,7 +625,7 @@ async def delete_cabinet(project_id: str, cabinet_id: str, user=Depends(require_
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id},
         {"$pull": {"cabinets": {"id": cabinet_id}}, "$set": {"updated_at": time.time()}}
     )
@@ -655,7 +651,7 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
     )
     render_service = get_render_service()
@@ -691,7 +687,7 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
             "created_at": time.time(),
         }
 
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id},
             {"$push": {"renders": render_entry}, "$set": {
                 "status": "completed" if result.get("success") else "failed",
@@ -702,13 +698,13 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
 
     except asyncio.TimeoutError:
         logger.error(f"Timeout generando render para proyecto {project_id}")
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=504, detail="El render tardó demasiado en generarse. Inténtalo de nuevo.")
     except Exception as e:
         logger.error(f"Error generando render para proyecto {project_id}: {e}")
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=500, detail="Error al generar el render")
@@ -734,7 +730,7 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
     for i, sk in enumerate(sketches):
         _validate_base64_image_size(sk, f"El boceto de la pared {i + 1}")
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
     )
     render_service = get_render_service()
@@ -773,7 +769,7 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
             "is_composed": True,
             "created_at": time.time(),
         }
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id},
             {"$push": {"renders": render_entry}, "$set": {
                 "status": "completed" if result.get("success") else "failed",
@@ -784,13 +780,13 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
 
     except asyncio.TimeoutError:
         logger.error(f"Timeout en render compuesto del proyecto {project_id}")
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=504, detail="El render tardó demasiado en generarse. Inténtalo de nuevo.")
     except Exception as e:
         logger.error(f"Error en render compuesto del proyecto {project_id}: {e}")
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=500, detail="Error al generar el render")
@@ -804,7 +800,7 @@ async def iterate_render(project_id: str, data: IterateRequest, user=Depends(req
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
     )
     render_service = get_render_service()
@@ -835,7 +831,7 @@ async def iterate_render(project_id: str, data: IterateRequest, user=Depends(req
             "created_at": time.time(),
         }
 
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id},
             {"$push": {"renders": render_entry}, "$set": {
                 "status": "completed" if result.get("success") else "failed",
@@ -846,13 +842,13 @@ async def iterate_render(project_id: str, data: IterateRequest, user=Depends(req
 
     except asyncio.TimeoutError:
         logger.error(f"Timeout en iteración para proyecto {project_id}")
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=504, detail="El render tardó demasiado en generarse. Inténtalo de nuevo.")
     except Exception as e:
         logger.error(f"Error en iteración para proyecto {project_id}: {e}")
-        await db.kitchen_projects.update_one(
+        await _get_db().kitchen_projects.update_one(
             {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=500, detail="Error en la iteración")
@@ -931,7 +927,7 @@ async def approve_project(project_id: str, data: ApproveRequest, user=Depends(re
         },
     ]
 
-    await db.kitchen_projects.update_one(
+    await _get_db().kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id},
         {"$set": {
             "technical_docs": technical_docs,

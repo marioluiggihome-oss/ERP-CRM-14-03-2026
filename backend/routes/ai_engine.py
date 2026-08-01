@@ -25,10 +25,10 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.jwt_service import require_auth, verify_access_token
 from services.luiggi_ai import get_engine, get_render_service, get_ai_config
+from services.db_client import get_db as _get_db
 
 try:
     from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
@@ -41,7 +41,7 @@ logger = logging.getLogger("luiggi_ai.router")
 
 ai_engine_router = APIRouter(prefix="/ai-engine", tags=["LuiggiAI Engine"])
 
-_db = AsyncIOMotorClient(os.environ.get('MONGO_URL'), serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)[os.environ.get('DB_NAME', 'luiggi_home')]
+_db = _get_db()  # cliente MongoDB compartido (singleton)
 
 
 # ─── Proyectos de render 3D (guardar / historial persistente) ─────────────────

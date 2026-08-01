@@ -18,7 +18,7 @@ import logging
 import os
 import json
 import re
-from motor.motor_asyncio import AsyncIOMotorClient
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +32,6 @@ except Exception:  # pragma: no cover - fallback si no hay jwt_service
 
 router = APIRouter(tags=["gastos"], dependencies=_GASTOS_DEPS)
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 # Tipos de gasto admitidos (clave interna -> etiqueta)
 TIPOS_GASTO = {
@@ -174,7 +170,7 @@ async def list_gastos(userId: Optional[str] = None, mes: Optional[str] = None):
         query["userId"] = userId
     if mes:
         query["fecha"] = {"$regex": f"^{re.escape(mes)}"}
-    items = await db.gastos.find(query, {"_id": 0}).sort("fecha", -1).to_list(5000)
+    items = await _get_db().gastos.find(query, {"_id": 0}).sort("fecha", -1).to_list(5000)
     total = round(sum(float(i.get("importe", 0) or 0) for i in items), 2)
     by_type = {}
     for i in items:
@@ -200,7 +196,7 @@ async def create_gasto(payload: dict):
     if doc_b64:
         stripped = doc_b64.split(",", 1)[1] if doc_b64.startswith("data:") else doc_b64
         doc_id = f"gastodoc-{uuid.uuid4().hex[:8]}"
-        await db.gasto_docs.insert_one({
+        await _get_db().gasto_docs.insert_one({
             "id": doc_id, "gastoId": gid,
             "dataBase64": stripped,
             "mime": str(payload.get("docMime") or "application/octet-stream"),
@@ -225,7 +221,7 @@ async def create_gasto(payload: dict):
         "createdAt": now.isoformat(),
         "updatedAt": now.isoformat(),
     }
-    await db.gastos.insert_one(doc)
+    await _get_db().gastos.insert_one(doc)
     doc.pop("_id", None)
     return {"success": True, "gasto": doc}
 
@@ -233,7 +229,7 @@ async def create_gasto(payload: dict):
 @router.put("/gastos/{gasto_id}")
 async def update_gasto(gasto_id: str, payload: dict):
     """Edita un gasto (importe, tipo, fecha, proveedor...)."""
-    existing = await db.gastos.find_one({"id": gasto_id}, {"_id": 0})
+    existing = await _get_db().gastos.find_one({"id": gasto_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Gasto no encontrado")
     allowed = ("tipo", "importe", "base", "iva", "fecha", "proveedor", "descripcion", "litros", "kms")
@@ -250,21 +246,21 @@ async def update_gasto(gasto_id: str, payload: dict):
     if not update:
         raise HTTPException(status_code=400, detail="Nada que actualizar")
     update["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    await db.gastos.update_one({"id": gasto_id}, {"$set": update})
-    doc = await db.gastos.find_one({"id": gasto_id}, {"_id": 0})
+    await _get_db().gastos.update_one({"id": gasto_id}, {"$set": update})
+    doc = await _get_db().gastos.find_one({"id": gasto_id}, {"_id": 0})
     return {"success": True, "gasto": doc}
 
 
 @router.delete("/gastos/{gasto_id}")
 async def delete_gasto(gasto_id: str):
-    await db.gastos.delete_one({"id": gasto_id})
-    await db.gasto_docs.delete_many({"gastoId": gasto_id})
+    await _get_db().gastos.delete_one({"id": gasto_id})
+    await _get_db().gasto_docs.delete_many({"gastoId": gasto_id})
     return {"success": True}
 
 
 @router.get("/gastos/doc/{doc_id}")
 async def get_gasto_doc(doc_id: str):
-    d = await db.gasto_docs.find_one({"id": doc_id}, {"_id": 0})
+    d = await _get_db().gasto_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     return d
@@ -286,7 +282,7 @@ async def create_informe(payload: dict):
     if not gasto_ids:
         raise HTTPException(status_code=400, detail="Marca al menos un ticket")
 
-    gastos = await db.gastos.find({"id": {"$in": gasto_ids}}, {"_id": 0}).to_list(5000)
+    gastos = await _get_db().gastos.find({"id": {"$in": gasto_ids}}, {"_id": 0}).to_list(5000)
     if not gastos:
         raise HTTPException(status_code=404, detail="No se encontraron los gastos indicados")
 
@@ -315,10 +311,10 @@ async def create_informe(payload: dict):
         "fechaHasta": fechas[-1] if fechas else "",
         "createdAt": now.isoformat(),
     }
-    await db.gasto_informes.insert_one(doc)
+    await _get_db().gasto_informes.insert_one(doc)
     doc.pop("_id", None)
     # Marcar los gastos como incluidos en este informe (cierre)
-    await db.gastos.update_many(
+    await _get_db().gastos.update_many(
         {"id": {"$in": doc["gastoIds"]}},
         {"$set": {"informeId": iid, "informeNombre": nombre}},
     )
@@ -328,28 +324,28 @@ async def create_informe(payload: dict):
 @router.get("/gastos/informes")
 async def list_informes(userId: Optional[str] = None):
     query = {"userId": userId} if userId else {}
-    items = await db.gasto_informes.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+    items = await _get_db().gasto_informes.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
     return {"items": items}
 
 
 @router.get("/gastos/informes/{informe_id}")
 async def get_informe(informe_id: str):
-    inf = await db.gasto_informes.find_one({"id": informe_id}, {"_id": 0})
+    inf = await _get_db().gasto_informes.find_one({"id": informe_id}, {"_id": 0})
     if not inf:
         raise HTTPException(status_code=404, detail="Informe no encontrado")
-    gastos = await db.gastos.find({"id": {"$in": inf.get("gastoIds", [])}}, {"_id": 0}).sort("fecha", 1).to_list(5000)
+    gastos = await _get_db().gastos.find({"id": {"$in": inf.get("gastoIds", [])}}, {"_id": 0}).sort("fecha", 1).to_list(5000)
     inf["gastos"] = gastos
     return inf
 
 
 @router.delete("/gastos/informes/{informe_id}")
 async def delete_informe(informe_id: str):
-    inf = await db.gasto_informes.find_one({"id": informe_id}, {"_id": 0})
+    inf = await _get_db().gasto_informes.find_one({"id": informe_id}, {"_id": 0})
     if inf:
         # Desmarcar los gastos para que vuelvan a estar disponibles
-        await db.gastos.update_many(
+        await _get_db().gastos.update_many(
             {"id": {"$in": inf.get("gastoIds", [])}},
             {"$unset": {"informeId": "", "informeNombre": ""}},
         )
-    await db.gasto_informes.delete_one({"id": informe_id})
+    await _get_db().gasto_informes.delete_one({"id": informe_id})
     return {"success": True}

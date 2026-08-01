@@ -18,7 +18,6 @@ import logging
 import os
 import json
 import re
-from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +59,6 @@ except Exception:  # pragma: no cover - fallback si no hay jwt_service
 
 router = APIRouter(tags=["rentabilidad"], dependencies=_RENTA_DEPS)
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 MAX_DOC_SIZE_MB = 15
 
@@ -90,7 +85,7 @@ async def _log_deletion(entity: str, entity_id: str, before: Optional[dict], use
     """Auditoria minima de borrados: quien borro que y una copia del documento
     para poder recuperarlo si hace falta."""
     try:
-        await db.rentabilidad_audit_log.insert_one({
+        await _get_db().rentabilidad_audit_log.insert_one({
             "id": f"aud-{uuid.uuid4().hex[:8]}",
             "action": "delete",
             "entity": entity,
@@ -117,7 +112,7 @@ async def buscar_articulo_por_codigo(codigo: str = ""):
         q = codigo.strip()
         escaped = _re.escape(q)
         # Primero busca coincidencia exacta de código
-        exact = await db.products.find_one(
+        exact = await _get_db().products.find_one(
             {"code": {"$regex": f"^{escaped}$", "$options": "i"}},
             {"_id": 0, "code": 1, "name": 1, "description": 1, "pvp": 1, "coste": 1}
         )
@@ -132,7 +127,7 @@ async def buscar_articulo_por_codigo(codigo: str = ""):
                 }]
             }
         # Si no hay exacta, busca parcial (hasta 10 resultados)
-        cursor = db.products.find(
+        cursor = _get_db().products.find(
             {"$or": [
                 {"code": {"$regex": escaped, "$options": "i"}},
                 {"name": {"$regex": escaped, "$options": "i"}},
@@ -187,7 +182,7 @@ async def add_project_cost(cost: dict):
         if b64:
             stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
             cdoc_id = f"costdoc-{uuid.uuid4().hex[:8]}"
-            await db.project_cost_docs.insert_one({
+            await _get_db().project_cost_docs.insert_one({
                 "id": cdoc_id,
                 "costId": doc["id"],
                 "dataBase64": stripped,
@@ -196,7 +191,7 @@ async def add_project_cost(cost: dict):
                 "createdAt": datetime.now(timezone.utc).isoformat(),
             })
             doc["docId"] = cdoc_id
-        await db.project_costs.insert_one(doc)
+        await _get_db().project_costs.insert_one(doc)
         doc.pop("_id", None)
         return doc
     except HTTPException:
@@ -211,7 +206,7 @@ async def list_project_costs(projectRef: Optional[str] = None):
     """Listar costes; si se pasa projectRef, solo los de ese proyecto."""
     try:
         query = {"projectRef": projectRef} if projectRef else {}
-        costs = await db.project_costs.find(query, {"_id": 0}).sort("fecha", -1).to_list(2000)
+        costs = await _get_db().project_costs.find(query, {"_id": 0}).sort("fecha", -1).to_list(2000)
         return costs
     except Exception as e:
         logger.error(f"List project costs error: {e}")
@@ -221,7 +216,7 @@ async def list_project_costs(projectRef: Optional[str] = None):
 @router.get("/project-costs/doc/{doc_id}")
 async def get_project_cost_doc(doc_id: str):
     """Devuelve el documento adjunto de un coste (factura del proveedor)."""
-    d = await db.project_cost_docs.find_one({"id": doc_id}, {"_id": 0})
+    d = await _get_db().project_cost_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     return d
@@ -230,9 +225,9 @@ async def get_project_cost_doc(doc_id: str):
 @router.delete("/project-costs/{cost_id}")
 async def delete_project_cost(cost_id: str, user: dict = Depends(require_rentabilidad)):
     try:
-        existing = await db.project_costs.find_one({"id": cost_id}, {"_id": 0})
-        await db.project_cost_docs.delete_many({"costId": cost_id})
-        res = await db.project_costs.delete_one({"id": cost_id})
+        existing = await _get_db().project_costs.find_one({"id": cost_id}, {"_id": 0})
+        await _get_db().project_cost_docs.delete_many({"costId": cost_id})
+        res = await _get_db().project_costs.delete_one({"id": cost_id})
         if existing:
             await _log_deletion("project_cost", cost_id, existing, user)
         return {"success": True, "deleted": res.deleted_count}
@@ -281,7 +276,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
         query = {}
         if userId:
             query["userId"] = userId
-        projects = await db.projects.find(
+        projects = await _get_db().projects.find(
             query,
             {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "clientCode": 1,
              "totalPvp": 1, "totalConIVA": 1, "createdAt": 1, "userId": 1, "status": 1,
@@ -293,7 +288,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
         # tanto el total como el desglose por categoria (MOBILIARIO, TRANSPORTE...).
         costs_agg = {}
         costs_by_cat = {}
-        async for c in db.project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1, "categoria": 1}):
+        async for c in _get_db().project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1, "categoria": 1}):
             ref = c.get("projectRef")
             importe = float(c.get("importe", 0) or 0)
             cat = str(c.get("categoria") or "OTROS").upper()
@@ -304,7 +299,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
         # Ingresos a cuenta (cobros) ya registrados, para poder calcular el
         # pendiente de cobro por documento (venta facturada - cobrado a cuenta).
         cobrado_by_target = {}
-        async for ing in db.ingresos_cuenta.find({}, {"_id": 0, "targetId": 1, "ingresos": 1, "importe": 1}):
+        async for ing in _get_db().ingresos_cuenta.find({}, {"_id": 0, "targetId": 1, "ingresos": 1, "importe": 1}):
             tid = ing.get("targetId")
             if not tid:
                 continue
@@ -319,11 +314,11 @@ async def get_rentabilidad(userId: Optional[str] = None):
         # actualizado de la factura cuando un presupuesto la tenga asociada, y
         # (b) detectar las que NO vienen de ningun presupuesto.
         invoices_by_id = {}
-        async for inv in db.invoices.find({}, {"_id": 0}):
+        async for inv in _get_db().invoices.find({}, {"_id": 0}):
             invoices_by_id[inv.get("id")] = inv
 
         orders_by_id = {}
-        async for o in db.orders.find({}, {"_id": 0}):
+        async for o in _get_db().orders.find({}, {"_id": 0}):
             orders_by_id[o.get("id")] = o
 
         linked_invoice_ids = set()
@@ -610,7 +605,7 @@ async def _resolve_project_cost_ref(ref: str) -> str:
     if not norm:
         return ref
     projection = {"_id": 0, "id": 1, "budgetNumber": 1, "orderRef": 1, "internalReference": 1, "invoiceNumber": 1}
-    async for p in db.projects.find({}, projection):
+    async for p in _get_db().projects.find({}, projection):
         aliases = [p.get("budgetNumber"), p.get("orderRef"), p.get("internalReference"), p.get("invoiceNumber"), p.get("id")]
         if any(_normalize_ref(a) == norm for a in aliases if a):
             return p.get("budgetNumber") or p.get("orderRef") or p.get("internalReference") or p.get("id") or ref
@@ -630,7 +625,7 @@ async def _find_project_matches(detected_ref: str, limit: int = 6) -> List[Dict[
 
     projection = {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "internalReference": 1,
                   "orderRef": 1, "invoiceNumber": 1, "createdAt": 1}
-    projects = await db.projects.find({}, projection).sort("createdAt", -1).to_list(3000)
+    projects = await _get_db().projects.find({}, projection).sort("createdAt", -1).to_list(3000)
     scored = []
     for p in projects:
         aliases = [p.get("budgetNumber"), p.get("orderRef"), p.get("internalReference"), p.get("invoiceNumber"), p.get("id")]
@@ -819,7 +814,7 @@ async def rentabilidad_analytics():
     Responde a: '¿que proveedor reduce mi margen?' y la evolucion mensual."""
     try:
         by_supplier, by_category, by_month = {}, {}, {}
-        async for c in db.project_costs.find({}, {"_id": 0, "proveedor": 1, "categoria": 1, "importe": 1, "fecha": 1}):
+        async for c in _get_db().project_costs.find({}, {"_id": 0, "proveedor": 1, "categoria": 1, "importe": 1, "fecha": 1}):
             imp = float(c.get("importe", 0) or 0)
             prov = (c.get("proveedor") or "(sin proveedor)").strip() or "(sin proveedor)"
             cat = (c.get("categoria") or "OTROS").strip() or "OTROS"
@@ -941,7 +936,7 @@ async def _cobrado_por_ficha_map():
     por referencia normalizada (fallback si el ingreso se registro contra la
     ref y no contra el id de la ficha)."""
     m = {}
-    async for ing in db.ingresos_cuenta.find({}, {"_id": 0, "targetId": 1, "targetRef": 1, "importe": 1}):
+    async for ing in _get_db().ingresos_cuenta.find({}, {"_id": 0, "targetId": 1, "targetRef": 1, "importe": 1}):
         monto = float(ing.get("importe", 0) or 0)
         tid = ing.get("targetId")
         if tid:
@@ -958,7 +953,7 @@ async def _costes_proyecto_map():
     referencia normalizada, para poder avisar en la ficha 'Por lineas' de que
     ya hay coste cargado aunque las lineas de la ficha no lo reflejen."""
     m = {}
-    async for c in db.project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1}):
+    async for c in _get_db().project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1}):
         ref = _normalize_ref(c.get("projectRef"))
         if not ref:
             continue
@@ -1202,6 +1197,7 @@ async def match_line_costs(payload: dict):
 # Permite alimentar el coste de las lineas de una ficha casando por la referencia
 # del articulo (linea.ref == codigo).
 import csv as _csv
+from services.db_client import get_db as _get_db
 
 _ARTICLE_COSTS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "costes_unitarios.csv")
 
@@ -1243,7 +1239,7 @@ def _read_costs_csv() -> List[Dict[str, Any]]:
 async def _seed_article_costs_if_empty():
     """Siembra la coleccion article_costs desde el CSV solo si esta vacia."""
     try:
-        if await db.article_costs.estimated_document_count() > 0:
+        if await _get_db().article_costs.estimated_document_count() > 0:
             return
         rows = _read_costs_csv()
         if not rows:
@@ -1255,7 +1251,7 @@ async def _seed_article_costs_if_empty():
                 continue
             docs.append({**r, "updatedAt": now, "updatedBy": "seed"})
         if docs:
-            await db.article_costs.insert_many(docs)
+            await _get_db().article_costs.insert_many(docs)
             logger.info("article_costs sembrado con %d articulos desde CSV", len(docs))
     except Exception as e:
         logger.error("No se pudo sembrar article_costs: %s", e)
@@ -1265,7 +1261,7 @@ async def _article_costs_map() -> Dict[str, Any]:
     """Devuelve {codigoNorm: articulo} con coste unitario desde MongoDB."""
     await _seed_article_costs_if_empty()
     by_code: Dict[str, Any] = {}
-    async for a in db.article_costs.find({"costeUnitario": {"$ne": None}}, {"_id": 0}):
+    async for a in _get_db().article_costs.find({"costeUnitario": {"$ne": None}}, {"_id": 0}):
         norm = a.get("codigoNorm") or _normalize_ref(a.get("codigo"))
         if norm:
             by_code[norm] = a
@@ -1287,8 +1283,8 @@ async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar:
             {"codigo": {"$regex": nq, "$options": "i"}},
             {"nombre": {"$regex": nq, "$options": "i"}},
         ]
-    total = await db.article_costs.count_documents(query)
-    items = await db.article_costs.find(query, {"_id": 0}).sort("codigo", 1).to_list(max(1, min(limit, 5000)))
+    total = await _get_db().article_costs.count_documents(query)
+    items = await _get_db().article_costs.find(query, {"_id": 0}).sort("codigo", 1).to_list(max(1, min(limit, 5000)))
     return {"total": total, "items": items}
 
 
@@ -1299,7 +1295,7 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
     if not cod:
         raise HTTPException(status_code=400, detail="Falta el codigo del articulo")
     norm = _normalize_ref(cod)
-    prev = await db.article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
+    prev = await _get_db().article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
     def _f(x, d=None):
         try:
             return float(x)
@@ -1327,10 +1323,10 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "updatedBy": (user or {}).get("username", ""),
     }
-    await db.article_costs.update_one({"codigoNorm": norm}, {"$set": doc}, upsert=True)
+    await _get_db().article_costs.update_one({"codigoNorm": norm}, {"$set": doc}, upsert=True)
     # Auditoria: registra el antes/despues de cada cambio de coste.
     try:
-        await db.article_costs_audit.insert_one({
+        await _get_db().article_costs_audit.insert_one({
             "id": f"acaud-{uuid.uuid4().hex[:8]}",
             "codigo": cod, "codigoNorm": norm,
             "before": prev, "after": doc,
@@ -1531,7 +1527,7 @@ async def seed_siemens_electros(user: dict = Depends(require_rentabilidad)):
     n = 0
     for e in _SIEMENS_ELECTROS:
         norm = _normalize_ref(e["codigo"])
-        prev = await db.article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
+        prev = await _get_db().article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
         doc = {
             "codigo": e["codigo"], "codigoNorm": norm, "nombre": e["nombre"],
             "costeUnitario": round(e["coste"], 4),
@@ -1542,7 +1538,7 @@ async def seed_siemens_electros(user: dict = Depends(require_rentabilidad)):
             "updatedAt": datetime.now(timezone.utc).isoformat(),
             "updatedBy": (user or {}).get("username", ""),
         }
-        await db.article_costs.update_one({"codigoNorm": norm}, {"$set": doc}, upsert=True)
+        await _get_db().article_costs.update_one({"codigoNorm": norm}, {"$set": doc}, upsert=True)
         n += 1
     return {"success": True, "cargados": n}
 
@@ -1551,8 +1547,8 @@ async def seed_siemens_electros(user: dict = Depends(require_rentabilidad)):
 async def delete_article_cost(codigo: str, user: dict = Depends(require_rentabilidad)):
     """Elimina un articulo del catalogo de costes (master)."""
     norm = _normalize_ref(codigo)
-    prev = await db.article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
-    res = await db.article_costs.delete_one({"codigoNorm": norm})
+    prev = await _get_db().article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
+    res = await _get_db().article_costs.delete_one({"codigoNorm": norm})
     if prev:
         await _log_deletion("article_cost", codigo, prev, user)
     return {"success": True, "deleted": res.deleted_count}
@@ -1562,7 +1558,7 @@ async def delete_article_cost(codigo: str, user: dict = Depends(require_rentabil
 async def article_costs_audit(codigo: Optional[str] = None, limit: int = 100, user: dict = Depends(require_rentabilidad)):
     """Historial de cambios del catalogo de costes (auditoria)."""
     query = {"codigoNorm": _normalize_ref(codigo)} if codigo else {}
-    items = await db.article_costs_audit.find(query, {"_id": 0}).sort("createdAt", -1).to_list(max(1, min(limit, 1000)))
+    items = await _get_db().article_costs_audit.find(query, {"_id": 0}).sort("createdAt", -1).to_list(max(1, min(limit, 1000)))
     return {"total": len(items), "items": items}
 
 
@@ -1577,16 +1573,16 @@ async def reseed_article_costs(payload: Optional[dict] = None, user: dict = Depe
     now = datetime.now(timezone.utc).isoformat()
     uname = (user or {}).get("username", "")
     if replace:
-        await db.article_costs.delete_many({})
+        await _get_db().article_costs.delete_many({})
         docs = [{**r, "updatedAt": now, "updatedBy": uname or "reseed"} for r in rows if r.get("codigoNorm")]
         if docs:
-            await db.article_costs.insert_many(docs)
+            await _get_db().article_costs.insert_many(docs)
         return {"success": True, "mode": "replace", "count": len(docs)}
     upserts = 0
     for r in rows:
         if not r.get("codigoNorm"):
             continue
-        await db.article_costs.update_one(
+        await _get_db().article_costs.update_one(
             {"codigoNorm": r["codigoNorm"]},
             {"$set": {**r, "updatedAt": now, "updatedBy": uname or "reseed"}},
             upsert=True,
@@ -1621,7 +1617,7 @@ async def tag_electros(payload: Optional[dict] = None, user: dict = Depends(requ
     nombre contiene una palabra clave de electro, y rellena la marca detectada.
     No pisa la marca ya definida a mano. Solo master."""
     tagged = 0
-    async for a in db.article_costs.find({}, {"_id": 0, "codigoNorm": 1, "nombre": 1, "marca": 1, "esElectro": 1}):
+    async for a in _get_db().article_costs.find({}, {"_id": 0, "codigoNorm": 1, "nombre": 1, "marca": 1, "esElectro": 1}):
         nombre = (a.get("nombre") or "").lower()
         if not any(k in nombre for k in _ELECTRO_KEYWORDS):
             continue
@@ -1630,7 +1626,7 @@ async def tag_electros(payload: Optional[dict] = None, user: dict = Depends(requ
             m = _detect_marca(a.get("nombre") or "")
             if m:
                 upd["marca"] = m
-        await db.article_costs.update_one({"codigoNorm": a["codigoNorm"]}, {"$set": upd})
+        await _get_db().article_costs.update_one({"codigoNorm": a["codigoNorm"]}, {"$set": upd})
         tagged += 1
     return {"success": True, "tagged": tagged}
 
@@ -1647,7 +1643,7 @@ async def _resolve_bodegon(b: dict) -> dict:
     arts = []
     total_pvp = 0.0
     if codes:
-        async for a in db.article_costs.find({"codigoNorm": {"$in": codes}}, {"_id": 0}):
+        async for a in _get_db().article_costs.find({"codigoNorm": {"$in": codes}}, {"_id": 0}):
             arts.append({
                 "codigo": a.get("codigo"), "codigoNorm": a.get("codigoNorm"),
                 "nombre": a.get("nombre"), "marca": a.get("marca"),
@@ -1667,7 +1663,7 @@ async def _resolve_bodegon(b: dict) -> dict:
 async def list_bodegones():
     """Lista los bodegones de electros con el detalle de sus articulos."""
     out = []
-    async for b in db.electro_bodegones.find({}, {"_id": 0}).sort("createdAt", 1):
+    async for b in _get_db().electro_bodegones.find({}, {"_id": 0}).sort("createdAt", 1):
         out.append(await _resolve_bodegon(b))
     return {"total": len(out), "items": out}
 
@@ -1677,7 +1673,7 @@ async def upsert_bodegon(payload: dict, user: dict = Depends(require_rentabilida
     """Crea o actualiza un bodegon. Campos: id?, nombre, tipo ('bodegon'|'oferta'),
     marca, articleCodes[] (referencias normalizadas de los articulos asignados)."""
     bid = (payload or {}).get("id") or f"bod-{uuid.uuid4().hex[:8]}"
-    prev = await db.electro_bodegones.find_one({"id": bid}, {"_id": 0})
+    prev = await _get_db().electro_bodegones.find_one({"id": bid}, {"_id": 0})
     codes = payload.get("articleCodes")
     if codes is None:
         codes = (prev or {}).get("articleCodes") or []
@@ -1697,14 +1693,14 @@ async def upsert_bodegon(payload: dict, user: dict = Depends(require_rentabilida
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "updatedBy": (user or {}).get("username", ""),
     }
-    await db.electro_bodegones.update_one({"id": bid}, {"$set": doc}, upsert=True)
+    await _get_db().electro_bodegones.update_one({"id": bid}, {"$set": doc}, upsert=True)
     return {"success": True, "bodegon": await _resolve_bodegon(doc), "created": prev is None}
 
 
 @router.delete("/rentabilidad/bodegones/{bid}")
 async def delete_bodegon(bid: str, user: dict = Depends(require_rentabilidad)):
     """Elimina un bodegon (no borra los articulos del catalogo)."""
-    res = await db.electro_bodegones.delete_one({"id": bid})
+    res = await _get_db().electro_bodegones.delete_one({"id": bid})
     return {"success": res.deleted_count > 0}
 
 
@@ -1757,12 +1753,12 @@ async def list_fichas(userId: Optional[str] = None):
     """Lista las fichas de rentabilidad por lineas (resumen)."""
     try:
         query = {"createdBy": userId} if userId else {}
-        fichas = await db.sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+        fichas = await _get_db().sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
         cobrado_map = await _cobrado_por_ficha_map()
         costes_map = await _costes_proyecto_map()
         for f in fichas:
             f["totals"] = _ficha_totals(f.get("lines", []))
-            f["numDocs"] = await db.sale_ficha_docs.count_documents({"fichaId": f.get("id")})
+            f["numDocs"] = await _get_db().sale_ficha_docs.count_documents({"fichaId": f.get("id")})
             _apply_ficha_extras(f, cobrado_map, costes_map)
         return fichas
     except Exception as e:
@@ -1773,14 +1769,14 @@ async def list_fichas(userId: Optional[str] = None):
 @router.get("/rentabilidad/fichas/{ficha_id}")
 async def get_ficha(ficha_id: str):
     """Detalle de una ficha + metadatos de sus documentos (sin el base64)."""
-    f = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
+    f = await _get_db().sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
     if not f:
         raise HTTPException(status_code=404, detail="Ficha no encontrada")
     f["totals"] = _ficha_totals(f.get("lines", []))
     cobrado_map = await _cobrado_por_ficha_map()
     costes_map = await _costes_proyecto_map()
     _apply_ficha_extras(f, cobrado_map, costes_map)
-    docs = await db.sale_ficha_docs.find(
+    docs = await _get_db().sale_ficha_docs.find(
         {"fichaId": ficha_id}, {"_id": 0, "dataBase64": 0}
     ).sort("uploadedAt", 1).to_list(100)
     f["docs"] = docs
@@ -1788,7 +1784,7 @@ async def get_ficha(ficha_id: str):
 
 
 async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
-    """Si una factura trae un cliente que no existe en db.clients, lo busca
+    """Si una factura trae un cliente que no existe en _get_db().clients, lo busca
     primero por el codigo que viene impreso en la factura (si lo hay) y si no
     por nombre. Solo se CREA un cliente nuevo cuando la factura trae un codigo
     de cliente fiable (usa ese MISMO codigo, no se autogenera ningun numero
@@ -1803,7 +1799,7 @@ async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
         return None
 
     if codigo:
-        existing = await db.clients.find_one(
+        existing = await _get_db().clients.find_one(
             {"codigo": {"$regex": f"^{re.escape(codigo)}$", "$options": "i"}},
             {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
         )
@@ -1811,7 +1807,7 @@ async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
             return {**existing, "created": False}
 
     if nombre:
-        existing = await db.clients.find_one(
+        existing = await _get_db().clients.find_one(
             {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}},
             {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
         )
@@ -1830,7 +1826,7 @@ async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "origenAutoFactura": True,
     }
-    await db.clients.insert_one(client_doc)
+    await _get_db().clients.insert_one(client_doc)
     return {"id": client_doc["id"], "codigo": codigo, "nombre": nombre, "created": True}
 
 
@@ -1843,12 +1839,12 @@ async def check_client(nombre: str = "", codigo: str = ""):
     codigo = (codigo or "").strip()
     existing = None
     if codigo:
-        existing = await db.clients.find_one(
+        existing = await _get_db().clients.find_one(
             {"codigo": {"$regex": f"^{re.escape(codigo)}$", "$options": "i"}},
             {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
         )
     if not existing and nombre:
-        existing = await db.clients.find_one(
+        existing = await _get_db().clients.find_one(
             {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}},
             {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
         )
@@ -1863,7 +1859,7 @@ async def save_ficha(payload: dict, user: dict = Depends(require_rentabilidad)):
         # Ficha con visto bueno del controller: BLOQUEADA para modificaciones.
         # Solo el master puede modificarla (la UI exige el desbloqueo con Shift).
         if (payload or {}).get("id"):
-            _prev = await db.sale_fichas.find_one(
+            _prev = await _get_db().sale_fichas.find_one(
                 {"id": fid}, {"_id": 0, "revisada": 1, "lines": 1, "ref": 1})
             if _prev and _prev.get("revisada"):
                 if not _is_elevated(user):
@@ -1905,7 +1901,7 @@ async def save_ficha(payload: dict, user: dict = Depends(require_rentabilidad)):
             "createdByName": payload.get("createdByName", ""),
             "updatedAt": datetime.now(timezone.utc).isoformat(),
         }
-        existing = await db.sale_fichas.find_one({"id": fid}, {"_id": 0})
+        existing = await _get_db().sale_fichas.find_one({"id": fid}, {"_id": 0})
         doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
         # Trazabilidad de conversión (documento de origen y de destino); se preserva si ya existía.
         for k in ("origenId", "origenRef", "origenType", "convertidoAId", "convertidoARef", "convertidoAType"):
@@ -1923,7 +1919,7 @@ async def save_ficha(payload: dict, user: dict = Depends(require_rentabilidad)):
         else:
             doc["clienteCodigo"] = clienteCodigo
 
-        await db.sale_fichas.update_one({"id": fid}, {"$set": doc}, upsert=True)
+        await _get_db().sale_fichas.update_one({"id": fid}, {"$set": doc}, upsert=True)
         doc["totals"] = _ficha_totals(norm_lines)
         return {"success": True, "ficha": doc, "clientCreated": client_created}
     except Exception as e:
@@ -1943,8 +1939,8 @@ async def assign_client_code(payload: dict, user: dict = Depends(require_rentabi
     query = {"cliente": cliente}
     if not _is_elevated(user):
         query["revisada"] = {"$ne": True}
-    res = await db.sale_fichas.update_many(query, {"$set": {"clienteCodigo": codigo}})
-    # Si el cliente existe en la ficha pero no en db.clients, lo damos de alta con ese código.
+    res = await _get_db().sale_fichas.update_many(query, {"$set": {"clienteCodigo": codigo}})
+    # Si el cliente existe en la ficha pero no en _get_db().clients, lo damos de alta con ese código.
     try:
         await _ensure_client_for_invoice(cliente, codigo)
     except Exception as e:
@@ -1958,7 +1954,7 @@ async def trace_ficha(ficha_id: str, payload: dict):
     upd = {k: str(v or "") for k, v in (payload or {}).items()
            if k in ("convertidoAId", "convertidoARef", "convertidoAType", "origenId", "origenRef", "origenType")}
     if upd:
-        await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
+        await _get_db().sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
     return {"success": True}
 
 
@@ -1975,7 +1971,7 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
             raise HTTPException(status_code=403, detail="Solo el master puede quitar el visto bueno del controller")
         # No dar el visto bueno a una factura con margen 0/negativo o sin costes cargados.
         if revisada:
-            fic = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0, "lines": 1})
+            fic = await _get_db().sale_fichas.find_one({"id": ficha_id}, {"_id": 0, "lines": 1})
             _lineas = (fic or {}).get("lines", []) or []
             tt = _ficha_totals(_lineas)
             # ¿Hay abono MEZCLADO con ventas? (alguna línea con venta negativa). En
@@ -2020,10 +2016,10 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
             upd["revisadaVenta"] = None
             upd["revisadaCoste"] = None
             upd["revisadaLineas"] = None
-        await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
+        await _get_db().sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
         # Auditoria de la revisión (marcar/desmarcar): quién, cuándo y sobre qué factura.
         try:
-            await db.rentabilidad_audit_log.insert_one({
+            await _get_db().rentabilidad_audit_log.insert_one({
                 "id": f"rev-{uuid.uuid4().hex[:8]}",
                 "action": "revision_marcar" if revisada else "revision_desmarcar",
                 "entity": "sale_ficha",
@@ -2050,15 +2046,15 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
 @router.delete("/rentabilidad/fichas/{ficha_id}")
 async def delete_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)):
     try:
-        existing = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
+        existing = await _get_db().sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
         if existing and existing.get("createdBy") and not _is_elevated(user) and existing.get("createdBy") != (user or {}).get("id"):
             raise HTTPException(status_code=403, detail="No puedes borrar un documento de otro usuario")
         # Ficha con visto bueno del controller: BLOQUEADA. Solo el master puede
         # borrarla (la UI exige la secuencia de desbloqueo con la tecla Shift).
         if existing and existing.get("revisada") and not _is_elevated(user):
             raise HTTPException(status_code=403, detail="Ficha revisada por el controller: bloqueada. Solo el master puede borrarla.")
-        await db.sale_fichas.delete_one({"id": ficha_id})
-        await db.sale_ficha_docs.delete_many({"fichaId": ficha_id})
+        await _get_db().sale_fichas.delete_one({"id": ficha_id})
+        await _get_db().sale_ficha_docs.delete_many({"fichaId": ficha_id})
         if existing:
             await _log_deletion("sale_ficha", ficha_id, existing, user)
         return {"success": True}
@@ -2094,7 +2090,7 @@ async def add_ficha_doc(ficha_id: str, payload: dict):
         "dataBase64": b64,
         "uploadedAt": datetime.now(timezone.utc).isoformat(),
     }
-    await db.sale_ficha_docs.insert_one(doc)
+    await _get_db().sale_ficha_docs.insert_one(doc)
     return {"success": True, "id": doc["id"], "kind": doc["kind"],
             "filename": doc["filename"], "mime": doc["mime"], "uploadedAt": doc["uploadedAt"]}
 
@@ -2102,7 +2098,7 @@ async def add_ficha_doc(ficha_id: str, payload: dict):
 @router.get("/rentabilidad/fichas/{ficha_id}/docs/{doc_id}")
 async def get_ficha_doc(ficha_id: str, doc_id: str):
     """Devuelve el documento (base64) para consultarlo/descargarlo."""
-    d = await db.sale_ficha_docs.find_one({"id": doc_id, "fichaId": ficha_id}, {"_id": 0})
+    d = await _get_db().sale_ficha_docs.find_one({"id": doc_id, "fichaId": ficha_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     return d
@@ -2110,7 +2106,7 @@ async def get_ficha_doc(ficha_id: str, doc_id: str):
 
 @router.delete("/rentabilidad/fichas/{ficha_id}/docs/{doc_id}")
 async def delete_ficha_doc(ficha_id: str, doc_id: str):
-    await db.sale_ficha_docs.delete_one({"id": doc_id, "fichaId": ficha_id})
+    await _get_db().sale_ficha_docs.delete_one({"id": doc_id, "fichaId": ficha_id})
     return {"success": True}
 
 
@@ -2129,7 +2125,7 @@ async def presupuesto_to_pedido(project_id: str, request: Request):
     except Exception:
         pass
 
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    project = await _get_db().projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
     if project.get("orderId"):
@@ -2171,8 +2167,8 @@ async def presupuesto_to_pedido(project_id: str, request: Request):
             "sideColor": project.get("sideColor", ""),
         },
     }
-    await db.orders.insert_one(order)
-    await db.projects.update_one(
+    await _get_db().orders.insert_one(order)
+    await _get_db().projects.update_one(
         {"id": project_id},
         {"$set": {
             "status": "aceptado",
@@ -2197,7 +2193,7 @@ async def pedido_to_albaran(project_id: str, request: Request):
     except Exception:
         pass
 
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    project = await _get_db().projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     if project.get("albaranId"):
@@ -2214,7 +2210,7 @@ async def pedido_to_albaran(project_id: str, request: Request):
     else:
         albaran_ref = f"ALB-{uuid.uuid4().hex[:6].upper()}"
 
-    order = await db.orders.find_one({"id": project["orderId"]}, {"_id": 0})
+    order = await _get_db().orders.find_one({"id": project["orderId"]}, {"_id": 0})
     now = datetime.now(timezone.utc)
     albaran = {
         "id": f"alb-{uuid.uuid4().hex[:8]}",
@@ -2233,8 +2229,8 @@ async def pedido_to_albaran(project_id: str, request: Request):
         "userId": project.get("userId", ""),
         "createdAt": now.isoformat(),
     }
-    await db.delivery_notes.insert_one(albaran)
-    await db.projects.update_one(
+    await _get_db().delivery_notes.insert_one(albaran)
+    await _get_db().projects.update_one(
         {"id": project_id},
         {"$set": {
             "albaranId": albaran["id"],
@@ -2242,7 +2238,7 @@ async def pedido_to_albaran(project_id: str, request: Request):
             "updatedAt": now.isoformat(),
         }},
     )
-    await db.orders.update_one(
+    await _get_db().orders.update_one(
         {"id": project["orderId"]},
         {"$set": {"albaranId": albaran["id"], "albaranRef": albaran_ref}},
     )
@@ -2262,7 +2258,7 @@ async def pedido_to_factura(project_id: str, request: Request):
     except Exception:
         pass
 
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    project = await _get_db().projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     if project.get("invoiceId"):
@@ -2280,28 +2276,28 @@ async def pedido_to_factura(project_id: str, request: Request):
 
     # Asegurar un estado válido para emitir factura
     if project.get("status") not in ["aceptado", "en_fabricacion", "entregado"]:
-        await db.projects.update_one({"id": project_id}, {"$set": {"status": "aceptado"}})
+        await _get_db().projects.update_one({"id": project_id}, {"$set": {"status": "aceptado"}})
 
     from routes.invoices import create_invoice_from_project
     doc = await create_invoice_from_project(project_id, inv_number_override=custom_inv_number)
 
     now = datetime.now(timezone.utc)
-    await db.projects.update_one(
+    await _get_db().projects.update_one(
         {"id": project_id},
         {"$set": {"status": "facturado", "updatedAt": now.isoformat()}},
     )
     if project.get("orderId"):
-        await db.orders.update_one(
+        await _get_db().orders.update_one(
             {"id": project["orderId"]},
             {"$set": {"status": "facturado", "invoiceId": doc.get("id"),
                       "invoiceNumber": doc.get("invoiceNumber")}},
         )
-    await db.delivery_notes.update_one(
+    await _get_db().delivery_notes.update_one(
         {"id": project["albaranId"]},
         {"$set": {"status": "facturado", "invoiceId": doc.get("id"),
                   "invoiceNumber": doc.get("invoiceNumber")}},
     )
-    await db.invoices.update_one(
+    await _get_db().invoices.update_one(
         {"id": doc.get("id")},
         {"$set": {
             "sourceDeliveryNoteId": project.get("albaranId"),
@@ -2406,7 +2402,7 @@ async def parse_ingresos(payload: dict):
 async def list_ingresos(userId: Optional[str] = None):
     """Lista los ingresos a cuenta (cada usuario los suyos si se pasa userId)."""
     query = {"createdBy": userId} if userId else {}
-    items = await db.ingresos_cuenta.find(query, {"_id": 0}).sort("fecha", -1).to_list(3000)
+    items = await _get_db().ingresos_cuenta.find(query, {"_id": 0}).sort("fecha", -1).to_list(3000)
     total = round(sum(float(i.get("importe", 0) or 0) for i in items), 2)
     return {"items": items, "total": total}
 
@@ -2418,7 +2414,7 @@ async def list_asignables(userId: Optional[str] = None):
     q_fichas = {"docType": {"$in": ["presupuesto", "pedido", "albaran", "factura"]}}
     if userId:
         q_fichas["createdBy"] = userId
-    fichas = await db.sale_fichas.find(
+    fichas = await _get_db().sale_fichas.find(
         q_fichas, {"_id": 0, "id": 1, "docType": 1, "ref": 1, "cliente": 1}
     ).sort("createdAt", -1).to_list(3000)
 
@@ -2426,7 +2422,7 @@ async def list_asignables(userId: Optional[str] = None):
     q_proj = {}
     if userId:
         q_proj["userId"] = userId
-    projects = await db.projects.find(
+    projects = await _get_db().projects.find(
         q_proj, {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "internalReference": 1, "orderRef": 1}
     ).sort("createdAt", -1).to_list(3000)
 
@@ -2480,7 +2476,7 @@ async def create_ingreso(payload: dict):
     if doc_b64:
         stripped = doc_b64.split(",", 1)[1] if doc_b64.startswith("data:") else doc_b64
         doc_id = f"ingdoc-{uuid.uuid4().hex[:8]}"
-        await db.ingreso_docs.insert_one({
+        await _get_db().ingreso_docs.insert_one({
             "id": doc_id,
             "ingresoId": iid,
             "dataBase64": stripped,
@@ -2497,7 +2493,7 @@ async def create_ingreso(payload: dict):
         "concepto": str(payload.get("concepto") or "Ingreso a cuenta"),
         "metodo": str(payload.get("metodo") or "otro"),
         "cliente": str(payload.get("cliente") or ""),
-        "clientCode": client_code,                              # vinculo directo a db.clients
+        "clientCode": client_code,                              # vinculo directo a _get_db().clients
         "projectRef": str(payload.get("projectRef") or payload.get("proyecto") or ""),
         "targetType": str(payload.get("targetType") or ""),   # presupuesto | pedido | factura
         "targetId": target_id,                                  # id de la ficha
@@ -2510,7 +2506,7 @@ async def create_ingreso(payload: dict):
         "createdByName": payload.get("createdByName", ""),
         "createdAt": now.isoformat(),
     }
-    await db.ingresos_cuenta.insert_one(doc)
+    await _get_db().ingresos_cuenta.insert_one(doc)
     doc.pop("_id", None)
     return {"success": True, "ingreso": doc}
 
@@ -2518,7 +2514,7 @@ async def create_ingreso(payload: dict):
 @router.get("/rentabilidad/ingresos/doc/{doc_id}")
 async def get_ingreso_doc(doc_id: str):
     """Devuelve el documento archivado de un ingreso (para consultarlo)."""
-    d = await db.ingreso_docs.find_one({"id": doc_id}, {"_id": 0})
+    d = await _get_db().ingreso_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     return d
@@ -2529,7 +2525,7 @@ async def update_ingreso(ingreso_id: str, payload: dict):
     """Asigna (o reasigna) un ingreso a cuenta a un cliente y/o documento sin
     tener que borrarlo y recrearlo — pensado para resolver los que quedaron
     'pendientes de asignación'."""
-    existing = await db.ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
+    existing = await _get_db().ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Ingreso no encontrado")
     target_id = str((payload or {}).get("targetId") or "")
@@ -2545,18 +2541,18 @@ async def update_ingreso(ingreso_id: str, payload: dict):
         upd["cliente"] = str(payload.get("cliente"))
     if (payload or {}).get("projectRef"):
         upd["projectRef"] = str(payload.get("projectRef"))
-    await db.ingresos_cuenta.update_one({"id": ingreso_id}, {"$set": upd})
-    updated = await db.ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
+    await _get_db().ingresos_cuenta.update_one({"id": ingreso_id}, {"$set": upd})
+    updated = await _get_db().ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
     return {"success": True, "ingreso": updated}
 
 
 @router.delete("/rentabilidad/ingresos/{ingreso_id}")
 async def delete_ingreso(ingreso_id: str, user: dict = Depends(require_rentabilidad)):
-    existing = await db.ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
+    existing = await _get_db().ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
     if existing and existing.get("createdBy") and not _is_elevated(user) and existing.get("createdBy") != (user or {}).get("id"):
         raise HTTPException(status_code=403, detail="No puedes borrar un ingreso de otro usuario")
-    await db.ingresos_cuenta.delete_one({"id": ingreso_id})
-    await db.ingreso_docs.delete_many({"ingresoId": ingreso_id})
+    await _get_db().ingresos_cuenta.delete_one({"id": ingreso_id})
+    await _get_db().ingreso_docs.delete_many({"ingresoId": ingreso_id})
     if existing:
         await _log_deletion("ingreso_cuenta", ingreso_id, existing, user)
     return {"success": True}
@@ -2576,14 +2572,14 @@ async def normalize_refs(user: dict = Depends(require_rentabilidad)):
     def _clean_ref(v: str) -> str:
         return _re.sub(r'\s*/\s*', '/', str(v or '').strip())
 
-    cursor = db.fichas_rentabilidad.find({}, {"_id": 0, "id": 1, "ref": 1})
+    cursor = _get_db().fichas_rentabilidad.find({}, {"_id": 0, "id": 1, "ref": 1})
     updated = 0
     skipped = 0
     async for doc in cursor:
         original = doc.get("ref") or ""
         cleaned = _clean_ref(original)
         if cleaned != original:
-            await db.fichas_rentabilidad.update_one(
+            await _get_db().fichas_rentabilidad.update_one(
                 {"id": doc["id"]},
                 {"$set": {"ref": cleaned}}
             )
@@ -2646,7 +2642,7 @@ async def verificar_listado(payload: dict, user: dict = Depends(require_rentabil
     if not oficiales:
         raise HTTPException(status_code=422, detail="No se reconoció ninguna factura en el listado.")
 
-    fichas = await db.sale_fichas.find({}, {"_id": 0, "id": 1, "ref": 1, "cliente": 1,
+    fichas = await _get_db().sale_fichas.find({}, {"_id": 0, "id": 1, "ref": 1, "cliente": 1,
                                             "lines": 1, "convertidoAId": 1}).to_list(20000)
     def _norm(r):
         return _r.sub(r'[^A-Z0-9]', '', str(r or '').upper())
@@ -2692,7 +2688,7 @@ async def auditoria_revisiones(user: dict = Depends(require_rentabilidad)):
     Y marca las sospechosas del fallo de coste (se cargó la tarifa BRUTA en vez del
     neto con descuento): margen negativo con todas las líneas costeadas.
     """
-    fichas = await db.sale_fichas.find(
+    fichas = await _get_db().sale_fichas.find(
         {"revisada": True},
         {"_id": 0, "id": 1, "ref": 1, "cliente": 1, "fecha": 1, "docType": 1,
          "lines": 1, "revisadaPor": 1, "revisadaAt": 1,

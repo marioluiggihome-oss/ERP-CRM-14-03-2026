@@ -10,8 +10,8 @@ import logging
 import uuid
 import os
 
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from services.db_client import get_db as _get_db
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -19,10 +19,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/materials", tags=["materials"])
 
 # Database connection
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 # Pydantic models
@@ -63,7 +59,7 @@ async def get_materials(library: str = None):
     query = {}
     if library:
         query["library"] = library.upper()
-    materials = await db.materials.find(query, {"_id": 0}).to_list(1000)
+    materials = await _get_db().materials.find(query, {"_id": 0}).to_list(1000)
     return materials
 
 
@@ -71,7 +67,7 @@ async def get_materials(library: str = None):
 async def create_material(material: MaterialCreate, user=Depends(require_auth)):
     """Crear un nuevo material"""
     material_obj = MaterialModel(**material.model_dump())
-    await db.materials.insert_one(material_obj.model_dump())
+    await _get_db().materials.insert_one(material_obj.model_dump())
     logger.info(f"Material created: {material_obj.name}")
     return material_obj
 
@@ -79,12 +75,12 @@ async def create_material(material: MaterialCreate, user=Depends(require_auth)):
 @router.put("/{material_id}", response_model=MaterialModel)
 async def update_material(material_id: str, material: MaterialCreate, user=Depends(require_auth)):
     """Actualizar un material"""
-    existing = await db.materials.find_one({"id": material_id}, {"_id": 0})
+    existing = await _get_db().materials.find_one({"id": material_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Material no encontrado")
     
-    await db.materials.update_one({"id": material_id}, {"$set": material.model_dump()})
-    updated = await db.materials.find_one({"id": material_id}, {"_id": 0})
+    await _get_db().materials.update_one({"id": material_id}, {"$set": material.model_dump()})
+    updated = await _get_db().materials.find_one({"id": material_id}, {"_id": 0})
     logger.info(f"Material updated: {material_id}")
     return updated
 
@@ -93,11 +89,11 @@ async def update_material(material_id: str, material: MaterialCreate, user=Depen
 async def delete_material(material_id: str, user=Depends(require_auth)):
     """Eliminar un material"""
     # Check if it's the last one
-    count = await db.materials.count_documents({})
+    count = await _get_db().materials.count_documents({})
     if count <= 1:
         raise HTTPException(status_code=400, detail="Debe existir al menos un material")
     
-    result = await db.materials.delete_one({"id": material_id})
+    result = await _get_db().materials.delete_one({"id": material_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Material no encontrado")
     

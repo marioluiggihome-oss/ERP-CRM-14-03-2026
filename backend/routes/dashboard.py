@@ -7,12 +7,9 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import os
 import logging
+from services.db_client import get_db as _get_db
 
-from motor.motor_asyncio import AsyncIOMotorClient
 
-mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +60,7 @@ async def get_dashboard_metrics(
         # ============================================
         
         # Total de órdenes de fabricación
-        fab_orders = await db.fabrica_orders.find({
+        fab_orders = await _get_db().fabrica_orders.find({
             "createdAt": {"$gte": start_date, "$lte": end_date}
         }, {"_id": 0}).to_list(5000)
         
@@ -105,7 +102,7 @@ async def get_dashboard_metrics(
         # ============================================
         
         # Pedidos confirmados
-        confirmed_orders = await db.orders.find({
+        confirmed_orders = await _get_db().orders.find({
             "confirmedAt": {"$gte": start_date, "$lte": end_date}
         }, {"_id": 0}).to_list(5000)
         
@@ -130,7 +127,7 @@ async def get_dashboard_metrics(
         # ============================================
         
         # Presupuestos creados en el período
-        projects = await db.projects.find({
+        projects = await _get_db().projects.find({
             "createdAt": {"$gte": start_date, "$lte": end_date}
         }, {"_id": 0}).to_list(5000)
         
@@ -166,17 +163,17 @@ async def get_dashboard_metrics(
         # MÉTRICAS DE CLIENTES (clients)
         # ============================================
         
-        total_clients = await db.clients.count_documents({})
-        active_clients = await db.clients.count_documents({"status": "activo"})
-        potential_clients = await db.clients.count_documents({"status": "potencial"})
+        total_clients = await _get_db().clients.count_documents({})
+        active_clients = await _get_db().clients.count_documents({"status": "activo"})
+        potential_clients = await _get_db().clients.count_documents({"status": "potencial"})
         
         # ============================================
         # MÉTRICAS DE PRODUCTOS
         # ============================================
         
-        total_products = await db.products.count_documents({})
-        products_zc = await db.products.count_documents({"library": "ZC"})
-        products_mv = await db.products.count_documents({"library": "MV"})
+        total_products = await _get_db().products.count_documents({})
+        products_zc = await _get_db().products.count_documents({"library": "ZC"})
+        products_mv = await _get_db().products.count_documents({"library": "MV"})
         
         # ============================================
         # TENDENCIA MENSUAL (últimos 6 meses)
@@ -199,7 +196,7 @@ async def get_dashboard_metrics(
         # ÚLTIMOS PEDIDOS
         # ============================================
         
-        recent_orders = await db.orders.find(
+        recent_orders = await _get_db().orders.find(
             {}, {"_id": 0}
         ).sort("confirmedAt", -1).limit(5).to_list(5)
         
@@ -217,7 +214,7 @@ async def get_dashboard_metrics(
         # ÓRDENES DE FABRICACIÓN PENDIENTES
         # ============================================
         
-        pending_fab = await db.fabrica_orders.find(
+        pending_fab = await _get_db().fabrica_orders.find(
             {"status": {"$in": ["confirmed", "in_production"]}},
             {"_id": 0}
         ).sort("createdAt", -1).limit(5).to_list(5)
@@ -314,19 +311,19 @@ async def get_production_summary(current_user: dict = Depends(require_auth)):
     """Resumen rápido de producción para widgets"""
     try:
         # Pedidos pendientes de producción
-        pending = await db.fabrica_orders.count_documents({
+        pending = await _get_db().fabrica_orders.count_documents({
             "status": {"$in": ["confirmed", "in_production"]}
         })
         
         # Completados esta semana
         week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        completed_week = await db.fabrica_orders.count_documents({
+        completed_week = await _get_db().fabrica_orders.count_documents({
             "status": "delivered",
             "updatedAt": {"$gte": week_ago}
         })
         
         # Urgentes
-        urgent = await db.fabrica_orders.count_documents({
+        urgent = await _get_db().fabrica_orders.count_documents({
             "status": {"$in": ["confirmed", "in_production"]},
             "priority": "urgent"
         })

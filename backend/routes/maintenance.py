@@ -11,9 +11,9 @@ import uuid
 import json
 import os
 
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from services.jwt_service import require_admin
+from services.db_client import get_db as _get_db
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -21,10 +21,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
 # Database connection
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 # Global maintenance state (synced with DB)
 maintenance_state = {
@@ -59,7 +55,7 @@ async def get_maintenance_status():
     global maintenance_state
     
     # Sync with database on first call
-    db_state = await db.system_settings.find_one({"key": "maintenance_mode"})
+    db_state = await _get_db().system_settings.find_one({"key": "maintenance_mode"})
     if db_state:
         maintenance_state = db_state.get("value", maintenance_state)
     
@@ -79,7 +75,7 @@ async def activate_maintenance_mode(request: MaintenanceActivateRequest, user=De
     
     try:
         # Verify admin user
-        admin_user = await db.users.find_one({"id": request.adminUserId})
+        admin_user = await _get_db().users.find_one({"id": request.adminUserId})
         if not admin_user or not admin_user.get("isAdmin"):
             raise HTTPException(status_code=403, detail="Solo administradores pueden activar modo mantenimiento")
         
@@ -107,7 +103,7 @@ async def activate_maintenance_mode(request: MaintenanceActivateRequest, user=De
             
             for coll_name in collections_to_backup:
                 try:
-                    docs = await db[coll_name].find({}).to_list(length=None)
+                    docs = await _get_db()[coll_name].find({}).to_list(length=None)
                     # Convert ObjectId to string
                     for doc in docs:
                         doc.pop('_id', None)
@@ -128,7 +124,7 @@ async def activate_maintenance_mode(request: MaintenanceActivateRequest, user=De
                 "size": len(json.dumps(backup_data, default=str))
             }
             
-            await db.system_backups.insert_one(backup_record)
+            await _get_db().system_backups.insert_one(backup_record)
             logger.info(f"Pre-update backup created with ID: {backup_id}")
         
         # Calculate estimated end time
@@ -145,7 +141,7 @@ async def activate_maintenance_mode(request: MaintenanceActivateRequest, user=De
         }
         
         # Save to database for persistence
-        await db.system_settings.update_one(
+        await _get_db().system_settings.update_one(
             {"key": "maintenance_mode"},
             {"$set": {"key": "maintenance_mode", "value": maintenance_state}},
             upsert=True
@@ -173,7 +169,7 @@ async def deactivate_maintenance_mode(adminUserId: str, user=Depends(require_adm
     
     try:
         # Verify admin user
-        admin_user = await db.users.find_one({"id": adminUserId})
+        admin_user = await _get_db().users.find_one({"id": adminUserId})
         if not admin_user or not admin_user.get("isAdmin"):
             raise HTTPException(status_code=403, detail="Solo administradores pueden desactivar modo mantenimiento")
         
@@ -188,7 +184,7 @@ async def deactivate_maintenance_mode(adminUserId: str, user=Depends(require_adm
         }
         
         # Save to database
-        await db.system_settings.update_one(
+        await _get_db().system_settings.update_one(
             {"key": "maintenance_mode"},
             {"$set": {"key": "maintenance_mode", "value": maintenance_state}},
             upsert=True
@@ -212,7 +208,7 @@ async def deactivate_maintenance_mode(adminUserId: str, user=Depends(require_adm
 async def list_pre_update_backups(limit: int = 10, user=Depends(require_admin)):
     """List all pre-update backups (solo admin)."""
     try:
-        cursor = db.system_backups.find({"type": "pre_update"}).sort("createdAt", -1).limit(limit)
+        cursor = _get_db().system_backups.find({"type": "pre_update"}).sort("createdAt", -1).limit(limit)
         backups = await cursor.to_list(length=limit)
         
         # Return summary without full data
@@ -236,7 +232,7 @@ async def list_pre_update_backups(limit: int = 10, user=Depends(require_admin)):
 async def download_pre_update_backup(backup_id: str, user=Depends(require_admin)):
     """Download a specific pre-update backup"""
     try:
-        backup = await db.system_backups.find_one({"id": backup_id})
+        backup = await _get_db().system_backups.find_one({"id": backup_id})
         
         if not backup:
             raise HTTPException(status_code=404, detail="Backup no encontrado")

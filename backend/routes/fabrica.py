@@ -12,12 +12,9 @@ import base64
 import os
 import json
 import asyncio
+from services.db_client import get_db as _get_db
 
 # MongoDB
-from motor.motor_asyncio import AsyncIOMotorClient
-mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
 # Gemini Vision para análisis de PDF
 try:
@@ -175,7 +172,7 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
         current_year = datetime.now().year
         counter_id = f"manufacturing_order_{current_year}"
         
-        result = await db.counters.find_one_and_update(
+        result = await _get_db().counters.find_one_and_update(
             {"_id": counter_id},
             {"$inc": {"seq": 1}},
             upsert=True,
@@ -185,7 +182,7 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
         order_number = f"OF-{current_year}-{seq_number:04d}"
         
         # Generar número de fabricación secuencial global (más corto, para uso interno)
-        mfg_counter = await db.counters.find_one_and_update(
+        mfg_counter = await _get_db().counters.find_one_and_update(
             {"_id": "manufacturing_number_global"},
             {"$inc": {"seq": 1}},
             upsert=True,
@@ -244,7 +241,7 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
             "factoryName": order.factoryName
         }
         
-        await db.manufacturing_orders.insert_one(order_doc)
+        await _get_db().manufacturing_orders.insert_one(order_doc)
         
         # Excluir _id de la respuesta
         order_doc.pop("_id", None)
@@ -282,10 +279,10 @@ async def get_manufacturing_orders(
                 {"customerCode": {"$regex": search, "$options": "i"}}
             ]
         
-        cursor = db.manufacturing_orders.find(query, {"_id": 0}).sort("createdAt", -1).skip(skip).limit(limit)
+        cursor = _get_db().manufacturing_orders.find(query, {"_id": 0}).sort("createdAt", -1).skip(skip).limit(limit)
         orders = await cursor.to_list(length=limit)
         
-        total = await db.manufacturing_orders.count_documents(query)
+        total = await _get_db().manufacturing_orders.count_documents(query)
         
         return {
             "orders": orders,
@@ -302,7 +299,7 @@ async def get_manufacturing_orders(
 async def get_manufacturing_order(order_id: str):
     """Obtener una orden de fabricación específica"""
     try:
-        order = await db.manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
+        order = await _get_db().manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
         return order
@@ -333,7 +330,7 @@ async def update_manufacturing_order(order_id: str, update: ManufacturingOrderUp
             update_data["totalPieces"] = total_pieces
             update_data["totalArea"] = round(total_area, 3)
         
-        result = await db.manufacturing_orders.update_one(
+        result = await _get_db().manufacturing_orders.update_one(
             {"id": order_id},
             {"$set": update_data}
         )
@@ -341,7 +338,7 @@ async def update_manufacturing_order(order_id: str, update: ManufacturingOrderUp
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
         
-        updated = await db.manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
+        updated = await _get_db().manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
         return {
             "success": True,
             "message": "Orden actualizada",
@@ -358,7 +355,7 @@ async def update_manufacturing_order(order_id: str, update: ManufacturingOrderUp
 async def delete_manufacturing_order(order_id: str):
     """Eliminar orden de fabricación"""
     try:
-        result = await db.manufacturing_orders.delete_one({"id": order_id})
+        result = await _get_db().manufacturing_orders.delete_one({"id": order_id})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
         return {"success": True, "message": "Orden eliminada"}
@@ -389,7 +386,7 @@ async def update_order_status(order_id: str, status: str, notes: str = ""):
         if notes:
             update_data["productionNotes"] = notes
         
-        result = await db.manufacturing_orders.update_one(
+        result = await _get_db().manufacturing_orders.update_one(
             {"id": order_id},
             {"$set": update_data}
         )
@@ -420,12 +417,12 @@ async def update_order_phase(order_id: str, phase: str, done: bool = True):
     if phase not in PRODUCTION_PHASES:
         raise HTTPException(status_code=400, detail=f"Fase inválida. Válidas: {PRODUCTION_PHASES}")
     try:
-        order = await db.manufacturing_orders.find_one({"id": order_id}, {"_id": 0, "productionPhases": 1})
+        order = await _get_db().manufacturing_orders.find_one({"id": order_id}, {"_id": 0, "productionPhases": 1})
         if not order:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
         phases = order.get("productionPhases") or {}
         phases[phase] = datetime.now(timezone.utc).isoformat() if done else None
-        await db.manufacturing_orders.update_one(
+        await _get_db().manufacturing_orders.update_one(
             {"id": order_id},
             {"$set": {"productionPhases": phases, "updatedAt": datetime.now(timezone.utc).isoformat()}}
         )
@@ -451,7 +448,7 @@ async def set_delivery_date(order_id: str, estimated_date: str, notes: str = "")
         if notes:
             update_data["deliveryNotes"] = notes
         
-        result = await db.manufacturing_orders.update_one(
+        result = await _get_db().manufacturing_orders.update_one(
             {"id": order_id},
             {"$set": update_data}
         )
@@ -637,7 +634,7 @@ async def import_from_budget(budget_id: str, userId: str = "", userName: str = "
     """Importar orden de fabricación desde un presupuesto existente"""
     try:
         # Buscar presupuesto
-        project = await db.projects.find_one({"id": budget_id}, {"_id": 0})
+        project = await _get_db().projects.find_one({"id": budget_id}, {"_id": 0})
         if not project:
             raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
         
@@ -673,7 +670,7 @@ async def import_from_budget(budget_id: str, userId: str = "", userName: str = "
         result = await create_manufacturing_order(order_create, userId, userName)
         
         # Marcar origen
-        await db.manufacturing_orders.update_one(
+        await _get_db().manufacturing_orders.update_one(
             {"id": result["order"]["id"]},
             {"$set": {
                 "sourceType": "budget_import",
@@ -706,7 +703,7 @@ async def get_factory_dashboard_stats():
             {"$group": {"_id": "$status", "count": {"$sum": 1}}}
         ]
         status_counts = {}
-        async for doc in db.manufacturing_orders.aggregate(pipeline):
+        async for doc in _get_db().manufacturing_orders.aggregate(pipeline):
             status_counts[doc["_id"]] = doc["count"]
         
         # Contar por prioridad
@@ -715,7 +712,7 @@ async def get_factory_dashboard_stats():
             {"$group": {"_id": "$priority", "count": {"$sum": 1}}}
         ]
         priority_counts = {}
-        async for doc in db.manufacturing_orders.aggregate(pipeline_priority):
+        async for doc in _get_db().manufacturing_orders.aggregate(pipeline_priority):
             priority_counts[doc["_id"]] = doc["count"]
         
         # Órdenes pendientes de entrega esta semana
@@ -723,7 +720,7 @@ async def get_factory_dashboard_stats():
         today = datetime.now(timezone.utc)
         week_end = today + timedelta(days=7)
         
-        pending_this_week = await db.manufacturing_orders.count_documents({
+        pending_this_week = await _get_db().manufacturing_orders.count_documents({
             "status": {"$in": ["confirmed", "in_production", "ready"]},
             "estimatedDeliveryDate": {
                 "$gte": today.isoformat(),
@@ -737,7 +734,7 @@ async def get_factory_dashboard_stats():
             {"$group": {"_id": None, "total": {"$sum": "$totalPieces"}}}
         ]
         pieces_in_production = 0
-        async for doc in db.manufacturing_orders.aggregate(pipeline_pieces):
+        async for doc in _get_db().manufacturing_orders.aggregate(pipeline_pieces):
             pieces_in_production = doc["total"]
         
         return {
@@ -756,7 +753,7 @@ async def get_factory_dashboard_stats():
 async def get_order_despiece(order_id: str):
     """Obtener el despiece completo de una orden para fabricación"""
     try:
-        order = await db.manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
+        order = await _get_db().manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
         
@@ -862,7 +859,7 @@ class FactoryUpdate(BaseModel):
 async def get_factories():
     """Obtener lista de todas las fábricas"""
     try:
-        factories = await db.factories.find({}).to_list(100)
+        factories = await _get_db().factories.find({}).to_list(100)
         for f in factories:
             f['_id'] = str(f.get('_id', ''))
             if '_id' in f and f['_id'] == '':
@@ -877,7 +874,7 @@ async def get_factories():
 async def get_factory(factory_id: str):
     """Obtener una fábrica por ID"""
     try:
-        factory = await db.factories.find_one({"id": factory_id})
+        factory = await _get_db().factories.find_one({"id": factory_id})
         if not factory:
             raise HTTPException(status_code=404, detail="Fábrica no encontrada")
         
@@ -897,7 +894,7 @@ async def create_factory(factory: FactoryCreate):
     """Crear nueva fábrica"""
     try:
         # Verificar si ya existe una fábrica con el mismo código
-        existing = await db.factories.find_one({"code": factory.code.upper()})
+        existing = await _get_db().factories.find_one({"code": factory.code.upper()})
         if existing:
             raise HTTPException(status_code=400, detail=f"Ya existe una fábrica con código {factory.code}")
         
@@ -912,7 +909,7 @@ async def create_factory(factory: FactoryCreate):
             "createdAt": datetime.now(timezone.utc).isoformat()
         }
         
-        await db.factories.insert_one(factory_doc)
+        await _get_db().factories.insert_one(factory_doc)
         
         # Remover _id de MongoDB para la respuesta
         factory_doc.pop('_id', None)
@@ -937,14 +934,14 @@ async def update_factory(factory_id: str, update: FactoryUpdate):
         # Si se actualiza el código, verificar que no exista
         if "code" in update_data:
             update_data["code"] = update_data["code"].upper()
-            existing = await db.factories.find_one({
+            existing = await _get_db().factories.find_one({
                 "code": update_data["code"],
                 "id": {"$ne": factory_id}
             })
             if existing:
                 raise HTTPException(status_code=400, detail=f"Ya existe una fábrica con código {update_data['code']}")
         
-        result = await db.factories.update_one(
+        result = await _get_db().factories.update_one(
             {"id": factory_id},
             {"$set": update_data}
         )
@@ -952,7 +949,7 @@ async def update_factory(factory_id: str, update: FactoryUpdate):
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Fábrica no encontrada")
         
-        updated = await db.factories.find_one({"id": factory_id})
+        updated = await _get_db().factories.find_one({"id": factory_id})
         updated.pop('_id', None)
         
         return updated
@@ -968,14 +965,14 @@ async def delete_factory(factory_id: str):
     """Eliminar fábrica (soft delete)"""
     try:
         # Verificar que no hay usuarios asignados a esta fábrica
-        users_count = await db.users.count_documents({"factoryId": factory_id})
+        users_count = await _get_db().users.count_documents({"factoryId": factory_id})
         if users_count > 0:
             raise HTTPException(
                 status_code=400, 
                 detail=f"No se puede eliminar: hay {users_count} usuario(s) asignado(s) a esta fábrica"
             )
         
-        result = await db.factories.update_one(
+        result = await _get_db().factories.update_one(
             {"id": factory_id},
             {"$set": {"isActive": False}}
         )
@@ -1026,10 +1023,10 @@ async def seed_default_factories():
     
     for factory in default_factories:
         # Buscar por id que es el campo único (no por code que puede haber cambiado)
-        existing = await db.factories.find_one({"id": factory["id"]})
+        existing = await _get_db().factories.find_one({"id": factory["id"]})
         if not existing:
             try:
-                await db.factories.insert_one(factory)
+                await _get_db().factories.insert_one(factory)
                 logger.info(f"Created default factory: {factory['name']}")
             except Exception as e:
                 # Si falla por duplicado (raza), no romper el arranque

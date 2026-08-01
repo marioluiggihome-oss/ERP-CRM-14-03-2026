@@ -3,7 +3,6 @@ Orders Router - Sistema de Confirmación de Pedidos
 Endpoints para confirmar pedidos, enviar emails y crear órdenes de fabricación
 """
 from fastapi import APIRouter, HTTPException, Form, File, UploadFile, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
@@ -35,10 +34,6 @@ def _is_admin(user) -> bool:
 router = APIRouter(tags=["orders"], dependencies=_DEPS)
 
 # Database connection
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 # ============================================
@@ -78,7 +73,7 @@ async def confirm_order(
         # La propiedad del pedido la fija el usuario autenticado, no el Form.
         userId = (current_user or {}).get("id") or userId
         # Clave de SendGrid: primero de los ajustes (MASTER > Settings), luego del entorno.
-        _email_settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+        _email_settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
         sendgrid_key = _email_settings.get('sendgridApiKey') or os.environ.get('SENDGRID_API_KEY')
         # No cortar aquí si falta SendGrid: el pedido DEBE guardarse igualmente.
         # El envío de email es best-effort (SendGrid -> Resend) más abajo; si no hay
@@ -296,7 +291,7 @@ async def confirm_order(
                 "globalFinish": globalFinish
             }
         }
-        await db.orders.insert_one(order_record)
+        await _get_db().orders.insert_one(order_record)
         
         # =============================================
         # CREATE MANUFACTURING ORDER AUTOMATICALLY
@@ -307,7 +302,7 @@ async def confirm_order(
             current_year = datetime.now().year
             counter_id = f"manufacturing_order_{current_year}"
             
-            counter_result = await db.counters.find_one_and_update(
+            counter_result = await _get_db().counters.find_one_and_update(
                 {"_id": counter_id},
                 {"$inc": {"seq": 1}},
                 upsert=True,
@@ -317,7 +312,7 @@ async def confirm_order(
             mfg_order_number = f"OF-{current_year}-{seq_number:04d}"
             
             # Generate global manufacturing number
-            mfg_counter = await db.counters.find_one_and_update(
+            mfg_counter = await _get_db().counters.find_one_and_update(
                 {"_id": "manufacturing_number_global"},
                 {"$inc": {"seq": 1}},
                 upsert=True,
@@ -397,11 +392,11 @@ async def confirm_order(
                 "createdByName": distributorName or ""
             }
             
-            await db.manufacturing_orders.insert_one(mfg_order_doc)
+            await _get_db().manufacturing_orders.insert_one(mfg_order_doc)
             manufacturing_order_id = mfg_order_doc["id"]
             
             # Update order with manufacturing reference
-            await db.orders.update_one(
+            await _get_db().orders.update_one(
                 {"id": order_record["id"]},
                 {"$set": {
                     "manufacturingOrderId": manufacturing_order_id,
@@ -463,11 +458,11 @@ async def get_user_orders(limit: int = 100, current_user: Optional[dict] = Depen
     try:
         query = {} if _is_admin(current_user) else {"userId": (current_user or {}).get("id")}
 
-        orders = await db.orders.find(query, {"_id": 0}).sort("confirmedAt", -1).limit(limit).to_list(limit)
+        orders = await _get_db().orders.find(query, {"_id": 0}).sort("confirmedAt", -1).limit(limit).to_list(limit)
         
         # Sync fabrication status
         for order in orders:
-            fab_order = await db.fabrica_orders.find_one(
+            fab_order = await _get_db().fabrica_orders.find_one(
                 {"budgetNumber": order.get("budgetNumber")}, 
                 {"_id": 0, "status": 1, "progress": 1}
             )
@@ -496,7 +491,7 @@ async def get_user_orders(limit: int = 100, current_user: Optional[dict] = Depen
 async def get_order_detail(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
     """Detalle de un pedido (solo su propietario o admin/dirección)."""
     try:
-        order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+        order = await _get_db().orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         owner = order.get("userId") or order.get("createdByUserId")
@@ -516,6 +511,7 @@ async def get_order_detail(order_id: str, current_user: Optional[dict] = Depends
 # ============================================
 
 from pydantic import BaseModel
+from services.db_client import get_db as _get_db
 
 class SendCopyRequest(BaseModel):
     """Request para enviar copia de pedido"""
@@ -532,7 +528,7 @@ async def send_order_copy(order_id: str, request: SendCopyRequest, current_user:
     """
     try:
         # Obtener pedido
-        order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+        order = await _get_db().orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         owner = order.get("userId") or order.get("createdByUserId")
@@ -635,7 +631,7 @@ async def send_order_copy(order_id: str, request: SendCopyRequest, current_user:
         """
         
         # Obtener email del remitente desde configuración
-        settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+        settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
         sender_email = settings.get("emailSender") or settings.get("senderEmail") or "no-reply@luiggihome.com"
         
         # Crear mensaje

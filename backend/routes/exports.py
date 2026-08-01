@@ -21,14 +21,10 @@ security = HTTPBearer()
 JWT_SECRET = os.environ.get("JWT_SECRET", "luiggi-home-kitchen-2024-secret-key")
 
 # Database connection will be imported from server
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from services.db_client import get_db as _get_db
 
 load_dotenv()
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 @router.get("/clientes")
@@ -39,11 +35,11 @@ async def export_clientes_excel(credentials: HTTPAuthorizationCredentials = Depe
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         user_id = payload.get("sub")
         
-        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        user = await _get_db().users.find_one({"id": user_id}, {"_id": 0})
         if not user or not user.get("isAdmin"):
             raise HTTPException(status_code=403, detail="Solo administradores pueden exportar")
         
-        clients = await db.clients.find({}).to_list(length=None)
+        clients = await _get_db().clients.find({}).to_list(length=None)
         
         data = []
         for c in clients:
@@ -93,11 +89,11 @@ async def export_presupuestos_excel(credentials: HTTPAuthorizationCredentials = 
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         user_id = payload.get("sub")
         
-        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        user = await _get_db().users.find_one({"id": user_id}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=403, detail="Usuario no encontrado")
         
-        projects = await db.projects.find({}).to_list(length=None)
+        projects = await _get_db().projects.find({}).to_list(length=None)
         
         if not projects:
             raise HTTPException(status_code=404, detail="No hay presupuestos para exportar")
@@ -153,7 +149,7 @@ async def export_crm_excel(credentials: HTTPAuthorizationCredentials = Depends(s
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         user_id = payload.get("sub")
         
-        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        user = await _get_db().users.find_one({"id": user_id}, {"_id": 0})
         if not user or not user.get("canAccessCRM"):
             raise HTTPException(status_code=403, detail="Sin acceso a CRM")
         
@@ -161,7 +157,7 @@ async def export_crm_excel(credentials: HTTPAuthorizationCredentials = Depends(s
         
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             # Oportunidades
-            opportunities = await db.crm_opportunities.find({}).to_list(length=None)
+            opportunities = await _get_db().crm_opportunities.find({}).to_list(length=None)
             if opportunities:
                 opp_data = []
                 for o in opportunities:
@@ -178,7 +174,7 @@ async def export_crm_excel(credentials: HTTPAuthorizationCredentials = Depends(s
                 pd.DataFrame(opp_data).to_excel(writer, index=False, sheet_name='Oportunidades')
             
             # Actividades
-            activities = await db.crm_activities.find({}).to_list(length=None)
+            activities = await _get_db().crm_activities.find({}).to_list(length=None)
             if activities:
                 act_data = []
                 for a in activities:
@@ -194,7 +190,7 @@ async def export_crm_excel(credentials: HTTPAuthorizationCredentials = Depends(s
                 pd.DataFrame(act_data).to_excel(writer, index=False, sheet_name='Actividades')
             
             # Eventos calendario
-            events = await db.crm_calendar.find({}).to_list(length=None)
+            events = await _get_db().crm_calendar.find({}).to_list(length=None)
             if events:
                 evt_data = []
                 for e in events:
@@ -234,11 +230,11 @@ async def export_usuarios_excel(credentials: HTTPAuthorizationCredentials = Depe
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         user_id = payload.get("sub")
         
-        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        user = await _get_db().users.find_one({"id": user_id}, {"_id": 0})
         if not user or not user.get("isAdmin"):
             raise HTTPException(status_code=403, detail="Solo administradores")
         
-        users = await db.users.find({}).to_list(length=None)
+        users = await _get_db().users.find({}).to_list(length=None)
         
         data = []
         for u in users:

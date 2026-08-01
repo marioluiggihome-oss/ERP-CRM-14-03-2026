@@ -11,11 +11,11 @@ Acciones (action):
   - enviar_email  : envía un email de plantilla al contacto (SendGrid).
   - cambiar_etapa : cambia la etapa (stage) del contacto.
 
-Para no repetir acciones se registra cada ejecución en db.automation_events y se
+Para no repetir acciones se registra cada ejecución en _get_db().automation_events y se
 respeta un enfriamiento (cooldownDays, 7 por defecto) por regla+contacto.
 
-Colecciones nuevas: db.automations, db.automation_events.
-Reutiliza: db.contacts, db.activities, services.email_service.send_email.
+Colecciones nuevas: _get_db().automations, _get_db().automation_events.
+Reutiliza: _get_db().contacts, _get_db().activities, services.email_service.send_email.
 """
 import logging
 import os
@@ -24,16 +24,12 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.jwt_service import get_current_user, require_auth
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = _client[DB_NAME]
 
 router = APIRouter(tags=["automation"], dependencies=[Depends(require_auth)])
 
@@ -70,7 +66,7 @@ def _render(txt, c):
 # ── CRUD de reglas ──────────────────────────────────────────────────────────
 @router.get("/crm/automation/rules")
 async def listar_reglas(current_user: dict = Depends(get_current_user)):
-    reglas = await db.automations.find({}, {"_id": 0}).sort("createdAt", -1).to_list(200)
+    reglas = await _get_db().automations.find({}, {"_id": 0}).sort("createdAt", -1).to_list(200)
     return {"success": True, "rules": reglas, "triggers": TRIGGERS, "acciones": ACCIONES}
 
 
@@ -92,7 +88,7 @@ async def crear_regla(payload: dict, current_user: dict = Depends(get_current_us
         "createdAt": _now().isoformat(),
         "createdByUserId": current_user.get("id"),
     }
-    await db.automations.insert_one(doc)
+    await _get_db().automations.insert_one(doc)
     doc.pop("_id", None)
     return {"success": True, "rule": doc}
 
@@ -105,8 +101,8 @@ async def actualizar_regla(rule_id: str, payload: dict, current_user: dict = Dep
             upd[k] = payload[k]
     if not upd:
         raise HTTPException(status_code=400, detail="Nada que actualizar.")
-    await db.automations.update_one({"id": rule_id}, {"$set": upd})
-    r = await db.automations.find_one({"id": rule_id}, {"_id": 0})
+    await _get_db().automations.update_one({"id": rule_id}, {"$set": upd})
+    r = await _get_db().automations.find_one({"id": rule_id}, {"_id": 0})
     if not r:
         raise HTTPException(status_code=404, detail="Regla no encontrada.")
     return {"success": True, "rule": r}
@@ -114,7 +110,7 @@ async def actualizar_regla(rule_id: str, payload: dict, current_user: dict = Dep
 
 @router.delete("/crm/automation/rules/{rule_id}")
 async def borrar_regla(rule_id: str, current_user: dict = Depends(get_current_user)):
-    await db.automations.delete_one({"id": rule_id})
+    await _get_db().automations.delete_one({"id": rule_id})
     return {"success": True}
 
 
@@ -127,7 +123,7 @@ async def _contactos_trigger(regla: dict):
         dias = int(p.get("dias") or 7)
         stages = p.get("stages") or ["lead", "contacted"]
         limite = now - timedelta(days=dias)
-        cs = await db.contacts.find({"stage": {"$in": stages}}, {"_id": 0}).to_list(5000)
+        cs = await _get_db().contacts.find({"stage": {"$in": stages}}, {"_id": 0}).to_list(5000)
         out = []
         for c in cs:
             ref = _parse(c.get("lastContactDate")) or _parse(c.get("createdAt"))
@@ -135,14 +131,14 @@ async def _contactos_trigger(regla: dict):
                 out.append(c)
         return out
     if trig == "followup_vencido":
-        cs = await db.contacts.find({"nextFollowUp": {"$nin": [None, ""]}}, {"_id": 0}).to_list(5000)
+        cs = await _get_db().contacts.find({"nextFollowUp": {"$nin": [None, ""]}}, {"_id": 0}).to_list(5000)
         return [c for c in cs if (_parse(c.get("nextFollowUp")) and _parse(c["nextFollowUp"]) < now)]
     return []
 
 
 async def _ya_ejecutada(rule_id, contact_id, cooldown_days):
     corte = _now() - timedelta(days=cooldown_days)
-    ev = await db.automation_events.find_one({
+    ev = await _get_db().automation_events.find_one({
         "ruleId": rule_id, "contactId": contact_id,
         "at": {"$gte": corte.isoformat()},
     })
@@ -169,14 +165,14 @@ async def _ejecutar_accion(regla, contacto, current_user, incluir_email):
             "createdAt": _now().isoformat(),
             "updatedAt": _now().isoformat(),
         }
-        await db.activities.insert_one(act)
-        await db.contacts.update_one({"id": contacto["id"]}, {"$set": {"nextFollowUp": due, "updatedAt": _now().isoformat()}})
+        await _get_db().activities.insert_one(act)
+        await _get_db().contacts.update_one({"id": contacto["id"]}, {"$set": {"nextFollowUp": due, "updatedAt": _now().isoformat()}})
         return True
     if accion == "cambiar_etapa":
         stage = p.get("stage")
         if not stage:
             return False
-        await db.contacts.update_one({"id": contacto["id"]}, {"$set": {"stage": stage, "updatedAt": _now().isoformat()}})
+        await _get_db().contacts.update_one({"id": contacto["id"]}, {"$set": {"stage": stage, "updatedAt": _now().isoformat()}})
         return True
     if accion == "enviar_email":
         if not incluir_email:
@@ -200,7 +196,7 @@ async def ejecutar(payload: dict = None, current_user: dict = Depends(get_curren
     enfriamiento). `incluirEmail=false` (por defecto en el disparo automático al
     entrar) omite las acciones de envío de email; el botón manual lo pone a true."""
     incluir_email = bool((payload or {}).get("incluirEmail", False))
-    reglas = await db.automations.find({"active": True}, {"_id": 0}).to_list(200)
+    reglas = await _get_db().automations.find({"active": True}, {"_id": 0}).to_list(200)
     resumen = []
     for regla in reglas:
         contactos = await _contactos_trigger(regla)
@@ -214,7 +210,7 @@ async def ejecutar(payload: dict = None, current_user: dict = Depends(get_curren
                 continue
             ok = await _ejecutar_accion(regla, c, current_user, incluir_email)
             if ok:
-                await db.automation_events.insert_one({
+                await _get_db().automation_events.insert_one({
                     "ruleId": regla["id"], "contactId": cid,
                     "action": regla.get("action"), "at": _now().isoformat(),
                 })

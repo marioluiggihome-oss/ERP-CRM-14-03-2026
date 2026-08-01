@@ -6,8 +6,8 @@ Es la pata de "Service Hub" que faltaba frente a un HubSpot: registrar una
 incidencia del cliente tras la venta, asignarla, seguir su estado con un SLA de
 resolución y dejar traza de las comunicaciones.
 
-Colecciones nuevas: db.tickets.
-Reutiliza: db.contacts (para vincular el cliente).
+Colecciones nuevas: _get_db().tickets.
+Reutiliza: _get_db().contacts (para vincular el cliente).
 """
 import logging
 import os
@@ -16,16 +16,12 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.jwt_service import get_current_user, require_auth
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = _client[DB_NAME]
 
 router = APIRouter(tags=["postventa"], dependencies=[Depends(require_auth)])
 
@@ -44,7 +40,7 @@ async def listar_tickets(estado: Optional[str] = None, current_user: dict = Depe
     q = {}
     if estado and estado in ESTADOS:
         q["estado"] = estado
-    tickets = await db.tickets.find(q, {"_id": 0}).sort("createdAt", -1).to_list(500)
+    tickets = await _get_db().tickets.find(q, {"_id": 0}).sort("createdAt", -1).to_list(500)
     # Marca vencidos (SLA superado y no resuelto/cerrado).
     now = _now()
     for t in tickets:
@@ -63,7 +59,7 @@ def _parse(s):
 
 @router.get("/crm/tickets/stats")
 async def stats_tickets(current_user: dict = Depends(get_current_user)):
-    tickets = await db.tickets.find({}, {"_id": 0, "estado": 1, "slaVence": 1}).to_list(2000)
+    tickets = await _get_db().tickets.find({}, {"_id": 0, "estado": 1, "slaVence": 1}).to_list(2000)
     now = _now()
     abiertos = sum(1 for t in tickets if t.get("estado") not in ("resuelto", "cerrado"))
     vencidos = sum(1 for t in tickets if t.get("estado") not in ("resuelto", "cerrado")
@@ -84,7 +80,7 @@ async def crear_ticket(payload: dict, current_user: dict = Depends(get_current_u
     now = _now()
     sla = now + timedelta(hours=_SLA_HORAS.get(prioridad, 72))
     # Nº correlativo legible.
-    n = await db.tickets.count_documents({}) + 1
+    n = await _get_db().tickets.count_documents({}) + 1
     doc = {
         "id": f"tick-{uuid.uuid4().hex[:8]}",
         "numero": f"PV-{n:05d}",
@@ -105,14 +101,14 @@ async def crear_ticket(payload: dict, current_user: dict = Depends(get_current_u
         "createdByUserId": current_user.get("id"),
         "createdByUsername": current_user.get("username", ""),
     }
-    await db.tickets.insert_one(doc)
+    await _get_db().tickets.insert_one(doc)
     doc.pop("_id", None)
     return {"success": True, "ticket": doc}
 
 
 @router.patch("/crm/tickets/{ticket_id}")
 async def actualizar_ticket(ticket_id: str, payload: dict, current_user: dict = Depends(get_current_user)):
-    t = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    t = await _get_db().tickets.find_one({"id": ticket_id}, {"_id": 0})
     if not t:
         raise HTTPException(status_code=404, detail="Ticket no encontrado.")
     upd = {"updatedAt": _now().isoformat()}
@@ -129,8 +125,8 @@ async def actualizar_ticket(ticket_id: str, payload: dict, current_user: dict = 
         if t.get("estado") not in ("resuelto", "cerrado"):
             base = _parse(t.get("createdAt")) or _now()
             upd["slaVence"] = (base + timedelta(hours=_SLA_HORAS[payload["prioridad"]])).isoformat()
-    await db.tickets.update_one({"id": ticket_id}, {"$set": upd})
-    nuevo = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    await _get_db().tickets.update_one({"id": ticket_id}, {"$set": upd})
+    nuevo = await _get_db().tickets.find_one({"id": ticket_id}, {"_id": 0})
     return {"success": True, "ticket": nuevo}
 
 
@@ -146,11 +142,11 @@ async def comentar_ticket(ticket_id: str, payload: dict, current_user: dict = De
         "autorId": current_user.get("id"),
         "fecha": _now().isoformat(),
     }
-    await db.tickets.update_one({"id": ticket_id}, {"$push": {"comentarios": com}, "$set": {"updatedAt": _now().isoformat()}})
+    await _get_db().tickets.update_one({"id": ticket_id}, {"$push": {"comentarios": com}, "$set": {"updatedAt": _now().isoformat()}})
     return {"success": True, "comentario": com}
 
 
 @router.delete("/crm/tickets/{ticket_id}")
 async def borrar_ticket(ticket_id: str, current_user: dict = Depends(get_current_user)):
-    await db.tickets.delete_one({"id": ticket_id})
+    await _get_db().tickets.delete_one({"id": ticket_id})
     return {"success": True}

@@ -4,7 +4,6 @@ Sistema de generación de informes PDF para fábrica con despiece y logo
 """
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
 import logging
@@ -20,16 +19,13 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import base64
 from io import BytesIO
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/fabrica/reports", tags=["Factory Reports"])
 
 # Database connection
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 def get_logo_from_base64(logo_base64: str) -> Optional[Image]:
@@ -56,7 +52,7 @@ def get_logo_from_base64(logo_base64: str) -> Optional[Image]:
 
 async def get_global_settings():
     """Obtener configuración global incluyendo logo"""
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0})
     return settings or {}
 
 
@@ -373,7 +369,7 @@ async def generate_production_report(order_id: str):
     """
     try:
         # Obtener orden de fabricación
-        order = await db.manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
+        order = await _get_db().manufacturing_orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Orden de fabricación no encontrada")
         
@@ -499,7 +495,7 @@ async def generate_production_report_from_budget(budget_id: str):
     """
     try:
         # Obtener presupuesto
-        project = await db.projects.find_one({"id": budget_id}, {"_id": 0})
+        project = await _get_db().projects.find_one({"id": budget_id}, {"_id": 0})
         if not project:
             raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
         

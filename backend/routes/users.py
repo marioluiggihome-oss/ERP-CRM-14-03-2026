@@ -12,7 +12,6 @@ import os
 import re
 import bcrypt
 
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,10 +21,6 @@ router = APIRouter(prefix="/users", tags=["users"])
 security = HTTPBearer(auto_error=False)  # NO exigir token (acepta sin)
 
 # Database connection
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 # Pydantic models
@@ -115,6 +110,7 @@ def user_to_response(user_data: dict) -> dict:
 
 # Authentication dependency
 from services.jwt_service import get_current_user as _get_current_user, ADMIN_ROLE_FLAGS
+from services.db_client import get_db as _get_db
 
 
 def _is_user_manager(user: dict) -> bool:
@@ -169,7 +165,7 @@ def filter_sensitive_user_fields(user_data: dict) -> dict:
 @router.get("")
 async def get_users(current_user: dict = Depends(get_current_user)):
     """Obtener todos los usuarios (sin passwords). Si no hay JWT, oculta campos sensibles."""
-    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
+    users = await _get_db().users.find({}, {"_id": 0, "password": 0}).to_list(1000)
     if not _is_user_manager(current_user):
         users = [filter_sensitive_user_fields(u) for u in users]
     return users
@@ -178,7 +174,7 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 @router.get("/{user_id}")
 async def get_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """Obtener un usuario por ID (sin password). Si no hay JWT, oculta campos sensibles."""
-    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    user = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if not _is_user_manager(current_user):
@@ -193,7 +189,7 @@ async def create_user(user: UserCreate, current_user: dict = Depends(require_use
     SEGURIDAD: Sin JWT, no se pueden crear usuarios con roles elevados (Admin, Gerente, etc.)
     ni permisos peligrosos (canManageUsers, canAuthorizePermissions, etc.)."""
     # Check if username exists (case insensitive)
-    existing = await db.users.find_one({"username": {"$regex": f"^{re.escape(user.username)}$", "$options": "i"}})
+    existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(user.username)}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
 
@@ -217,7 +213,7 @@ async def create_user(user: UserCreate, current_user: dict = Depends(require_use
     user_data["password"] = hash_password(user_data["password"])
     user_data["isActive"] = True
     
-    await db.users.insert_one(user_data)
+    await _get_db().users.insert_one(user_data)
     
     logger.info(f"User created: {user_data['username']} (compat={current_user.get('_compat_mode', False)})")
     
@@ -230,7 +226,7 @@ async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depen
 
     SEGURIDAD: Sin JWT, no se pueden elevar permisos del usuario editado ni cambiar
     el usuario admin principal."""
-    existing = await db.users.find_one({"id": user_id}, {"_id": 0})
+    existing = await _get_db().users.find_one({"id": user_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
@@ -259,11 +255,11 @@ async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depen
         logger.info(f"Password changed for user: {user_id}")
     
     if update_data:
-        await db.users.update_one({"id": user_id}, {"$set": update_data})
+        await _get_db().users.update_one({"id": user_id}, {"$set": update_data})
     
     logger.info(f"User updated: {user_id}, fields: {list(update_data.keys())}")
     
-    updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    updated = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     return updated
 
 
@@ -276,14 +272,14 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_user_ma
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
 
     # Get user info before deletion
-    user_to_delete = await db.users.find_one({"id": user_id}, {"_id": 0, "username": 1, "isAdmin": 1, "isGerente": 1})
+    user_to_delete = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "username": 1, "isAdmin": 1, "isGerente": 1})
 
     # SEGURIDAD: sin JWT no se puede borrar usuarios con rol admin/gerente
     if current_user.get("_compat_mode") and user_to_delete:
         if user_to_delete.get("isAdmin") or user_to_delete.get("isGerente"):
             raise HTTPException(status_code=403, detail="Eliminar admin/gerente requiere autenticación")
     
-    result = await db.users.delete_one({"id": user_id})
+    result = await _get_db().users.delete_one({"id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
@@ -305,7 +301,7 @@ async def require_carpintero_admin(credentials: Optional[HTTPAuthorizationCreden
     user = await require_authenticated_user(credentials)
     if _is_user_manager(user):
         return user
-    full = await db.users.find_one(
+    full = await _get_db().users.find_one(
         {"id": user.get("id")},
         {"_id": 0, "id": 1, "username": 1, "isCarpintero": 1, "canManageCarpinteroUsers": 1,
          "carpinteroLandingUrl": 1, "canUseCascos": 1},
@@ -319,7 +315,7 @@ async def require_carpintero_admin(credentials: Optional[HTTPAuthorizationCreden
 @router.get("/carpinteros/mine")
 async def carpintero_users(current_user: dict = Depends(require_carpintero_admin)):
     """Usuarios vinculados al admin carpintero autenticado."""
-    users = await db.users.find(
+    users = await _get_db().users.find(
         {"linkedCarpinteroAdminId": current_user.get("id")},
         {"_id": 0, "password": 0},
     ).to_list(500)
@@ -339,14 +335,14 @@ async def carpintero_stats(current_user: dict = Depends(require_carpintero_admin
             q["linkedCarpinteroAdminId"] = adminId
     else:
         q = {"$or": [{"linkedCarpinteroAdminId": current_user.get("id")}, {"id": current_user.get("id")}]}
-    users = await db.users.find(q, {"_id": 0, "password": 0}).to_list(1000)
+    users = await _get_db().users.find(q, {"_id": 0, "password": 0}).to_list(1000)
     ids = [u.get("id") for u in users if u.get("id")]
 
     # Logins (colección user_activity, activityType=login)
     logins_count = {}
     last_login = {}
     try:
-        cur = db.user_activity.find({"userId": {"$in": ids}, "activityType": "login"}, {"_id": 0, "userId": 1, "timestamp": 1})
+        cur = _get_db().user_activity.find({"userId": {"$in": ids}, "activityType": "login"}, {"_id": 0, "userId": 1, "timestamp": 1})
         async for a in cur:
             uid = a.get("userId")
             logins_count[uid] = logins_count.get(uid, 0) + 1
@@ -361,7 +357,7 @@ async def carpintero_stats(current_user: dict = Depends(require_carpintero_admin
     month = datetime.now(timezone.utc).strftime("%Y-%m")
     renders = {}
     try:
-        cur = db.ai_credits.find({"user_id": {"$in": [str(i) for i in ids]}, "month": month}, {"_id": 0})
+        cur = _get_db().ai_credits.find({"user_id": {"$in": [str(i) for i in ids]}, "month": month}, {"_id": 0})
         async for c in cur:
             renders[str(c.get("user_id"))] = int(c.get("consumed", 0) or 0)
     except Exception as e:
@@ -397,7 +393,7 @@ async def carpintero_create_user(payload: dict, current_user: dict = Depends(req
     password = str((payload or {}).get("password", ""))
     if not username or not password:
         raise HTTPException(status_code=400, detail="Usuario y contrasena son obligatorios")
-    existing = await db.users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
+    existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
     doc = {
@@ -412,7 +408,7 @@ async def carpintero_create_user(payload: dict, current_user: dict = Depends(req
         "carpinteroLandingUrl": str(payload.get("carpinteroLandingUrl") or current_user.get("carpinteroLandingUrl") or ""),
         "canUseCascos": bool(current_user.get("canUseCascos")),
     }
-    await db.users.insert_one(doc)
+    await _get_db().users.insert_one(doc)
     logger.info("Carpintero user created: %s (by %s)", username, current_user.get("username"))
     return {k: v for k, v in doc.items() if k != "password"}
 
@@ -420,18 +416,18 @@ async def carpintero_create_user(payload: dict, current_user: dict = Depends(req
 @router.put("/carpinteros/toggle/{user_id}")
 async def carpintero_toggle_user(user_id: str, current_user: dict = Depends(require_carpintero_admin)):
     """Activa/desactiva un usuario de la division (solo los vinculados al admin)."""
-    u = await db.users.find_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")}, {"_id": 0})
+    u = await _get_db().users.find_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")}, {"_id": 0})
     if not u:
         raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
     new_active = not bool(u.get("isActive", True))
-    await db.users.update_one({"id": user_id}, {"$set": {"isActive": new_active}})
+    await _get_db().users.update_one({"id": user_id}, {"$set": {"isActive": new_active}})
     return {"success": True, "isActive": new_active}
 
 
 @router.delete("/carpinteros/remove/{user_id}")
 async def carpintero_delete_user(user_id: str, current_user: dict = Depends(require_carpintero_admin)):
     """Elimina un usuario de la division (solo los vinculados al admin)."""
-    res = await db.users.delete_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")})
+    res = await _get_db().users.delete_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
     return {"success": True}

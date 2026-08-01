@@ -3,11 +3,11 @@ Panel de Mando - LUIGGI HOME
 Centro de control con KPIs, actividad de usuarios y métricas de negocio
 """
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import os
 import logging
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,6 @@ except Exception:  # pragma: no cover - fallback si no hay jwt_service
 
 router = APIRouter(prefix="/command-center", tags=["CommandCenter"], dependencies=_COMMAND_CENTER_DEPS)
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 def now_utc(): return datetime.now(timezone.utc)
@@ -43,9 +39,9 @@ async def get_overview():
     prev_month_end = month_start
 
     # ── Presupuestos ──────────────────────────────────────────────────────
-    total_projects = await db.projects.count_documents({})
-    month_projects = await db.projects.count_documents({"createdAt": {"$gte": month_start.isoformat()}})
-    prev_month_projects = await db.projects.count_documents({
+    total_projects = await _get_db().projects.count_documents({})
+    month_projects = await _get_db().projects.count_documents({"createdAt": {"$gte": month_start.isoformat()}})
+    prev_month_projects = await _get_db().projects.count_documents({
         "createdAt": {"$gte": prev_month_start.isoformat(), "$lt": prev_month_end.isoformat()}
     })
 
@@ -53,7 +49,7 @@ async def get_overview():
     pipeline_status = [
         {"$group": {"_id": "$status", "count": {"$sum": 1}, "total": {"$sum": "$totalPvp"}}}
     ]
-    status_results = await db.projects.aggregate(pipeline_status).to_list(20)
+    status_results = await _get_db().projects.aggregate(pipeline_status).to_list(20)
     status_map = {r["_id"]: {"count": r["count"], "total": r["total"]} for r in status_results}
 
     # ── Facturación ───────────────────────────────────────────────────────
@@ -66,27 +62,27 @@ async def get_overview():
             "pendienteCobro": {"$sum": {"$cond": [{"$eq": ["$status", "issued"]}, "$total", 0]}},
         }}
     ]
-    inv_result = await db.invoices.aggregate(inv_pipeline).to_list(1)
+    inv_result = await _get_db().invoices.aggregate(inv_pipeline).to_list(1)
     inv_data = inv_result[0] if inv_result else {}
 
     inv_month = [
         {"$match": {"status": {"$in": ["issued","paid"]}, "createdAt": {"$gte": month_start.isoformat()}}},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
-    inv_month_result = await db.invoices.aggregate(inv_month).to_list(1)
+    inv_month_result = await _get_db().invoices.aggregate(inv_month).to_list(1)
     inv_month_total = inv_month_result[0]["total"] if inv_month_result else 0
 
-    inv_overdue = await db.invoices.count_documents({
+    inv_overdue = await _get_db().invoices.count_documents({
         "status": "issued",
         "dueDate": {"$lt": today.date().isoformat()}
     })
 
     # ── CRM ───────────────────────────────────────────────────────────────
-    total_contacts = await db.contacts.count_documents({})
-    month_contacts = await db.contacts.count_documents({"createdAt": {"$gte": month_start.isoformat()}})
-    total_opps = await db.opportunities.count_documents({})
-    active_opps = await db.opportunities.count_documents({"stage": {"$nin": ["won", "lost"]}})
-    won_month = await db.opportunities.count_documents({
+    total_contacts = await _get_db().contacts.count_documents({})
+    month_contacts = await _get_db().contacts.count_documents({"createdAt": {"$gte": month_start.isoformat()}})
+    total_opps = await _get_db().opportunities.count_documents({})
+    active_opps = await _get_db().opportunities.count_documents({"stage": {"$nin": ["won", "lost"]}})
+    won_month = await _get_db().opportunities.count_documents({
         "stage": "won",
         "updatedAt": {"$gte": month_start.isoformat()}
     })
@@ -95,22 +91,22 @@ async def get_overview():
         {"$match": {"stage": {"$nin": ["won", "lost"]}}},
         {"$group": {"_id": None, "total": {"$sum": "$value"}}}
     ]
-    opp_value = await db.opportunities.aggregate(opp_value_pipeline).to_list(1)
+    opp_value = await _get_db().opportunities.aggregate(opp_value_pipeline).to_list(1)
     pipeline_value = opp_value[0]["total"] if opp_value else 0
 
     # ── Pedidos/Fábrica ───────────────────────────────────────────────────
-    total_orders = await db.fabrica_orders.count_documents({})
-    month_orders = await db.fabrica_orders.count_documents({"createdAt": {"$gte": month_start.isoformat()}})
-    pending_orders = await db.fabrica_orders.count_documents({"status": {"$in": ["pending", "in_progress"]}})
+    total_orders = await _get_db().fabrica_orders.count_documents({})
+    month_orders = await _get_db().fabrica_orders.count_documents({"createdAt": {"$gte": month_start.isoformat()}})
+    pending_orders = await _get_db().fabrica_orders.count_documents({"status": {"$in": ["pending", "in_progress"]}})
 
     # ── Usuarios activos ──────────────────────────────────────────────────
-    active_users_today = await db.user_activity.distinct("userId", {
+    active_users_today = await _get_db().user_activity.distinct("userId", {
         "timestamp": {"$gte": today}
     })
-    active_users_week = await db.user_activity.distinct("userId", {
+    active_users_week = await _get_db().user_activity.distinct("userId", {
         "timestamp": {"$gte": week_start}
     })
-    active_users_month = await db.user_activity.distinct("userId", {
+    active_users_month = await _get_db().user_activity.distinct("userId", {
         "timestamp": {"$gte": month_start}
     })
 
@@ -119,10 +115,10 @@ async def get_overview():
     for i in range(5, -1, -1):
         m_start = (now_utc().replace(day=1) - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0)
         m_end = (m_start + timedelta(days=32)).replace(day=1)
-        count = await db.projects.count_documents({
+        count = await _get_db().projects.count_documents({
             "createdAt": {"$gte": m_start.isoformat(), "$lt": m_end.isoformat()}
         })
-        inv_m = await db.invoices.aggregate([
+        inv_m = await _get_db().invoices.aggregate([
             {"$match": {"createdAt": {"$gte": m_start.isoformat(), "$lt": m_end.isoformat()}, "status": {"$in": ["issued","paid"]}}},
             {"$group": {"_id": None, "total": {"$sum": "$total"}}}
         ]).to_list(1)
@@ -194,11 +190,11 @@ async def get_users_activity(days: int = 30):
         {"$sort": {"totalAcciones": -1}}
     ]
 
-    results = await db.user_activity.aggregate(pipeline).to_list(100)
+    results = await _get_db().user_activity.aggregate(pipeline).to_list(100)
 
     # Enriquecer con datos del usuario (rol, email)
     for r in results:
-        user = await db.users.find_one({"id": r["_id"]}, {"_id": 0, "email": 1, "isAdmin": 1, "isGerente": 1, "isRepresentative": 1, "isTienda": 1, "clientName": 1})
+        user = await _get_db().users.find_one({"id": r["_id"]}, {"_id": 0, "email": 1, "isAdmin": 1, "isGerente": 1, "isRepresentative": 1, "isTienda": 1, "clientName": 1})
         if user:
             r["email"] = user.get("email", "")
             r["clientName"] = user.get("clientName", "")
@@ -228,7 +224,7 @@ async def get_activity_timeline(days: int = 7, limit: int = 100):
         "order_confirm": "Pedido confirmado", "ai_telemetry": "Uso IA",
         "report_generate": "Informe generado", "settings_update": "Configuración cambiada",
     }
-    cursor = db.user_activity.find(
+    cursor = _get_db().user_activity.find(
         {"timestamp": {"$gte": start}}, {"_id": 0}
     ).sort("timestamp", -1).limit(limit)
     results = await cursor.to_list(limit)
@@ -255,7 +251,7 @@ async def get_user_performance(days: int = 30):
             "entregados": {"$sum": {"$cond": [{"$eq": ["$status", "entregado"]}, 1, 0]}},
         }}
     ]
-    proj_results = {r["_id"]: r for r in await db.projects.aggregate(proj_pipeline).to_list(100)}
+    proj_results = {r["_id"]: r for r in await _get_db().projects.aggregate(proj_pipeline).to_list(100)}
 
     # Facturas por creador (via projectId)
     inv_pipeline = [
@@ -268,17 +264,17 @@ async def get_user_performance(days: int = 30):
             "totalFacturado": {"$sum": "$total"},
         }}
     ]
-    inv_results = {r["_id"]: r for r in await db.invoices.aggregate(inv_pipeline).to_list(100)}
+    inv_results = {r["_id"]: r for r in await _get_db().invoices.aggregate(inv_pipeline).to_list(100)}
 
     # Oportunidades ganadas
     opp_pipeline = [
         {"$match": {"stage": "won", "updatedAt": {"$gte": start.isoformat()}}},
         {"$group": {"_id": "$assignedTo", "ganadas": {"$sum": 1}, "valorGanado": {"$sum": "$value"}}}
     ]
-    opp_results = {r["_id"]: r for r in await db.opportunities.aggregate(opp_pipeline).to_list(100)}
+    opp_results = {r["_id"]: r for r in await _get_db().opportunities.aggregate(opp_pipeline).to_list(100)}
 
     # Obtener todos los usuarios comerciales
-    users = await db.users.find(
+    users = await _get_db().users.find(
         {"isAdmin": {"$ne": True}},
         {"_id": 0, "id": 1, "username": 1, "clientName": 1, "email": 1, "isRepresentative": 1, "isTienda": 1}
     ).to_list(100)
@@ -320,7 +316,7 @@ async def get_alerts():
     alerts = []
 
     # Facturas vencidas
-    overdue = await db.invoices.count_documents({
+    overdue = await _get_db().invoices.count_documents({
         "status": "issued",
         "dueDate": {"$lt": today.date().isoformat()}
     })
@@ -329,7 +325,7 @@ async def get_alerts():
 
     # Presupuestos caducando en 7 días
     soon = (today + timedelta(days=7)).date().isoformat()
-    expiring = await db.projects.count_documents({
+    expiring = await _get_db().projects.count_documents({
         "status": {"$in": ["borrador", "enviado"]},
         "validUntil": {"$lte": soon, "$gte": today.date().isoformat()}
     })
@@ -337,7 +333,7 @@ async def get_alerts():
         alerts.append({"tipo": "warning", "icono": "⏰", "titulo": f"{expiring} presupuesto{'s' if expiring>1 else ''} caduca en 7 días", "descripcion": "Presupuestos en estado borrador o enviado próximos a caducar", "accion": "archivo"})
 
     # Pedidos pendientes en fábrica > 3 días
-    old_pending = await db.fabrica_orders.count_documents({
+    old_pending = await _get_db().fabrica_orders.count_documents({
         "status": "pending",
         "createdAt": {"$lt": (today - timedelta(days=3)).isoformat()}
     })
@@ -345,14 +341,14 @@ async def get_alerts():
         alerts.append({"tipo": "warning", "icono": "🏭", "titulo": f"{old_pending} pedido{'s' if old_pending>1 else ''} en espera en fábrica >3 días", "descripcion": "Órdenes de fabricación sin procesar", "accion": "fabrica"})
 
     # Usuarios sin actividad > 7 días
-    active_ids = await db.user_activity.distinct("userId", {"timestamp": {"$gte": days_ago(7)}})
-    all_users = await db.users.count_documents({"isAdmin": {"$ne": True}})
+    active_ids = await _get_db().user_activity.distinct("userId", {"timestamp": {"$gte": days_ago(7)}})
+    all_users = await _get_db().users.count_documents({"isAdmin": {"$ne": True}})
     inactive = all_users - len(active_ids)
     if inactive > 0:
         alerts.append({"tipo": "info", "icono": "👤", "titulo": f"{inactive} usuario{'s' if inactive>1 else ''} sin actividad esta semana", "descripcion": "Comerciales o tiendas que no han accedido en 7 días", "accion": "usuarios"})
 
     # Oportunidades sin actualizar > 14 días
-    stale_opps = await db.opportunities.count_documents({
+    stale_opps = await _get_db().opportunities.count_documents({
         "stage": {"$nin": ["won", "lost"]},
         "updatedAt": {"$lt": days_ago(14).isoformat()}
     })
@@ -377,7 +373,7 @@ async def get_realtime():
         }},
         {"$sort": {"_id": 1}}
     ]
-    results = await db.user_activity.aggregate(pipeline).to_list(24)
+    results = await _get_db().user_activity.aggregate(pipeline).to_list(24)
 
     horas = []
     for r in results:
@@ -388,7 +384,7 @@ async def get_realtime():
         })
 
     # Últimas 10 acciones
-    last_actions = await db.user_activity.find(
+    last_actions = await _get_db().user_activity.find(
         {}, {"_id": 0}
     ).sort("timestamp", -1).limit(10).to_list(10)
 

@@ -5,10 +5,10 @@ Permite administrar bibliotecas de productos (ZC, MV, etc.) y acceso de usuarios
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 import os
 import uuid
+from services.db_client import get_db as _get_db
 
 router = APIRouter(prefix="/libraries", tags=["libraries"])
 
@@ -19,9 +19,6 @@ except Exception:  # pragma: no cover
         raise HTTPException(status_code=503, detail="Auth service unavailable")
 
 # MongoDB connection
-mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[os.environ.get('DB_NAME')]
 
 
 # ============================================
@@ -77,7 +74,7 @@ class UserLibraryAccess(BaseModel):
 @router.get("")
 async def get_libraries():
     """Obtener todas las bibliotecas disponibles"""
-    libraries = await db.libraries.find({}, {"_id": 0}).to_list(100)
+    libraries = await _get_db().libraries.find({}, {"_id": 0}).to_list(100)
     
     # Si no hay bibliotecas, crear las predeterminadas
     if not libraries:
@@ -96,7 +93,7 @@ async def get_libraries():
                 "currency": "points",
                 "pointValue": 1.0,
                 "isActive": True,
-                "productCount": await db.products.count_documents({"library": "ZC"}),
+                "productCount": await _get_db().products.count_documents({"library": "ZC"}),
                 "pricingSystem": "zones",
                 "priceLevels": zc_zones,
                 "createdAt": datetime.now(timezone.utc).isoformat()
@@ -115,7 +112,7 @@ async def get_libraries():
                 "createdAt": datetime.now(timezone.utc).isoformat()
             }
         ]
-        await db.libraries.insert_many(default_libraries)
+        await _get_db().libraries.insert_many(default_libraries)
         libraries = default_libraries
 
     # Asegurar que la biblioteca ALV existe (se añade sin muebles, a la espera
@@ -134,7 +131,7 @@ async def get_libraries():
             "priceLevels": ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"],
             "createdAt": datetime.now(timezone.utc).isoformat()
         }
-        await db.libraries.insert_one(alv)
+        await _get_db().libraries.insert_one(alv)
         libraries.append(alv)
 
     # Normalizar nombres antiguos ("Zona Cocinas" / "Muebles Valencia") a "ZC" / "MV"
@@ -143,11 +140,11 @@ async def get_libraries():
         new_name = rename_map.get(lib.get("name"))
         if new_name:
             lib["name"] = new_name
-            await db.libraries.update_one({"code": lib.get("code")}, {"$set": {"name": new_name}})
+            await _get_db().libraries.update_one({"code": lib.get("code")}, {"$set": {"name": new_name}})
 
     # Actualizar conteo de productos para cada biblioteca
     for lib in libraries:
-        lib["productCount"] = await db.products.count_documents({"library": lib.get("code", "")})
+        lib["productCount"] = await _get_db().products.count_documents({"library": lib.get("code", "")})
     
     return libraries
 
@@ -155,12 +152,12 @@ async def get_libraries():
 @router.get("/{library_code}")
 async def get_library(library_code: str):
     """Obtener una biblioteca por código"""
-    library = await db.libraries.find_one({"code": library_code.upper()}, {"_id": 0})
+    library = await _get_db().libraries.find_one({"code": library_code.upper()}, {"_id": 0})
     if not library:
         raise HTTPException(status_code=404, detail=f"Biblioteca '{library_code}' no encontrada")
     
     # Actualizar conteo de productos
-    library["productCount"] = await db.products.count_documents({"library": library_code.upper()})
+    library["productCount"] = await _get_db().products.count_documents({"library": library_code.upper()})
     
     return library
 
@@ -169,7 +166,7 @@ async def get_library(library_code: str):
 async def create_library(library: LibraryCreate):
     """Crear una nueva biblioteca"""
     # Verificar que no existe
-    existing = await db.libraries.find_one({"code": library.code.upper()})
+    existing = await _get_db().libraries.find_one({"code": library.code.upper()})
     if existing:
         raise HTTPException(status_code=400, detail=f"Ya existe una biblioteca con código '{library.code}'")
     
@@ -186,7 +183,7 @@ async def create_library(library: LibraryCreate):
         "createdAt": datetime.now(timezone.utc).isoformat()
     }
     
-    await db.libraries.insert_one(library_data)
+    await _get_db().libraries.insert_one(library_data)
     library_data.pop("_id", None)
     return library_data
 
@@ -194,15 +191,15 @@ async def create_library(library: LibraryCreate):
 @router.put("/{library_code}")
 async def update_library(library_code: str, update: LibraryUpdate):
     """Actualizar una biblioteca"""
-    existing = await db.libraries.find_one({"code": library_code.upper()})
+    existing = await _get_db().libraries.find_one({"code": library_code.upper()})
     if not existing:
         raise HTTPException(status_code=404, detail=f"Biblioteca '{library_code}' no encontrada")
     
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     if update_data:
-        await db.libraries.update_one({"code": library_code.upper()}, {"$set": update_data})
+        await _get_db().libraries.update_one({"code": library_code.upper()}, {"$set": update_data})
     
-    return await db.libraries.find_one({"code": library_code.upper()}, {"_id": 0})
+    return await _get_db().libraries.find_one({"code": library_code.upper()}, {"_id": 0})
 
 
 @router.delete("/{library_code}")
@@ -213,14 +210,14 @@ async def delete_library(library_code: str):
         raise HTTPException(status_code=400, detail="No se puede eliminar la biblioteca principal ZC")
     
     # Verificar si tiene productos
-    product_count = await db.products.count_documents({"library": library_code.upper()})
+    product_count = await _get_db().products.count_documents({"library": library_code.upper()})
     if product_count > 0:
         raise HTTPException(
             status_code=400, 
             detail=f"No se puede eliminar: la biblioteca tiene {product_count} productos"
         )
     
-    result = await db.libraries.delete_one({"code": library_code.upper()})
+    result = await _get_db().libraries.delete_one({"code": library_code.upper()})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail=f"Biblioteca '{library_code}' no encontrada")
     
@@ -234,7 +231,7 @@ async def delete_library(library_code: str):
 @router.get("/users/{user_id}/access")
 async def get_user_library_access(user_id: str):
     """Obtener las bibliotecas a las que tiene acceso un usuario"""
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    user = await _get_db().users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
@@ -243,9 +240,9 @@ async def get_user_library_access(user_id: str):
     # Obtener detalles de cada biblioteca
     libraries = []
     for lib_code in allowed_libraries:
-        lib = await db.libraries.find_one({"code": lib_code}, {"_id": 0})
+        lib = await _get_db().libraries.find_one({"code": lib_code}, {"_id": 0})
         if lib:
-            lib["productCount"] = await db.products.count_documents({"library": lib_code})
+            lib["productCount"] = await _get_db().products.count_documents({"library": lib_code})
             libraries.append(lib)
     
     return {
@@ -259,18 +256,18 @@ async def get_user_library_access(user_id: str):
 @router.put("/users/{user_id}/access")
 async def update_user_library_access(user_id: str, access: UserLibraryAccess):
     """Actualizar las bibliotecas a las que tiene acceso un usuario"""
-    user = await db.users.find_one({"id": user_id})
+    user = await _get_db().users.find_one({"id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
     # Validar que todas las bibliotecas existen
     for lib_code in access.libraries:
-        lib = await db.libraries.find_one({"code": lib_code.upper()})
+        lib = await _get_db().libraries.find_one({"code": lib_code.upper()})
         if not lib:
             raise HTTPException(status_code=400, detail=f"Biblioteca '{lib_code}' no existe")
     
     # Actualizar usuario
-    await db.users.update_one(
+    await _get_db().users.update_one(
         {"id": user_id},
         {"$set": {"allowedLibraries": [l.upper() for l in access.libraries]}}
     )
@@ -288,9 +285,9 @@ async def bulk_update_library_access(updates: List[UserLibraryAccess]):
     results = []
     for update in updates:
         try:
-            user = await db.users.find_one({"id": update.userId})
+            user = await _get_db().users.find_one({"id": update.userId})
             if user:
-                await db.users.update_one(
+                await _get_db().users.update_one(
                     {"id": update.userId},
                     {"$set": {"allowedLibraries": [l.upper() for l in update.libraries]}}
                 )
@@ -335,8 +332,8 @@ async def get_library_products(
             {"name": {"$regex": search, "$options": "i"}}
         ]
     
-    total = await db.products.count_documents(query)
-    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    total = await _get_db().products.count_documents(query)
+    products = await _get_db().products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     
     return {
         "library": library_code.upper(),
@@ -377,11 +374,11 @@ async def import_tariffs(library_code: str, dry_run: bool = True, wipe: bool = F
 
     now = datetime.now(timezone.utc).isoformat()
     if wipe:
-        await db.products.delete_many({"library": "MV"})
+        await _get_db().products.delete_many({"library": "MV"})
     inserted, updated = 0, 0
     for p in products:
         p["updatedAt"] = now
-        res = await db.products.update_one(
+        res = await _get_db().products.update_one(
             {"library": "MV", "code": p["code"]}, {"$set": p}, upsert=True
         )
         if res.upserted_id:
@@ -397,10 +394,10 @@ async def get_library_stats(library_code: str):
     """Obtener estadísticas de una biblioteca"""
     query = {"library": library_code.upper()}
     
-    total = await db.products.count_documents(query)
-    categories = await db.products.distinct("category", query)
-    programas = await db.products.distinct("programa", query)
-    series = await db.products.distinct("series", query)
+    total = await _get_db().products.count_documents(query)
+    categories = await _get_db().products.distinct("category", query)
+    programas = await _get_db().products.distinct("programa", query)
+    series = await _get_db().products.distinct("series", query)
     
     return {
         "library": library_code.upper(),
@@ -433,14 +430,14 @@ async def import_products_to_library(library_code: str, products: List[Dict]):
             prod["library"] = library_code.upper()
             
             # Verificar si ya existe en esta biblioteca
-            existing = await db.products.find_one({
+            existing = await _get_db().products.find_one({
                 "code": code,
                 "library": library_code.upper()
             })
             
             if existing:
                 # Actualizar
-                await db.products.update_one(
+                await _get_db().products.update_one(
                     {"code": code, "library": library_code.upper()},
                     {"$set": prod}
                 )
@@ -449,16 +446,16 @@ async def import_products_to_library(library_code: str, products: List[Dict]):
                 # Crear nuevo
                 prod["id"] = f"prod-{uuid.uuid4().hex[:8]}"
                 prod["createdAt"] = datetime.now(timezone.utc).isoformat()
-                await db.products.insert_one(prod)
+                await _get_db().products.insert_one(prod)
                 created += 1
                 
         except Exception as e:
             errors.append(f"Producto {idx} ({prod.get('code', '?')}): {str(e)}")
     
     # Actualizar conteo en biblioteca
-    await db.libraries.update_one(
+    await _get_db().libraries.update_one(
         {"code": library_code.upper()},
-        {"$set": {"productCount": await db.products.count_documents({"library": library_code.upper()})}}
+        {"$set": {"productCount": await _get_db().products.count_documents({"library": library_code.upper()})}}
     )
     
     return {

@@ -3,7 +3,6 @@ Digitalizador Router - Reconocimiento Óptico de Presupuestos
 Endpoints para digitalización de borradores con IA y gestión de expedientes
 """
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 import uuid
 import logging
@@ -12,6 +11,7 @@ import json
 import re
 
 from models.schemas import (
+from services.db_client import get_db as _get_db
     DigitalizadorMatchedProduct, DigitalizadorLine, DigitalizadorRequest, DigitalizadorResponse,
     DigitalizadorExportRequest, DigitalizadorSaveRequest, DigitalizadorHistoryItem,
     ExpedienteRequest, DigitalizadorToProjectRequest
@@ -30,10 +30,6 @@ except Exception:  # pragma: no cover - fallback si no hay jwt_service
 router = APIRouter(tags=["digitalizador"], dependencies=_DIGITALIZADOR_DEPS)
 
 # Database connection
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 # ============================================
@@ -59,7 +55,7 @@ async def generate_expediente_number(request: ExpedienteRequest):
         counter_id = f"expediente_{prefix}_{current_year}"
         
         # Atomic find_and_modify to get next sequence number
-        result = await db.counters.find_one_and_update(
+        result = await _get_db().counters.find_one_and_update(
             {"_id": counter_id},
             {"$inc": {"seq": 1}},
             upsert=True,
@@ -96,7 +92,7 @@ async def get_current_expediente_sequence(clientCode: str = None):
         prefix = clientCode.upper() if clientCode else "EXP"
         counter_id = f"expediente_{prefix}_{current_year}"
         
-        counter = await db.counters.find_one({"_id": counter_id})
+        counter = await _get_db().counters.find_one({"_id": counter_id})
         current_seq = counter["seq"] if counter else 0
         
         return {
@@ -137,7 +133,7 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
         exp_number = request.expNumber
         if not exp_number:
             current_year = datetime.now().year
-            result = await db.counters.find_one_and_update(
+            result = await _get_db().counters.find_one_and_update(
                 {"_id": f"expediente_{current_year}"},
                 {"$inc": {"seq": 1}},
                 upsert=True,
@@ -148,7 +144,7 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
         
         # Si el expediente ya existe, se ACTUALIZA (re-guardar tras retocar la
         # cabecera o las líneas), en vez de rechazarlo.
-        existing = await db.digitalizador_history.find_one({"expNumber": exp_number})
+        existing = await _get_db().digitalizador_history.find_one({"expNumber": exp_number})
 
         # Create history item
         history_item = {
@@ -182,9 +178,9 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
         }
 
         if existing:
-            await db.digitalizador_history.update_one({"expNumber": exp_number}, {"$set": history_item})
+            await _get_db().digitalizador_history.update_one({"expNumber": exp_number}, {"$set": history_item})
         else:
-            await db.digitalizador_history.insert_one(history_item)
+            await _get_db().digitalizador_history.insert_one(history_item)
         history_item.pop('_id', None)
         
         return {
@@ -217,7 +213,7 @@ async def get_digitalizador_history(userId: str = None, search: str = None, limi
                 {"customerName": {"$regex": _s, "$options": "i"}}
             ]
         
-        cursor = db.digitalizador_history.find(query).sort("createdAt", -1).limit(limit)
+        cursor = _get_db().digitalizador_history.find(query).sort("createdAt", -1).limit(limit)
         history = []
         
         async for item in cursor:
@@ -234,7 +230,7 @@ async def get_digitalizador_history(userId: str = None, search: str = None, limi
 async def get_digitalizador_item(item_id: str):
     """Get a specific digitalizador history item"""
     try:
-        item = await db.digitalizador_history.find_one({"id": item_id})
+        item = await _get_db().digitalizador_history.find_one({"id": item_id})
         
         if not item:
             raise HTTPException(status_code=404, detail="Item no encontrado")
@@ -252,7 +248,7 @@ async def get_digitalizador_item(item_id: str):
 async def delete_digitalizador_item(item_id: str):
     """Delete a digitalizador history item"""
     try:
-        result = await db.digitalizador_history.delete_one({"id": item_id})
+        result = await _get_db().digitalizador_history.delete_one({"id": item_id})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Item no encontrado")
@@ -322,7 +318,7 @@ async def save_digitalizador_to_presupuestos(request: DigitalizadorToProjectRequ
             "source": "digitalizador"
         }
         
-        await db.projects.insert_one(project_data)
+        await _get_db().projects.insert_one(project_data)
         project_data.pop('_id', None)
         
         logger.info(f"Digitalizador budget saved to projects: {request.expNumber}")
@@ -584,7 +580,7 @@ IMPORTANTE:
                 
                 # Search by exact code match first
                 exact_query = {**base_filter, "code": search_upper}
-                exact_match = await db.products.find_one(
+                exact_match = await _get_db().products.find_one(
                     exact_query,
                     {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1}
                 )
@@ -610,7 +606,7 @@ IMPORTANTE:
                 
                 if regex_patterns:
                     query = {"$and": [base_filter, {"$or": regex_patterns}]}
-                    cursor = db.products.find(query, {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "library": 1}).limit(limit * 3)
+                    cursor = _get_db().products.find(query, {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "library": 1}).limit(limit * 3)
                     products = await cursor.to_list(limit * 3)
                     
                     for p in products:
@@ -731,7 +727,7 @@ async def search_digitalizador_catalog(q: str, limit: int = 5, library: str = "Z
         
         # First try exact code match
         exact_query = {**base_filter, "code": search_upper}
-        exact = await db.products.find_one(exact_query, {"_id": 0})
+        exact = await _get_db().products.find_one(exact_query, {"_id": 0})
         if exact:
             price = exact.get("points", 0) or 0
             if exact.get("zonePoints"):
@@ -754,7 +750,7 @@ async def search_digitalizador_catalog(q: str, limit: int = 5, library: str = "Z
         
         if regex_patterns:
             query = {"$and": [base_filter, {"$or": regex_patterns}]}
-            cursor = db.products.find(query, {"_id": 0}).limit(limit * 5)
+            cursor = _get_db().products.find(query, {"_id": 0}).limit(limit * 5)
             products = await cursor.to_list(limit * 5)
             
             for p in products:
@@ -857,9 +853,9 @@ async def save_resumen_totales(payload: dict):
             "data": payload.get("data") or {},
             "updatedAt": datetime.now(timezone.utc).isoformat(),
         }
-        existing = await db.resumen_totales.find_one({"id": rid}, {"_id": 0, "createdAt": 1})
+        existing = await _get_db().resumen_totales.find_one({"id": rid}, {"_id": 0, "createdAt": 1})
         doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
-        await db.resumen_totales.update_one({"id": rid}, {"$set": doc}, upsert=True)
+        await _get_db().resumen_totales.update_one({"id": rid}, {"$set": doc}, upsert=True)
         return {"success": True, "id": rid, "name": doc["name"]}
     except Exception as e:
         logger.error(f"Save resumen-totales error: {e}")
@@ -871,7 +867,7 @@ async def list_resumen_totales(userId: str = None):
     """Lista los resúmenes guardados (por usuario)."""
     try:
         query = {"userId": userId} if userId else {}
-        items = await db.resumen_totales.find(query, {"_id": 0, "data": 0}).sort("updatedAt", -1).to_list(300)
+        items = await _get_db().resumen_totales.find(query, {"_id": 0, "data": 0}).sort("updatedAt", -1).to_list(300)
         return {"success": True, "items": items}
     except Exception as e:
         logger.error(f"List resumen-totales error: {e}")
@@ -880,7 +876,7 @@ async def list_resumen_totales(userId: str = None):
 
 @router.get("/resumen-totales/{rid}")
 async def get_resumen_totales(rid: str):
-    item = await db.resumen_totales.find_one({"id": rid}, {"_id": 0})
+    item = await _get_db().resumen_totales.find_one({"id": rid}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Resumen no encontrado")
     return item
@@ -888,5 +884,5 @@ async def get_resumen_totales(rid: str):
 
 @router.delete("/resumen-totales/{rid}")
 async def delete_resumen_totales(rid: str):
-    await db.resumen_totales.delete_one({"id": rid})
+    await _get_db().resumen_totales.delete_one({"id": rid})
     return {"success": True}

@@ -12,7 +12,7 @@ import uuid
 import json
 import re
 import logging
-from motor.motor_asyncio import AsyncIOMotorClient
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +27,6 @@ except Exception:
 
 router = APIRouter(tags=["armarios2"], dependencies=_DEPS)
 
-_client = AsyncIOMotorClient(os.environ.get('MONGO_URL'), serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
-_db = _client[os.environ.get('DB_NAME', 'luiggi_home')]
-
 
 @router.post("/armarios2/designs")
 async def save_design(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
@@ -37,7 +34,7 @@ async def save_design(payload: dict, current_user: Optional[dict] = Depends(get_
     p = payload or {}
     oid = p.get("id") or f"arm-{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc).isoformat()
-    existing = await _db.armarios2_designs.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+    existing = await _get_db().armarios2_designs.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
     if existing and existing.get("userId") and current_user and current_user.get("id") \
        and existing["userId"] != current_user["id"] and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         raise HTTPException(status_code=403, detail="Sin acceso a este diseño")
@@ -53,7 +50,7 @@ async def save_design(payload: dict, current_user: Optional[dict] = Depends(get_
         "createdAt": (existing or {}).get("createdAt") or now,
         "updatedAt": now,
     }
-    await _db.armarios2_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
+    await _get_db().armarios2_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
     doc.pop("_id", None)
     return {"success": True, "design": doc}
 
@@ -63,7 +60,7 @@ async def list_designs(current_user: Optional[dict] = Depends(get_current_user))
     query = {}
     if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         query["userId"] = current_user["id"]
-    items = await _db.armarios2_designs.find(query, {"_id": 0, "cfg": 0, "comps": 0}).sort("updatedAt", -1).to_list(300)
+    items = await _get_db().armarios2_designs.find(query, {"_id": 0, "cfg": 0, "comps": 0}).sort("updatedAt", -1).to_list(300)
     return {"success": True, "designs": items}
 
 
@@ -78,7 +75,7 @@ def _owns(doc, current_user) -> bool:
 
 @router.get("/armarios2/designs/{design_id}")
 async def get_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    d = await _db.armarios2_designs.find_one({"id": design_id}, {"_id": 0})
+    d = await _get_db().armarios2_designs.find_one({"id": design_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
     if not _owns(d, current_user):
@@ -88,12 +85,12 @@ async def get_design(design_id: str, current_user: Optional[dict] = Depends(get_
 
 @router.delete("/armarios2/designs/{design_id}")
 async def delete_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    d = await _db.armarios2_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1})
+    d = await _get_db().armarios2_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1})
     if not d:
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
     if not _owns(d, current_user):
         raise HTTPException(status_code=403, detail="Sin acceso a este diseño")
-    await _db.armarios2_designs.delete_one({"id": design_id})
+    await _get_db().armarios2_designs.delete_one({"id": design_id})
     return {"success": True}
 
 

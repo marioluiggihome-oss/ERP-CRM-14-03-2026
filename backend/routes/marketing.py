@@ -7,8 +7,8 @@ HubSpot: definir un segmento con filtros sobre los contactos del CRM, previsuali
 a cuántos alcanza, redactar una campaña con variables ({{nombre}}, {{empresa}}) y
 enviarla a todos los contactos con email del segmento, guardando el resultado.
 
-Colecciones nuevas: db.campaigns.
-Reutiliza: db.contacts (CRM), services.email_service.send_email (SendGrid).
+Colecciones nuevas: _get_db().campaigns.
+Reutiliza: _get_db().contacts (CRM), services.email_service.send_email (SendGrid).
 """
 import logging
 import os
@@ -18,16 +18,12 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.jwt_service import get_current_user, require_auth
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
-_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = _client[DB_NAME]
 
 router = APIRouter(tags=["marketing"], dependencies=[Depends(require_auth)])
 
@@ -80,7 +76,7 @@ def _build_query(filtros: dict) -> dict:
 
 async def _contactos_segmento(filtros: dict, proj=None, limit: int = 5000):
     query = _build_query(filtros)
-    cur = db.contacts.find(query, proj or {"_id": 0, "id": 1, "name": 1, "email": 1, "company": 1})
+    cur = _get_db().contacts.find(query, proj or {"_id": 0, "id": 1, "name": 1, "email": 1, "company": 1})
     return await cur.to_list(limit)
 
 
@@ -138,20 +134,20 @@ async def crear_campaign(payload: dict, current_user: dict = Depends(get_current
         "createdByUserId": current_user.get("id"),
         "createdByUsername": current_user.get("username", ""),
     }
-    await db.campaigns.insert_one(doc)
+    await _get_db().campaigns.insert_one(doc)
     doc.pop("_id", None)
     return {"success": True, "campaign": doc}
 
 
 @router.get("/crm/marketing/campaigns")
 async def listar_campaigns(current_user: dict = Depends(get_current_user)):
-    camps = await db.campaigns.find({}, {"_id": 0}).sort("createdAt", -1).to_list(200)
+    camps = await _get_db().campaigns.find({}, {"_id": 0}).sort("createdAt", -1).to_list(200)
     return {"success": True, "campaigns": camps}
 
 
 @router.get("/crm/marketing/campaigns/{campaign_id}")
 async def detalle_campaign(campaign_id: str, current_user: dict = Depends(get_current_user)):
-    c = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    c = await _get_db().campaigns.find_one({"id": campaign_id}, {"_id": 0})
     if not c:
         raise HTTPException(status_code=404, detail="Campaña no encontrada.")
     return {"success": True, "campaign": c}
@@ -159,7 +155,7 @@ async def detalle_campaign(campaign_id: str, current_user: dict = Depends(get_cu
 
 @router.delete("/crm/marketing/campaigns/{campaign_id}")
 async def borrar_campaign(campaign_id: str, current_user: dict = Depends(get_current_user)):
-    await db.campaigns.delete_one({"id": campaign_id})
+    await _get_db().campaigns.delete_one({"id": campaign_id})
     return {"success": True}
 
 
@@ -168,7 +164,7 @@ async def enviar_campaign(campaign_id: str, payload: dict = None, current_user: 
     """Envía la campaña a todos los contactos con email del segmento. Devuelve el
     recuento de envíos correctos/fallidos. Idempotente por estado (no reenvía una
     ya enviada salvo que se fuerce)."""
-    c = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    c = await _get_db().campaigns.find_one({"id": campaign_id}, {"_id": 0})
     if not c:
         raise HTTPException(status_code=404, detail="Campaña no encontrada.")
     forzar = bool((payload or {}).get("forzar"))
@@ -202,7 +198,7 @@ async def enviar_campaign(campaign_id: str, payload: dict = None, current_user: 
             logger.warning("campaña %s envío a %s: %s", campaign_id, ct.get("email"), e)
             fail += 1
 
-    await db.campaigns.update_one(
+    await _get_db().campaigns.update_one(
         {"id": campaign_id},
         {"$set": {
             "status": "enviada",

@@ -5,7 +5,6 @@ Generación de facturas PDF, envío por email y gestión del ciclo de vida
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile
 from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ReturnDocument
 import re as _re
 from datetime import datetime, timezone, timedelta
@@ -25,6 +24,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +41,6 @@ except Exception:  # pragma: no cover - fallback si no hay jwt_service
 router = APIRouter(prefix="/invoices", tags=["Invoices"], dependencies=_INVOICES_DEPS)
 security = HTTPBearer(auto_error=False)
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[DB_NAME]
 
 
 # ─── Modelos ────────────────────────────────────────────────────────────────
@@ -95,10 +91,10 @@ async def _seed_counter(key: str, prefix: str):
     """Inicializa el contador atómico del año a partir del MÁXIMO número de factura
     ya existente (para no colisionar con las facturas emitidas antes de este contador).
     Solo actúa la primera vez (upsert con $setOnInsert)."""
-    existing = await db.counters.find_one({"key": key})
+    existing = await _get_db().counters.find_one({"key": key})
     if existing:
         return
-    last = await db.invoices.find_one(
+    last = await _get_db().invoices.find_one(
         {"invoiceNumber": {"$regex": f"^{_re.escape(prefix)}"}},
         sort=[("invoiceNumber", -1)],
     )
@@ -108,7 +104,7 @@ async def _seed_counter(key: str, prefix: str):
             seed = int(last["invoiceNumber"].split("-")[-1])
         except Exception:
             seed = 0
-    await db.counters.update_one({"key": key}, {"$setOnInsert": {"key": key, "seq": seed}}, upsert=True)
+    await _get_db().counters.update_one({"key": key}, {"$setOnInsert": {"key": key, "seq": seed}}, upsert=True)
 
 
 async def next_invoice_number() -> str:
@@ -123,7 +119,7 @@ async def next_invoice_number() -> str:
     prefix = f"FAC-{year}-"
     key = f"invoice-{year}"
     await _seed_counter(key, prefix)
-    doc = await db.counters.find_one_and_update(
+    doc = await _get_db().counters.find_one_and_update(
         {"key": key}, {"$inc": {"seq": 1}}, return_document=ReturnDocument.AFTER,
     )
     return f"{prefix}{doc['seq']:03d}"
@@ -136,7 +132,7 @@ async def peek_next_invoice_number() -> str:
     prefix = f"FAC-{year}-"
     key = f"invoice-{year}"
     await _seed_counter(key, prefix)
-    doc = await db.counters.find_one({"key": key})
+    doc = await _get_db().counters.find_one({"key": key})
     seq = (doc.get("seq") if doc else 0) + 1
     return f"{prefix}{seq:03d}"
 
@@ -369,7 +365,7 @@ async def get_invoices(
             {"clientName": {"$regex": q, "$options": "i"}},
             {"budgetNumber": {"$regex": q, "$options": "i"}},
         ]
-    invoices = await db.invoices.find(query, {"_id": 0}).sort("createdAt", -1).limit(limit).to_list(limit)
+    invoices = await _get_db().invoices.find(query, {"_id": 0}).sort("createdAt", -1).limit(limit).to_list(limit)
     return invoices
 
 
@@ -386,18 +382,18 @@ async def get_invoice_stats():
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
 
-    total = await db.invoices.count_documents({})
-    draft = await db.invoices.count_documents({"status": "draft"})
-    issued = await db.invoices.count_documents({"status": "issued"})
-    paid = await db.invoices.count_documents({"status": "paid"})
-    overdue = await db.invoices.count_documents({"status": "overdue"})
+    total = await _get_db().invoices.count_documents({})
+    draft = await _get_db().invoices.count_documents({"status": "draft"})
+    issued = await _get_db().invoices.count_documents({"status": "issued"})
+    paid = await _get_db().invoices.count_documents({"status": "paid"})
+    overdue = await _get_db().invoices.count_documents({"status": "overdue"})
 
     # Total facturado este mes
     pipeline = [
         {"$match": {"status": {"$in": ["issued","paid"]}, "createdAt": {"$gte": month_start}}},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
-    month_result = await db.invoices.aggregate(pipeline).to_list(1)
+    month_result = await _get_db().invoices.aggregate(pipeline).to_list(1)
     month_total = month_result[0]["total"] if month_result else 0
 
     # Total pendiente de cobro
@@ -405,7 +401,7 @@ async def get_invoice_stats():
         {"$match": {"status": "issued"}},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
-    pending_result = await db.invoices.aggregate(pipeline2).to_list(1)
+    pending_result = await _get_db().invoices.aggregate(pipeline2).to_list(1)
     pending_total = pending_result[0]["total"] if pending_result else 0
 
     return {
@@ -418,7 +414,7 @@ async def get_invoice_stats():
 
 @router.get("/{invoice_id}")
 async def get_invoice(invoice_id: str):
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
     return inv
@@ -439,7 +435,7 @@ async def create_invoice(invoice: InvoiceCreate):
     # Si viene de un presupuesto, enriquecer con sus datos
     lines = [l.model_dump() for l in invoice.lines]
     if invoice.projectId and not lines:
-        project = await db.projects.find_one({"id": invoice.projectId}, {"_id": 0})
+        project = await _get_db().projects.find_one({"id": invoice.projectId}, {"_id": 0})
         if project:
             items_montada = project.get("itemsMontada", [])
             items_despiece = project.get("itemsDespiece", [])
@@ -475,12 +471,12 @@ async def create_invoice(invoice: InvoiceCreate):
         "updatedAt": now.isoformat(),
     }
 
-    await db.invoices.insert_one(doc)
+    await _get_db().invoices.insert_one(doc)
     doc.pop("_id", None)
 
     # Si status=issued, marcar el presupuesto como facturado
     if invoice.projectId and invoice.status == "issued":
-        await db.projects.update_one(
+        await _get_db().projects.update_one(
             {"id": invoice.projectId},
             {"$set": {"invoiceId": doc["id"], "invoiceNumber": inv_number}}
         )
@@ -491,7 +487,7 @@ async def create_invoice(invoice: InvoiceCreate):
 @router.post("/from-project/{project_id}")
 async def create_invoice_from_project(project_id: str, inv_number_override: Optional[str] = None):
     """Crear factura automáticamente desde un presupuesto aceptado"""
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    project = await _get_db().projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
         raise HTTPException(404, "Presupuesto no encontrado")
     if project.get("status") not in ["aceptado", "en_fabricacion", "entregado"]:
@@ -521,7 +517,7 @@ async def create_invoice_from_project(project_id: str, inv_number_override: Opti
     client_email = ""
     client_taxid = ""
     if project.get("clientCode"):
-        client = await db.clients.find_one({"code": project["clientCode"]}, {"_id": 0})
+        client = await _get_db().clients.find_one({"code": project["clientCode"]}, {"_id": 0})
         if client:
             client_email = client.get("email", "")
             client_taxid = client.get("taxId", client.get("cif", ""))
@@ -546,10 +542,10 @@ async def create_invoice_from_project(project_id: str, inv_number_override: Opti
         "updatedAt": now.isoformat(),
     }
 
-    await db.invoices.insert_one(doc)
+    await _get_db().invoices.insert_one(doc)
     doc.pop("_id", None)
 
-    await db.projects.update_one(
+    await _get_db().projects.update_one(
         {"id": project_id},
         {"$set": {"invoiceId": doc["id"], "invoiceNumber": inv_number}}
     )
@@ -559,7 +555,7 @@ async def create_invoice_from_project(project_id: str, inv_number_override: Opti
 
 @router.put("/{invoice_id}")
 async def update_invoice(invoice_id: str, update: InvoiceUpdate):
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
@@ -571,13 +567,13 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
         data.update({k: v for k, v in totals.items() if k != "lines"})
 
     data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    await db.invoices.update_one({"id": invoice_id}, {"$set": data})
-    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    await _get_db().invoices.update_one({"id": invoice_id}, {"$set": data})
+    return await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
 
 
 @router.delete("/{invoice_id}")
 async def delete_invoice(invoice_id: str):
-    result = await db.invoices.delete_one({"id": invoice_id})
+    result = await _get_db().invoices.delete_one({"id": invoice_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Factura no encontrada")
     return {"message": "Factura eliminada"}
@@ -586,11 +582,11 @@ async def delete_invoice(invoice_id: str):
 @router.get("/{invoice_id}/pdf")
 async def download_invoice_pdf(invoice_id: str):
     """Descargar PDF de la factura"""
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     pdf = generate_invoice_pdf(inv, settings)
 
     return StreamingResponse(
@@ -605,7 +601,7 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
     """Enviar factura por email al cliente"""
     from services.email_service import send_email
 
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
@@ -613,7 +609,7 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
     if not to_email:
         raise HTTPException(400, "No hay email del cliente. Añádelo antes de enviar.")
 
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     pdf = generate_invoice_pdf(inv, settings)
 
     company = settings.get("companyName", "LUIGGI HOME")
@@ -640,7 +636,7 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
     )
 
     if sent:
-        await db.invoices.update_one(
+        await _get_db().invoices.update_one(
             {"id": invoice_id},
             {"$set": {"sentAt": datetime.now(timezone.utc).isoformat(), "sentTo": to_email}}
         )
@@ -662,8 +658,8 @@ async def change_invoice_status(invoice_id: str, body: dict):
     if new_status == "paid":
         update["paidAt"] = body.get("paidAt", now)
 
-    await db.invoices.update_one({"id": invoice_id}, {"$set": update})
-    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    await _get_db().invoices.update_one({"id": invoice_id}, {"$set": update})
+    return await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -675,11 +671,11 @@ async def download_facturae_xml(invoice_id: str):
     """Descargar factura en formato FacturaE 3.2.2 (XML)"""
     from services.facturacion import FacturaeGenerator
 
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
 
     generator = FacturaeGenerator(settings)
     # Determinar tipo por la serie
@@ -705,11 +701,11 @@ async def get_sii_json(invoice_id: str):
     """Obtener JSON para envío al SII de la AEAT"""
     from services.facturacion import AccountingExporter
 
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     exporter = AccountingExporter()
     sii_data = exporter.export_sii_json([inv], settings)
     return sii_data
@@ -742,12 +738,12 @@ async def export_accounting(req: ExportRequest):
         else:
             query["issueDate"] = {"$lte": req.dateTo}
 
-    invoices = await db.invoices.find(query, {"_id": 0}).sort("issueDate", 1).to_list(5000)
+    invoices = await _get_db().invoices.find(query, {"_id": 0}).sort("issueDate", 1).to_list(5000)
     if not invoices:
         raise HTTPException(404, "No hay facturas para exportar con esos filtros")
 
     exporter = AccountingExporter()
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
 
     if req.format == "a3":
         content = exporter.export_a3_format(invoices)
@@ -852,7 +848,7 @@ async def get_next_number_by_series(series: str = "FAC"):
     """Obtener siguiente número por serie (FAC, REC, PRO)"""
     year = datetime.now(timezone.utc).year
     prefix = f"{series}-{year}-"
-    last = await db.invoices.find_one(
+    last = await _get_db().invoices.find_one(
         {"invoiceNumber": {"$regex": f"^{prefix}"}},
         sort=[("invoiceNumber", -1)]
     )
@@ -873,7 +869,7 @@ async def get_next_number_by_series(series: str = "FAC"):
 @router.post("/{invoice_id}/attachments")
 async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)):
     """Subir archivo adjunto a una factura (albarán, contrato, foto, etc.)"""
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
@@ -892,7 +888,7 @@ async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)
         "uploadedAt": datetime.now(timezone.utc).isoformat()
     }
 
-    await db.invoices.update_one(
+    await _get_db().invoices.update_one(
         {"id": invoice_id},
         {"$push": {"attachments": attachment}}
     )
@@ -908,7 +904,7 @@ async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)
 @router.get("/{invoice_id}/attachments")
 async def list_attachments(invoice_id: str):
     """Listar archivos adjuntos de una factura"""
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0, "attachments": 1})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0, "attachments": 1})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
     attachments = inv.get("attachments", [])
@@ -919,7 +915,7 @@ async def list_attachments(invoice_id: str):
 @router.get("/{invoice_id}/attachments/{attachment_id}")
 async def download_attachment(invoice_id: str, attachment_id: str):
     """Descargar un archivo adjunto"""
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not inv:
         raise HTTPException(404, "Factura no encontrada")
 
@@ -939,7 +935,7 @@ async def download_attachment(invoice_id: str, attachment_id: str):
 @router.delete("/{invoice_id}/attachments/{attachment_id}")
 async def delete_attachment(invoice_id: str, attachment_id: str):
     """Eliminar un archivo adjunto"""
-    result = await db.invoices.update_one(
+    result = await _get_db().invoices.update_one(
         {"id": invoice_id},
         {"$pull": {"attachments": {"id": attachment_id}}}
     )
