@@ -1020,7 +1020,7 @@ class Render3DService:
                 async with httpx.AsyncClient(timeout=120) as client:
                     # Crear predicción
                     resp = await client.post(
-                        "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions",
+                        "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions",
                         headers=headers,
                         json={"input": flux_input},
                     )
@@ -1059,7 +1059,7 @@ class Render3DService:
                 "success": True,
                 "status": "completed",
                 "result": {"images": [data_url]},
-                "engine": f"{self.config.brand_name} (Flux Pro)",
+                "engine": f"{self.config.brand_name} (Flux Schnell)",
                 "duration_seconds": round(time.time() - start, 1),
                 "prompt_used": prompt,
             }
