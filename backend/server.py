@@ -143,17 +143,12 @@ from models.schemas import (
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection.
-# serverSelectionTimeoutMS=5000: falla rápido si el cluster no responde en 5 s,
-# en lugar de quedarse colgado hasta que Railway corta la petición.
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(
-    mongo_url,
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=10000,
-    maxPoolSize=50,
-)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection — usa el singleton compartido (services/db_client.py)
+# para no abrir un pool adicional. Las variables client y db se mantienen
+# para compatibilidad con los módulos que hacen `from server import db`.
+from services.db_client import get_db as _get_db, get_client as _get_client
+client = _get_client()
+db = _get_db()
 
 # Configure logging
 logging.basicConfig(

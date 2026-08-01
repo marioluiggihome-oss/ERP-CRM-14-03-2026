@@ -26,10 +26,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Conexión MongoDB
-mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
-db = client[os.environ.get('DB_NAME', 'luiggi_home')]
+# Conexión MongoDB — singleton compartido
+from services.db_client import get_db as _get_db
+db = _get_db()
 
 class JobStatus(str, Enum):
     PENDING = "pending"

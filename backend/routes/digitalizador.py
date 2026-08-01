@@ -10,8 +10,8 @@ import os
 import json
 import re
 
-from models.schemas import (
 from services.db_client import get_db as _get_db
+from models.schemas import (
     DigitalizadorMatchedProduct, DigitalizadorLine, DigitalizadorRequest, DigitalizadorResponse,
     DigitalizadorExportRequest, DigitalizadorSaveRequest, DigitalizadorHistoryItem,
     ExpedienteRequest, DigitalizadorToProjectRequest

@@ -11,8 +11,8 @@ import os
 import json
 import re
 
-from models.schemas import (
 from services.db_client import get_db as _get_db
+from models.schemas import (
     ArmarioModuleConfig, ArmarioProject, ArmarioProjectCreate, ArmarioProjectUpdate,
     IAConfigRequest, IARenderRequest, IALayoutRequest,
     ContactModel, OpportunityModel

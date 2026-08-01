@@ -1,10 +1,13 @@
 """
-Configuración centralizada para el backend de LUIGGI HOME
+Configuración centralizada para el backend de LUIGGI HOME.
+El cliente MongoDB ahora usa el singleton de services/db_client.py para
+evitar abrir pools adicionales. Las variables exportadas (db, client,
+*_collection) se mantienen idénticas para compatibilidad con los módulos
+que hacen `from config import db`.
 """
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from motor.motor_asyncio import AsyncIOMotorClient
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
@@ -14,19 +17,10 @@ load_dotenv(ROOT_DIR / '.env')
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'test_database')
 
-# Inicializar cliente MongoDB.
-# serverSelectionTimeoutMS=5000: si el cluster tarda más de 5 s en dar conexión,
-# la operación falla con un error claro en lugar de quedarse colgada hasta que
-# la pasarela de Railway corta la petición con un "Failed to fetch" opaco.
-# connectTimeoutMS=10000: tiempo máximo para abrir el socket TCP.
-# maxPoolSize=20: limita las conexiones concurrentes para no saturar el cluster.
-client = AsyncIOMotorClient(
-    MONGO_URL,
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=10000,
-    maxPoolSize=20,
-)
-db = client[DB_NAME]
+# Cliente y DB compartidos (singleton) — no se abre un pool adicional
+from services.db_client import get_db as _get_db, get_client as _get_client
+client = _get_client()
+db = _get_db()
 
 # Collections
 users_collection = db['users']

@@ -9,8 +9,8 @@ import uuid
 import logging
 import os
 
-from models.schemas import (
 from services.db_client import get_db as _get_db
+from models.schemas import (
     MontadorCreate, MontadorUpdate, MontadorResponse,
     MontajeCreate, MontajeUpdate, MontajeResponse
 )
