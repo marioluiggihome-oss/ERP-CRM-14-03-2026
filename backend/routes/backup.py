@@ -68,7 +68,7 @@ async def create_daily_backup_with_email():
     os.makedirs(temp_dir, exist_ok=True)
     
     # Export MongoDB
-    client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+    client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
     db = client[DB_NAME]
     collections = await db.list_collection_names()
     
@@ -240,7 +240,7 @@ async def create_full_backup(user=Depends(require_admin)):
         os.makedirs(f"{temp_dir}/code", exist_ok=True)
         
         # 1. Export MongoDB collections
-        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
         db = client[DB_NAME]
         
         collections = await db.list_collection_names()
@@ -451,7 +451,7 @@ async def export_database_only(user=Depends(require_admin)):
         temp_dir = f"/tmp/{backup_name}"
         os.makedirs(temp_dir, exist_ok=True)
         
-        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
         db = client[DB_NAME]
         
         collections = await db.list_collection_names()
@@ -510,7 +510,7 @@ async def descargar_copia_completa(user=Depends(require_admin)):
     from fastapi.responses import StreamingResponse
     from tempfile import SpooledTemporaryFile
 
-    client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+    client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
     try:
         db = client[DB_NAME]
         colecciones = await db.list_collection_names()

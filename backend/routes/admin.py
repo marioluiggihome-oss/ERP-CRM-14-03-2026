@@ -24,7 +24,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # Conexión a BD (mismo patrón que el resto de routers)
 _MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 _DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-_admin_client = AsyncIOMotorClient(_MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+_admin_client = AsyncIOMotorClient(_MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
 _db = _admin_client[_DB_NAME]
 
 

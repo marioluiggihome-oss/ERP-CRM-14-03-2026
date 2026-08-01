@@ -131,7 +131,7 @@ class BackupService:
 
             logger.info(f"Iniciando backup (nativo): {backup_name}")
 
-            client = AsyncIOMotorClient(self.mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+            client = AsyncIOMotorClient(self.mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
             db = client[self.db_name]
             collections = await db.list_collection_names()
 
@@ -292,7 +292,7 @@ class BackupService:
             if db_dir is None:
                 return {"success": False, "error": "El backup no contiene datos restaurables (.json)"}
 
-            client = AsyncIOMotorClient(self.mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000)
+            client = AsyncIOMotorClient(self.mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
             db = client[self.db_name]
 
             restored = 0
