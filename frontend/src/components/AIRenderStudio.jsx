@@ -503,6 +503,12 @@ export default function AIRenderStudio({ state, setState }) {
   const [panelW, setPanelW] = useState(420);
   const [panelHidden, setPanelHidden] = useState(false);
   const resizingPanel = useRef(false);
+  // UX móvil: colapso de secciones avanzadas por defecto
+  const [showEstilo, setShowEstilo] = useState(false);
+  const [showPlanos, setShowPlanos] = useState(false);
+  const [showMedidas, setShowMedidas] = useState(false);
+  // Ref para auto-scroll al panel de render en móvil
+  const renderPanelRef = useRef(null);
   const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
   useEffect(() => {
     const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(300, Math.min(760, e.clientX - 8))); };
@@ -1860,9 +1866,13 @@ export default function AIRenderStudio({ state, setState }) {
       );
       if (usePlan) { await handleGenerateComposed(); return; }
     }
-    setIsGenerating(true);
+        setIsGenerating(true);
     setError(null);
-
+    // Auto-scroll al panel de render en móvil
+    if (window.innerWidth < 1024 && renderPanelRef.current) {
+      setPanelHidden(true);
+      setTimeout(() => renderPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
     // ── VARIAS REFERENCIAS → un render por cada imagen ────────────────────
     const refs = refImages.length ? refImages : (refImage ? [refImage] : []);
     if (refs.length > 1) {
@@ -2218,14 +2228,18 @@ export default function AIRenderStudio({ state, setState }) {
                     )}
                   </div>
                 )}
-                {/* Medidas de la estancia — arriba, junto a la subida de imagen (a mano).
-                    Es la ESCALA REAL: clave para que los planos/alzados salgan acotados. */}
-                <div className="mb-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-2.5 flex flex-col gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Maximize2 size={13} className="text-indigo-500" />
-                    <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Medidas de la estancia</span>
-                    <span className="text-[10px] text-indigo-400">— escala real para render y planos acotados</span>
-                  </div>
+                {/* Medidas de la estancia — colapsable en móvil */}
+                <div className="mb-2 rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col">
+                  <button onClick={() => setShowMedidas(v => !v)}
+                    className="flex items-center justify-between p-2.5 text-left w-full">
+                    <div className="flex items-center gap-1.5">
+                      <Maximize2 size={13} className="text-indigo-500" />
+                      <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Medidas de la estancia</span>
+                      <span className="text-[10px] text-indigo-400 hidden sm:inline">— escala real para render y planos acotados</span>
+                    </div>
+                    <span className="text-indigo-400 shrink-0 ml-2">{showMedidas ? '▲' : '▼'}</span>
+                  </button>
+                  {showMedidas && <div className="px-2.5 pb-2.5 flex flex-col gap-2">
                   <div className="grid grid-cols-3 gap-2">
                     <label className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Ancho (cm)</span>
@@ -2243,6 +2257,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <input value={medidas.aberturas} onChange={e => setMedidas(m => ({ ...m, aberturas: e.target.value }))}
                     placeholder="Ventanas/puertas: ej. ventana 120 cm en pared izquierda, puerta al fondo"
                     className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white" />
+                  </div>}
                 </div>
                 <textarea
                   ref={textareaRef}
@@ -2261,9 +2276,14 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               </div>
 
-              {/* PASO 2 — Estilo y ambiente (agrupado) */}
-              <div className="rounded-xl border border-slate-200 p-3 flex flex-col gap-3">
-                <StepHeader n={2} title="Estilo y ambiente" hint="Aspecto, punto de vista e iluminación del render." />
+              {/* PASO 2 — Estilo y ambiente (agrupado) - colapsable en móvil */}
+              <div className="rounded-xl border border-slate-200 flex flex-col">
+                <button onClick={() => setShowEstilo(v => !v)}
+                  className="flex items-center justify-between p-3 text-left w-full">
+                  <StepHeader n={2} title="Estilo y ambiente" hint="Aspecto, punto de vista e iluminación del render." />
+                  <span className="text-slate-400 shrink-0 ml-2">{showEstilo ? '▲' : '▼'}</span>
+                </button>
+              {showEstilo && <div className="px-3 pb-3 flex flex-col gap-3">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estilo</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -2310,11 +2330,16 @@ export default function AIRenderStudio({ state, setState }) {
                     </button>
                   ))}
                 </div>
+                            </div>}
               </div>
-
-              {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) */}
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex flex-col gap-2.5">
-                <StepHeader n={3} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
+              {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) - colapsable */}
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col">
+                <button onClick={() => setShowPlanos(v => !v)}
+                  className="flex items-center justify-between p-3 text-left w-full">
+                  <StepHeader n={3} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
+                  <span className="text-indigo-400 shrink-0 ml-2">{showPlanos ? '▲' : '▼'}</span>
+                </button>
+              {showPlanos && <div className="px-3 pb-3 flex flex-col gap-2.5">
                 <p className="text-[11px] text-slate-500">
                   El render seguirá la distribución del plano y el diseño de cada pared, con el acabado descrito en el paso 1.
                 </p>
@@ -2340,10 +2365,10 @@ export default function AIRenderStudio({ state, setState }) {
                   disabled={isGenerating || (!floorPlan && wallSketches.length === 0)}
                   className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isGenerating ? <><Loader size={15} className="animate-spin" /> Generando…</> : <><Send size={15} /> Generar render (plano + bocetos)</>}
+                                    {isGenerating ? <><Loader size={15} className="animate-spin" /> Generando…</> : <><Send size={15} /> Generar render (plano + bocetos)</>}
                 </button>
+              </div>}
               </div>
-
               {/* Separador entre las dos vías de generación */}
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
                 <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
@@ -2558,7 +2583,7 @@ export default function AIRenderStudio({ state, setState }) {
         )}
 
         {/* Panel derecho - Resultado */}
-        <div className="flex-1 flex flex-col p-4 sm:p-6 min-h-[60vh] lg:min-h-0 lg:overflow-hidden">
+        <div ref={renderPanelRef} className="flex-1 flex flex-col p-4 sm:p-6 min-h-[60vh] lg:min-h-0 lg:overflow-hidden">
           {/* Mostrar/ocultar el panel de opciones en móvil y tablet para dar sitio al render */}
           <button onClick={() => setPanelHidden(v => !v)}
             className="lg:hidden self-start mb-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm">
