@@ -9,7 +9,7 @@ import { useEffect, useState, useRef } from "react";
 import CarpinterLogo, { CarpinterMark } from "./CarpinterLogo";
 import {
   FileText, Sparkles, TrendingUp, Ruler, CheckCircle2, ChevronDown,
-  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star, Play, Lock,
+  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star, Play,
 } from "lucide-react";
 
 /* ─── DATOS ──────────────────────────────────────────────────────────────── */
@@ -606,56 +606,10 @@ const STYLES = `
 @media(max-width:900px){.cl-root .footer-grid{grid-template-columns:1fr;gap:28px;}}
 `;
 
-/* ─── CANDADO DE ACCESO ──────────────────────────────────────────────────────
-   La web queda OCULTA tras un candado al entrar. Se revela SOLO con un gesto
-   secreto: pulsar el candado manteniendo Shift (escritorio) o la tecla A
-   (pensado para responsive/tablet con teclado). Un toque simple no hace nada. */
-function LockGate({ onUnlock }) {
-  const longPress = useRef(null);
-  // Escritorio: se revela pulsando Shift o la tecla A. También shift+clic en el candado.
-  useEffect(() => {
-    const dn = (e) => {
-      if (e.key === 'Shift' || e.key === 'a' || e.key === 'A') { e.preventDefault(); onUnlock(); }
-    };
-    window.addEventListener('keydown', dn);
-    return () => window.removeEventListener('keydown', dn);
-  }, [onUnlock]);
-  const onClick = (e) => { if (e.shiftKey) onUnlock(); };
-  // Móvil/responsive (sin teclado): pulsación LARGA del candado (~800 ms) lo abre.
-  const startPress = () => { longPress.current = setTimeout(onUnlock, 800); };
-  const cancelPress = () => { if (longPress.current) { clearTimeout(longPress.current); longPress.current = null; } };
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999, background: '#F5F0E7',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18,
-    }}>
-      <button
-        onClick={onClick}
-        onPointerDown={startPress}
-        onPointerUp={cancelPress}
-        onPointerLeave={cancelPress}
-        aria-label="Candado"
-        style={{
-          width: 96, height: 96, borderRadius: 24, border: '1px solid rgba(32,26,20,.12)',
-          background: '#fff', color: '#C4622D', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', cursor: 'pointer', boxShadow: '0 20px 50px -24px rgba(32,26,20,.4)',
-          touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none',
-        }}>
-        <Lock size={44} />
-      </button>
-      <p style={{ fontFamily: "'DM Sans',system-ui,sans-serif", color: '#6F6152', fontSize: 13, letterSpacing: '.02em' }}>
-        Web privada
-      </p>
-    </div>
-  );
-}
-
 /* ─── EXPORT ─────────────────────────────────────────────────────────────── */
 export default function CarpinterosLanding({ onEnter, embedded = false }) {
   useReveal();
   const rootRef = useRef(null);
-  const [locked, setLocked] = useState(!embedded); // al entrar, oculta tras candado (salvo incrustada en el portal)
-  if (locked) return <LockGate onUnlock={() => setLocked(false)} />;
   return (
     <div className={`cl-root ${embedded ? 'cl-embedded' : ''}`} ref={rootRef}>
       <style>{STYLES}</style>
