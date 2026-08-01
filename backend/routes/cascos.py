@@ -327,6 +327,19 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
     return {"success": True, "estado": "procesando", "jobId": job_id}
 
 
+@router.get("/cascos/proforma/ping")
+async def proforma_ping(current_user: Optional[dict] = Depends(get_current_user)):
+    """Endpoint de diagnóstico: confirma que el importador está disponible y
+    si la visión IA está configurada. El frontend lo sondea para distinguir
+    'servidor caido' de 'ruta no desplegada aún' de 'falta clave de IA'."""
+    from services.llm_vision import is_vision_available
+    return {
+        "ok": True,
+        "vision": is_vision_available(),
+        "master": _es_master(current_user),
+    }
+
+
 @router.get("/cascos/proforma/job/{job_id}")
 async def estado_proforma(job_id: str, current_user: Optional[dict] = Depends(get_current_user)):
     """Estado de un trabajo de importación de proforma (sondeo del frontend)."""

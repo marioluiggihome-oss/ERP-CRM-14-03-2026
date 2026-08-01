@@ -97,25 +97,34 @@ const _diagnostico = async (e) => {
     return `El servidor no responde (${motivo}). Está caído o terminando de desplegarse: espera un minuto y reinténtalo. Si sigue igual, revisa el despliegue del backend en Railway.`;
   }
 
-  // ¿Existe ya la ruta del análisis en segundo plano? Frontend y backend son
-  // servicios distintos en Railway y no se despliegan a la vez.
-  const sondeo = await probar(`${API_URL}/api/cascos/proforma/job/_ping`, { headers: { ...authHeaders() } });
-  if (sondeo.estado === 404 && /not found/i.test(sondeo.detail)) {
-    return 'El backend todavía sirve la versión anterior: por eso la petición se queda colgada hasta que se corta. Espera a que termine de desplegarse el backend en Railway y vuelve a probar.';
+  // ¿Existe ya la ruta del importador? Frontend y backend son servicios distintos
+  // en Railway y no se despliegan a la vez. El endpoint /ping es el más ligero.
+  const sondeo = await probar(`${API_URL}/api/cascos/proforma/ping`, { headers: { ...authHeaders() } });
+  if (sondeo.estado === 404) {
+    return 'El backend todavía sirve la versión anterior: por eso la petición se queda colgada hasta que se corta. Espera a que termine de desplegarse el backend en Railway (1-2 min) y vuelve a probar.';
+  }
+  if (sondeo.estado === 200) {
+    // El servidor está vivo y el endpoint existe. Comprobamos si la IA de visión
+    // está configurada, porque sin ella los PDFs sin capa de texto no se pueden leer.
+    let visionOk = false;
+    try {
+      const pd = await fetch(`${API_URL}/api/cascos/proforma/ping`, { headers: { ...authHeaders() } });
+      const pj = await pd.json();
+      visionOk = !!pj.vision;
+    } catch { /* noop */ }
+    if (!visionOk) {
+      return 'El PDF de Alvic no tiene capa de texto legible (es un PDF vectorial de "Imprimir a PDF") y la IA de visión no está configurada en el servidor. Solución: configura GEMINI_API_KEY en las variables de entorno de Railway.';
+    }
+    return `El envío del PDF corta la conexión (${motivo}). El servidor responde bien y la IA de visión está activa. Prueba a subir solo las páginas con la tabla de artículos (sin las páginas de renders 3D). Si sigue fallando, revisa los logs del backend en Railway.`;
   }
   if (sondeo.estado === 0) {
-    // Antes se concluía aquí que fallaban TODAS las peticiones autenticadas, pero
-    // solo se había probado una, y de este módulo. Se contrasta con una ruta
-    // autenticada de otro módulo para saber si el problema es general o de aquí.
     const otro = await probar(`${API_URL}/api/clients`, { headers: { ...authHeaders() } });
     if (otro.estado === 0) {
-      return `No sale ninguna petición con sesión: el servidor responde a una consulta simple (${ping.estado}) pero ni esta ruta ni el resto contestan. Vuelve a entrar en el ERP; si sigue igual, el backend se está reiniciando.`;
+      return `No sale ninguna petición con sesión: el servidor responde a una consulta simple (${ping.estado}) pero las rutas autenticadas no contestan. Vuelve a entrar en el ERP; si sigue igual, el backend se está reiniciando.`;
     }
-    return `El resto del ERP responde (${otro.estado}), pero las peticiones de este importador no llegan a contestar. Suele ser que el servidor tarda demasiado en conseguir conexión con la base de datos y se corta la llamada. Reinténtalo en un minuto; si se repite, hay que mirar las conexiones de MongoDB.`;
+    return `El resto del ERP responde (${otro.estado}), pero el importador no contesta. El backend puede estar reiniciándose o saturado. Espera 1 minuto y vuelve a intentarlo.`;
   }
-  // El servidor está vivo y acepta peticiones autenticadas: el que revienta es
-  // el envío del PDF. Lo más probable es que el proceso se caiga al recibirlo.
-  return `El envío del PDF corta la conexión (${motivo}), aunque el servidor responde bien a lo demás (comprobación ${ping.estado}, sondeo ${sondeo.estado}). Avisa: hay que mirar los logs del backend en Railway justo al reproducirlo.`;
+  return `El envío del PDF corta la conexión (${motivo}), aunque el servidor responde bien a lo demás. Avisa: hay que mirar los logs del backend en Railway justo al reproducirlo.`;
 };
 
 export default function ProformaImporter({ esMaster }) {
