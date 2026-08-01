@@ -13,11 +13,12 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
+import RecargarRenders from './RecargarRenders';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -502,6 +503,8 @@ export default function AIRenderStudio({ state, setState }) {
   // Panel izquierdo redimensionable/ocultable (solo en pantallas grandes).
   const [panelW, setPanelW] = useState(420);
   const [panelHidden, setPanelHidden] = useState(false);
+  // Saldo de renders y compra de packs (no caducan). Se abre solo al pulsar.
+  const [verRecarga, setVerRecarga] = useState(false);
   const resizingPanel = useRef(false);
   // UX móvil: colapso de secciones avanzadas por defecto
   const [showEstilo, setShowEstilo] = useState(false);
@@ -3229,6 +3232,14 @@ export default function AIRenderStudio({ state, setState }) {
           />
         </div>
       )}
+
+      {/* Saldo de renders: acceso siempre visible, para poder recargar
+          sin salir del estudio cuando se agota el cupo. */}
+      <button onClick={() => setVerRecarga(true)} title="Tus renders de IA"
+        className="fixed bottom-4 right-4 z-[60] px-3 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-lg flex items-center gap-1.5">
+        <Zap size={14} /> Mis renders
+      </button>
+      <RecargarRenders abierto={verRecarga} onClose={() => setVerRecarga(false)} />
     </div>
   );
 }

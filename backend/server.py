@@ -89,6 +89,7 @@ from routes.rentabilidad import router as rentabilidad_router
 from routes.gastos import router as gastos_router
 from routes.floor import router as floor_router
 from routes.cascos import router as cascos_router
+from routes.render_packs import router as render_packs_router
 from routes.propdata import router as propdata_router
 from routes.armarios2 import router as armarios2_router
 from routes.cocinasai import router as cocinasai_router
@@ -268,6 +269,7 @@ api_router.include_router(rentabilidad_router)
 api_router.include_router(gastos_router)
 api_router.include_router(floor_router)
 api_router.include_router(cascos_router)
+api_router.include_router(render_packs_router)
 api_router.include_router(propdata_router)
 api_router.include_router(armarios2_router)
 api_router.include_router(cocinasai_router)

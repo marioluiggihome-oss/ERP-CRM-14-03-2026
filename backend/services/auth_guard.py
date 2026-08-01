@@ -35,6 +35,9 @@ PUBLIC_API_PATHS = frozenset({
     "/api/auth/reset-password",
     "/api/maintenance/status",
     "/api/distributor/request",
+    # Stripe avisa del pago sin sesion del ERP; lo que autentica la llamada
+    # es la FIRMA del evento, que se valida en el propio endpoint.
+    "/api/render-packs/webhook",
     "/api/settings/public-logo",
     "/api/floor/public-logo",
     "/api/products/export/mv-catalog-pdf",
