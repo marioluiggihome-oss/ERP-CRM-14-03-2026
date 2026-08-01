@@ -492,6 +492,9 @@ export default function EstudioCocinas({ state, setState }) {
   const [panelW, setPanelW] = useState(224);
   const [panelHidden, setPanelHidden] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Sidebar overlay en mobile
+  // Panel derecho (acciones + proyecto) — solo desktop
+  const [rightOpen, setRightOpen] = useState(true);      // visible u oculto
+  const [rightExpanded, setRightExpanded] = useState(false); // normal (220px) o expandido (340px)
   const resizingPanel = useRef(false);
   const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
   useEffect(() => {
@@ -1054,21 +1057,21 @@ export default function EstudioCocinas({ state, setState }) {
           <h1 className={`text-xs font-black uppercase tracking-widest truncate ${t.title}`}>3D Estudio</h1>
           {proy.nombre_cliente && <p className={`text-[9px] truncate ${t.subtext}`}>{proy.nombre_cliente}</p>}
         </div>
-        {/* Botones de proyecto */}
-        <div className="flex items-center gap-1">
+        {/* Botones de proyecto — solo en mobile/tablet (en desktop van al panel derecho) */}
+        <div className="flex lg:hidden items-center gap-1">
           <button onClick={openProjectList} title="Abrir proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-            <FolderOpen size={12}/> <span className="hidden lg:inline">Proyectos</span>
-          </button>
-          <button onClick={generarDossier} disabled={dossierBusy || !render.imageUrl} title="Generar dossier PDF" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50">
-            {dossierBusy ? <Loader2 size={12} className="animate-spin"/> : <FileText size={12}/>} <span className="hidden lg:inline">Dossier</span>
+            <FolderOpen size={12}/> <span className="hidden md:inline">Proyectos</span>
           </button>
           <button onClick={saveProject} disabled={busySave} title="Guardar proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${savedId ? 'bg-emerald-600 text-white' : t.dlBtn}`}>
-            {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} <span className="hidden lg:inline">{savedId ? 'Guardado' : 'Guardar'}</span>
-          </button>
-          <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }} title="Nuevo proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-            <Plus size={12}/> <span className="hidden lg:inline">Nuevo</span>
+            {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>}
           </button>
         </div>
+        {/* Botón para abrir/cerrar panel derecho — solo desktop */}
+        <button onClick={() => setRightOpen(v => !v)}
+          className={`hidden lg:flex items-center justify-center w-8 h-8 rounded-lg transition-all ${rightOpen ? 'bg-amber-600/20 text-amber-600' : t.dlBtn}`}
+          title={rightOpen ? 'Ocultar panel derecho' : 'Mostrar panel derecho'}>
+          <ChevronRight size={15} className={`transition-transform ${rightOpen ? 'rotate-180' : ''}`}/>
+        </button>
         <ThemeSelector mode={themeMode} onChange={handleThemeChange} t={t} />
       </div>
 
@@ -1077,7 +1080,7 @@ export default function EstudioCocinas({ state, setState }) {
         <div className="lg:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
       )}
 
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-1 overflow-hidden min-h-0 relative">
 
         {/* Sidebar — overlay en mobile, fijo en desktop */}
         <div className={`
@@ -1769,6 +1772,151 @@ export default function EstudioCocinas({ state, setState }) {
 
           </div>
         </div>
+
+        {/* ═══ PANEL DERECHO (solo desktop) ═══════════════════════════════════ */}
+        <div className={`hidden lg:flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden border-l ${t.cardBorder} ${
+          rightOpen ? (rightExpanded ? 'w-[340px]' : 'w-[220px]') : 'w-0'
+        }`}>
+          {rightOpen && (
+            <div className={`flex flex-col h-full overflow-hidden ${t.sidebar}`}>
+              {/* Cabecera del panel derecho */}
+              <div className={`flex items-center justify-between px-3 py-2.5 flex-shrink-0 border-b ${t.cardBorder}`}>
+                <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Acciones</p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setRightExpanded(v => !v)}
+                    title={rightExpanded ? 'Reducir panel' : 'Expandir panel'}
+                    className={`flex items-center justify-center w-6 h-6 rounded transition-all ${t.dlBtn}`}>
+                    <Maximize2 size={11}/>
+                  </button>
+                  <button onClick={() => setRightOpen(false)}
+                    title="Ocultar panel"
+                    className={`flex items-center justify-center w-6 h-6 rounded transition-all ${t.dlBtn}`}>
+                    <X size={11}/>
+                  </button>
+                </div>
+              </div>
+
+              {/* Contenido scrollable */}
+              <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+
+                {/* ── Proyecto ── */}
+                <div className="flex flex-col gap-1.5">
+                  <p className={`text-[8px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
+                  <button onClick={openProjectList}
+                    className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                    <FolderOpen size={12}/> Abrir proyecto
+                  </button>
+                  <button onClick={saveProject} disabled={busySave}
+                    className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      savedId ? 'bg-emerald-600 text-white' : t.dlBtn
+                    }`}>
+                    {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>}
+                    {savedId ? 'Guardado' : 'Guardar proyecto'}
+                  </button>
+                  <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }}
+                    className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                    <Plus size={12}/> Nuevo proyecto
+                  </button>
+                </div>
+
+                {/* ── Exportar ── */}
+                <div className="flex flex-col gap-1.5">
+                  <p className={`text-[8px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Exportar</p>
+                  <button onClick={generarDossier} disabled={dossierBusy || !render.imageUrl}
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-40">
+                    {dossierBusy ? <Loader2 size={12} className="animate-spin"/> : <FileText size={12}/>} Dossier PDF
+                  </button>
+                  {render.imageUrl && (
+                    <button onClick={downloadWithWatermark}
+                      className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                      <Download size={12}/> Descargar PNG
+                    </button>
+                  )}
+                </div>
+
+                {/* ── Render (solo si hay imagen) ── */}
+                {render.imageUrl && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className={`text-[8px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Render actual</p>
+                    {/* Miniatura del render */}
+                    <div className={`rounded-xl overflow-hidden border ${t.cardBorder} cursor-pointer`}
+                      onClick={() => setRender(s => ({ ...s, fs: true }))}
+                      title="Ver a pantalla completa">
+                      <img src={imgSrc(render.imageUrl)} alt="Render" className="w-full object-cover" style={{maxHeight: rightExpanded ? '200px' : '130px'}}/>
+                    </div>
+                    <button onClick={guardarEnGaleria}
+                      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white transition-all">
+                      <Save size={12}/> Guardar en galería
+                    </button>
+                    <button onClick={attachToBudget}
+                      className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                        attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                      }`}>
+                      {attached ? <><CheckCircle size={12}/> Adjuntado</> : <><Send size={12}/> Al presupuesto</>}
+                    </button>
+                    {render.croquisPrev && (
+                      <button onClick={() => setCompareOn(v => !v)}
+                        className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                          compareOn ? 'bg-slate-800 text-white' : t.dlBtn
+                        }`}>
+                        <Image size={12}/> {compareOn ? 'Ocultar comparativa' : 'Comparar croquis'}
+                      </button>
+                    )}
+                    <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))}
+                      className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                        render.editMode ? 'bg-amber-600 text-white' : t.dlBtn
+                      }`}>
+                      <Edit3 size={12}/> {render.editMode ? 'Cancelar edición' : 'Editar render'}
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Marca de agua (solo si hay render) ── */}
+                {render.imageUrl && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className={`text-[8px] font-black uppercase tracking-widest ${t.sidebarSect}`}>
+                      <Stamp size={9} className="inline mr-1"/>Marca de agua
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => setWatermark(w => ({ ...w, mode: 'none' }))}
+                        className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${
+                          watermark.mode === 'none' ? 'bg-red-500 text-white' : t.tabInactive
+                        }`}>Sin marca</button>
+                      <button onClick={() => setWatermark(w => ({ ...w, mode: 'default' }))}
+                        className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${
+                          watermark.mode === 'default' ? 'bg-amber-600 text-white' : t.tabInactive
+                        }`}>Logo ERP</button>
+                      <button onClick={() => watermarkInputRef.current?.click()}
+                        className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all ${
+                          watermark.mode === 'custom' ? 'bg-purple-600 text-white' : t.tabInactive
+                        }`}>
+                        <ImagePlus size={10}/> {watermark.customLogoPreview ? 'Cambiar logo' : 'Logo personalizado'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Tema ── */}
+                <div className="flex flex-col gap-1.5">
+                  <p className={`text-[8px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Apariencia</p>
+                  <div className={`rounded-lg p-2 ${t.card}`}>
+                    <ThemeSelector mode={themeMode} onChange={handleThemeChange} t={t} />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Botón flotante para reabrir el panel derecho cuando está cerrado */}
+        {!rightOpen && (
+          <button onClick={() => setRightOpen(true)}
+            className={`hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 flex-col items-center justify-center w-6 h-20 rounded-l-xl shadow-lg border border-r-0 transition-all ${t.sidebar} ${t.cardBorder} hover:text-amber-600`}
+            title="Mostrar panel de acciones">
+            <ChevronLeft size={13}/>
+          </button>
+        )}
+
       </div>
 
       {/* Modal: Lista de proyectos guardados */}
