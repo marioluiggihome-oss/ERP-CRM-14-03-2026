@@ -13,7 +13,8 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Request, Response
 from fastapi.responses import StreamingResponse
 
-from config import db
+from services.db_client import get_db as _get_db_singleton
+db = _get_db_singleton()
 from services.jwt_service import (
     get_current_user, require_auth, require_admin, ADMIN_ROLE_FLAGS,
     create_access_token, create_refresh_token, verify_refresh_token,

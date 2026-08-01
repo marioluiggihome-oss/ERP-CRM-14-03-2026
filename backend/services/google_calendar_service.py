@@ -20,7 +20,9 @@ from urllib.parse import urlencode
 import httpx
 import jwt  # PyJWT (mismo paquete que usa jwt_service)
 
-from config import db, JWT_SECRET, JWT_ALGORITHM
+from config import JWT_SECRET, JWT_ALGORITHM
+from services.db_client import get_db as _get_db_gcal
+db = _get_db_gcal()
 
 logger = logging.getLogger("google_calendar")
 

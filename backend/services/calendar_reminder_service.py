@@ -20,7 +20,8 @@ except Exception:  # pragma: no cover
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from config import db
+from services.db_client import get_db as _get_db_singleton
+db = _get_db_singleton()
 from services.email_service import send_email
 
 logger = logging.getLogger("calendar_reminders")

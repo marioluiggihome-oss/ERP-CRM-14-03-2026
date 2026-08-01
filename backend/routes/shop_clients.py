@@ -9,7 +9,8 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Header
 
-from config import db
+from services.db_client import get_db as _get_db_singleton
+db = _get_db_singleton()
 
 logger = logging.getLogger(__name__)
 

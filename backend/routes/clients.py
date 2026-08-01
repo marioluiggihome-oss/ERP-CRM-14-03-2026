@@ -14,7 +14,8 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 
-from config import db
+from services.db_client import get_db as _get_db_singleton
+db = _get_db_singleton()
 from models.schemas import ClientUpdate
 from services.jwt_service import get_current_user, require_auth, ADMIN_ROLE_FLAGS
 

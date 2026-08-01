@@ -420,7 +420,7 @@ async def get_render_packs(user=Depends(require_admin)):
 async def grant_render_pack(payload: dict, user=Depends(require_admin)):
     """Añade un pack de renders (créditos extra) al cupo del mes del usuario.
     payload: {user_id, pack_id} o {user_id, renders} para una cantidad libre."""
-    from config import db as main_db
+    from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
     from services.ai_usage import _month
     uid = str((payload or {}).get("user_id", "")).strip()
     if not uid:
@@ -462,7 +462,7 @@ async def grant_render_pack(payload: dict, user=Depends(require_admin)):
 async def ai_usage_clients(user=Depends(require_admin)):
     """Medidor de consumo IA por cliente (mes en curso): renders del plan,
     packs extra, consumidos, restantes y coste estimado. Ordenado por % de uso."""
-    from config import db as main_db
+    from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
     from services.ai_usage import _month, DEFAULT_COST_PER
     month = _month()
     cost_render = float(DEFAULT_COST_PER.get("render", 0.12))
@@ -506,7 +506,7 @@ async def get_subscription_plans(user=Depends(require_admin)):
 
 @router.get("/subscription/users")
 async def get_subscription_users(user=Depends(require_admin)):
-    from config import db as main_db
+    from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
     users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
     result = []
     for u in users:
@@ -526,7 +526,7 @@ async def get_subscription_users(user=Depends(require_admin)):
 @router.post("/subscription/assign")
 async def assign_subscription(payload: dict, user=Depends(require_admin)):
     """Asigna un plan a uno o varios usuarios. payload: {user_ids, plan_id, custom_credits?, notes?}"""
-    from config import db as main_db
+    from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
     user_ids = payload.get("user_ids", [])
     plan_id = payload.get("plan_id", "")
     custom_credits = payload.get("custom_credits", None)
@@ -553,7 +553,7 @@ async def assign_subscription(payload: dict, user=Depends(require_admin)):
 @router.get("/subscription/credits-usage")
 async def get_credits_usage(user=Depends(require_admin)):
     """Consumo de créditos de IA de todos los usuarios en el mes actual."""
-    from config import db as main_db
+    from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
     from services.ai_usage import _month
     month = _month()
     credits_docs = await main_db.ai_credits.find({"month": month}, {"_id": 0}).to_list(None)

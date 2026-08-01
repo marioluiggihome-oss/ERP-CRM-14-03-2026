@@ -19,7 +19,8 @@ import pyotp
 import qrcode
 import resend
 
-from config import db
+from services.db_client import get_db as _get_db_singleton
+db = _get_db_singleton()
 from models.schemas import (
     UserRegisterRequest, UserRegisterResponse,
     EmailVerificationRequest,

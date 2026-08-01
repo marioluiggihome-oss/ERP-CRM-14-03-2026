@@ -119,7 +119,7 @@ async def generate_rentabilidad_report(
     Genera un informe de rentabilidad por líneas con filtros avanzados.
     Devuelve datos estructurados para el frontend y para generar PDF.
     """
-    from server import db
+    from services.db_client import get_db as _get_db_rep2; db = _get_db_rep2()
 
     try:
         # Se filtra en MONGO lo que se puede (fecha, tipo, revisada) en vez de
@@ -443,7 +443,7 @@ async def generate_rentabilidad_pdf(
     ROWALT = colors.HexColor('#f8fafc')    # fila alterna
     LINE = colors.HexColor('#e2e8f0')      # rejilla suave
     try:
-        from server import db as _db
+        from services.db_client import get_db as _get_db_rep; _db = _get_db_rep()
         _settings = await _db["settings"].find_one({"id": "global-settings"}) or {}
         company = (_settings.get("companyName") or "").strip()
     except Exception:
@@ -677,7 +677,7 @@ async def generate_rentabilidad_pdf(
 @router.get("/reports/available-filters")
 async def get_available_filters():
     """Devuelve los valores disponibles para los filtros (clientes, categorías, etc.)"""
-    from server import db
+    from services.db_client import get_db as _get_db_rep2; db = _get_db_rep2()
 
     try:
         # Solo se necesitan estos campos para poblar los desplegables de filtros:
