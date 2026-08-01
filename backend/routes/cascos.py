@@ -32,7 +32,14 @@ def _safe_float(v, default=0.0):
         return default
 
 mongo_url = os.environ.get('MONGO_URL')
-client = AsyncIOMotorClient(mongo_url)
+# Este backend abre un cliente de Mongo por modulo (unos 40 en total), cada uno
+# con su propio pool. Un modulo poco usado como este tiene que abrir conexion
+# nueva cuando se le llama y, si el cluster va justo de conexiones, la peticion
+# se quedaba colgada los 30 s del timeout por defecto hasta que la cortaba la
+# pasarela: en el navegador eso se ve como un "Failed to fetch" sin explicacion.
+# Con 5 s falla rapido y con un error legible, y el pool se limita para no
+# acaparar conexiones del cluster.
+client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000, maxPoolSize=10)
 db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
 
@@ -128,6 +135,9 @@ def _es_master(user: Optional[dict]) -> bool:
 
 
 _TAREAS_PROFORMA = set()
+# Estado de los analisis de proforma en curso: {job_id: {...}}. En memoria, no en
+# Mongo (ver _job_set). Se limpia solo en _job_limpiar.
+_JOBS = {}
 
 _PROMPT_PROFORMA = (
     "Esta imagen es una página de una PROFORMA de muebles de cocina (cascos). "
@@ -228,15 +238,32 @@ async def _proforma_job(job_id: str, pdf_bytes: bytes):
 
 
 async def _job_set(job_id: str, **campos):
-    """Actualiza el estado del trabajo. Va en Mongo (y no en memoria) para que el
-    sondeo funcione aunque lo atienda otro worker del servidor."""
-    try:
-        await db.cascos_proforma_jobs.update_one(
-            {"id": job_id},
-            {"$set": {**campos, "updatedAt": datetime.now(timezone.utc).isoformat()}},
-        )
-    except Exception as e:
-        logger.warning("proforma job %s: no se pudo guardar el estado: %s", job_id, e)
+    """Actualiza el estado del trabajo.
+
+    El estado vive EN MEMORIA a proposito. Antes iba a Mongo para que el sondeo
+    funcionase aunque lo atendiera otro worker, pero el servicio corre con una
+    sola replica y a cambio metia una escritura en Mongo dentro de la peticion:
+    si el cluster tardaba en dar conexion, el POST se colgaba y el navegador solo
+    veia un "Failed to fetch". Analizar un PDF no necesita base de datos, asi que
+    ya no depende de ella. (Si algun dia hay varias replicas, habra que volver a
+    un almacen compartido.)
+    """
+    job = _JOBS.get(job_id)
+    if job is None:
+        return
+    job.update(campos)
+    job["updatedAt"] = datetime.now(timezone.utc).isoformat()
+
+
+def _job_limpiar():
+    """Descarta los trabajos viejos para que el diccionario no crezca sin fin."""
+    limite = datetime.now(timezone.utc) - timedelta(hours=2)
+    for jid, j in list(_JOBS.items()):
+        try:
+            if datetime.fromisoformat(j.get("createdAt")) < limite:
+                _JOBS.pop(jid, None)
+        except Exception:
+            _JOBS.pop(jid, None)
 
 
 @router.post("/cascos/proforma")
@@ -287,17 +314,12 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
 
     job_id = f"prof-{uuid.uuid4().hex[:12]}"
     ahora = datetime.now(timezone.utc).isoformat()
-    await db.cascos_proforma_jobs.insert_one({
+    _job_limpiar()
+    _JOBS[job_id] = {
         "id": job_id, "estado": "procesando", "hechas": 0, "total": 0,
         "items": [], "error": "", "userId": (current_user or {}).get("id") or "",
         "createdAt": ahora, "updatedAt": ahora,
-    })
-    # Limpieza oportunista de trabajos viejos (no bloquea la respuesta).
-    try:
-        limite = (datetime.now(timezone.utc) - timedelta(hours=6)).isoformat()
-        await db.cascos_proforma_jobs.delete_many({"createdAt": {"$lt": limite}})
-    except Exception:
-        pass
+    }
     # Se guarda la referencia: una tarea suelta puede llevársela el recolector.
     tarea = _asyncio.ensure_future(_proforma_job(job_id, pdf_bytes))
     _TAREAS_PROFORMA.add(tarea)
@@ -310,7 +332,7 @@ async def estado_proforma(job_id: str, current_user: Optional[dict] = Depends(ge
     """Estado de un trabajo de importación de proforma (sondeo del frontend)."""
     if not _es_master(current_user):
         raise HTTPException(status_code=403, detail="Solo el master puede importar proformas de proveedor.")
-    job = await db.cascos_proforma_jobs.find_one({"id": job_id}, {"_id": 0})
+    job = _JOBS.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="El análisis ha caducado. Vuelve a subir el PDF.")
     return {
