@@ -376,7 +376,7 @@ const PLACEHOLDER_TIPO = {
 };
 
 export default function AIRenderStudio({ state, setState }) {
-  const isMaster = state?.currentUser?.isAdmin === true;
+  const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
   const canUseRender360 = isMaster || state?.currentUser?.canUseRender360 === true;
   // Permiso específico para exportar a 4K (o rol master).
