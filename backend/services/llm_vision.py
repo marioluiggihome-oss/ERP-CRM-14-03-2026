@@ -445,6 +445,7 @@ async def generate_image_with_gemini(
     reference_mime: str = "image/png",
     reference_images: Optional[list] = None,
     image_size: Optional[str] = None,
+    model_override: Optional[str] = None,
 ) -> str:
     """
     Genera una imagen con Gemini a partir de un prompt (y opcionalmente una
@@ -527,9 +528,14 @@ async def generate_image_with_gemini(
             resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
         return _extract_inline_image(resp), resp
 
+    # Si se pasa model_override, ese modelo va primero en la cascada
+    _model_cascade = GEMINI_IMAGE_MODELS
+    if model_override:
+        _model_cascade = [model_override] + [m for m in GEMINI_IMAGE_MODELS if m != model_override]
+
     loop = asyncio.get_event_loop()
     last_err = None
-    for model_name in GEMINI_IMAGE_MODELS:
+    for model_name in _model_cascade:
         try:
             data_url, resp = await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_call, model_name), timeout=90

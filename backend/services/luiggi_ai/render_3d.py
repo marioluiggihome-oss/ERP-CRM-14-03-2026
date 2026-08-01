@@ -131,6 +131,21 @@ PRO_KITCHEN_DESIGN_PRINCIPLES = (
 )
 
 
+# Prefijo de prompt para IA 3 (Gemini premium / fallback de Flux)
+_PREMIUM_PROMPT_PREFIX = (
+    "ULTRA-PREMIUM PHOTOREALISTIC KITCHEN RENDER. "
+    "Professional architectural photography, shot with Phase One IQ4 150MP medium format camera, "
+    "Schneider Kreuznach 28mm LS lens, f/8, ISO 100, perfect exposure. "
+    "Physically-based rendering (PBR) with path tracing, subsurface scattering on stone surfaces, "
+    "anisotropic reflections on metal, micro-detail wood grain texture at 16K resolution. "
+    "Cinematic natural daylight from floor-to-ceiling windows, soft fill light, "
+    "warm accent LED under-cabinet strips. Perfect depth of field, tack-sharp foreground, "
+    "subtle bokeh on background. Hyper-realistic material response: fingerprint-free matte lacquer, "
+    "veined marble with translucency, brushed metal with directional grain. "
+    "Award-winning interior design magazine quality. No CGI artifacts, no plastic look."
+)
+
+
 class Render3DService:
     """Servicio de generación de renders 3D fotorrealistas."""
 
@@ -933,16 +948,21 @@ class Render3DService:
                                   parsed_params: Optional[Dict[str, Any]] = None,
                                   reference_image_base64: Optional[str] = None,
                                   reference_mime: str = "image/png",
-                                  reference_images: Optional[list] = None) -> Dict[str, Any]:
+                                  reference_images: Optional[list] = None,
+                                  model_override: Optional[str] = None,
+                                  prompt_prefix: Optional[str] = None) -> Dict[str, Any]:
         """Genera el render con Gemini y lo devuelve como data URL (marca blanca)."""
         from services.llm_vision import generate_image_with_gemini
         start = time.time()
+        # Aplicar prefijo de prompt si se especifica (IA 3 premium)
+        final_prompt = f"{prompt_prefix}\n\n{task_prompt}" if prompt_prefix else task_prompt
         try:
             data_url = await generate_image_with_gemini(
-                task_prompt,
+                final_prompt,
                 reference_image_base64=reference_image_base64,
                 reference_mime=reference_mime or "image/png",
                 reference_images=reference_images,
+                model_override=model_override,
             )
         except Exception as e:
             logger.error(f"Render (Gemini) error: {e}")
@@ -963,6 +983,98 @@ class Render3DService:
         if parsed_params is not None:
             out["parsed_params"] = parsed_params
         return out
+
+    async def _render_with_flux(self, task_prompt: str, prompt: str,
+                                 parsed_params: Optional[Dict[str, Any]] = None,
+                                 reference_image_base64: Optional[str] = None,
+                                 reference_mime: str = "image/png",
+                                 replicate_key: str = "") -> Dict[str, Any]:
+        """Genera el render con Flux Pro (black-forest-labs/flux-1.1-pro) via Replicate.
+        Devuelve la imagen como data URL base64 para consistencia con los otros motores.
+        Requiere REPLICATE_API_TOKEN en el entorno."""
+        import asyncio
+        import base64
+        import httpx
+        start = time.time()
+        try:
+            # Preparar input para Flux 1.1 Pro
+            flux_input: Dict[str, Any] = {
+                "prompt": f"{_PREMIUM_PROMPT_PREFIX}\n\n{task_prompt}",
+                "aspect_ratio": "16:9",
+                "output_format": "png",
+                "output_quality": 95,
+                "safety_tolerance": 5,
+                "prompt_upsampling": True,
+            }
+            # Si hay imagen de referencia, usarla como img2img (Flux Redux)
+            # Flux 1.1 Pro no acepta img2img directamente; usamos solo el prompt
+            # (en el futuro se puede usar flux-redux para img2img)
+
+            headers = {
+                "Authorization": f"Bearer {replicate_key}",
+                "Content-Type": "application/json",
+                "Prefer": "wait",  # esperar resultado directamente (hasta 60s)
+            }
+
+            async def _call_replicate():
+                async with httpx.AsyncClient(timeout=120) as client:
+                    # Crear predicción
+                    resp = await client.post(
+                        "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions",
+                        headers=headers,
+                        json={"input": flux_input},
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    # Con Prefer: wait, el resultado puede venir directo
+                    if data.get("status") == "succeeded" and data.get("output"):
+                        return data["output"]
+                    # Si no, hacer polling
+                    prediction_url = data.get("urls", {}).get("get") or f"https://api.replicate.com/v1/predictions/{data['id']}"
+                    for _ in range(60):  # hasta 120s
+                        await asyncio.sleep(2)
+                        poll = await client.get(prediction_url, headers=headers)
+                        poll.raise_for_status()
+                        pd = poll.json()
+                        if pd.get("status") == "succeeded":
+                            return pd.get("output")
+                        if pd.get("status") in ("failed", "canceled"):
+                            raise RuntimeError(f"Flux falló: {pd.get('error', 'unknown')}")
+                    raise RuntimeError("Flux: tiempo de espera agotado")
+
+            output = await _call_replicate()
+            # output es una URL o lista de URLs con la imagen generada
+            image_url = output[0] if isinstance(output, list) else output
+            if not image_url:
+                raise RuntimeError("Flux no devolvio imagen")
+
+            # Descargar la imagen y convertir a data URL
+            async with httpx.AsyncClient(timeout=60) as client:
+                img_resp = await client.get(image_url)
+                img_resp.raise_for_status()
+                img_b64 = base64.b64encode(img_resp.content).decode("ascii")
+                data_url = f"data:image/png;base64,{img_b64}"
+
+            out = {
+                "success": True,
+                "status": "completed",
+                "result": {"images": [data_url]},
+                "engine": f"{self.config.brand_name} (Flux Pro)",
+                "duration_seconds": round(time.time() - start, 1),
+                "prompt_used": prompt,
+            }
+            if parsed_params is not None:
+                out["parsed_params"] = parsed_params
+            return out
+
+        except Exception as e:
+            logger.error(f"Render (Flux) error: {e}")
+            return {
+                "success": False,
+                "status": "failed",
+                "error": f"Flux Pro no pudo generar el render: {str(e)[:200]}",
+                "engine": self.config.brand_name,
+            }
 
     async def _render_with_manus(self, task_prompt: str, prompt: str,
                                  parsed_params: Optional[Dict[str, Any]] = None,
@@ -1047,6 +1159,7 @@ class Render3DService:
         provider = (provider or os.environ.get("KITCHEN_RENDER_PROVIDER") or "gemini").lower()
         manus_ready = bool(getattr(self.config, "provider_api_key", ""))
 
+        # IA 2: Manus
         if provider == "manus" and manus_ready:
             res = await self._render_with_manus(
                 task_prompt, prompt, parsed_params,
@@ -1056,6 +1169,47 @@ class Render3DService:
                 return res
             logger.warning("Render con Manus falló; usando Gemini como respaldo.")
 
+        # IA 3: Flux Pro (Replicate) si hay clave, si no cae a Gemini premium
+        if provider == "flux":
+            replicate_key = os.environ.get("REPLICATE_API_TOKEN", "").strip()
+            if replicate_key:
+                res = await self._render_with_flux(
+                    task_prompt, prompt, parsed_params,
+                    reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+                    replicate_key=replicate_key,
+                )
+                if res.get("success"):
+                    return res
+                logger.warning("Render con Flux falló; usando Gemini premium como respaldo.")
+            else:
+                logger.info("REPLICATE_API_TOKEN no configurado; usando Gemini premium para IA 3.")
+            # Fallback a Gemini con prompt premium
+            return await self._render_with_gemini(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+                reference_images=reference_images,
+                prompt_prefix=_PREMIUM_PROMPT_PREFIX,
+            )
+
+        # IA 4: Gemini Flash (más rápido)
+        if provider == "gemini_flash":
+            return await self._render_with_gemini(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+                reference_images=reference_images,
+                model_override="gemini-2.5-flash-image",
+            )
+
+        # gemini_premium (legacy): Gemini con prompt enriquecido
+        if provider == "gemini_premium":
+            return await self._render_with_gemini(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+                reference_images=reference_images,
+                prompt_prefix=_PREMIUM_PROMPT_PREFIX,
+            )
+
+        # IA 1 / default: Gemini estándar
         return await self._render_with_gemini(
             task_prompt, prompt, parsed_params,
             reference_image_base64=reference_image_base64, reference_mime=reference_mime,
