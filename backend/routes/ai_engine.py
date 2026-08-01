@@ -102,6 +102,15 @@ async def get_render_design(design_id: str, current_user: Optional[dict] = Depen
 
 @ai_engine_router.delete("/designs/{design_id}")
 async def delete_render_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    # Validar propiedad: solo el dueño o un admin puede borrar
+    doc = await _db.render3d_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    if current_user and current_user.get("id") and doc.get("userId"):
+        is_owner = doc["userId"] == current_user["id"]
+        is_admin = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
+        if not is_owner and not is_admin:
+            raise HTTPException(status_code=403, detail="Sin permiso para eliminar este proyecto")
     await _db.render3d_designs.delete_one({"id": design_id})
     return {"success": True}
 

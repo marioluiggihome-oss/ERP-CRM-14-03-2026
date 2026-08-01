@@ -449,10 +449,15 @@ export default function EstudioCocinas({ state, setState }) {
   const addElemento = useCallback((elemId, paredIdx) => {
     const elem = ELEMENTOS_COCINA.find(e => e.id === elemId);
     if (!elem) return;
-    setDistribucion(d => ({
-      ...d,
-      elementos: [...d.elementos, { id: elemId, label: elem.label, emoji: elem.emoji, pared_idx: paredIdx, ancho: elem.ancho_default }]
-    }));
+    setDistribucion(d => {
+      // Calcular posicion_cm acumulando anchos de elementos previos en la misma pared
+      const elemsEnPared = d.elementos.filter(e => e.pared_idx === paredIdx);
+      const posicion_cm = elemsEnPared.reduce((acc, e) => acc + (e.ancho || 60), 0);
+      return {
+        ...d,
+        elementos: [...d.elementos, { id: elemId, label: elem.label, emoji: elem.emoji, pared_idx: paredIdx, ancho: elem.ancho_default, posicion_cm }]
+      };
+    });
   }, []);
 
   const removeElemento = useCallback((idx) => {
@@ -684,6 +689,10 @@ export default function EstudioCocinas({ state, setState }) {
       setRender(s => ({ ...s, status: 'error', msg: 'Escribe o dicta una descripción' }));
       return;
     }
+    // Revocar blob URL anterior para evitar memory leak
+    if (render.imageUrl && render.imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(render.imageUrl);
+    }
     setRender(s => ({ ...s, status: 'loading', msg: 'Generando render…', imageUrl: null }));
     try {
       // Con croquis, quitamos del texto de materiales/descripción los fragmentos que
@@ -730,6 +739,10 @@ export default function EstudioCocinas({ state, setState }) {
 
   const editRender = useCallback(async () => {
     if (!render.editTxt.trim()) return;
+    if (!render.imageUrl) {
+      setRender(s => ({ ...s, status: 'error', msg: 'No hay render para editar. Genera uno primero.' }));
+      return;
+    }
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
       // Mismo pipeline que "Estudio 3D": mandamos la imagen actual como referencia
@@ -1044,7 +1057,7 @@ export default function EstudioCocinas({ state, setState }) {
           <button onClick={saveProject} disabled={busySave} title="Guardar proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${savedId ? 'bg-emerald-600 text-white' : t.dlBtn}`}>
             {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} <span className="hidden md:inline">{savedId ? 'Guardado' : 'Guardar'}</span>
           </button>
-          <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); }} title="Nuevo proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+          <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }} title="Nuevo proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
             <Plus size={12}/> <span className="hidden md:inline">Nuevo</span>
           </button>
         </div>
@@ -1144,28 +1157,33 @@ export default function EstudioCocinas({ state, setState }) {
                           </div>
                         )}
                       </div>
-                      <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos</p>
-                      <div className="flex flex-wrap gap-1">
-                        {ELEMENTOS_COCINA.map(e => (
-                          <button key={e.id} onClick={() => addElemento(e.id, 0)}
-                            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${t.input} hover:opacity-80`}
-                            title={`Añadir ${e.label} (${e.ancho_default}cm)`}>
-                            <span>{e.emoji}</span>
-                          </button>
-                        ))}
-                      </div>
-                      {distribucion.elementos.length > 0 && (
-                        <div className="flex flex-col gap-0.5">
-                          {distribucion.elementos.map((el, i) => (
-                            <div key={i} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] ${t.input}`}>
-                              <span>{el.emoji}</span>
-                              <span className="flex-1 truncate">{el.label}</span>
-                              <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
-                              <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[10px]">×</button>
+                      <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos por pared</p>
+                      {distribucion.paredes.map((pared, pIdx) => (
+                        <div key={pIdx} className={`rounded-lg p-1.5 mb-1 ${t.input}`}>
+                          <p className={`text-[8px] font-bold mb-1 ${t.sidebarLabel}`}>{pared.nombre} ({pared.ancho}cm)</p>
+                          <div className="flex flex-wrap gap-0.5 mb-1">
+                            {ELEMENTOS_COCINA.map(e => (
+                              <button key={e.id} onClick={() => addElemento(e.id, pIdx)}
+                                className={`flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-medium transition-all ${t.input} hover:opacity-80`}
+                                title={`Añadir ${e.label} (${e.ancho_default}cm) a ${pared.nombre}`}>
+                                <span className="text-[10px]">{e.emoji}</span>
+                              </button>
+                            ))}
+                          </div>
+                          {distribucion.elementos.filter(el => el.pared_idx === pIdx).length > 0 && (
+                            <div className="flex flex-col gap-0.5">
+                              {distribucion.elementos.map((el, i) => el.pared_idx === pIdx ? (
+                                <div key={i} className={`flex items-center gap-1 px-1 py-0.5 rounded text-[7px] ${t.card}`}>
+                                  <span>{el.emoji}</span>
+                                  <span className="flex-1 truncate">{el.label}</span>
+                                  <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
+                                  <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[9px]">×</button>
+                                </div>
+                              ) : null)}
                             </div>
-                          ))}
+                          )}
                         </div>
-                      )}
+                      ))}
                     </>
                   )}
                 </div>;

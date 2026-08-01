@@ -37,10 +37,13 @@ logger = logging.getLogger("estudio_cocinas")
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 try:
-    from services.jwt_service import require_auth
+    from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
     _DEPS = [Depends(require_auth)]
 except Exception:
     _DEPS = []
+    async def get_current_user():
+        return None
+    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
 
 router = APIRouter(
     prefix="/estudio-cocinas",
@@ -1303,8 +1306,9 @@ class GaleriaGuardarPayload(BaseModel):
 
 
 @router.post("/galeria/guardar")
-async def galeria_guardar(payload: GaleriaGuardarPayload):
+async def galeria_guardar(payload: GaleriaGuardarPayload, current_user: Optional[dict] = Depends(get_current_user)):
     """Guarda un render generado en la galería MongoDB."""
+    user_id = (current_user or {}).get("id")
     doc = {
         "image_url": payload.image_url,
         "cliente": payload.cliente,
@@ -1314,6 +1318,7 @@ async def galeria_guardar(payload: GaleriaGuardarPayload):
         "presupuesto": payload.presupuesto,
         "fecha": datetime.datetime.utcnow(),
         "favorito": False,
+        "userId": user_id,
     }
     result = await _galeria_db.insert_one(doc)
     return {"ok": True, "id": str(result.inserted_id)}
