@@ -2320,7 +2320,7 @@ export default function AIRenderStudio({ state, setState }) {
                     ))}
                   </div>
                 </div>
-              </div>
+              </div>}
 
               {/* Equipamiento */}
               <div className="rounded-xl border border-slate-200 p-3 flex flex-col gap-2">
@@ -2333,7 +2333,7 @@ export default function AIRenderStudio({ state, setState }) {
                     </button>
                   ))}
                 </div>
-                            </div>}
+                </div>
               </div>
               {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) - colapsable */}
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col">
