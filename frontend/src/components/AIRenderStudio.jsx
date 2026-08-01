@@ -479,11 +479,11 @@ export default function AIRenderStudio({ state, setState }) {
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
-  // Motor de render: 'ia1' = Gemini (por defecto), 'ia2' = Manus, 'ia3' = Flux Schnell (Replicate, ~$0.003/img), 'ia4' = Gemini Flash rápido.
+  // Motor de render: 'ia1' = Gemini estándar, 'ia2' = Manus, 'ia3' = Gemini prompt ultra-premium (gratis), 'ia4' = Gemini Flash rápido.
   const [motor, setMotor] = useState('ia1');
   const providerOf = () => {
     if (motor === 'ia2') return 'manus';
-    if (motor === 'ia3') return 'flux';        // Flux Schnell (Replicate, ~$0.003/img) — cae a Gemini premium si no hay clave
+    if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
     if (motor === 'ia4') return 'gemini_flash'; // Gemini Flash (rápido)
     return 'gemini';
   };
@@ -2419,7 +2419,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Flux Schnell — rápido y económico'], ['ia4', 'IA 4', 'Gemini Flash — rápido']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
+                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
                         className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}
