@@ -512,3 +512,60 @@ async def nomenclaturas_pdf(current_user: Optional[dict] = Depends(get_current_u
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="Nomenclaturas_MV_rellenable.pdf"'},
     )
+
+
+# ─── PROYECTOS DE PROFORMA ALVIC (guardar/cargar con metadatos) ─────────────────
+@router.post("/cascos/proforma/proyectos")
+async def guardar_proforma_proyecto(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Guarda un proyecto de proforma Alvic (items + overrides + parámetros de costes). Solo MASTER."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede guardar proyectos de proforma.")
+    uid = (current_user or {}).get("id") or "anonymous"
+    pid = (payload or {}).get("id") or f"prof-{uuid.uuid4().hex[:10]}"
+    now = datetime.now(timezone.utc).isoformat()
+    existing = await _get_db().proforma_proyectos.find_one({"id": pid}, {"_id": 0, "createdAt": 1})
+    doc = {
+        "id": pid,
+        "userId": uid,
+        "nombre": str((payload or {}).get("nombre") or "Sin nombre"),
+        "items": (payload or {}).get("items") or [],
+        "overrides": (payload or {}).get("overrides") or {},
+        "parametros": (payload or {}).get("parametros") or {},
+        "precioM2Puerta": (payload or {}).get("precioM2Puerta") or "",
+        "createdAt": (existing or {}).get("createdAt") or now,
+        "updatedAt": now,
+    }
+    await _get_db().proforma_proyectos.update_one({"id": pid}, {"$set": doc}, upsert=True)
+    doc.pop("_id", None)
+    return {"success": True, "proyecto": doc}
+
+
+@router.get("/cascos/proforma/proyectos")
+async def listar_proforma_proyectos(current_user: Optional[dict] = Depends(get_current_user)):
+    """Lista los proyectos de proforma del usuario actual. Solo MASTER."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede ver proyectos de proforma.")
+    uid = (current_user or {}).get("id") or ""
+    query = {"userId": uid} if uid else {}
+    proyectos = await _get_db().proforma_proyectos.find(query, {"_id": 0}).sort("updatedAt", -1).to_list(200)
+    return {"success": True, "proyectos": proyectos}
+
+
+@router.get("/cascos/proforma/proyectos/{proyecto_id}")
+async def obtener_proforma_proyecto(proyecto_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Obtiene un proyecto de proforma por ID. Solo MASTER."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede ver proyectos de proforma.")
+    doc = await _get_db().proforma_proyectos.find_one({"id": proyecto_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado.")
+    return {"success": True, "proyecto": doc}
+
+
+@router.delete("/cascos/proforma/proyectos/{proyecto_id}")
+async def borrar_proforma_proyecto(proyecto_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Borra un proyecto de proforma. Solo MASTER."""
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede borrar proyectos de proforma.")
+    await _get_db().proforma_proyectos.delete_one({"id": proyecto_id})
+    return {"success": True}

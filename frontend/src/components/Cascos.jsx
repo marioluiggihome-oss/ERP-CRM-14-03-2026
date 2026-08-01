@@ -153,6 +153,7 @@ const Cascos = ({ state, setState }) => {
   const currentUser = state?.currentUser;
   const esMasterCascos = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente);
   const [showRenta, setShowRenta] = useState(false); // módulo unificado de rentabilidad (Alvic/MV, solo master)
+  const [presupuestoBloqueado, setPresupuestoBloqueado] = useState(false); // bloquear edición del presupuesto
   const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
   const [relacionRevisar, setRelacionRevisar] = useState(null); // muebles detectados pendientes de revisar
   const [descargandoPdf, setDescargandoPdf] = useState(false);
@@ -734,12 +735,23 @@ const Cascos = ({ state, setState }) => {
               )}
             </div>
           )}
-          {/* Candado (solo master): SOLO se abre con Shift+clic (clic normal no hace nada). */}
+          {/* Candado (solo master):
+               - Clic normal = bloquear/desbloquear edición del presupuesto
+               - Shift+clic = abrir/cerrar panel de Rentabilidad */}
           {esMasterCascos && (
-            <button onClick={(e) => { if (e.shiftKey) setShowRenta(v => !v); }}
-              title="Rentabilidad (solo master) — mantén Shift y haz clic para abrir"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs ${showRenta ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'}`}>
-              {showRenta ? <Unlock size={15} /> : <Lock size={15} />}
+            <button
+              onClick={(e) => {
+                if (e.shiftKey) { setShowRenta(v => !v); }
+                else { setPresupuestoBloqueado(v => !v); }
+              }}
+              title={presupuestoBloqueado ? 'Desbloquear edición del presupuesto (Shift+clic = Rentabilidad)' : 'Bloquear edición del presupuesto (Shift+clic = Rentabilidad)'}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs transition-colors ${
+                presupuestoBloqueado
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : showRenta ? 'bg-emerald-400 text-emerald-900' : 'bg-emerald-500/90 text-white hover:bg-emerald-500'
+              }`}>
+              {presupuestoBloqueado ? <Lock size={15} /> : <Unlock size={15} />}
+              {presupuestoBloqueado && <span className="text-[10px] font-black">Bloqueado</span>}
             </button>
           )}
         </div>

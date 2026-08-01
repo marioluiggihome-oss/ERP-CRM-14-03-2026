@@ -481,6 +481,28 @@ export default function EstudioCocinas({ state, setState }) {
   const watermarkInputRef = useRef(null);
   const defaultLogo = state?.logo || null;
 
+  // ── Permisos ──
+  const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true;
+
+  // ── Motor IA (solo master ve IA2/IA3/IA4) ──
+  // ia1=Gemini pro (default), ia2=Manus, ia3=Gemini flash (rápido), ia4=Gemini ultra-fotorrealista
+  const [motorIA, setMotorIA] = useState('ia1');
+  const providerDeMotor = () => motorIA === 'ia2' ? 'manus' : 'gemini';
+  // Prompt extra según motor
+  const promptExtraMotor = (base) => {
+    if (motorIA === 'ia4') {
+      return `ULTRA-PHOTOREALISTIC architectural visualization, 8K resolution, professional kitchen photography, shot with Canon EOS R5 85mm lens, f/2.8, golden hour natural light from window, physically-based rendering, subsurface scattering on surfaces, ray-traced reflections, volumetric light rays, micro-detail textures visible, interior design magazine quality. ${base}`;
+    }
+    if (motorIA === 'ia3') {
+      return `${base}. Render fotorrealista rápido, buena calidad, iluminación natural.`;
+    }
+    return base;
+  };
+
+  // ── Comparativa A/B entre dos renders ──
+  const [renderB, setRenderB] = useState({ status: null, msg: '', imageUrl: null });
+  const [compareAB, setCompareAB] = useState(false);
+
   // ── Nuevas funcionalidades migradas ──
   const [attached, setAttached] = useState(false);       // Adjuntado al presupuesto
   const [compareOn, setCompareOn] = useState(false);     // Comparativa croquis vs render
@@ -719,13 +741,14 @@ export default function EstudioCocinas({ state, setState }) {
         descripcion = `Genera un render 3D fotorrealista RESPETANDO FIELMENTE el croquis/plano adjunto: misma distribución, mismos módulos (altos, bajos, columnas), mismas proporciones y posiciones. No añadas ni quites muebles, no añadas isla ni ventanas que no estén en el croquis. ${descripcion}`;
       }
 
+      const descFinal = promptExtraMotor(descripcion);
       const res = await fetch(`${API}/api/ai-engine/render`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({
-          description: descripcion,
+          description: descFinal,
           style: proy.estilo || undefined,
-          provider: 'gemini',
+          provider: providerDeMotor(),
           referenceImage: conCroquis ? render.croquis : undefined,
         }),
       });
@@ -735,12 +758,11 @@ export default function EstudioCocinas({ state, setState }) {
       const u = data.result?.images?.[0] || data.imageUrl;
       if (!u) throw new Error('El motor no devolvió ninguna imagen');
       const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
-      setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: shown, originalUrl: u }));
+      setRender(s => ({ ...s, status: 'success', msg: `Render generado [${motorIA.toUpperCase()}]`, imageUrl: shown, originalUrl: u }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy, render.croquis, freeDesign]);
-
+    }, [proy, render.croquis, freeDesign, motorIA]);
   const editRender = useCallback(async () => {
     if (!render.editTxt.trim()) return;
     if (!render.imageUrl) {
@@ -1400,6 +1422,21 @@ export default function EstudioCocinas({ state, setState }) {
                   </p>
                 )}
 
+                {/* Selector de motor IA — solo master */}
+                {isMaster && (
+                  <div className={`flex items-center gap-2 p-2 rounded-lg ${t.card}`}>
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${t.motorText} whitespace-nowrap`}>Motor</span>
+                    <div className="flex bg-slate-100/10 rounded-lg p-0.5 gap-0.5 flex-1">
+                      {[['ia1','IA 1','Motor principal (Gemini pro)'],['ia2','IA 2','Motor alternativo (Manus)'],['ia3','IA 3','Gemini flash — rápido'],['ia4','IA 4','Ultra-fotorrealista (prompt potenciado)']].map(([id,lbl,title]) => (
+                        <button key={id} onClick={() => setMotorIA(id)} title={title}
+                          className={`flex-1 py-1 rounded-md text-[9px] font-black transition-all ${
+                            motorIA === id ? 'bg-indigo-600 text-white' : `${t.tabInactive}`
+                          }`}>{lbl}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button onClick={genRender} disabled={render.status === 'loading'}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
                   {render.status === 'loading'
@@ -1441,7 +1478,67 @@ export default function EstudioCocinas({ state, setState }) {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${render.editMode ? 'bg-amber-600 text-white' : t.dlBtn}`}>
                         <Edit3 size={11}/> Editar
                       </button>
+                      {isMaster && (
+                        <button onClick={() => setCompareAB(v => !v)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                            compareAB ? 'bg-indigo-600 text-white' : t.dlBtn
+                          }`}
+                          title="Comparativa A/B: genera un segundo render con el mismo prompt para comparar">
+                          <Image size={11}/> A/B
+                        </button>
+                      )}
                     </div>
+                    {/* Comparativa A/B — solo master */}
+                    {isMaster && compareAB && (
+                      <div className={`p-3 rounded-xl ${t.card} flex flex-col gap-2`}>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${t.motorText}`}>Comparativa A/B</span>
+                          <button onClick={async () => {
+                            setRenderB({ status: 'loading', msg: 'Generando render B…', imageUrl: null });
+                            try {
+                              const conCroquis = !!render.croquis && !freeDesign;
+                              const partes = [proy.descripcion];
+                              if (proy.notas?.trim()) partes.push(`Materiales: ${proy.notas.trim()}`);
+                              if (!conCroquis && proy.medidas?.trim()) partes.push(`Medidas: ${proy.medidas.trim()}`);
+                              let desc = partes.filter(Boolean).join('. ');
+                              if (conCroquis) desc = `Genera un render 3D fotorrealista RESPETANDO el croquis adjunto. ${desc}`;
+                              const descB = promptExtraMotor(desc);
+                              const r = await fetch(`${API}/api/ai-engine/render`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                body: JSON.stringify({ description: descB, style: proy.estilo || undefined, provider: providerDeMotor(), referenceImage: conCroquis ? render.croquis : undefined }),
+                              });
+                              const d = await r.json().catch(() => ({}));
+                              if (!r.ok || !d.success) throw new Error(d.error || 'Error en render B');
+                              const u = d.result?.images?.[0] || d.imageUrl;
+                              if (!u) throw new Error('Sin imagen');
+                              const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
+                              setRenderB({ status: 'success', msg: 'Render B listo', imageUrl: shown });
+                            } catch (e) { setRenderB({ status: 'error', msg: e.message, imageUrl: null }); }
+                          }} disabled={renderB.status === 'loading'}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-[9px] font-black uppercase">
+                            {renderB.status === 'loading' ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} Generar B
+                          </button>
+                        </div>
+                        {renderB.imageUrl && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <img src={imgSrc(render.imageUrl)} alt="Render A" className="w-full rounded-lg object-contain"/>
+                              <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-amber-600 rounded text-[8px] font-black text-white">A</span>
+                            </div>
+                            <div className="relative">
+                              <img src={imgSrc(renderB.imageUrl)} alt="Render B" className="w-full rounded-lg object-contain"/>
+                              <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-indigo-600 rounded text-[8px] font-black text-white">B</span>
+                              <button onClick={() => { const a = document.createElement('a'); a.href = renderB.imageUrl; a.download = `render-B-${Date.now()}.png`; a.click(); }}
+                                className="absolute bottom-1 right-1 p-1 bg-black/60 rounded text-white hover:bg-black">
+                                <Download size={10}/>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {renderB.status === 'error' && <p className="text-red-400 text-[9px]">{renderB.msg}</p>}
+                      </div>
+                    )}
 
                     {/* Selector de marca de agua */}
                     <div className={`flex items-center gap-3 flex-wrap p-2 rounded-lg ${t.card}`}>
