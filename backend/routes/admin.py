@@ -440,12 +440,11 @@ async def grant_render_pack(payload: dict, user=Depends(require_admin)):
             raise HTTPException(status_code=400, detail="Indica un pack o un nº de renders")
         price = None; name = f"{renders} renders (manual)"
     month = _month()
-    await main_db.ai_credits.update_one(
-        {"user_id": uid, "month": month},
-        {"$inc": {"extra": renders},
-         "$setOnInsert": {"user_id": uid, "month": month}},
-        upsert=True,
-    )
+    # Los packs se PAGAN aparte, asi que van al saldo permanente y no caducan a
+    # fin de mes. Antes se sumaban al campo `extra` del mes en curso y el dia 1
+    # se perdia lo pagado y no consumido.
+    from services.ai_usage import añadir_saldo
+    saldo = await añadir_saldo(uid, renders)
     # Registro de la compra/concesión para histórico y facturación.
     await main_db.render_pack_purchases.insert_one({
         "id": f"pack-{uuid.uuid4().hex[:8]}",
@@ -455,7 +454,12 @@ async def grant_render_pack(payload: dict, user=Depends(require_admin)):
         "createdAt": datetime.now(timezone.utc).isoformat(),
     })
     doc = await main_db.ai_credits.find_one({"user_id": uid, "month": month}, {"_id": 0})
-    return {"success": True, "extra": int((doc or {}).get("extra", 0) or 0), "renders": renders}
+    return {
+        "success": True,
+        "renders": renders,
+        "saldo": saldo,                                        # permanente, no caduca
+        "extra": int((doc or {}).get("extra", 0) or 0),        # heredado del mes
+    }
 
 
 @router.get("/ai-usage/clients")

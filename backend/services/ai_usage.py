@@ -196,10 +196,32 @@ async def _get_credits_config():
     return default_credits, credits_per
 
 
+async def get_saldo_comprado(user_id: str) -> int:
+    """Saldo de renders COMPRADOS que le queda al usuario.
+
+    Vive en `ai_credit_balance`, una sola ficha por usuario y SIN mes: los packs
+    se pagan aparte, asi que no caducan a fin de mes. Antes se guardaban en el
+    campo `extra` de (user_id, month) y el dia 1 se evaporaba lo pagado y no
+    consumido.
+    """
+    if db is None or not user_id:
+        return 0
+    try:
+        doc = await db.ai_credit_balance.find_one({"user_id": str(user_id)}, {"_id": 0, "saldo": 1})
+        return max(int((doc or {}).get("saldo", 0) or 0), 0)
+    except Exception:
+        return 0
+
+
 async def get_user_credits(user: dict) -> dict:
     """Estado de créditos del usuario en el mes en curso.
 
-    Devuelve {asignados, consumidos_mes, restantes, ilimitado}.
+    Hay tres bolsas y se gastan en este orden, de la que antes caduca a la que
+    no caduca nunca:
+      1. `asignados`  - los del plan, se renuevan cada mes y se pierden.
+      2. `extraMes`   - packs antiguos guardados en el mes (formato heredado).
+      3. `saldo`      - packs comprados, permanentes.
+
     Admin/master → ilimitado=True. Si el campo del usuario `aiCreditsMonthly`
     está a 0/vacío, se usa el default global `ai_usage_config.default_credits`.
     """
@@ -216,32 +238,60 @@ async def get_user_credits(user: dict) -> dict:
     if assigned <= 0:
         assigned = default_credits
 
-    uid = user.get("id") or user.get("_id") or ""
+    uid = str(user.get("id") or user.get("_id") or "")
     consumed = 0
-    extra = 0
+    extra_mes = 0
     try:
-        doc = await db.ai_credits.find_one({"user_id": str(uid), "month": _month()})
+        doc = await db.ai_credits.find_one({"user_id": uid, "month": _month()})
         consumed = int((doc or {}).get("consumed", 0) or 0)
-        # Creditos extra comprados (packs de renders) para el mes en curso.
-        extra = int((doc or {}).get("extra", 0) or 0)
+        # Formato heredado: packs concedidos al mes en curso antes de que el
+        # saldo fuera permanente. Se siguen respetando hasta que se agoten.
+        extra_mes = int((doc or {}).get("extra", 0) or 0)
     except Exception:
         consumed = 0
 
-    total = assigned + extra
-    remaining = max(total - consumed, 0)
+    saldo = await get_saldo_comprado(uid)
+    # `consumed` cuenta TODO el consumo del mes, incluido lo que ya se descontó
+    # del saldo comprado; sin ese ajuste se restaría dos veces.
+    gastado_de_saldo = 0
+    try:
+        gastado_de_saldo = int((doc or {}).get("gastado_saldo", 0) or 0)
+    except Exception:
+        gastado_de_saldo = 0
+    consumido_del_mes = max(consumed - gastado_de_saldo, 0)
+
+    restante_plan = max(assigned + extra_mes - consumido_del_mes, 0)
     return {
         "asignados": assigned,
-        "extra": extra,
-        "total": total,
+        "extra": extra_mes,
+        "saldo": saldo,
+        "total": assigned + extra_mes + saldo,
         "consumidos_mes": consumed,
-        "restantes": remaining,
+        "restantes": restante_plan + saldo,
         "ilimitado": False,
     }
 
 
+async def añadir_saldo(user_id: str, renders: int) -> int:
+    """Suma renders comprados al saldo permanente. Devuelve el saldo resultante."""
+    if db is None or not user_id or renders <= 0:
+        return await get_saldo_comprado(user_id)
+    await db.ai_credit_balance.update_one(
+        {"user_id": str(user_id)},
+        {"$inc": {"saldo": int(renders)},
+         "$set": {"updatedAt": datetime.now(timezone.utc).isoformat()},
+         "$setOnInsert": {"user_id": str(user_id)}},
+        upsert=True,
+    )
+    return await get_saldo_comprado(user_id)
+
+
 async def consume_credits(user: dict, kind: str) -> dict:
-    """Descuenta el coste (en créditos) de una llamada de tipo `kind` para el
-    usuario y lo registra en la colección `ai_credits` por (user_id, month).
+    """Descuenta el coste (en créditos) de una llamada de tipo `kind`.
+
+    Se gasta primero lo del plan (que caduca a fin de mes) y solo cuando se
+    agota se toca el saldo comprado, que no caduca. Al revés, un cliente podría
+    perder renders pagados teniendo cupo del plan sin usar.
 
     Admin/master no consumen. Devuelve el estado de créditos actualizado.
     Best-effort: si algo falla, no lanza (el enforcement decide si bloquea).
@@ -256,14 +306,32 @@ async def consume_credits(user: dict, kind: str) -> dict:
         cost = 0
 
     if cost > 0:
-        uid = user.get("id") or user.get("_id") or ""
+        uid = str(user.get("id") or user.get("_id") or "")
         try:
+            antes = await get_user_credits(user)
+            saldo_actual = int(antes.get("saldo", 0) or 0)
+            # Lo que queda del plan ANTES de este consumo.
+            del_plan = max(int(antes.get("restantes", 0) or 0) - saldo_actual, 0)
+            # Nunca se descuenta mas saldo del que hay: si quedara en negativo,
+            # la siguiente recarga PAGADA llegaria mermada.
+            del_saldo = min(max(cost - del_plan, 0), saldo_actual)
+            # `consumed` sigue contando el consumo total del mes: lo usan el
+            # medidor por cliente y las estadisticas de carpinteros.
+            inc = {"consumed": cost}
+            if del_saldo > 0:
+                inc["gastado_saldo"] = del_saldo
             await db.ai_credits.update_one(
-                {"user_id": str(uid), "month": _month()},
-                {"$inc": {"consumed": cost},
-                 "$setOnInsert": {"user_id": str(uid), "month": _month()}},
+                {"user_id": uid, "month": _month()},
+                {"$inc": inc, "$setOnInsert": {"user_id": uid, "month": _month()}},
                 upsert=True,
             )
+            if del_saldo > 0:
+                await db.ai_credit_balance.update_one(
+                    {"user_id": uid},
+                    {"$inc": {"saldo": -del_saldo},
+                     "$set": {"updatedAt": datetime.now(timezone.utc).isoformat()}},
+                    upsert=True,
+                )
         except Exception:
             pass  # no bloquear por un fallo del contador
     return await get_user_credits(user)
