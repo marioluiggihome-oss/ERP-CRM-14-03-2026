@@ -35,6 +35,7 @@ const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Mó
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
 const CarpinterosUsers = lazy(() => import('./components/CarpinterosUsers')); // Gestión de usuarios de la división carpinteros
 const CarpinterPanel = lazy(() => import('./components/CarpinterPanel')); // Panel independiente admin Carpinter.io (reemplaza SettingsModal)
+const Studio3kLanding = lazy(() => import('./components/Studio3kLanding')); // Landing pública studio3k.io / estudio3k.io
 const CarpinterosLanding = lazy(() => import('./components/CarpinterosLanding')); // Landing propia carpinteros (carpenter.io)
 const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
@@ -760,6 +761,39 @@ const App = () => {
   })();
   const _showCarpLanding = _isCarpBrandEntry && (CARP_LANDING_PUBLISHED || _carpPreview);
 
+  // ── Studio3K: entrando por studio3k.io / estudio3k.io (o ?brand=studio3k)
+  // muestra la landing comercial de Studio3K. Publicada por defecto.
+  const _isStudio3kEntry = (() => {
+    try {
+      const host = (window.location.hostname || '').toLowerCase();
+      const sp = new URLSearchParams(window.location.search);
+      const path = (window.location.pathname || '').toLowerCase();
+      return host.includes('studio3k.io') || host.includes('estudio3k.io')
+        || sp.get('brand') === 'studio3k' || sp.has('s3k')
+        || path === '/s3k' || path.endsWith('/s3k');
+    } catch { return false; }
+  })();
+  const STUDIO3K_LANDING_PUBLISHED = true;
+  const _studio3kPreview = (() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const path = (window.location.pathname || '').toLowerCase();
+      return sp.has('s3k') || sp.get('brand') === 'studio3k'
+        || path === '/s3k' || path.endsWith('/s3k')
+        || ((window.location.hash || '').toLowerCase().includes('s3k'));
+    } catch { return false; }
+  })();
+  const _showStudio3kLanding = _isStudio3kEntry && (STUDIO3K_LANDING_PUBLISHED || _studio3kPreview);
+
+  // Vista previa Studio3K aunque estés logueado
+  if (_studio3kPreview && _showStudio3kLanding && !state.studio3kLandingSkip && !_skipLanding) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#0A0A0A]" />}>
+        <Studio3kLanding onEnter={() => setState(prev => ({ ...prev, studio3kLandingSkip: true }))} />
+      </Suspense>
+    );
+  }
+
   // Vista previa de la LANDING aunque estés logueado: si pides ?carp / /carp /
   // ?preview explícitamente, muestra la web comercial (para revisarla sin cerrar
   // sesión). El botón "Entrar" de la landing (onEnter) la cierra y sigues a la app.
@@ -776,6 +810,13 @@ const App = () => {
       return (
         <Suspense fallback={<div className="min-h-screen bg-[#F5F0E8]" />}>
           <CarpinterosLanding onEnter={() => setState(prev => ({ ...prev, carpLandingSkip: true }))} />
+        </Suspense>
+      );
+    }
+    if (_showStudio3kLanding && !state.studio3kLandingSkip && !_skipLanding) {
+      return (
+        <Suspense fallback={<div className="min-h-screen bg-[#0A0A0A]" />}>
+          <Studio3kLanding onEnter={() => setState(prev => ({ ...prev, studio3kLandingSkip: true }))} />
         </Suspense>
       );
     }
