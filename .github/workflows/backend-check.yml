@@ -58,4 +58,4 @@ jobs:
       - name: Pruebas de calculo (pytest)
         run: |
           python -m pip install --quiet pytest
-          python -m pytest backend/tests/test_calculo_creditos_ia.py -q
+          python -m pytest backend/tests/test_calculo_*.py -q

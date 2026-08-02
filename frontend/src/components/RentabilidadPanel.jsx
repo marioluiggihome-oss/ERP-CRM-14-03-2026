@@ -9,6 +9,7 @@ import RentabilidadLineas from './RentabilidadLineas';
 import ReportGenerator from './ReportGenerator';
 import RevisionFichas from './RevisionFichas';
 import IngresosACuenta from './IngresosACuenta';
+import SaldoCliente from './SaldoCliente';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -406,11 +407,14 @@ const RentabilidadPanel = ({ currentUser }) => {
         <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
         {/* "Por proyecto" desactivada temporalmente: la tabla no cuadraba bien, se retoma mas adelante */}
         <button onClick={() => setView('ingresos')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'ingresos' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ingresos a cuenta</button>
+        <button onClick={() => setView('saldo')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'saldo' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Saldo de cliente</button>
         <button onClick={() => setView('informes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
         <button onClick={() => setView('revision')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'revision' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>Revisión</button>
       </div>
 
       {view === 'ingresos' && <IngresosACuenta currentUser={currentUser} />}
+
+      {view === 'saldo' && <SaldoCliente onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
 
       {view === 'revision' && <RevisionFichas onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
 

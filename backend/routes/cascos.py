@@ -30,14 +30,6 @@ def _safe_float(v, default=0.0):
     except (TypeError, ValueError):
         return default
 
-# Este backend abre un cliente de Mongo por modulo (unos 40 en total), cada uno
-# con su propio pool. Un modulo poco usado como este tiene que abrir conexion
-# nueva cuando se le llama y, si el cluster va justo de conexiones, la peticion
-# se quedaba colgada los 30 s del timeout por defecto hasta que la cortaba la
-# pasarela: en el navegador eso se ve como un "Failed to fetch" sin explicacion.
-# Con 5 s falla rapido y con un error legible, y el pool se limita para no
-# acaparar conexiones del cluster.
-
 
 @router.post("/cascos/orders")
 async def create_casco_order(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
