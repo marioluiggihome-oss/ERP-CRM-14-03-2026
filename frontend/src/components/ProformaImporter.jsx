@@ -94,6 +94,25 @@ const _match_acb = (it, tipoOverride, colorOverride, grosorOverride) => {
   return { ...best, _base: precio, _precio: precio * PUNTO, _color: colorFinal, _colorLbl: COLOR_LBL[colorFinal] || colorFinal };
 };
 
+// ── Destinos de pedido ───────────────────────────────────────────────────────
+// Cada linea se manda a un proveedor distinto. La clasificacion es automatica
+// pero SIEMPRE editable en la tabla: si una linea cae en el grupo equivocado se
+// corrige en el desplegable, no hay que tocar codigo.
+const DESTINOS = {
+  cascos:   { id: 'cascos',   label: 'Cascos',   color: '#4f46e5' },
+  puertas:  { id: 'puertas',  label: 'Puertas',  color: '#C4622D' },
+  herrajes: { id: 'herrajes', label: 'Herrajes', color: '#0891b2' },
+  otros:    { id: 'otros',    label: 'Otros',    color: '#64748b' },
+};
+
+const _destino_auto = (it, acb) => {
+  const t = (it.descripcion || '').toUpperCase();
+  if (/^PTA |PUERTA DE INTEGRACION/.test(t)) return 'puertas';
+  if (/COSTADO|^REG |REGLETA|COPETE|ZOCALO|ZÓCALO|TABLERO|TRASERA|BANDA/.test(t)) return 'otros';
+  if (acb) return 'cascos';
+  return 'otros';
+};
+
 const _herraje_especial = (desc) => {
   for (const h of HERRAJE_ESPECIAL) if (h.re.test(desc || '')) return h.label;
   return null;
@@ -145,6 +164,11 @@ export default function ProformaImporter({ esMaster }) {
   // tocar el resto.
   const [moLinea, setMoLinea] = useState({});          // { origIdx: euros }
   const [puertaLinea, setPuertaLinea] = useState({});  // { origIdx: euros }
+  // Pedido: que lineas van y a que proveedor. Sin entrada propia, la linea va
+  // marcada y con el destino que le toca por su descripcion.
+  const [excluidas, setExcluidas] = useState({});   // { origIdx: true } -> fuera del pedido
+  const [destinoLinea, setDestinoLinea] = useState({}); // { origIdx: 'cascos'|... }
+  const [exportando, setExportando] = useState(false);
 
   const HERRAJE = {
     blum: { cajon: 41.34, gaveta: 54.37 },
@@ -256,6 +280,8 @@ export default function ProformaImporter({ esMaster }) {
           _totalAlvic: Number(it.total) || 0,
           _mo: moDeLinea, _puerta: puertaDeLinea, _esPuerta: esPuerta,
           _coste: casco + herraje + moDeLinea + puertaDeLinea,
+          _destino: destinoLinea[origIdx] || _destino_auto(it, acb),
+          _pedir: !excluidas[origIdx],
         };
       });
 
@@ -284,7 +310,7 @@ export default function ProformaImporter({ esMaster }) {
     return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, herrajesEsp,
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
              puertas, costados, regletas, costePuertas, pm2 };
-  }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas]);
+  }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas]);
 
   // ── Guardar proyecto ──────────────────────────────────────────────────────
   const guardarProyecto = async () => {
@@ -330,6 +356,93 @@ export default function ProformaImporter({ esMaster }) {
   };
 
   // ── Exportar pedido puertas ───────────────────────────────────────────────
+  // Linea nueva a mano: para lo que no venga en la proforma (un mueble extra,
+  // un accesorio, un porte). Se anade vacia y se rellena en la tabla.
+  const anadirLinea = () => {
+    setItems(prev => [...prev, {
+      n: prev.length + 1, cod: '', descripcion: 'NUEVA LÍNEA', material: '',
+      largo: null, ancho: null, grueso: null, cantidad: 1, pvp: null, total: null,
+      puertas: 0, cajones: 0, gavetas: 0, tipo: '', esMueble: false, _manual: true,
+    }]);
+  };
+
+  // ── Pedidos a proveedor en PDF ──────────────────────────────────────────────
+  // Un PDF por proveedor, solo con las lineas marcadas. Los HERRAJES son la
+  // excepcion: no son lineas de la proforma sino piezas que salen de cada
+  // mueble (bisagras, patas, colgadores, guias), asi que se piden por cantidad
+  // total, que es como se compran.
+  const exportarPedidos = async (destinosPedidos) => {
+    const marcadas = calc.rows.filter(r => r._pedir);
+    if (!marcadas.length) { alert('No hay ninguna línea marcada para pedir.'); return; }
+    setExportando(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const hoy = new Date().toLocaleDateString('es-ES');
+      const ref = nombreProyecto || 'sin referencia';
+      let generados = 0;
+
+      for (const destino of destinosPedidos) {
+        const info = DESTINOS[destino];
+        // Los herrajes no son lineas de la proforma: son las piezas que lleva
+        // cada mueble. Por eso su pedido sale de los MUEBLES marcados, no de las
+        // lineas cuyo destino sea 'herrajes' (que no existirian nunca).
+        const lineas = destino === 'herrajes'
+          ? marcadas.filter(r => r._acb)
+          : marcadas.filter(r => r._destino === destino);
+        if (!lineas.length) continue;
+
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        doc.setFontSize(16); doc.setFont(undefined, 'bold');
+        doc.text(`Pedido · ${info.label}`, 14, 18);
+        doc.setFontSize(9); doc.setFont(undefined, 'normal');
+        doc.text(`Referencia: ${ref}`, 14, 25);
+        doc.text(`Fecha: ${hoy}`, 14, 30);
+
+        if (destino === 'herrajes') {
+          // Se acumulan las piezas de todos los muebles marcados.
+          const piezas = {};
+          const sumar = (nombre, n) => { if (n > 0) piezas[nombre] = (piezas[nombre] || 0) + n; };
+          for (const r of lineas) {
+            sumar(`Bisagra ${marcaBis.toUpperCase()}`, (r.puertas || 0) * 2);
+            sumar('Pata regulable', (r.tipo === 'bajo' || r.tipo === 'columna') ? 4 : 0);
+            sumar('Colgador', r.tipo === 'alto' ? 2 : 0);
+            sumar(`Cajón ${marcaCaj.toUpperCase()}`, r.cajones || 0);
+            sumar(`Gaveta ${marcaCaj.toUpperCase()}`, r.gavetas || 0);
+          }
+          const filas = Object.entries(piezas).map(([n, c]) => [n, String(c)]);
+          if (!filas.length) { continue; }
+          autoTable(doc, {
+            startY: 36, head: [['Pieza', 'Cantidad']], body: filas,
+            styles: { fontSize: 9 }, headStyles: { fillColor: info.color },
+          });
+        } else {
+          const filas = lineas.map((r, i) => [
+            String(i + 1),
+            r.cod || '',
+            r.descripcion || '',
+            r._acb ? `${r._acb.tipo} ${r._acb.ancho}` : '',
+            [r.largo, r.ancho, r.grueso].filter(Boolean).join(' × ') || '',
+            String(r.cantidad || 1),
+          ]);
+          autoTable(doc, {
+            startY: 36,
+            head: [['#', 'Código', 'Descripción', 'Equivalencia', 'Medidas (mm)', 'Ud']],
+            body: filas,
+            styles: { fontSize: 8, cellPadding: 1.5 },
+            headStyles: { fillColor: info.color },
+            columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 26 }, 5: { cellWidth: 12, halign: 'center' } },
+          });
+        }
+        doc.save(`pedido-${destino}-${(ref || 'alvic').replace(/[^\w-]+/g, '_')}.pdf`);
+        generados += 1;
+      }
+      if (!generados) alert('Las líneas marcadas no corresponden a ningún pedido de los elegidos.');
+    } catch (e) {
+      alert(`No se pudo generar el PDF: ${e?.message || 'error'}`);
+    } finally { setExportando(false); }
+  };
+
   const exportarPedidoPuertas = () => {
     const lineas = [
       ['#', 'Código', 'Descripción', 'Cantidad', 'Alto (mm)', 'Ancho (mm)', 'Área m²', 'Precio/m²', 'Total €'],
@@ -548,11 +661,47 @@ export default function ProformaImporter({ esMaster }) {
             )}
 
             {/* Tabla de muebles */}
+            {/* Barra de pedidos: que se pide y a quien */}
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/40 p-2.5">
+              <span className="text-[11px] font-black text-indigo-900 uppercase tracking-wide">Pedidos</span>
+              {Object.values(DESTINOS).map(d => {
+                const n = d.id === 'herrajes'
+                  ? calc.rows.filter(r => r._pedir && r._acb).length
+                  : calc.rows.filter(r => r._pedir && r._destino === d.id).length;
+                return (
+                  <button key={d.id} onClick={() => exportarPedidos([d.id])} disabled={!n || exportando}
+                    title={n ? `Generar el PDF del pedido de ${d.label}` : `No hay líneas marcadas para ${d.label}`}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-white disabled:opacity-30"
+                    style={{ background: d.color }}>
+                    {d.label} ({n})
+                  </button>
+                );
+              })}
+              <button onClick={() => exportarPedidos(Object.keys(DESTINOS))} disabled={exportando}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 hover:bg-slate-900 text-white disabled:opacity-40 flex items-center gap-1">
+                {exportando ? <Loader size={11} className="animate-spin" /> : <Download size={11} />} Todos
+              </button>
+              <span className="mx-1 w-px h-4 bg-indigo-200" />
+              <button onClick={() => setExcluidas({})} disabled={bloqueado}
+                className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
+                Marcar todas
+              </button>
+              <button onClick={() => setExcluidas(Object.fromEntries(calc.rows.map(r => [r._origIdx, true])))} disabled={bloqueado}
+                className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
+                Desmarcar todas
+              </button>
+              <button onClick={anadirLinea} disabled={bloqueado}
+                className="ml-auto px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40">
+                + Añadir línea
+              </button>
+            </div>
+
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
                     <th className="px-2 py-2 w-6"></th>
+                    <th className="px-2 py-2 w-6" title="Marcar para incluir en el pedido">Pedir</th>
                     <th className="px-2 py-2">#</th>
                     <th className="px-2 py-2">Código</th>
                     <th className="px-2 py-2">Descripción</th>
@@ -566,6 +715,7 @@ export default function ProformaImporter({ esMaster }) {
                     <th className="px-2 py-2 text-right">Mano obra</th>
                     <th className="px-2 py-2 text-right">Puertas</th>
                     <th className="px-2 py-2 text-right font-black">Total línea</th>
+                    <th className="px-2 py-2">Pedido a</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -581,6 +731,10 @@ export default function ProformaImporter({ esMaster }) {
                       onMo={(v) => setMoLinea(prev => ({ ...prev, [r._origIdx]: v }))}
                       puertaLinea={puertaLinea[r._origIdx]}
                       onPuerta={(v) => setPuertaLinea(prev => ({ ...prev, [r._origIdx]: v }))}
+                      onPedir={(v) => setExcluidas(prev => ({ ...prev, [r._origIdx]: !v }))}
+                      onDestino={(v) => setDestinoLinea(prev => ({ ...prev, [r._origIdx]: v }))}
+                      onDescripcion={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, descripcion: v } : x))}
+                      onCod={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, cod: v } : x))}
                     />
                   ))}
                 </tbody>
@@ -656,7 +810,7 @@ export default function ProformaImporter({ esMaster }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta }) {
+function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod }) {
   const [editando, setEditando] = useState(false);
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
   const colorActual = override.color || (r._acb ? r._acb._color : 'grafito');
@@ -671,10 +825,23 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
           </button>
         )}
       </td>
+      <td className="px-1 py-1.5 text-center">
+        <input type="checkbox" checked={r._pedir} disabled={bloqueado}
+          onChange={e => onPedir(e.target.checked)} title="Incluir esta línea en el pedido" />
+      </td>
       <td className="px-2 py-1.5">{r.n}</td>
-      <td className="px-2 py-1.5 font-mono">{r.cod}</td>
+      <td className="px-2 py-1.5 font-mono">
+        {bloqueado ? r.cod : (
+          <input value={r.cod || ''} onChange={e => onCod(e.target.value)} placeholder="código"
+            className="w-24 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
+        )}
+      </td>
       <td className="px-2 py-1.5 max-w-[180px]">
-        <span className="truncate block" title={`${r.descripcion} · ${r.color}`}>{r.descripcion}</span>
+        {bloqueado
+          ? <span className="truncate block" title={`${r.descripcion} · ${r.color}`}>{r.descripcion}</span>
+          : <input value={r.descripcion || ''} onChange={e => onDescripcion(e.target.value)}
+              title={`${r.descripcion} · ${r.color}`}
+              className="w-full min-w-[150px] px-1 py-0.5 border border-slate-200 rounded text-xs" />}
         <div className="flex items-center gap-1 flex-wrap">
           {r.herrajeBlum && <span className="text-[9px] font-black text-orange-600">BLUM</span>}
           {r._herrajeEsp && (
@@ -767,6 +934,16 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
         )}
       </td>
       <td className="px-2 py-1.5 text-right font-black text-slate-800">{eur(r._coste)}</td>
+      <td className="px-2 py-1.5">
+        {bloqueado ? DESTINOS[r._destino].label : (
+          <select value={r._destino} onChange={e => onDestino(e.target.value)}
+            title="Proveedor al que se pedirá esta línea"
+            className="border border-slate-200 rounded px-1 py-0.5 text-[10px]"
+            style={{ color: DESTINOS[r._destino].color }}>
+            {Object.values(DESTINOS).filter(d => d.id !== 'herrajes').map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+          </select>
+        )}
+      </td>
     </tr>
   );
 }
