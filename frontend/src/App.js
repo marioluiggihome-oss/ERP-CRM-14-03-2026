@@ -1122,8 +1122,7 @@ const App = () => {
                 // Para otros usuarios, mostrar navegación normal
                 return (
                   <>
-                    {/* Inicio - pantalla de bienvenida (vídeo + accesos rápidos). Visible
-                        también en móvil para poder ver/abrir todos los módulos desde ahí. */}
+                    {/* ── INICIO ─────────────────────────────────── */}
                     <button
                       onClick={() => setState(p => ({...p, currentTab: 'welcome'}))}
                       className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'welcome' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1133,7 +1132,10 @@ const App = () => {
                       <span className="text-[7px] font-black uppercase tracking-widest">Inicio</span>
                     </button>
 
-                    {/* CRM - Solo visible para usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
+                    {/* ── SEPARADOR: VENTAS / COMERCIAL ──────────── */}
+                    <div className="w-8 h-px bg-white/10 mx-auto my-0.5" />
+
+                    {/* CRM */}
                     {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
@@ -1149,8 +1151,7 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Agenda de Negocios (Prescriptor) - icono ADITIVO, justo debajo del CRM:
-                        aparece si el usuario tiene el permiso, sin ocultar el resto de funciones */}
+                    {/* Agenda de Negocios (Prescriptor) */}
                     {state.currentUser?.isPrescriptor && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'agendaNegocios'}))}
@@ -1158,33 +1159,33 @@ const App = () => {
                         data-testid="agenda-negocios-nav-btn"
                       >
                         <CalendarDays size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Agenda Neg.</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Agenda</span>
                       </button>
                     )}
 
-                    {/* Presupuestador (MV por tarifa) - principal, abre por defecto */}
+                    {/* Cocina Montada (presupuestador principal) */}
                     {(state.currentUser?.canUsePresupuestador2 !== false) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Receipt size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">C. Montada</span>
                       </button>
                     )}
 
-                    {/* Presupuestador 2 (el anterior) - requiere autorización por usuario */}
+                    {/* Cocina Montada 2 (presupuestador anterior) */}
                     {(state.currentUser?.canUsePresupuestador1 !== false) && (
-                    <button
-                      onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                    >
-                      <FileText size={18}/>
-                      <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada 2</span>
-                    </button>
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <FileText size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">C. Mont. 2</span>
+                      </button>
                     )}
 
-                    {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
+                    {/* Pedidos */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))}
@@ -1196,62 +1197,18 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Resumen Totales - resumen por cocinas con totales y forma de pago (permiso específico) */}
+                    {/* Resumen Totales */}
                     {!state.currentUser?.isTienda && state.currentUser?.canUseResumenTotales === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'resumenCocinas'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'resumenCocinas' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Layers size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Resumen Tot.</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Resumen</span>
                       </button>
                     )}
 
-                    {/* Presupuestador de Cascos - permiso específico */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUseCascos === true && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'cascos'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cascos' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <Box size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Desmontada</span>
-                      </button>
-                    )}
-
-                    {/* Prospección de Obra Nueva (PropData IA) - permiso específico */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUsePropData === true && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'propdata'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'propdata' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <Building2 size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Obra Nueva</span>
-                      </button>
-                    )}
-
-                    {/* Armarios 2 - diseñador IA (permiso específico) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUseArmarios2 === true && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'armarios2'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'armarios2' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <Hammer size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Armarios 2</span>
-                      </button>
-                    )}
-
-                    {/* Cocinas IA 2 oculta: unificado en Estudio 3D + Agentes (reversible) */}
-                    {false && !state.currentUser?.isTienda && state.currentUser?.canUseCocinasAI === true && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'cocinasai'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinasai' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <ChefHat size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocinas IA 2</span>
-                      </button>
-                    )}
-
-                    {/* Archivo - requiere permiso explícito (la casilla manda) */}
+                    {/* Archivo */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'library'}))}
@@ -1262,7 +1219,7 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* G. Comercial / Facturación - requiere permiso explícito (la casilla manda) */}
+                    {/* G. Comercial / Facturación */}
                     {state.currentUser?.canAccessInvoices === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'invoices'}))}
@@ -1270,11 +1227,11 @@ const App = () => {
                         data-testid="invoices-nav-btn"
                       >
                         <Receipt size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">G. Comercial</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">G. Comerc.</span>
                       </button>
                     )}
 
-                    {/* Rentabilidad - requiere permiso explícito (la casilla manda) */}
+                    {/* Rentabilidad */}
                     {state.currentUser?.canAccessRentabilidad === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'rentabilidad'}))}
@@ -1286,7 +1243,7 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Gastos de comercial (escaneo de tickets) - comerciales y admin, con permiso */}
+                    {/* Gastos */}
                     {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessGastos !== false && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'gastos'}))}
@@ -1298,59 +1255,32 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Luiggi Floor - división de suelo SPC (solo con permiso canAccessFloor) */}
-                    {(state.currentUser?.canAccessFloor === true) && (
+                    {/* ── SEPARADOR: PRODUCCIÓN ──────────────────── */}
+                    <div className="w-8 h-px bg-white/10 mx-auto my-0.5" />
+
+                    {/* Cocina Desmontada (Cascos) */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canUseCascos === true && (
                       <button
-                        onClick={() => setState(p => ({...p, currentTab: 'luiggifloor'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'luiggifloor' ? 'bg-amber-500 text-zinc-900 shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="luiggifloor-nav-btn"
+                        onClick={() => setState(p => ({...p, currentTab: 'cascos'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cascos' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
-                        <Layers size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Floor</span>
+                        <Box size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">C. Desmont.</span>
                       </button>
                     )}
 
-                    {/* Panel de Mando - requiere permiso explícito (la casilla manda) */}
-                    {state.currentUser?.canAccessMando === true && (
+                    {/* Obra Nueva */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canUsePropData === true && (
                       <button
-                        onClick={() => setState(p => ({...p, currentTab: 'command'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'command' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="command-center-btn"
+                        onClick={() => setState(p => ({...p, currentTab: 'propdata'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'propdata' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
-                        <Shield size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Mando</span>
+                        <Building2 size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Obra Nueva</span>
                       </button>
                     )}
-                    
-                    {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
-                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <Sparkles size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
-                      </button>
-                    )}
-                    
-                    {/* Render 3D Studio — APARCADO: integrado en 3D Estudio */}
-                    {/* Kitchen 3D Designer — APARCADO: integrado en 3D Estudio */}
-                    {/* 3D Estudio — Módulo unificado con Manus API (render, plano, ficha, presentación) */}
-                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'estudioCocinas'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-amber-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="estudio-3d-nav-btn"
-                        title="Estudio 3D: Renders, Planos 2D, Fichas Técnicas y Presentaciones"
-                      >
-                        <ChefHat size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Estudio 3D</span>
-                      </button>
-                    )}
-                    
 
-
-                    {/* Diseñador de Armarios */}
+                    {/* Armarios */}
                     {state.currentUser?.canAccessArmarios && !state.currentUser?.isTienda && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'armarios'}))}
@@ -1362,7 +1292,18 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Electros — catálogo de electrodomésticos (coste solo master; el resto ve PVP) */}
+                    {/* Armarios 2 */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canUseArmarios2 === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'armarios2'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'armarios2' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Hammer size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Armarios 2</span>
+                      </button>
+                    )}
+
+                    {/* Electros */}
                     {!state.currentUser?.isTienda && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'electros'}))}
@@ -1375,22 +1316,9 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Informes: ahora vive DENTRO de RENTAB (pestaña "Generador de informes") */}
-
-                    {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
-                    {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
+                    {/* Montajes */}
+                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (
                       <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="digitalizador-nav-btn"
-                      >
-                        <ScanLine size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Digitalizador</span>
-                      </button>
-                    )}
-                    
-                    {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
-                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (                      <button 
                         onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="montajes-nav-btn"
@@ -1399,8 +1327,8 @@ const App = () => {
                         <span className="text-[7px] font-black uppercase tracking-widest">Montajes</span>
                       </button>
                     )}
-                    
-                    {/* Portal de Fábrica - requiere permiso explícito (la casilla manda) */}
+
+                    {/* Fábrica */}
                     {state.currentUser?.canAccessFabrica === true && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
@@ -1412,7 +1340,34 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Agentes Diseñadores IA - sección Producción */}
+                    {/* ── SEPARADOR: IA / DISEÑO ─────────────────── */}
+                    <div className="w-8 h-px bg-white/10 mx-auto my-0.5" />
+
+                    {/* Estudio 3D */}
+                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'estudioCocinas'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-amber-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="estudio-3d-nav-btn"
+                        title="Estudio 3D: Renders, Planos 2D, Fichas Técnicas y Presentaciones"
+                      >
+                        <ChefHat size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Estudio 3D</span>
+                      </button>
+                    )}
+
+                    {/* IA Lab */}
+                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Sparkles size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
+                      </button>
+                    )}
+
+                    {/* Agentes Diseñadores IA */}
                     {(state.currentUser?.canUseAgentesIA || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'agentesDisenadores'}))}
@@ -1425,7 +1380,43 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
+                    {/* Digitalizador */}
+                    {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="digitalizador-nav-btn"
+                      >
+                        <ScanLine size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Digit.</span>
+                      </button>
+                    )}
+
+                    {/* Floor */}
+                    {(state.currentUser?.canAccessFloor === true) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'luiggifloor'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'luiggifloor' ? 'bg-amber-500 text-zinc-900 shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="luiggifloor-nav-btn"
+                      >
+                        <Layers size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Floor</span>
+                      </button>
+                    )}
+
+                    {/* Panel de Mando */}
+                    {state.currentUser?.canAccessMando === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'command'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'command' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="command-center-btn"
+                      >
+                        <Shield size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Mando</span>
+                      </button>
+                    )}
+
+                    {/* Mis Tiendas - Solo para Comerciales */}
                     {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setShowCommercialWorkView(true)} 
@@ -1434,6 +1425,17 @@ const App = () => {
                       >
                         <Users size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Mis Tiendas</span>
+                      </button>
+                    )}
+
+                    {/* Cocinas IA 2 — APARCADO: unificado en Estudio 3D + Agentes (reversible) */}
+                    {false && !state.currentUser?.isTienda && state.currentUser?.canUseCocinasAI === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'cocinasai'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinasai' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <ChefHat size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocinas IA 2</span>
                       </button>
                     )}
                   </>
