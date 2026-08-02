@@ -733,6 +733,12 @@ const Cascos = ({ state, setState }) => {
                   </div>
                 </>
               )}
+              {/* Panel Rentabilidad/Alvic: aparece debajo del botón Importar, alineado a la derecha */}
+              {showRenta && (
+                <div className="absolute right-0 mt-2 z-50 w-[700px] max-w-[90vw]" style={{top: '100%'}}>
+                  <RentabilidadUnificada esMaster={true} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
+                </div>
+              )}
             </div>
           )}
           {/* Candado (solo master):
@@ -741,7 +747,7 @@ const Cascos = ({ state, setState }) => {
           {esMasterCascos && (
             <button
               onClick={(e) => {
-                if (e.shiftKey) { setShowRenta(v => !v); }
+                if (e.shiftKey) { setSistemaRenta('mv'); setShowRenta(v => !v); }
                 else { setPresupuestoBloqueado(v => !v); }
               }}
               title={presupuestoBloqueado ? 'Desbloquear edición del presupuesto (Shift+clic = Rentabilidad)' : 'Bloquear edición del presupuesto (Shift+clic = Rentabilidad)'}
@@ -772,8 +778,7 @@ const Cascos = ({ state, setState }) => {
         />
       )}
 
-      {/* Módulo unificado de rentabilidad (Alvic/MV). Oculto tras el candado (solo master). */}
-      {esMasterCascos && showRenta && <RentabilidadUnificada esMaster={true} sistemaInicial={sistemaRenta} />}
+      {/* Módulo unificado de rentabilidad: ahora se muestra como dropdown bajo el botón Importar */}
 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}

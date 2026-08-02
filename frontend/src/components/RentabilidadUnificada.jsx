@@ -6,7 +6,7 @@ import RentabilidadMV from './RentabilidadMV';
 // Módulo unificado de rentabilidad (solo master). Un selector Sistema: ALVIC / MV
 // enruta al motor correspondiente. Mismo coste de fabricación, distinto sistema de
 // venta. Los clientes NO lo ven (gateado a master en Cocina Desmontada).
-export default function RentabilidadUnificada({ esMaster, sistemaInicial }) {
+export default function RentabilidadUnificada({ esMaster, sistemaInicial, onClose }) {
   const [sistema, setSistema] = useState(sistemaInicial === 'alvic' || sistemaInicial === 'mv' ? sistemaInicial : 'mv');
   if (!esMaster) return null;
   return (
@@ -24,9 +24,14 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial }) {
             <Package size={14} /> Alvic
           </button>
         </div>
-        <span className="text-[11px] text-slate-400 ml-auto hidden sm:block">
+        <span className="text-[11px] text-slate-400 ml-2 hidden sm:block">
           {sistema === 'mv' ? 'Códigos MV → margen (PVP puntos × 3,33)' : 'Proforma Alvic → coste ACB + puertas aparte'}
         </span>
+        {onClose && (
+          <button onClick={onClose} className="ml-auto text-slate-400 hover:text-white p-1 rounded" title="Cerrar">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        )}
       </div>
       <div className="border-2 border-t-0 border-slate-700 rounded-b-2xl overflow-hidden">
         {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} />}
