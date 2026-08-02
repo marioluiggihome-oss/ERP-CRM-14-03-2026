@@ -139,6 +139,12 @@ export default function ProformaImporter({ esMaster }) {
   const [showEditorPuertas, setShowEditorPuertas] = useState(false);
   const [precioM2Puerta, setPrecioM2Puerta] = useState('');
   const [puertasEditadas, setPuertasEditadas] = useState({}); // { idx: { alto, ancho } }
+  // Mano de obra y coste de puerta POR LINEA. Sin valor propio, cada mueble
+  // toma la mano de obra general y cada puerta su precio por m2; con valor,
+  // manda el de la linea. Asi se puede subir o bajar un mueble suelto sin
+  // tocar el resto.
+  const [moLinea, setMoLinea] = useState({});          // { origIdx: euros }
+  const [puertaLinea, setPuertaLinea] = useState({});  // { origIdx: euros }
 
   const HERRAJE = {
     blum: { cajon: 41.34, gaveta: 54.37 },
@@ -195,6 +201,17 @@ export default function ProformaImporter({ esMaster }) {
 
   const calc = useMemo(() => {
     const facCasco = (1 - (Number(p.desc1) || 0) / 100) * (1 - (Number(p.desc2) || 0) / 100);
+    const pm2 = Number(precioM2Puerta) || 0;
+    const esPuertaDesc = (d) => /^PTA |PUERTA DE INTEGRACION/i.test(d || '');
+    // puertasEditadas se indexa por la POSICION dentro de la lista de puertas,
+    // no por la fila; este mapa permite casar una cosa con la otra para que el
+    // coste respete las medidas corregidas en el editor de puertas.
+    const idxPuertaPorOrig = {};
+    let _np = 0;
+    items.forEach((it, i) => {
+      if (!deletedRows.has(i) && esPuertaDesc(it.descripcion)) { idxPuertaPorOrig[i] = _np; _np += 1; }
+    });
+    const moGeneral = Number(p.manoObra) || 0;
     const rows = items
       .filter((_, i) => !deletedRows.has(i))
       .map((it, idx) => {
@@ -209,6 +226,27 @@ export default function ProformaImporter({ esMaster }) {
         const guias = (it.cajones || 0) * (Number(p.cajon) || 0) + (it.gavetas || 0) * (Number(p.gaveta) || 0);
         const herraje = bisagras + patas + colgadores + guias;
         const herrajeEsp = _herraje_especial(it.descripcion);
+
+        // Mano de obra: el valor general se aplica A CADA MUEBLE (los paneles,
+        // puertas y regletas no llevan). Si la linea tiene valor propio, manda.
+        const moPropia = moLinea[origIdx];
+        const moDeLinea = (moPropia !== undefined && moPropia !== '')
+          ? (Number(moPropia) || 0)
+          : (acb ? moGeneral : 0);
+
+        // Puertas: por defecto m2 x precio/m2 (con las medidas del editor si se
+        // han corregido); si la linea tiene precio propio, manda ese.
+        const esPuerta = idxPuertaPorOrig[origIdx] !== undefined;
+        let puertaDeLinea = 0;
+        if (esPuerta) {
+          const ovp = puertasEditadas[idxPuertaPorOrig[origIdx]] || {};
+          const altoP = Number(ovp.alto ?? it.largo) || 0;
+          const anchoP = Number(ovp.ancho ?? it.ancho) || 0;
+          if (altoP > 0 && anchoP > 0 && pm2 > 0) puertaDeLinea = (altoP / 1000) * (anchoP / 1000) * pm2;
+        }
+        const puertaPropia = puertaLinea[origIdx];
+        if (puertaPropia !== undefined && puertaPropia !== '') puertaDeLinea = Number(puertaPropia) || 0;
+
         return {
           ...it, _origIdx: origIdx, _acb: acb, _precioAcb: precioAcb,
           _casco: casco, _herraje: herraje, _bis: bisagras, _pat: patas,
@@ -216,6 +254,8 @@ export default function ProformaImporter({ esMaster }) {
           _herrajeEsp: herrajeEsp,
           _pvpAlvic: Number(it.pvp) || 0,
           _totalAlvic: Number(it.total) || 0,
+          _mo: moDeLinea, _puerta: puertaDeLinea, _esPuerta: esPuerta,
+          _coste: casco + herraje + moDeLinea + puertaDeLinea,
         };
       });
 
@@ -233,19 +273,18 @@ export default function ProformaImporter({ esMaster }) {
     const herrajesEsp = rows.filter(r => r._herrajeEsp);
     const mo = Number(p.manoObra) || 0;
     const margen = Number(p.margen) || 0;
-    const costeProduccion = totMat + mo;
+    // La mano de obra ya no es un importe unico: es la suma de la de cada
+    // mueble, con las lineas que se hayan retocado a mano.
+    const totMo = rows.reduce((a, r) => a + r._mo, 0);
+    const nMuebles = rows.filter(r => r._acb).length;
+    const costePuertas = rows.reduce((a, r) => a + r._puerta, 0);
+    const costeProduccion = totMat + totMo + costePuertas;
     const precioVenta = costeProduccion + margen;
 
-    // Coste puertas por m²
-    const pm2 = Number(precioM2Puerta) || 0;
-    const costePuertas = pm2 > 0 ? puertas.reduce((a, it) => {
-      const alto = Number(it.largo) || 0;
-      const ancho = Number(it.ancho) || 0;
-      return a + (alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * pm2 : 0);
-    }, 0) : 0;
-
-    return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, herrajesEsp, mo, margen, costeProduccion, precioVenta, puertas, costados, regletas, costePuertas, pm2 };
-  }, [items, p, overrides, deletedRows, precioM2Puerta]);
+    return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, herrajesEsp,
+             mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
+             puertas, costados, regletas, costePuertas, pm2 };
+  }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas]);
 
   // ── Guardar proyecto ──────────────────────────────────────────────────────
   const guardarProyecto = async () => {
@@ -429,7 +468,7 @@ export default function ProformaImporter({ esMaster }) {
               {/* Descuento 1 + botón para mostrar descuento 2 */}
               <div className="flex items-end gap-2 mb-3 flex-wrap">
                 <label className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Dto casco 1 % (−{p.desc1})</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Dto casco 1 %</span>
                   <input
                     type="number" step="any" value={p.desc1} onChange={setNum('desc1')}
                     disabled={bloqueado}
@@ -440,7 +479,7 @@ export default function ProformaImporter({ esMaster }) {
                   ? (
                     <label className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                        Dto casco 2 % (−{p.desc2})
+                        Dto casco 2 %
                         <button onClick={() => setShowDesc2(false)} className="text-slate-300 hover:text-slate-500"><X size={10} /></button>
                       </span>
                       <input
@@ -523,7 +562,10 @@ export default function ProformaImporter({ esMaster }) {
                     <th className="px-2 py-2 text-right">Tarifa ACB</th>
                     <th className="px-2 py-2 text-right">Casco coste</th>
                     <th className="px-2 py-2 text-right">Herraje</th>
-                    <th className="px-2 py-2 text-right font-black">Coste mat.</th>
+                    <th className="px-2 py-2 text-right">Coste mat.</th>
+                    <th className="px-2 py-2 text-right">Mano obra</th>
+                    <th className="px-2 py-2 text-right">Puertas</th>
+                    <th className="px-2 py-2 text-right font-black">Total línea</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -535,6 +577,10 @@ export default function ProformaImporter({ esMaster }) {
                       override={overrides[r._origIdx] || {}}
                       onOverride={(ov) => setOverrides(prev => ({ ...prev, [r._origIdx]: { ...(prev[r._origIdx] || {}), ...ov } }))}
                       onDelete={() => setDeletedRows(prev => new Set([...prev, r._origIdx]))}
+                      moLinea={moLinea[r._origIdx]}
+                      onMo={(v) => setMoLinea(prev => ({ ...prev, [r._origIdx]: v }))}
+                      puertaLinea={puertaLinea[r._origIdx]}
+                      onPuerta={(v) => setPuertaLinea(prev => ({ ...prev, [r._origIdx]: v }))}
                     />
                   ))}
                 </tbody>
@@ -545,16 +591,16 @@ export default function ProformaImporter({ esMaster }) {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border border-slate-200 p-3 text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-slate-400 text-xs">Valor Alvic (presupuesto proveedor)</span><b className="text-slate-400">{eur(calc.totAlvic)}</b></div>
-                <div className="flex justify-between border-t border-slate-100 pt-1 mt-1"><span className="text-slate-500">Cascos ACB (−{p.desc1}%{showDesc2 ? ` −${p.desc2}%` : ''})</span><b>{eur(calc.totCasco)}</b></div>
+                <div className="flex justify-between border-t border-slate-100 pt-1 mt-1"><span className="text-slate-500">Cascos ACB</span><b>{eur(calc.totCasco)}</b></div>
                 <div className="flex justify-between"><span className="text-slate-500">Herraje (bisagras, patas, colgadores, guías)</span><b>{eur(calc.totHerr)}</b></div>
                 {calc.costePuertas > 0 && <div className="flex justify-between"><span className="text-slate-500">Puertas ({calc.pm2}€/m²)</span><b>{eur(calc.costePuertas)}</b></div>}
                 <div className="flex justify-between border-t border-slate-100 pt-1"><span className="text-slate-600 font-bold">Materiales</span><b>{eur(calc.totMat + calc.costePuertas)}</b></div>
-                <div className="flex justify-between"><span className="text-emerald-600 font-bold">+ Mano de obra</span><b className="text-emerald-700">{eur(calc.mo)}</b></div>
+                <div className="flex justify-between"><span className="text-emerald-600 font-bold">+ Mano de obra{calc.nMuebles > 0 ? ` (${calc.nMuebles} muebles)` : ''}</span><b className="text-emerald-700">{eur(calc.totMo)}</b></div>
               </div>
               <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/50 p-3 text-sm space-y-1">
-                <div className="flex justify-between"><span className="text-slate-600 font-bold">COSTE de producción</span><b className="text-slate-900">{eur(calc.costeProduccion + calc.costePuertas)}</b></div>
+                <div className="flex justify-between"><span className="text-slate-600 font-bold">COSTE de producción</span><b className="text-slate-900">{eur(calc.costeProduccion)}</b></div>
                 <div className="flex justify-between"><span className="text-indigo-600 font-bold">+ Margen</span><b className="text-indigo-700">{eur(calc.margen)}</b></div>
-                <div className="flex justify-between border-t border-indigo-200 pt-1 text-base"><span className="font-black text-indigo-900">PRECIO DE VENTA</span><b className="text-indigo-900">{eur(calc.precioVenta + calc.costePuertas)}</b></div>
+                <div className="flex justify-between border-t border-indigo-200 pt-1 text-base"><span className="font-black text-indigo-900">PRECIO DE VENTA</span><b className="text-indigo-900">{eur(calc.precioVenta)}</b></div>
               </div>
             </div>
 
@@ -610,7 +656,7 @@ export default function ProformaImporter({ esMaster }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, bloqueado, override, onOverride, onDelete }) {
+function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta }) {
   const [editando, setEditando] = useState(false);
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
   const colorActual = override.color || (r._acb ? r._acb._color : 'grafito');
@@ -693,7 +739,34 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete }) {
       <td className="px-2 py-1.5 text-right" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
         {r._herraje ? eur(r._herraje) : '—'}
       </td>
-      <td className="px-2 py-1.5 text-right font-black text-slate-800">{eur(r._mat)}</td>
+      <td className="px-2 py-1.5 text-right text-slate-600">{eur(r._mat)}</td>
+      {/* Mano de obra de ESTA linea: vacia = la general del mueble. */}
+      <td className="px-2 py-1.5 text-right">
+        {bloqueado ? eur(r._mo) : (
+          <input
+            type="number" step="any"
+            value={moLinea ?? ''}
+            placeholder={r._mo ? r._mo.toFixed(2) : '0'}
+            onChange={e => onMo(e.target.value)}
+            title="Vacío = mano de obra general. Escribe un valor para esta línea."
+            className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${moLinea !== undefined && moLinea !== '' ? 'border-emerald-400 font-bold text-emerald-700' : 'border-slate-200 text-slate-500'}`}
+          />
+        )}
+      </td>
+      {/* Puertas: vacio = m2 x precio/m2. Solo tiene sentido en las puertas. */}
+      <td className="px-2 py-1.5 text-right">
+        {!r._esPuerta ? <span className="text-slate-300">—</span> : bloqueado ? eur(r._puerta) : (
+          <input
+            type="number" step="any"
+            value={puertaLinea ?? ''}
+            placeholder={r._puerta ? r._puerta.toFixed(2) : '0'}
+            onChange={e => onPuerta(e.target.value)}
+            title="Vacío = área × precio/m². Escribe un precio para esta puerta."
+            className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
+          />
+        )}
+      </td>
+      <td className="px-2 py-1.5 text-right font-black text-slate-800">{eur(r._coste)}</td>
     </tr>
   );
 }
