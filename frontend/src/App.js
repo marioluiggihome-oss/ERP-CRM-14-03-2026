@@ -34,6 +34,7 @@ const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
 const CarpinterosUsers = lazy(() => import('./components/CarpinterosUsers')); // Gestión de usuarios de la división carpinteros
+const CarpinterPanel = lazy(() => import('./components/CarpinterPanel')); // Panel independiente admin Carpinter.io (reemplaza SettingsModal)
 const CarpinterosLanding = lazy(() => import('./components/CarpinterosLanding')); // Landing propia carpinteros (carpenter.io)
 const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
@@ -1655,12 +1656,23 @@ const App = () => {
           </main>
 
           <Suspense fallback={null}>
-            <SettingsModal 
-              isOpen={state.showSettings || false} 
-              onClose={() => setState(p => ({...p, showSettings: false}))} 
-              state={state} 
-              setState={setState} 
-            />
+            {/* Panel Maestro: si el usuario es admin de división Carpinter.io (canManageCarpinteroUsers && !isAdmin)
+                mostramos el panel independiente sin branding ni tabs de Luiggi Home.
+                Para todos los demás (admin, gerente, comerciales) mostramos el SettingsModal completo. */}
+            {state.currentUser?.canManageCarpinteroUsers && !state.currentUser?.isAdmin ? (
+              <CarpinterPanel
+                isOpen={state.showSettings || false}
+                onClose={() => setState(p => ({...p, showSettings: false}))}
+                currentUser={state.currentUser}
+              />
+            ) : (
+              <SettingsModal 
+                isOpen={state.showSettings || false} 
+                onClose={() => setState(p => ({...p, showSettings: false}))} 
+                state={state} 
+                setState={setState} 
+              />
+            )}
           </Suspense>
 
           {/* Maintenance Panel Modal - ADMIN ONLY */}
