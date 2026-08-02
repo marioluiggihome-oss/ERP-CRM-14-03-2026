@@ -122,7 +122,11 @@ function Nav({ onEnter }) {
       <div className="s3k-wrap s3k-nav-inner">
         {/* Logo wordmark */}
         <a href="#top" className="s3k-logo-link">
-          <img src="/manus-storage/studio3k-logo_77914d2f.png" alt="studio3k" className="s3k-logo-img" />
+          <img
+            src={scrolled ? "/manus-storage/s3k-final-light_17ebe7c8.png" : "/manus-storage/s3k-final-dark_d57fcc06.png"}
+            alt="studio3k"
+            className="s3k-logo-img"
+          />
         </a>
         {/* Links desktop */}
         <nav className="s3k-nav-links">
@@ -437,7 +441,7 @@ function Footer() {
     <footer className="s3k-footer">
       <div className="s3k-wrap s3k-footer-inner">
         <div className="s3k-footer-brand">
-          <img src="/manus-storage/studio3k-logo_77914d2f.png" alt="studio3k" className="s3k-footer-logo" />
+          <img src="/manus-storage/s3k-final-dark_d57fcc06.png" alt="studio3k" className="s3k-footer-logo" />
           <p className="s3k-footer-tagline">Diseño de cocinas con inteligencia artificial.<br />Para tiendas que quieren vender más.</p>
         </div>
         <div className="s3k-footer-links">
@@ -542,9 +546,7 @@ const CSS = `
 .s3k-nav-solid { background: rgba(255,255,255,.94); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(26,26,46,.08); }
 .s3k-nav-inner { display: flex; align-items: center; gap: 32px; height: 64px; }
 .s3k-logo-link { display: flex; align-items: center; }
-.s3k-logo-img { height: 22px; width: auto; object-fit: contain; filter: brightness(0); }
-.s3k-nav-solid .s3k-logo-img { filter: brightness(0); }
-.s3k-nav:not(.s3k-nav-solid) .s3k-logo-img { filter: brightness(0) invert(1); }
+.s3k-logo-img { height: 26px; width: auto; object-fit: contain; }
 .s3k-nav-links { display: flex; align-items: center; gap: 28px; margin-left: auto; }
 .s3k-nav-links a { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); transition: color .2s; }
 .s3k-nav-solid .s3k-nav-links a { color: var(--s3k-ink); }
@@ -688,7 +690,7 @@ const CSS = `
 .s3k-footer { background: var(--s3k-black); padding: 64px 0 0; }
 .s3k-footer-inner { display: grid; grid-template-columns: 1fr auto; gap: 64px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,.07); }
 .s3k-footer-brand { display: flex; flex-direction: column; gap: 16px; }
-.s3k-footer-logo { height: 20px; width: auto; filter: brightness(0) invert(1); opacity: .8; }
+.s3k-footer-logo { height: 24px; width: auto; object-fit: contain; opacity: .85; }
 .s3k-footer-tagline { font-size: 14px; color: rgba(255,255,255,.35); line-height: 1.6; max-width: 280px; }
 .s3k-footer-links { display: flex; gap: 48px; }
 .s3k-footer-col { display: flex; flex-direction: column; gap: 12px; }
