@@ -712,11 +712,24 @@ const App = () => {
 
   // Loading screen
   if (isLoading) {
+    // Detectar marca por dominio o parámetro de URL para colorear la pantalla de carga
+    const _lHost = (window.location.hostname || '').toLowerCase();
+    const _lParams = new URLSearchParams(window.location.search);
+    const _lIsS3k = _lHost.includes('studio3k') || _lHost.includes('estudio3k') || _lParams.has('s3k') || _lParams.get('brand') === 'studio3k';
+    const _lIsCarp = _lHost.includes('carpinter') || _lHost.includes('carpenter') || _lParams.has('carp') || _lParams.get('brand') === 'carpinteros';
+    // Studio3K: fondo navy oscuro + spinner azul índigo
+    // Carpinter.io: fondo beige oscuro + spinner naranja corporativo
+    // Luiggi Home (default): fondo slate-900 + spinner naranja
+    const _lBg = _lIsS3k ? '#0A0A1A' : _lIsCarp ? '#17130F' : '#0f172a';
+    const _lSpinner = _lIsS3k ? '#3B5BDB' : '#C4622D';
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+      <div className="fixed inset-0 flex items-center justify-center" style={{ background: _lBg }}>
         <div className="text-center">
-          <Loader size={48} className="animate-spin text-orange-500 mx-auto mb-4" />
-          <p className="text-white font-bold text-sm uppercase tracking-widest">Cargando Sistema...</p>
+          <svg className="animate-spin mx-auto mb-4" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+            <path d="M44 24a20 20 0 0 0-20-20" stroke={_lSpinner} strokeWidth="4" strokeLinecap="round" />
+          </svg>
+          <p className="text-white font-bold text-sm uppercase tracking-widest" style={{ opacity: 0.6 }}>Cargando...</p>
         </div>
       </div>
     );
