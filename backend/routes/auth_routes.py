@@ -98,7 +98,32 @@ async def login(request: Request, credentials: dict):
         # Auditoría: cuenta desactivada
         audit.log_login_failed(username, request, "account_disabled")
         raise HTTPException(status_code=401, detail="Cuenta desactivada")
-    
+
+    # ─── Restricción de dominio: división Carpinteros ────────────────────────────
+    # Los usuarios isCarpintero (o canManageCarpinteroUsers sin isAdmin) solo
+    # pueden autenticarse desde los dominios oficiales de Carpinter.io.
+    # Si intentan entrar desde erp.luiggihome.es u otro dominio, se rechaza
+    # con un error genérico (no revela que el usuario existe).
+    _is_carp_user = user.get("isCarpintero") or (
+        user.get("canManageCarpinteroUsers") and not user.get("isAdmin")
+    )
+    if _is_carp_user:
+        _origin = (
+            request.headers.get("origin") or
+            request.headers.get("referer") or
+            ""
+        ).lower()
+        _allowed_carp_domains = ("carpinter.io", "carpenter.io")
+        _origin_ok = any(d in _origin for d in _allowed_carp_domains)
+        if not _origin_ok:
+            # Registrar intento en auditoría pero devolver error genérico
+            audit.log_login_failed(username, request, "domain_restricted")
+            logger.warning(
+                f"[DOMAIN-RESTRICT] Usuario carpintero '{username}' intentó login "
+                f"desde dominio no autorizado: origin='{_origin}'"
+            )
+            raise HTTPException(status_code=401, detail="Credenciales no válidas")
+
     # Verificar fecha de caducidad del acceso
     expiration_date = user.get("accessExpirationDate")
     if expiration_date:
