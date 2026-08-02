@@ -30,12 +30,19 @@ else
 fi
 
 # 2. Backend: pruebas de calculo (precios, creditos, pedidos)
-if command -v python3 >/dev/null 2>&1 && [ -d "$RAIZ/backend/tests" ]; then
-  if python3 -m pytest "$RAIZ/backend/tests" -q -k "calculo or creditos or alvic" 2>/dev/null | tail -3; then
+#    OJO: nada de `pytest | tail`, porque entonces se mira el estado de `tail`
+#    (siempre 0) y las pruebas rojas pasarían desapercibidas. Se guarda la
+#    salida y se comprueba el estado de pytest.
+if command -v python3 >/dev/null 2>&1 && python3 -m pytest --version >/dev/null 2>&1; then
+  if python3 -m pytest "$RAIZ"/backend/tests/test_calculo_*.py -q >/tmp/_pytest_pre_push.log 2>&1; then
     echo "  ✓ backend: pruebas de cálculo"
   else
-    echo "  · backend: pytest no disponible o sin pruebas que ejecutar"
+    echo "  ✗ backend: pruebas de cálculo EN ROJO"
+    tail -20 /tmp/_pytest_pre_push.log
+    FALLOS=1
   fi
+else
+  echo "  · backend: pytest no disponible, se omite"
 fi
 
 # 3. Frontend: el build COMPLETO, que es lo unico que detecta los fallos de
