@@ -21,7 +21,7 @@ const NAV_LINKS = [
 ];
 
 const FEATURES = [
-  { icon: Image, cota: "01", title: "Renders fotorrealistas en segundos", desc: "El cliente ve su cocina terminada antes de firmar. Genera renders de calidad de estudio directamente desde la ficha del proyecto, sin software externo." },
+  { icon: Image, cota: "01", title: "Del boceto al render en segundos", desc: "El cliente dibuja a mano alzada o describe la cocina. Studio3K genera un render fotorrealista de calidad de estudio en menos de 10 segundos, sin software externo." },
   { icon: Layers, cota: "02", title: "Catálogo vivo de productos", desc: "Tus acabados, puertas y electrodomésticos siempre actualizados. El vendedor configura en tiempo real y el render se actualiza al instante." },
   { icon: TrendingUp, cota: "03", title: "Presupuesto automático", desc: "Cada configuración genera su presupuesto al momento. Precio, margen y coste de fabricación en una sola pantalla. Sin Excel, sin errores." },
   { icon: Users, cota: "04", title: "Gestión de clientes y proyectos", desc: "Historial completo de cada cliente: visitas, presupuestos, renders y estado del pedido. Tu equipo siempre al día, desde cualquier dispositivo." },
@@ -122,7 +122,7 @@ function Nav({ onEnter }) {
       <div className="s3k-wrap s3k-nav-inner">
         {/* Logo wordmark */}
         <a href="#top" className="s3k-logo-link">
-          <img src="/studio3k-logo.png" alt="studio3k" className="s3k-logo-img" />
+          <img src="/manus-storage/studio3k-logo_77914d2f.png" alt="studio3k" className="s3k-logo-img" />
         </a>
         {/* Links desktop */}
         <nav className="s3k-nav-links">
@@ -166,8 +166,8 @@ function Hero({ onEnter }) {
           <span className="s3k-hero-accent">Antes de que exista.</span>
         </h1>
         <p className="s3k-hero-sub">
-          Studio3K genera renders fotorrealistas de cocinas en segundos desde tu catálogo.
-          Cierra más ventas, en la misma visita.
+        Studio3K convierte un dibujo a mano alzada en un render fotorrealista de cocina en segundos.
+        Cierra más ventas, en la misma visita.
         </p>
         <div className="s3k-hero-actions">
           <a href="#acceso" onClick={enter} className="s3k-btn-solid s3k-btn-lg">
@@ -195,10 +195,10 @@ function DemoSection() {
       <div className="s3k-wrap">
         <div className="s3k-sec-head" data-reveal>
           <Eyebrow>EL ANTES Y EL DESPUÉS</Eyebrow>
-          <h2 className="s3k-sec-h2">De boceto a render<br /><span className="s3k-accent">en segundos</span></h2>
+          <h2 className="s3k-sec-h2">          Del papel al render<br /><span className="s3k-accent">en segundos</span></h2>
           <p className="s3k-sec-sub">
-            Tu vendedor configura la cocina con el cliente. Studio3K genera el render al instante.
-            Sin esperas, sin software de diseño, sin formación técnica.
+          El cliente hace un boceto a mano alzada. Studio3K lo convierte en un render fotorrealista al instante.
+          Sin esperas, sin software de diseño, sin formación técnica.
           </p>
         </div>
         <div className="s3k-demo-img-wrap" data-reveal>
@@ -437,7 +437,7 @@ function Footer() {
     <footer className="s3k-footer">
       <div className="s3k-wrap s3k-footer-inner">
         <div className="s3k-footer-brand">
-          <img src="/studio3k-logo.png" alt="studio3k" className="s3k-footer-logo" />
+          <img src="/manus-storage/studio3k-logo_77914d2f.png" alt="studio3k" className="s3k-footer-logo" />
           <p className="s3k-footer-tagline">Diseño de cocinas con inteligencia artificial.<br />Para tiendas que quieren vender más.</p>
         </div>
         <div className="s3k-footer-links">
