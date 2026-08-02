@@ -740,10 +740,13 @@ const App = () => {
     } catch { return false; }
   })();
 
-  // La web comercial de carpinter.io AÚN NO está publicada: por ahora es PRIVADA.
-  // Mientras esté sin publicar, el público que entra por el dominio va directo al
-  // login (no ve la landing). Solo se muestra en modo VISTA PREVIA (?preview o
-  // #preview) para revisarla en privado. Para publicarla, poner esto en true.
+  // La web comercial de carpinter.io está PUBLICADA: quien entra por el dominio
+  // ve la landing. Para volver a ocultarla (y mandar al público directo al
+  // login) basta con poner esto en false; entonces solo se vería en modo VISTA
+  // PREVIA (?preview o #preview).
+  // OJO: la landing solo se muestra a quien NO ha iniciado sesión. Si ya estás
+  // dentro del ERP y abres carpinter.io, entras a la aplicación; para verla
+  // logueado hay que añadir ?preview.
   const CARP_LANDING_PUBLISHED = true;
   const _carpPreview = (() => {
     try {
