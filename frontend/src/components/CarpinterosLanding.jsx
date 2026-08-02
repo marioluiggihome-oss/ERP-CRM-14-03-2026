@@ -610,6 +610,20 @@ const STYLES = `
 export default function CarpinterosLanding({ onEnter, embedded = false }) {
   useReveal();
   const rootRef = useRef(null);
+
+  // El CSS global del ERP pone overflow:hidden en body para el scroll interno
+  // de la app. La landing necesita scroll normal.
+  useEffect(() => {
+    if (embedded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'auto';
+    document.body.style.overflowX = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+      document.body.style.overflowX = '';
+    };
+  }, [embedded]);
+
   return (
     <div className={`cl-root ${embedded ? 'cl-embedded' : ''}`} ref={rootRef}>
       <style>{STYLES}</style>
