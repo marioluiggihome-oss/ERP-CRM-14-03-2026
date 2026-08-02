@@ -181,7 +181,6 @@ export default function ProformaImporter({ esMaster }) {
   const [p, setP] = useState(() => {
     try { const s = JSON.parse(localStorage.getItem('alvic_costes') || 'null'); return s ? { ...P_DEFAULT, ...s } : P_DEFAULT; } catch { return P_DEFAULT; }
   });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const setNum = useCallback((k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) })), []);
   const cambiarMarcaCaj = (m) => { setMarcaCaj(m); setP(prev => ({ ...prev, cajon: HERRAJE[m].cajon, gaveta: HERRAJE[m].gaveta })); };
   const cambiarMarcaBis = (m) => { setMarcaBis(m); setP(prev => ({ ...prev, bisagra: BISAGRA[m] })); };
