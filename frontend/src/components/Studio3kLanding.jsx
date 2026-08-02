@@ -465,6 +465,20 @@ function Footer() {
 /* ─── COMPONENTE PRINCIPAL ───────────────────────────────────────────────── */
 export default function Studio3kLanding({ onEnter }) {
   useReveal();
+
+  // El CSS global del ERP pone overflow:hidden en body para el scroll interno
+  // de la app. La landing necesita scroll normal, así que lo sobreescribimos
+  // mientras este componente está montado y lo restauramos al desmontar.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'auto';
+    document.body.style.overflowX = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+      document.body.style.overflowX = '';
+    };
+  }, []);
+
   return (
     <div className="s3k-root">
       <style>{CSS}</style>
