@@ -14,6 +14,7 @@ Endpoints:
 - GET  /api/ai-engine/task/{task_id} → Consultar estado de tarea
 """
 
+import hashlib
 import logging
 import io
 import os
@@ -100,6 +101,126 @@ async def get_render_design(design_id: str, current_user: Optional[dict] = Depen
     return {"success": True, "design": doc}
 
 
+# ─── Historial de imágenes DEL PROYECTO ───────────────────────────────────────
+# Cada render, variante, plano o lámina que se genera dentro de un proyecto se
+# guarda como un documento propio en `render3d_images`, NO dentro del proyecto.
+#
+# Por qué separado: una imagen a 1600px en JPEG base64 ocupa ~250-400 KB. Un
+# proyecto con 40 imágenes dentro del mismo documento se acerca al límite de
+# 16 MB de MongoDB y, mucho antes, hace que el POST de guardado pese tanto que
+# el proxy lo rechaza (era el "Error al guardar" de los renders grandes). Con un
+# documento por imagen, cada subida es pequeña y el listado se pagina.
+MAX_IMGS_PROYECTO = 120      # tope por proyecto (~30 MB); evita crecer sin freno
+MAX_BYTES_IMAGEN = 6_000_000  # una sola imagen no puede pasar de ~6 MB
+
+
+async def _design_accesible(design_id: str, current_user: Optional[dict]) -> dict:
+    """Devuelve el proyecto o lanza 404/403. Solo el dueño o un admin entran."""
+    doc = await _db.render3d_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1, "id": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    if current_user and current_user.get("id") and doc.get("userId"):
+        es_dueno = doc["userId"] == current_user["id"]
+        es_admin = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
+        if not es_dueno and not es_admin:
+            raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
+    return doc
+
+
+def _huella(data_url: str) -> str:
+    """Identifica una imagen por su contenido, para no guardarla dos veces."""
+    return hashlib.sha1((data_url or "").encode("utf-8", "ignore")).hexdigest()
+
+
+@ai_engine_router.post("/designs/{design_id}/imagenes")
+async def add_design_images(design_id: str, payload: dict,
+                            current_user: Optional[dict] = Depends(get_current_user)):
+    """Añade imágenes al historial del proyecto. Repetir una imagen no la duplica."""
+    doc = await _design_accesible(design_id, current_user)
+    entrantes = (payload or {}).get("imagenes") or []
+    if not isinstance(entrantes, list):
+        raise HTTPException(status_code=400, detail="Formato de imágenes no válido")
+
+    ya = await _db.render3d_images.count_documents({"designId": design_id})
+    hueco = max(MAX_IMGS_PROYECTO - ya, 0)
+    now = datetime.now(timezone.utc).isoformat()
+    guardadas, repetidas, descartadas = [], 0, 0
+    # Un resultado por cada imagen recibida, en el mismo orden: así el navegador
+    # sabe qué id le corresponde a cada foto y puede borrarla luego una a una.
+    resultados = []
+
+    for indice, item in enumerate(entrantes[:24]):  # tope por petición, que el JSON no se dispare
+        if len(guardadas) >= hueco:
+            resultados.append({"indice": indice, "estado": "lleno"})
+            continue
+        src = (item or {}).get("dataUrl") or ""
+        if not isinstance(src, str) or not src.strip():
+            resultados.append({"indice": indice, "estado": "vacia"})
+            continue
+        if len(src) > MAX_BYTES_IMAGEN:
+            descartadas += 1
+            resultados.append({"indice": indice, "estado": "demasiado_grande"})
+            continue
+        h = _huella(src)
+        previa = await _db.render3d_images.find_one({"designId": design_id, "hash": h}, {"_id": 0, "id": 1})
+        if previa:
+            repetidas += 1
+            resultados.append({"indice": indice, "estado": "repetida", "id": previa.get("id")})
+            continue
+        img = {
+            "id": f"img-{uuid.uuid4().hex[:12]}",
+            "designId": design_id,
+            "userId": doc.get("userId") or (current_user or {}).get("id") or "anonymous",
+            "hash": h,
+            "dataUrl": src,
+            "descripcion": str((item or {}).get("descripcion") or "")[:400],
+            "tipo": str((item or {}).get("tipo") or "render")[:40],
+            "createdAt": str((item or {}).get("createdAt") or now),
+            "guardadaEn": now,
+        }
+        await _db.render3d_images.insert_one(img)
+        guardadas.append(img["id"])
+        resultados.append({"indice": indice, "estado": "guardada", "id": img["id"]})
+
+    total = await _db.render3d_images.count_documents({"designId": design_id})
+    if guardadas:
+        await _db.render3d_designs.update_one(
+            {"id": design_id}, {"$set": {"numImagenes": total, "updatedAt": now}})
+    return {"success": True, "guardadas": len(guardadas), "repetidas": repetidas,
+            "descartadas": descartadas, "total": total, "resultados": resultados,
+            "lleno": total >= MAX_IMGS_PROYECTO}
+
+
+@ai_engine_router.get("/designs/{design_id}/imagenes")
+async def list_design_images(design_id: str, desde: int = 0, limite: int = 12,
+                             current_user: Optional[dict] = Depends(get_current_user)):
+    """Historial de imágenes del proyecto, de la más nueva a la más antigua.
+
+    Se pagina porque devolver 40 imágenes de golpe son decenas de MB y la
+    petición se cae. `limite` está acotado a 24 por respuesta.
+    """
+    await _design_accesible(design_id, current_user)
+    desde = max(int(desde or 0), 0)
+    limite = min(max(int(limite or 12), 1), 24)
+    total = await _db.render3d_images.count_documents({"designId": design_id})
+    items = await _db.render3d_images.find(
+        {"designId": design_id}, {"_id": 0, "hash": 0, "userId": 0}
+    ).sort("guardadaEn", -1).skip(desde).limit(limite).to_list(limite)
+    return {"success": True, "imagenes": items, "total": total,
+            "desde": desde, "hayMas": desde + len(items) < total}
+
+
+@ai_engine_router.delete("/designs/{design_id}/imagenes/{imagen_id}")
+async def delete_design_image(design_id: str, imagen_id: str,
+                              current_user: Optional[dict] = Depends(get_current_user)):
+    """Quita UNA imagen del historial guardado del proyecto."""
+    await _design_accesible(design_id, current_user)
+    res = await _db.render3d_images.delete_one({"designId": design_id, "id": imagen_id})
+    total = await _db.render3d_images.count_documents({"designId": design_id})
+    await _db.render3d_designs.update_one({"id": design_id}, {"$set": {"numImagenes": total}})
+    return {"success": True, "borradas": getattr(res, "deleted_count", 0), "total": total}
+
+
 @ai_engine_router.delete("/designs/{design_id}")
 async def delete_render_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
     # Validar propiedad: solo el dueño o un admin puede borrar
@@ -112,6 +233,9 @@ async def delete_render_design(design_id: str, current_user: Optional[dict] = De
         if not is_owner and not is_admin:
             raise HTTPException(status_code=403, detail="Sin permiso para eliminar este proyecto")
     await _db.render3d_designs.delete_one({"id": design_id})
+    # El historial de imágenes vive en otra colección: si no se borra aquí, se
+    # queda ocupando espacio para siempre sin proyecto al que pertenecer.
+    await _db.render3d_images.delete_many({"designId": design_id})
     return {"success": True}
 
 
