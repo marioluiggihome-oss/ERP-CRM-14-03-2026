@@ -323,6 +323,11 @@ export default function ProformaImporter({ esMaster }) {
         overrides,
         parametros: p,
         precioM2Puerta,
+        // Sin esto se perdian al recargar los retoques hechos linea a linea:
+        // mano de obra, precio de puerta, medidas corregidas y a que proveedor
+        // va cada cosa. Es justo el trabajo manual que mas cuesta rehacer.
+        moLinea, puertaLinea, destinoLinea, excluidas, puertasEditadas,
+        deletedRows: [...deletedRows],
       };
       const r = await fetch(`${API_URL}/api/cascos/proforma/proyectos`, {
         method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload),
@@ -351,7 +356,14 @@ export default function ProformaImporter({ esMaster }) {
     if (proy.parametros) setP(prev => ({ ...prev, ...proy.parametros }));
     if (proy.precioM2Puerta) setPrecioM2Puerta(proy.precioM2Puerta);
     setNombreProyecto(proy.nombre || '');
-    setDeletedRows(new Set());
+    // Se restaura el trabajo manual; los proyectos guardados antes de esto no
+    // llevan estos campos, y con `|| {}` se abren igual, simplemente en blanco.
+    setMoLinea(proy.moLinea || {});
+    setPuertaLinea(proy.puertaLinea || {});
+    setDestinoLinea(proy.destinoLinea || {});
+    setExcluidas(proy.excluidas || {});
+    setPuertasEditadas(proy.puertasEditadas || {});
+    setDeletedRows(new Set(proy.deletedRows || []));
     setShowProyectos(false);
   };
 

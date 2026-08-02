@@ -532,6 +532,15 @@ async def guardar_proforma_proyecto(payload: dict, current_user: Optional[dict] 
         "overrides": (payload or {}).get("overrides") or {},
         "parametros": (payload or {}).get("parametros") or {},
         "precioM2Puerta": (payload or {}).get("precioM2Puerta") or "",
+        # Retoques hechos linea a linea en la tabla: mano de obra, precio de
+        # puerta, medidas corregidas, destino de pedido y lineas descartadas.
+        # Sin guardarlos, al reabrir el proyecto se perdia el trabajo manual.
+        "moLinea": (payload or {}).get("moLinea") or {},
+        "puertaLinea": (payload or {}).get("puertaLinea") or {},
+        "destinoLinea": (payload or {}).get("destinoLinea") or {},
+        "excluidas": (payload or {}).get("excluidas") or {},
+        "puertasEditadas": (payload or {}).get("puertasEditadas") or {},
+        "deletedRows": (payload or {}).get("deletedRows") or [],
         "createdAt": (existing or {}).get("createdAt") or now,
         "updatedAt": now,
     }
