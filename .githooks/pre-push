@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Comprobaciones ANTES de subir. Ejecuta lo mismo que el CI, para enterarse aquí
+# y no media hora después con la rama rota.
+#
+# Instalación (una sola vez por equipo):
+#     git config core.hooksPath .githooks
+#
+# Saltárselo puntualmente (con criterio):  git push --no-verify
+#
+# Por qué existe: el 31/07 se subió un `eslint-disable` de una regla inexistente
+# y el frontend estuvo dos días sin compilar. El CI lo detectó, pero como nada
+# impide subir con el CI en rojo, nadie se entero y Railway siguió sirviendo la
+# versión anterior. Este enganche corta eso antes de que salga del equipo.
+set -u
+RAIZ="$(git rev-parse --show-toplevel)"
+FALLOS=0
+echo "── Comprobaciones previas al push ──────────────────────────────"
+
+# 1. Backend: sintaxis de todos los .py
+if command -v python3 >/dev/null 2>&1; then
+  if python3 -m compileall -q "$RAIZ/backend" >/dev/null 2>&1; then
+    echo "  ✓ backend: sintaxis Python"
+  else
+    echo "  ✗ backend: hay errores de sintaxis en Python"
+    python3 -m compileall -q "$RAIZ/backend" 2>&1 | head -20
+    FALLOS=1
+  fi
+else
+  echo "  · backend: sin python3, se omite"
+fi
+
+# 2. Backend: pruebas de calculo (precios, creditos, pedidos)
+if command -v python3 >/dev/null 2>&1 && [ -d "$RAIZ/backend/tests" ]; then
+  if python3 -m pytest "$RAIZ/backend/tests" -q -k "calculo or creditos or alvic" 2>/dev/null | tail -3; then
+    echo "  ✓ backend: pruebas de cálculo"
+  else
+    echo "  · backend: pytest no disponible o sin pruebas que ejecutar"
+  fi
+fi
+
+# 3. Frontend: el build COMPLETO, que es lo unico que detecta los fallos de
+#    ESLint y de JSX. Sin node_modules no se puede, y se avisa en vez de dar un
+#    falso visto bueno.
+if [ -d "$RAIZ/frontend/node_modules" ]; then
+  echo "  · frontend: compilando (tarda ~1 min)…"
+  if (cd "$RAIZ/frontend" && CI=true npx craco build >/tmp/_build_pre_push.log 2>&1); then
+    echo "  ✓ frontend: compila"
+  else
+    echo "  ✗ frontend: NO compila — esto rompería el despliegue"
+    grep -A 4 "Failed to compile" /tmp/_build_pre_push.log | head -20
+    FALLOS=1
+  fi
+else
+  echo "  ⚠ frontend: sin node_modules, NO se ha podido comprobar el build."
+  echo "    Instala con 'cd frontend && yarn install' para que esta red funcione."
+fi
+
+if [ "$FALLOS" -ne 0 ]; then
+  echo "────────────────────────────────────────────────────────────────"
+  echo "  PUSH CANCELADO. Arregla lo de arriba (o usa --no-verify si sabes"
+  echo "  lo que haces y por qué)."
+  exit 1
+fi
+echo "  todo correcto"
+exit 0
