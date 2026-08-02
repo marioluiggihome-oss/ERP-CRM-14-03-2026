@@ -1084,10 +1084,10 @@ const App = () => {
               data-testid="sidebar-toggle"
               title="Mostrar menú"
             >
-              {state.logo ? (
-                <img src={state.logo} alt="logo" className="w-full h-full object-contain p-1" />
-              ) : (state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId) ? (
+              {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers) && _isCarpBrandEntry ? (
                 <img src="/carpinter-logo-icon.png" alt="carpinter.io" className="w-full h-full object-contain p-1" />
+              ) : state.logo ? (
+                <img src={state.logo} alt="logo" className="w-full h-full object-contain p-1" />
               ) : state.marcaBlanca ? (
                 <div className="w-full h-full bg-indigo-600 flex items-center justify-center font-black text-white text-lg">
                   {(state.companyName || '').trim().charAt(0).toUpperCase() || '·'}
@@ -1123,10 +1123,10 @@ const App = () => {
               title="Toca para ocultar el menú"
               data-testid="sidebar-logo-toggle"
             >
-              {state.logo ? (
-                <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
-              ) : (state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId) ? (
+              {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers) && _isCarpBrandEntry ? (
                 <img src="/carpinter-logo-icon.png" alt="carpinter.io" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
+              ) : state.logo ? (
+                <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
               ) : (
                 <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-2xl group-hover:opacity-60 transition-opacity">L</div>
               )}
@@ -1557,11 +1557,19 @@ const App = () => {
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
             {state.currentTab === 'welcome' && (
               <ErrorBoundary>
-                <WelcomeScreen
-                  currentUser={state.currentUser}
-                  settings={state.settings}
-                  onNavigate={(tab) => setState(p => ({ ...p, currentTab: tab }))}
-                />
+                {state.currentUser?.canManageCarpinteroUsers && _isCarpBrandEntry ? (
+                  <div className="h-full overflow-y-auto">
+                    <Suspense fallback={<div className="min-h-full bg-[#F5F0E8]" />}>
+                      <CarpinterosLanding onEnter={null} embedded />
+                    </Suspense>
+                  </div>
+                ) : (
+                  <WelcomeScreen
+                    currentUser={state.currentUser}
+                    settings={state.settings}
+                    onNavigate={(tab) => setState(p => ({ ...p, currentTab: tab }))}
+                  />
+                )}
               </ErrorBoundary>
             )}
             {state.currentTab === 'budget' && (state.currentUser?.canUsePresupuestador1 !== false) && (
