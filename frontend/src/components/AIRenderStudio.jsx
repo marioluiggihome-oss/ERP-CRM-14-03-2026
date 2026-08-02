@@ -350,10 +350,12 @@ function StepHeader({ n, title, hint }) {
 // ─── Componente Principal ────────────────────────────────────────────────────
 // Tipos de mueble del Estudio 3D (deben coincidir con SettingsModal · ESTUDIO_3D_TIPOS).
 const ESTUDIO_3D_TIPOS = [
-  { id: 'cocina', label: 'Cocina' },
-  { id: 'armario', label: 'Armario / Vestidor' },
-  { id: 'bano', label: 'Baño' },
-  { id: 'otro', label: 'Otro mueble' },
+  // `corto`: como se nombra el tipo DENTRO DE UNA FRASE. El `label` es para
+  // botones y selectores ("Armario / Vestidor"), que ahi no pega.
+  { id: 'cocina',  label: 'Cocina',             corto: 'cocina' },
+  { id: 'armario', label: 'Armario / Vestidor', corto: 'armario' },
+  { id: 'bano',    label: 'Baño',               corto: 'baño' },
+  { id: 'otro',    label: 'Otro mueble',        corto: 'mueble a medida' },
 ];
 
 // Palabras clave que delatan un tipo de proyecto. Se usan para BLOQUEAR el render
@@ -3077,7 +3079,9 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
                 <h3 className="font-black text-slate-800 uppercase tracking-wider mb-2 text-lg">Estudio 3D</h3>
                 <p className="text-sm text-slate-500 leading-relaxed mb-6">
-                  Describe tu diseño (cocina, armario, baño, mueble a medida…) por voz o texto, o elige materiales.
+                  {/* Solo se nombran los tipos que ESE usuario tiene contratados: antes
+                      se listaban los cuatro aunque solo pudiera diseñar armarios. */}
+                  Describe tu diseño ({tiposPermitidos.map(t => t.corto || t.label.toLowerCase()).join(', ')}{tiposPermitidos.length === ESTUDIO_3D_TIPOS.length ? '…' : ''}) por voz o texto, o elige materiales.
                   Genera un render fotorrealista en segundos y preséntalo al cliente.
                 </p>
                 <div className="grid grid-cols-3 gap-3 text-left">
