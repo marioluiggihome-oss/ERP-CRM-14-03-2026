@@ -469,7 +469,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [selIds, setSelIds] = useState([]);           // ids de proyectos seleccionados para unir
   const [busy, setBusy] = useState(false);
   // Historial de fotos DEL PROYECTO (guardado en el servidor, no solo en memoria).
-  const [histInfo, setHistInfo] = useState({ total: 0, hayMas: false, cargadas: 0 });
+  const [histInfo, setHistInfo] = useState({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
   const [histSubiendo, setHistSubiendo] = useState(false);
   const histYaSubidas = useRef(new Set()); // srcs ya guardados del proyecto abierto
   const histEnCurso = useRef(false);       // evita dos subidas a la vez
@@ -861,6 +861,13 @@ export default function AIRenderStudio({ state, setState }) {
     if (typeof path === 'string' && path.startsWith('/api/ai-engine/asset')) {
       const token = getToken() || '';
       return `${API_URL}${path}&t=${encodeURIComponent(token)}`;
+    }
+    // Fotos guardadas del proyecto (pueden venir de Google Drive): se sirven por
+    // el propio ERP, con sesión. El token va en la URL porque una etiqueta <img>
+    // no puede mandar cabeceras.
+    if (typeof path === 'string' && path.startsWith('/api/ai-engine/designs/')) {
+      const token = getToken() || '';
+      return `${API_URL}${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(token)}`;
     }
     return path;
   };
@@ -1650,6 +1657,28 @@ export default function AIRenderStudio({ state, setState }) {
     return await shrinkForSave(src);
   };
 
+  // Miniatura para la tira del historial (~25 KB). Cuando la foto grande va a
+  // Google Drive, esto es lo ÚNICO que queda en la base de datos.
+  const hacerMiniatura = async (src) => {
+    const dataUrl = await imageToDataUrl(src);
+    if (!dataUrl || !String(dataUrl).startsWith('data:image')) return null;
+    return await new Promise((resolve) => {
+      const im = new window.Image();
+      im.onload = () => {
+        try {
+          const escala = Math.min(1, 400 / Math.max(im.width, im.height));
+          const w = Math.max(Math.round(im.width * escala), 1);
+          const h = Math.max(Math.round(im.height * escala), 1);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(im, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', 0.7));
+        } catch (_) { resolve(null); }
+      };
+      im.onerror = () => resolve(null);
+      im.src = dataUrl;
+    });
+  };
+
   // Render actual + todo el historial, sin repetir y de más reciente a más
   // antiguo. La tira de miniaturas solo conserva las últimas ~12 (las viejas se
   // caen sola al generar), así que se apunta aquí TODO lo que ha pasado por
@@ -1685,7 +1714,13 @@ export default function AIRenderStudio({ state, setState }) {
         for (const f of lote) {
           try {
             const dataUrl = await listaParaGuardar(f.src);
-            if (dataUrl) { imagenes.push({ dataUrl, descripcion: f.descripcion, tipo: f.tipo }); origen.push(f.src); }
+            if (dataUrl) {
+              // La miniatura viaja siempre: es lo que se ve en el historial y lo
+              // único que se queda aquí cuando la grande se va a Drive.
+              const miniatura = await hacerMiniatura(dataUrl);
+              imagenes.push({ dataUrl, miniatura, descripcion: f.descripcion, tipo: f.tipo });
+              origen.push(f.src);
+            }
           } catch (_) { /* una foto que no se puede leer no bloquea al resto */ }
         }
         if (!imagenes.length) continue;
@@ -1707,7 +1742,12 @@ export default function AIRenderStudio({ state, setState }) {
             return (src && idPorSrc.has(src) && !h.guardadaId) ? { ...h, guardadaId: idPorSrc.get(src) } : h;
           }));
         }
-        setHistInfo(prev => ({ ...prev, total: typeof d.total === 'number' ? d.total : prev.total }));
+        setHistInfo(prev => ({
+          ...prev,
+          total: typeof d.total === 'number' ? d.total : prev.total,
+          enDrive: !!d.drive,
+        }));
+        if (d.driveAviso && avisar) setError(d.driveAviso);
         if (d.lleno) {
           if (avisar) setError('El proyecto ha llegado al tope de fotos guardadas; borra alguna del historial para seguir.');
           break;
@@ -1725,11 +1765,19 @@ export default function AIRenderStudio({ state, setState }) {
         { headers: getAuthHeaders() });
       if (!r.ok) return;
       const d = await r.json();
+      // Si la foto grande está en Drive, `dataUrl` es solo la miniatura: la
+      // grande se pide al ERP cuando hace falta (verla, PDF, descargar).
       const items = (d.imagenes || []).map(im => ({
         success: true, guardadaId: im.id, tipo: im.tipo || 'render',
         description: im.descripcion || '',
         timestamp: im.createdAt ? new Date(im.createdAt) : new Date(),
-        result: { images: [im.dataUrl] },
+        miniatura: im.dataUrl || null,
+        enDrive: !!im.enDrive,
+        result: {
+          images: [im.enDrive
+            ? `/api/ai-engine/designs/${designId}/imagenes/${im.id}/archivo`
+            : im.dataUrl],
+        },
       })).filter(it => it.result.images[0]);
       items.forEach(it => histYaSubidas.current.add(it.result.images[0]));
       setRenderHistory(prev => {
@@ -1737,7 +1785,8 @@ export default function AIRenderStudio({ state, setState }) {
         const vistos = new Set(base.map(x => x?.result?.images?.[0]));
         return [...base, ...items.filter(it => !vistos.has(it.result.images[0]))].slice(0, 60);
       });
-      setHistInfo({ total: d.total || items.length, hayMas: !!d.hayMas, cargadas: desde + items.length });
+      setHistInfo({ total: d.total || items.length, hayMas: !!d.hayMas,
+        cargadas: desde + items.length, enDrive: items.some(it => it.enDrive) });
     } catch (_) { /* el proyecto se abre igual aunque el historial falle */ }
   };
 
@@ -1755,8 +1804,8 @@ export default function AIRenderStudio({ state, setState }) {
         const d = await r.json().catch(() => null);
         if (!d?.success) throw new Error(d?.detail || `HTTP ${r.status}`);
         setHistInfo(prev => ({
+          ...prev,
           total: typeof d.total === 'number' ? d.total : Math.max(prev.total - 1, 0),
-          hayMas: prev.hayMas,
           cargadas: Math.max(prev.cargadas - 1, 0),
         }));
       } catch (e) { setError(`No se pudo borrar la foto del proyecto: ${e.message || 'error de conexión'}`); return; }
@@ -1825,7 +1874,7 @@ export default function AIRenderStudio({ state, setState }) {
     // proyecto, para no mezclarlas con las del proyecto anterior.
     histYaSubidas.current = new Set(); histVistas.current = new Map();
     setRenderHistory([]);
-    setHistInfo({ total: 0, hayMas: false, cargadas: 0 });
+    setHistInfo({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
     if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
     // La lista ya no trae el referenceImage (payload); se carga el detalle completo
     // para poder Comparar con el plano/referencia original guardado.
@@ -1928,7 +1977,7 @@ export default function AIRenderStudio({ state, setState }) {
     setOrbitFrames([]); setOrbitOn(false); setOrbitIndex(0);
     setSavedList(null); setSelMode(false); setSelIds([]); setError(null);
     histYaSubidas.current = new Set(); histVistas.current = new Map();
-    setHistInfo({ total: 0, hayMas: false, cargadas: 0 });
+    setHistInfo({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
   };
 
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
@@ -3279,6 +3328,12 @@ export default function AIRenderStudio({ state, setState }) {
                     {histInfo.total} guardada{histInfo.total === 1 ? '' : 's'}
                   </span>
                 )}
+                {savedId && histInfo.enDrive && (
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5"
+                    title="Las fotos a tamaño completo se guardan en la carpeta del proyecto en Google Drive">
+                    en Google Drive
+                  </span>
+                )}
                 {histSubiendo && <span className="text-[10px] text-slate-400">guardando fotos…</span>}
                 {!savedId && (
                   <span className="text-[10px] text-slate-400">se guardarán con el proyecto al pulsar «Guardar»</span>
@@ -3292,8 +3347,8 @@ export default function AIRenderStudio({ state, setState }) {
                       className="w-16 h-16 bg-slate-200 rounded-xl overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all block"
                       title={item.description}
                     >
-                      {item?.result?.images?.[0] ? (
-                        <img src={assetSrc(item.result.images[0])} alt="" className="w-full h-full object-cover" />
+                      {(item?.miniatura || item?.result?.images?.[0]) ? (
+                        <img src={assetSrc(item.miniatura || item.result.images[0])} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-400">
                           <Image size={16} />

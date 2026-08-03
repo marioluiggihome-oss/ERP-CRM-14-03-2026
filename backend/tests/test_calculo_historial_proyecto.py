@@ -275,6 +275,143 @@ def test_una_foto_enorme_no_se_guarda(motor):
     asyncio.run(esc())
 
 
+class _DriveFalso(types.ModuleType):
+    """Drive simulado: guarda lo que le suben y puede fallar a voluntad."""
+
+    def __init__(self, funciona=True):
+        super().__init__("services.drive_fotos")
+        self.funciona = funciona
+        self.archivos = {}
+        self.carpetas = []
+
+    def esta_configurado(self):
+        return True
+
+    def carpeta_de_proyecto(self, nombre):
+        if not self.funciona:
+            return {"ok": False, "error": "Drive caido"}
+        self.carpetas.append(nombre)
+        return {"ok": True, "id": "carp-1", "nombre": nombre, "creada": True}
+
+    def subir_imagen(self, data_url, nombre, carpeta_id):
+        if not self.funciona or getattr(self, "falla_subida", False):
+            return {"ok": False, "error": "Drive caido"}
+        fid = f"drive-{len(self.archivos) + 1}"
+        self.archivos[fid] = data_url
+        return {"ok": True, "id": fid, "nombre": nombre, "enlace": f"https://drive/{fid}"}
+
+    def descargar_imagen(self, file_id):
+        if file_id not in self.archivos:
+            return {"ok": False, "error": "no esta"}
+        return {"ok": True, "datos": b"contenido", "mime": "image/jpeg"}
+
+    def a_papelera(self, file_id):
+        self.archivos.pop(file_id, None)
+        return {"ok": True}
+
+    def trocear_data_url(self, data_url):
+        if not isinstance(data_url, str) or not data_url.startswith("data:"):
+            return None, None
+        return b"contenido", "image/jpeg"
+
+
+def _con_drive(motor, monkeypatch, funciona=True):
+    falso = _DriveFalso(funciona)
+    monkeypatch.setitem(sys.modules, "services.drive_fotos", falso)
+    setattr(sys.modules["services"], "drive_fotos", falso)
+    return falso
+
+
+def _foto_con_miniatura(n):
+    f = _foto(n, tam=400)
+    f["miniatura"] = "data:image/jpeg;base64,mini" + str(n)
+    return f
+
+
+def test_con_drive_la_foto_grande_va_a_drive_y_aqui_queda_la_miniatura(motor, monkeypatch):
+    """Es la razon de ser de esto: no llenar los 5 GB de MongoDB con renders."""
+    async def esc():
+        drive = _con_drive(motor, monkeypatch)
+        pid = await _proyecto(motor)
+        r = await motor.add_design_images(
+            pid, {"imagenes": [_foto_con_miniatura(1), _foto_con_miniatura(2)]}, DUENO)
+        assert r["drive"] is True and r["guardadas"] == 2
+        assert len(drive.archivos) == 2, "las fotos no han llegado a Drive"
+        guardadas = motor._db.render3d_images.docs
+        assert all(d["dataUrl"].startswith("data:image/jpeg;base64,mini") for d in guardadas), \
+            "se ha guardado la foto grande en la base de datos"
+        assert all(d.get("enDrive") and d.get("driveId") for d in guardadas)
+        # La carpeta se crea una sola vez y lleva el nombre del proyecto.
+        assert drive.carpetas == ["PRUEBA OLG · Cocina"]
+    asyncio.run(esc())
+
+
+def test_si_drive_falla_la_foto_se_guarda_igual_en_el_erp(motor, monkeypatch):
+    """Un fallo de Google no puede hacer que se pierda el trabajo."""
+    async def esc():
+        _con_drive(motor, monkeypatch, funciona=False)
+        pid = await _proyecto(motor)
+        r = await motor.add_design_images(pid, {"imagenes": [_foto_con_miniatura(1)]}, DUENO)
+        assert r["guardadas"] == 1, "se ha perdido la foto por un fallo de Drive"
+        assert r["driveAviso"] is None or "Drive" in r["driveAviso"]
+        doc = motor._db.render3d_images.docs[0]
+        assert doc["dataUrl"].startswith("data:image/jpeg;base64,1"), \
+            "sin Drive hay que guardar la foto entera aqui"
+        assert not doc.get("enDrive")
+    asyncio.run(esc())
+
+
+def test_si_falla_la_subida_se_avisa_y_la_foto_queda_entera_en_el_erp(motor, monkeypatch):
+    async def esc():
+        drive = _con_drive(motor, monkeypatch)
+        drive.falla_subida = True  # la carpeta se crea, pero la subida se cae
+        pid = await _proyecto(motor)
+        r = await motor.add_design_images(pid, {"imagenes": [_foto_con_miniatura(1)]}, DUENO)
+        assert r["guardadas"] == 1
+        assert r["driveAviso"] and "Drive" in r["driveAviso"], "hay que avisar del fallo"
+        doc = motor._db.render3d_images.docs[0]
+        assert doc["dataUrl"].startswith("data:image/jpeg;base64,1") and not doc.get("enDrive")
+        assert doc.get("driveError"), "no queda constancia del fallo"
+    asyncio.run(esc())
+
+
+def test_la_foto_de_drive_se_sirve_por_el_erp_y_no_por_enlace_publico(motor, monkeypatch):
+    async def esc():
+        _con_drive(motor, monkeypatch)
+        pid = await _proyecto(motor)
+        r = await motor.add_design_images(pid, {"imagenes": [_foto_con_miniatura(1)]}, DUENO)
+        iid = [x["id"] for x in r["resultados"] if x["estado"] == "guardada"][0]
+        resp = await motor.get_design_image_file(pid, iid, None, DUENO)
+        assert resp.body == b"contenido" and resp.media_type == "image/jpeg"
+        # Y un extrano no puede descargarla.
+        with pytest.raises(motor.HTTPException) as e:
+            await motor.get_design_image_file(pid, iid, None, OTRO)
+        assert e.value.status_code == 403
+    asyncio.run(esc())
+
+
+def test_borrar_una_foto_la_manda_a_la_papelera_de_drive(motor, monkeypatch):
+    async def esc():
+        drive = _con_drive(motor, monkeypatch)
+        pid = await _proyecto(motor)
+        r = await motor.add_design_images(pid, {"imagenes": [_foto_con_miniatura(1)]}, DUENO)
+        iid = [x["id"] for x in r["resultados"] if x["estado"] == "guardada"][0]
+        await motor.delete_design_image(pid, iid, DUENO)
+        assert drive.archivos == {}, "la foto sigue ocupando sitio en Drive"
+    asyncio.run(esc())
+
+
+def test_borrar_el_proyecto_no_se_lleva_por_delante_el_drive(motor, monkeypatch):
+    """El archivo de fotos de la empresa no se borra desde el ERP."""
+    async def esc():
+        drive = _con_drive(motor, monkeypatch)
+        pid = await _proyecto(motor)
+        await motor.add_design_images(pid, {"imagenes": [_foto_con_miniatura(1)]}, DUENO)
+        await motor.delete_render_design(pid, DUENO)
+        assert len(drive.archivos) == 1, "se han borrado las fotos del Drive de la empresa"
+    asyncio.run(esc())
+
+
 def test_el_tope_por_proyecto_se_respeta(motor):
     async def esc():
         pid = await _proyecto(motor)

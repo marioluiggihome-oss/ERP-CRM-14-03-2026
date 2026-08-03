@@ -14,6 +14,7 @@ Endpoints:
 - GET  /api/ai-engine/task/{task_id} → Consultar estado de tarea
 """
 
+import asyncio
 import hashlib
 import logging
 import io
@@ -116,7 +117,9 @@ MAX_BYTES_IMAGEN = 6_000_000  # una sola imagen no puede pasar de ~6 MB
 
 async def _design_accesible(design_id: str, current_user: Optional[dict]) -> dict:
     """Devuelve el proyecto o lanza 404/403. Solo el dueño o un admin entran."""
-    doc = await _db.render3d_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1, "id": 1})
+    doc = await _db.render3d_designs.find_one(
+        {"id": design_id},
+        {"_id": 0, "userId": 1, "id": 1, "cliente": 1, "ref": 1, "driveFolderId": 1})
     if not doc:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     if current_user and current_user.get("id") and doc.get("userId"):
@@ -132,6 +135,38 @@ def _huella(data_url: str) -> str:
     return hashlib.sha1((data_url or "").encode("utf-8", "ignore")).hexdigest()
 
 
+# ─── Fotos en Google Drive ────────────────────────────────────────────────────
+# Si hay Drive configurado (la misma cuenta de servicio de las copias de
+# seguridad), la foto GRANDE se sube a una carpeta por proyecto y en la base de
+# datos queda solo la miniatura (~25 KB) y el enlace. Así el Estudio 3D no se
+# come el espacio de MongoDB y las fotos quedan también en el Drive de la casa.
+#
+# Si Drive no está configurado, o falla, la foto se guarda entera en la base de
+# datos como hasta ahora: un problema con Google NO puede impedir guardar.
+def _drive_disponible() -> bool:
+    try:
+        from services import drive_fotos
+        return drive_fotos.esta_configurado()
+    except Exception:
+        return False
+
+
+async def _carpeta_drive_del_proyecto(doc: dict) -> Optional[str]:
+    """Id de la carpeta del proyecto en Drive; la crea la primera vez."""
+    if doc.get("driveFolderId"):
+        return doc["driveFolderId"]
+    from services import drive_fotos
+    nombre = " · ".join([x for x in [doc.get("cliente"), doc.get("ref")] if x]) or doc.get("id")
+    res = await asyncio.to_thread(drive_fotos.carpeta_de_proyecto, nombre)
+    if not res.get("ok"):
+        logger.warning("Sin carpeta de Drive para %s: %s", doc.get("id"), res.get("error"))
+        return None
+    await _db.render3d_designs.update_one(
+        {"id": doc["id"]}, {"$set": {"driveFolderId": res["id"], "driveFolderNombre": res.get("nombre")}})
+    doc["driveFolderId"] = res["id"]
+    return res["id"]
+
+
 @ai_engine_router.post("/designs/{design_id}/imagenes")
 async def add_design_images(design_id: str, payload: dict,
                             current_user: Optional[dict] = Depends(get_current_user)):
@@ -145,6 +180,9 @@ async def add_design_images(design_id: str, payload: dict,
     hueco = max(MAX_IMGS_PROYECTO - ya, 0)
     now = datetime.now(timezone.utc).isoformat()
     guardadas, repetidas, descartadas = [], 0, 0
+    usar_drive = _drive_disponible()
+    carpeta = await _carpeta_drive_del_proyecto(doc) if usar_drive else None
+    fallos_drive = []
     # Un resultado por cada imagen recibida, en el mismo orden: así el navegador
     # sabe qué id le corresponde a cada foto y puede borrarla luego una a una.
     resultados = []
@@ -178,9 +216,28 @@ async def add_design_images(design_id: str, payload: dict,
             "createdAt": str((item or {}).get("createdAt") or now),
             "guardadaEn": now,
         }
+
+        # A Drive la foto grande; en la base de datos, la miniatura y el enlace.
+        # Sin miniatura no se sube: quedaría un historial sin nada que enseñar.
+        miniatura = (item or {}).get("miniatura")
+        if usar_drive and carpeta and isinstance(miniatura, str) and miniatura.startswith("data:"):
+            from services import drive_fotos
+            nombre = f"{now[:19].replace(':', '-')}_{img['tipo']}_{img['id']}"
+            sub = await asyncio.to_thread(drive_fotos.subir_imagen, src, nombre, carpeta)
+            if sub.get("ok"):
+                img["dataUrl"] = miniatura          # lo que se ve en el historial
+                img["driveId"] = sub["id"]
+                img["driveEnlace"] = sub.get("enlace")
+                img["enDrive"] = True
+            else:
+                # Drive ha fallado: se guarda entera aquí y se deja constancia.
+                img["driveError"] = str(sub.get("error"))[:300]
+                fallos_drive.append(sub.get("error"))
+
         await _db.render3d_images.insert_one(img)
         guardadas.append(img["id"])
-        resultados.append({"indice": indice, "estado": "guardada", "id": img["id"]})
+        resultados.append({"indice": indice, "estado": "guardada", "id": img["id"],
+                           "enDrive": bool(img.get("enDrive"))})
 
     total = await _db.render3d_images.count_documents({"designId": design_id})
     if guardadas:
@@ -188,7 +245,11 @@ async def add_design_images(design_id: str, payload: dict,
             {"id": design_id}, {"$set": {"numImagenes": total, "updatedAt": now}})
     return {"success": True, "guardadas": len(guardadas), "repetidas": repetidas,
             "descartadas": descartadas, "total": total, "resultados": resultados,
-            "lleno": total >= MAX_IMGS_PROYECTO}
+            "lleno": total >= MAX_IMGS_PROYECTO,
+            "drive": bool(usar_drive and carpeta),
+            "driveAviso": (f"{len(fallos_drive)} foto(s) no se pudieron subir a Drive; "
+                           f"están guardadas en el ERP. {fallos_drive[0]}"
+                           if fallos_drive else None)}
 
 
 @ai_engine_router.get("/designs/{design_id}/imagenes")
@@ -204,10 +265,45 @@ async def list_design_images(design_id: str, desde: int = 0, limite: int = 12,
     limite = min(max(int(limite or 12), 1), 24)
     total = await _db.render3d_images.count_documents({"designId": design_id})
     items = await _db.render3d_images.find(
-        {"designId": design_id}, {"_id": 0, "hash": 0, "userId": 0}
+        {"designId": design_id}, {"_id": 0, "hash": 0, "userId": 0, "driveId": 0}
     ).sort("guardadaEn", -1).skip(desde).limit(limite).to_list(limite)
     return {"success": True, "imagenes": items, "total": total,
             "desde": desde, "hayMas": desde + len(items) < total}
+
+
+@ai_engine_router.get("/designs/{design_id}/imagenes/{imagen_id}/archivo")
+async def get_design_image_file(design_id: str, imagen_id: str, t: Optional[str] = None,
+                                current_user: Optional[dict] = Depends(get_current_user)):
+    """Devuelve la foto a tamaño completo (de Drive o de la base de datos).
+
+    Acepta el token por query param `t` además de por cabecera, porque una
+    etiqueta <img> del navegador no puede mandar cabeceras. Las fotos NO se
+    publican en Drive con enlace abierto: se sirven por aquí, con sesión.
+    """
+    usuario = current_user
+    if not usuario and t:
+        from services.jwt_service import _payload_to_user
+        usuario = _payload_to_user(verify_access_token(t))  # 401 si no vale
+    await _design_accesible(design_id, usuario)
+    img = await _db.render3d_images.find_one({"designId": design_id, "id": imagen_id}, {"_id": 0})
+    if not img:
+        raise HTTPException(status_code=404, detail="Foto no encontrada")
+
+    if img.get("driveId"):
+        from services import drive_fotos
+        res = await asyncio.to_thread(drive_fotos.descargar_imagen, img["driveId"])
+        if res.get("ok"):
+            return Response(content=res["datos"], media_type=res.get("mime") or "image/jpeg",
+                            headers={"Cache-Control": "private, max-age=3600"})
+        # Drive caído: se devuelve la miniatura antes que un error en pantalla.
+        logger.warning("Foto %s no descargable de Drive: %s", imagen_id, res.get("error"))
+
+    from services import drive_fotos
+    datos, mime = drive_fotos.trocear_data_url(img.get("dataUrl") or "")
+    if not datos:
+        raise HTTPException(status_code=404, detail="La foto no tiene contenido")
+    return Response(content=datos, media_type=mime or "image/jpeg",
+                    headers={"Cache-Control": "private, max-age=3600"})
 
 
 @ai_engine_router.delete("/designs/{design_id}/imagenes/{imagen_id}")
@@ -215,6 +311,13 @@ async def delete_design_image(design_id: str, imagen_id: str,
                               current_user: Optional[dict] = Depends(get_current_user)):
     """Quita UNA imagen del historial guardado del proyecto."""
     await _design_accesible(design_id, current_user)
+    img = await _db.render3d_images.find_one({"designId": design_id, "id": imagen_id},
+                                             {"_id": 0, "driveId": 1})
+    # En Drive va a la PAPELERA, no se borra a fuego: 30 días para recuperarla si
+    # el borrado fue un descuido.
+    if img and img.get("driveId"):
+        from services import drive_fotos
+        await asyncio.to_thread(drive_fotos.a_papelera, img["driveId"])
     res = await _db.render3d_images.delete_one({"designId": design_id, "id": imagen_id})
     total = await _db.render3d_images.count_documents({"designId": design_id})
     await _db.render3d_designs.update_one({"id": design_id}, {"$set": {"numImagenes": total}})
@@ -235,6 +338,9 @@ async def delete_render_design(design_id: str, current_user: Optional[dict] = De
     await _db.render3d_designs.delete_one({"id": design_id})
     # El historial de imágenes vive en otra colección: si no se borra aquí, se
     # queda ocupando espacio para siempre sin proyecto al que pertenecer.
+    # Los archivos que estén en Google Drive NO se tocan: son de la empresa y
+    # allí siguen viéndose en su carpeta. Borrar un proyecto del ERP no puede
+    # llevarse por delante el archivo de fotos del cliente.
     await _db.render3d_images.delete_many({"designId": design_id})
     return {"success": True}
 
