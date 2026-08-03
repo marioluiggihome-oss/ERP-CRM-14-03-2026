@@ -508,8 +508,9 @@ export default function AIRenderStudio({ state, setState }) {
   const paletteData = colorTab === 'c1' ? COLORES_1 : colorTab === 'c2' ? COLORES_2 : COLORES_3;
   const gamas = porGama(paletteData);
   // Panel izquierdo redimensionable/ocultable (solo en pantallas grandes).
-  const [panelW, setPanelW] = useState(420);
-  const [panelHidden, setPanelHidden] = useState(false);
+  const [panelW, setPanelW] = useState(280);
+  // En móvil/tablet el panel arranca oculto para que el render sea lo primero que se ve
+  const [panelHidden, setPanelHidden] = useState(typeof window !== 'undefined' && window.innerWidth < 1024);
   // Saldo de renders y compra de packs (no caducan). Se abre solo al pulsar.
   const [verRecarga, setVerRecarga] = useState(false);
   const resizingPanel = useRef(false);
@@ -521,7 +522,7 @@ export default function AIRenderStudio({ state, setState }) {
   const renderPanelRef = useRef(null);
   const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
   useEffect(() => {
-    const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(300, Math.min(760, e.clientX - 8))); };
+    const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(240, Math.min(420, e.clientX - 8))); };
     const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -2038,17 +2039,17 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
-      {/* Header (el hueco para el logo flotante lo reserva <main> al colapsar) */}
-      <div className="shrink-0 px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-              <Wand2 size={20} className="text-white" />
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Header compacto — en móvil solo muestra título + créditos + acciones esenciales */}
+      <div className="shrink-0 px-3 sm:px-5 py-2.5 sm:py-3 bg-white border-b border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-md">
+              <Wand2 size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-slate-900 uppercase tracking-wide">Estudio 3D</h1>
-              <p className="text-xs text-slate-500 font-medium">Powered by Motor de IA</p>
+              <h1 className="text-base font-black text-slate-900 uppercase tracking-wide leading-tight">Estudio 3D</h1>
+              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Motor de IA</p>
             </div>
             {/* Créditos de IA del usuario (bolsa mensual). Admin/master = ilimitado. */}
             {aiCredits && (
@@ -2066,36 +2067,46 @@ export default function AIRenderStudio({ state, setState }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            {/* Cliente / referencia del proyecto */}
+          <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
+            {/* Cliente / referencia del proyecto — más compactos en móvil */}
             <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente"
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm flex-1 min-w-0 sm:flex-none sm:w-36" />
-            <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia"
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm flex-1 min-w-0 sm:flex-none sm:w-28" />
-            <button onClick={nuevoProyecto} title="Nuevo proyecto" className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50"><Plus size={14} /> Nuevo</button>
-            <button onClick={openList} title="Mis proyectos guardados" className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50"><FolderOpen size={14} /> Proyectos</button>
-            <button onClick={saveDesign} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">{busy ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Guardar</button>
+              className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs flex-1 min-w-0 sm:flex-none sm:w-32" />
+            <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Ref."
+              className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs w-20 sm:w-24" />
+            {/* En móvil solo iconos; en desktop texto + icono */}
+            <button onClick={nuevoProyecto} title="Nuevo proyecto"
+              className="flex items-center gap-1 px-2 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50">
+              <Plus size={13} /> <span className="hidden sm:inline">Nuevo</span>
+            </button>
+            <button onClick={openList} title="Mis proyectos guardados"
+              className="flex items-center gap-1 px-2 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50">
+              <FolderOpen size={13} /> <span className="hidden sm:inline">Proyectos</span>
+            </button>
+            <button onClick={saveDesign} disabled={busy}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
+              {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
+              <span className="hidden sm:inline">Guardar</span>
+            </button>
           </div>
-
-          {/* Mode Toggle */}
-          <div className="flex bg-slate-100 rounded-xl p-1">
+          {/* Mode Toggle — compacto */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
             <button
               onClick={() => setMode('natural')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
                 mode === 'natural' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Volume2 size={14} className="inline mr-1.5" />
-              Voz / Texto
+              <Volume2 size={13} />
+              <span className="hidden xs:inline">Voz</span>
             </button>
             <button
               onClick={() => setMode('params')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
                 mode === 'params' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Palette size={14} className="inline mr-1.5" />
-              Materiales
+              <Palette size={13} />
+              <span className="hidden xs:inline">Materiales</span>
             </button>
           </div>
         </div>
@@ -2118,14 +2129,40 @@ export default function AIRenderStudio({ state, setState }) {
         </div>
       )}
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-        {/* Panel izquierdo - Entrada */}
-        <div className={`${panelHidden ? 'hidden' : ''} w-full lg:w-auto shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto max-h-[55vh] lg:max-h-none`}
+      {/* Content: siempre flex-row en desktop, panel izquierdo estrecho + área render grande */}
+      <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+        {/* Panel izquierdo - Entrada (drawer en móvil, panel fijo en desktop) */}
+        {/* En móvil/tablet: overlay drawer desde la izquierda con backdrop */}
+        {!panelHidden && (
+          <div className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            onClick={() => setPanelHidden(true)} />
+        )}
+        <div className={`
+          ${panelHidden
+            ? 'translate-x-[-100%] lg:translate-x-0 lg:w-0 lg:overflow-hidden'
+            : 'translate-x-0'
+          }
+          fixed lg:relative z-50 lg:z-auto
+          top-0 left-0 h-full lg:h-auto
+          w-[85vw] sm:w-80 lg:w-auto
+          shrink-0 border-r border-slate-200 bg-white
+          flex flex-col min-h-0 overflow-y-auto
+          transition-transform duration-300 ease-in-out
+          lg:transition-none
+          shadow-2xl lg:shadow-none
+        `}
           style={isWide() && !panelHidden ? { width: panelW } : undefined}>
+          {/* Cabecera del drawer en móvil: título + botón cerrar */}
+          <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white sticky top-0 z-10">
+            <span className="text-sm font-black text-slate-700 uppercase tracking-wide">Opciones de diseño</span>
+            <button onClick={() => setPanelHidden(true)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+              <X size={18} />
+            </button>
+          </div>
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
-            <div className="flex-1 flex flex-col p-6 gap-5">
+            <div className="flex-1 flex flex-col p-4 sm:p-5 gap-4">
               {/* PASO 1 — Describe el diseño */}
               <StepHeader n={1} title="Describe el diseño" hint={`${tipoActual.label}. Puedes hablar o escribir.`} />
 
@@ -2451,7 +2488,7 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
           ) : (
             /* ─── Modo Parámetros/Materiales ─── */
-            <div className="flex-1 flex flex-col p-6 gap-4 overflow-y-auto">
+            <div className="flex-1 flex flex-col p-4 sm:p-5 gap-4 overflow-y-auto">
               {/* Layout */}
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Distribución</label>
@@ -2592,13 +2629,16 @@ export default function AIRenderStudio({ state, setState }) {
           </button>
         )}
 
-        {/* Panel derecho - Resultado */}
-        <div ref={renderPanelRef} className="flex-1 flex flex-col p-4 sm:p-6 min-h-[60vh] lg:min-h-0 lg:overflow-hidden">
-          {/* Mostrar/ocultar el panel de opciones en móvil y tablet para dar sitio al render */}
-          <button onClick={() => setPanelHidden(v => !v)}
-            className="lg:hidden self-start mb-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm">
-            {panelHidden ? <><ChevronRight size={14} /> Mostrar opciones</> : <><ChevronLeft size={14} /> Ocultar opciones</>}
-          </button>
+        {/* Panel derecho - Área de render principal (ocupa todo el espacio disponible) */}
+        <div ref={renderPanelRef} className="flex-1 flex flex-col p-3 sm:p-4 min-h-0 overflow-hidden bg-slate-50">
+          {/* Barra superior del área render: botón abrir opciones (móvil) + info */}
+          <div className="flex items-center gap-2 mb-2 shrink-0">
+            {/* Botón flotante para abrir el drawer de opciones en móvil/tablet */}
+            <button onClick={() => setPanelHidden(false)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-white border border-slate-200 text-indigo-600 hover:bg-indigo-50 shadow-sm">
+              <Palette size={14} /> Opciones
+            </button>
+          </div>
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
               <span className="text-red-500 font-bold">Error:</span> {error}
@@ -2627,114 +2667,117 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
           ) : renderResult ? (
             /* Resultado del render */
-            <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between shrink-0 gap-2">
-                <h3 className="font-black text-slate-700 uppercase tracking-wider text-xs">Resultado</h3>
-                <div className="flex gap-1.5 flex-wrap justify-start sm:justify-end">
-                  <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
-                    title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
-                    {editing ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />} Visita de decorador/a
+            <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
+              {/* Barra de acciones compacta: dos filas en móvil, una en desktop */}
+              <div className="shrink-0 flex flex-wrap items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1.5">
+                {/* Grupo IA: acciones que generan nueva imagen */}
+                <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
+                  title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
+                  {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  <span className="hidden sm:inline">Decorador/a</span><span className="sm:hidden">Deco</span>
+                </button>
+                <button onClick={mejorarResolucion} disabled={editing || downloading || !currentImage()}
+                  title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50">
+                  {editing ? <Loader size={12} className="animate-spin" /> : <Wand2 size={12} />} HD
+                </button>
+                {canUse4K && (
+                <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
+                  title="Genera y descarga la imagen a resolución 4K real (3840 px): nitidez con IA + reescalado a 4K"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 shadow-sm disabled:opacity-50">
+                  {editing ? <Loader size={12} className="animate-spin" /> : <Maximize2 size={12} />} 4K
+                </button>
+                )}
+                {/* Separador visual */}
+                <span className="w-px h-5 bg-slate-200 mx-0.5" />
+                {/* Grupo descarga/export */}
+                <button onClick={downloadRender} disabled={downloading || !currentImage()}
+                  className="flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
+                  {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
+                  <span className="hidden sm:inline">PNG</span>
+                </button>
+                <button onClick={descargarTodo} disabled={downloading || !currentImage()}
+                  className="flex items-center gap-1 px-2 py-1 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar render actual + historial completo">
+                  {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
+                  <span className="hidden sm:inline">Todo</span>
+                </button>
+                <button onClick={() => setWatermarkOn(v => !v)}
+                  title={state?.logo ? (watermarkOn ? 'Marca de agua ACTIVADA: tu logo se estampa al descargar' : 'Activar marca de agua con tu logo al descargar') : 'Sube tu logo en Ajustes para usar marca de agua'}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${watermarkOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} disabled:opacity-40`}
+                  disabled={!state?.logo}>
+                  <Image size={12} />
+                  <span className="hidden sm:inline">Logo</span>
+                </button>
+                <button onClick={exportPDF} disabled={downloading || !currentImage()}
+                  className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
+                  <FileText size={12} /> PDF
+                </button>
+                <button onClick={exportDossierPDF} disabled={downloading || !currentImage()}
+                  className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white rounded-lg text-[11px] font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
+                  <BookOpen size={12} />
+                  <span className="hidden sm:inline">Dossier</span>
+                </button>
+                <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
+                  className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded-lg text-[11px] font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
+                  <Share2 size={12} />
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </button>
+                <button onClick={attachToBudget} disabled={downloading || !currentImage()}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                  title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
+                  {attached ? <><CheckCircle size={12} /> <span className="hidden sm:inline">Adjuntado</span></> : <><Send size={12} /> <span className="hidden sm:inline">{tipo3d === 'armario' ? 'Armarios' : 'Presup.'}</span></>}
+                </button>
+                {/* Separador visual */}
+                <span className="w-px h-5 bg-slate-200 mx-0.5" />
+                {/* Grupo visor */}
+                {(originalRef || refImage) && (
+                  <button onClick={() => setCompareOn(v => !v)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    title="Comparar la imagen original subida con el render">
+                    <Image size={12} /> <span className="hidden sm:inline">Comparar</span>
                   </button>
-                  <button onClick={mejorarResolucion} disabled={editing || downloading || !currentImage()}
-                    title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50">
-                    {editing ? <Loader size={14} className="animate-spin" /> : <Wand2 size={14} />} HD
+                )}
+                {canUseRender360 && (orbitFrames.length >= 2 ? (
+                  <button onClick={() => setOrbitOn(v => !v)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${orbitOn ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    title="Visor 360º: arrastra para girar la cocina">
+                    <RotateCw size={12} /> 360º
                   </button>
-                  {canUse4K && (
-                  <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
-                    title="Genera y descarga la imagen a resolución 4K real (3840 px): nitidez con IA + reescalado a 4K"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 shadow-sm disabled:opacity-50">
-                    {editing ? <Loader size={14} className="animate-spin" /> : <Maximize2 size={14} />} 4K
+                ) : (
+                  <button onClick={generarOrbita} disabled={orbitLoading}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors"
+                    title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos de IA)">
+                    {orbitLoading ? <Loader size={12} className="animate-spin" /> : <RotateCw size={12} />}
+                    <span className="hidden sm:inline">{orbitLoading ? 'Generando…' : '360º'}</span>
                   </button>
-                  )}
-                  <button onClick={downloadRender} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
-                    {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar
-                  </button>
-                  <button onClick={descargarTodo} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar de seguido el render actual y todo el historial (renders, variantes, planos y láminas)">
-                    {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar todo
-                  </button>
-                  <button onClick={() => setWatermarkOn(v => !v)}
-                    title={state?.logo ? (watermarkOn ? 'Marca de agua ACTIVADA: tu logo se estampa al descargar' : 'Activar marca de agua con tu logo al descargar') : 'Sube tu logo en Ajustes para usar marca de agua'}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${watermarkOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} disabled:opacity-40`}
-                    disabled={!state?.logo}>
-                    <Image size={14} /> Marca de agua
-                  </button>
-                  <button onClick={exportPDF} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
-                    <FileText size={14} /> PDF
-                  </button>
-                  <button onClick={exportDossierPDF} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-600 text-white rounded-lg text-[11px] font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
-                    <BookOpen size={14} /> Dossier
-                  </button>
-                  <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-[11px] font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
-                    <Share2 size={14} /> WhatsApp
-                  </button>
-                  <button onClick={attachToBudget} disabled={downloading || !currentImage()}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
-                    title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
-                    {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> {tipo3d === 'armario' ? 'Al presup. armarios' : 'Al presupuesto'}</>}
-                  </button>
-                  {(originalRef || refImage) && (
-                    <button onClick={() => setCompareOn(v => !v)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                      title="Comparar la imagen original subida con el render">
-                      <Image size={14} /> Comparar
-                    </button>
-                  )}
-                  {canUseRender360 && (orbitFrames.length >= 2 ? (
-                    <button
-                      onClick={() => setOrbitOn(v => !v)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${orbitOn ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                      title="Visor 360º: arrastra para girar la cocina"
-                    >
-                      <RotateCw size={14} /> 360º
-                    </button>
-                  ) : (
-                    <button
-                      onClick={generarOrbita}
-                      disabled={orbitLoading}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors"
-                      title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos de IA)"
-                    >
-                      {orbitLoading ? <Loader size={14} className="animate-spin" /> : <RotateCw size={14} />}
-                      {orbitLoading ? 'Generando…' : 'Generar 360º'}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => { setInteractiveMode(v => !v); setOrbitOn(false); if (!interactiveMode) { setZoom(1); setPanX(0); setPanY(0); } }}
-                    className={`p-2 rounded-lg transition-colors ${interactiveMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}
-                    title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}
-                  >
-                    <Layers size={16} className={interactiveMode ? 'text-white' : 'text-slate-600'} />
-                  </button>
-                  <button
-                    onClick={() => setShowFullscreen(true)}
-                    className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-                    title="Ver en pantalla completa"
-                  >
-                    <Maximize2 size={16} className="text-slate-600" />
-                  </button>
-                  <button
-                    onClick={() => { setRenderResult(null); setDescription(''); }}
-                    className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-                    title="Nuevo render"
-                  >
-                    <RotateCcw size={16} className="text-slate-600" />
-                  </button>
-                </div>
+                ))}
+                <button
+                  onClick={() => { setInteractiveMode(v => !v); setOrbitOn(false); if (!interactiveMode) { setZoom(1); setPanX(0); setPanY(0); } }}
+                  className={`p-1.5 rounded-lg transition-colors ${interactiveMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}
+                  title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}>
+                  <Layers size={14} className={interactiveMode ? 'text-white' : 'text-slate-600'} />
+                </button>
+                <button onClick={() => setShowFullscreen(true)}
+                  className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                  title="Ver en pantalla completa">
+                  <Maximize2 size={14} className="text-slate-600" />
+                </button>
+                {/* Separador + nuevo render */}
+                <span className="w-px h-5 bg-slate-200 mx-0.5" />
+                <button onClick={() => { setRenderResult(null); setDescription(''); }}
+                  className="p-1.5 bg-slate-100 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                  title="Nuevo render (limpia el resultado actual)">
+                  <RotateCcw size={14} className="text-slate-500" />
+                </button>
               </div>
 
               {/* Comparativa referencia vs render */}
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
-                <div className="flex-1 grid grid-cols-2 gap-3 min-h-[350px]">
-                  <div className="bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative p-3" style={{ minHeight: '300px' }}>
+                <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
+                  <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
                     {(originalRef || refImage).startsWith('data:image') ? (
-                      <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-[500px] object-contain rounded-lg" />
+                      <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
                     ) : (
                       <div className="text-center p-4">
                         <FileText size={40} className="text-slate-400 mx-auto mb-2" />
@@ -2744,8 +2787,8 @@ export default function AIRenderStudio({ state, setState }) {
                     )}
                     <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">Referencia</span>
                   </div>
-                  <div className="bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative p-3" style={{ minHeight: '300px' }}>
-                    <img src={assetSrc(renderResult.result.images[0])} alt="Render" className="max-w-full max-h-[500px] object-contain rounded-lg" />
+                  <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
+                    <img src={assetSrc(renderResult.result.images[0])} alt="Render" className="max-w-full max-h-full object-contain" />
                     <span className="absolute top-2 left-2 px-2 py-1 bg-indigo-600 rounded text-[10px] font-black text-white uppercase tracking-widest">Render</span>
                   </div>
                 </div>
@@ -2825,7 +2868,7 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                 </div>
               )}
-              <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative"
+              <div className="flex-1 min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
@@ -3072,45 +3115,46 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
           ) : (
             /* Estado vacío */
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center max-w-md">
-                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Wand2 size={36} className="text-white" />
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
+              <div className="text-center max-w-sm">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Wand2 size={28} className="text-white" />
                 </div>
-                <h3 className="font-black text-slate-800 uppercase tracking-wider mb-2 text-lg">Estudio 3D</h3>
-                <p className="text-sm text-slate-500 leading-relaxed mb-6">
-                  {/* Solo se nombran los tipos que ESE usuario tiene contratados: antes
-                      se listaban los cuatro aunque solo pudiera diseñar armarios. */}
+                <h3 className="font-black text-slate-800 uppercase tracking-wider mb-2">Estudio 3D</h3>
+                <p className="text-sm text-slate-500 leading-relaxed mb-4">
                   Describe tu diseño ({tiposPermitidos.map(t => t.corto || t.label.toLowerCase()).join(', ')}{tiposPermitidos.length === ESTUDIO_3D_TIPOS.length ? '…' : ''}) por voz o texto, o elige materiales.
-                  Genera un render fotorrealista en segundos y preséntalo al cliente.
                 </p>
-                <div className="grid grid-cols-3 gap-3 text-left">
+                <div className="grid grid-cols-3 gap-2 text-left mb-4">
                   {[
                     { n: '1', t: 'Describe', d: 'Voz o texto' },
                     { n: '2', t: 'Ajusta', d: 'Estilo y medidas' },
                     { n: '3', t: 'Genera', d: 'Descarga o PDF' },
                   ].map(s => (
-                    <div key={s.n} className="rounded-xl border border-slate-200 bg-white p-3">
-                      <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center mb-2">{s.n}</span>
+                    <div key={s.n} className="rounded-lg border border-slate-200 bg-white p-2.5">
+                      <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center mb-1.5">{s.n}</span>
                       <p className="text-xs font-black text-slate-700">{s.t}</p>
-                      <p className="text-[11px] text-slate-400">{s.d}</p>
+                      <p className="text-[10px] text-slate-400">{s.d}</p>
                     </div>
                   ))}
                 </div>
+                {/* Botón CTA para abrir el panel de opciones en móvil */}
+                <button onClick={() => setPanelHidden(false)}
+                  className="lg:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md">
+                  <Palette size={16} /> Abrir opciones de diseño
+                </button>
               </div>
             </div>
           )}
 
-          {/* Historial de renders */}
+          {/* Historial de renders: tira horizontal compacta */}
           {renderHistory.length > 0 && !isGenerating && (
-            <div className="shrink-0 mt-4 border-t border-slate-200 pt-4">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Historial reciente</h4>
-              <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="shrink-0 border-t border-slate-200 pt-2 mt-1">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {renderHistory.map((item, i) => (
                   <div key={i} className="relative shrink-0 group">
                     <button
                       onClick={() => setRenderResult(item)}
-                      className="w-16 h-16 bg-slate-200 rounded-xl overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all block"
+                      className="w-12 h-12 bg-slate-200 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all block"
                       title={item.description}
                     >
                       {item?.result?.images?.[0] ? (
