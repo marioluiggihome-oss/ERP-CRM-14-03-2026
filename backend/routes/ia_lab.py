@@ -722,6 +722,35 @@ por proporción, usando anchos estándar (300/400/450/500/600/700/800/900/1000/1
     return ANALYSIS_PROMPT_SINGLE
 
 
+@router.post("/relacion-pdf")
+async def relacion_pdf(payload: dict):
+    """Relación de muebles detectados en PDF RELLENABLE.
+
+    Sale del analizador, pero se corrige en obra: por eso los campos son
+    editables (AcroForm) y hay filas en blanco para añadir a mano lo que el
+    analizador no vio. Se puede volver a subir al ERP y releerlo sin IA.
+    """
+    from fastapi.responses import Response as _Response
+    from services.relacion_pdf import build_relacion_pdf
+
+    muebles = (payload or {}).get("muebles") or []
+    if not isinstance(muebles, list) or not muebles:
+        raise HTTPException(status_code=400, detail="No hay muebles que listar.")
+    try:
+        pdf = build_relacion_pdf(
+            muebles[:400],
+            titulo=str((payload or {}).get("titulo") or "Relación de muebles detectados"),
+            cliente=str((payload or {}).get("cliente") or ""),
+            observaciones=str((payload or {}).get("observaciones") or ""),
+        )
+    except Exception as e:
+        logger.error("relacion-pdf: %s", e)
+        raise HTTPException(status_code=500, detail=f"No se pudo generar el PDF: {e}")
+    nombre = "relacion-muebles.pdf"
+    return _Response(content=pdf, media_type="application/pdf",
+                     headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
 @router.post("/analyze-kitchen-plan")
 async def analyze_kitchen_plan(
     file: UploadFile = File(...),
