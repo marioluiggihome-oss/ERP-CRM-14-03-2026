@@ -72,6 +72,9 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   const [docType, setDocType] = useState('factura');
   const [converting, setConverting] = useState('');
   const [fichas, setFichas] = useState([]);
+  // Motivo por el que no hay listado (403 por permisos, servidor caído…). Se
+  // enseña en su sitio en vez de dejar la pantalla vacía o hacerla caer.
+  const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editor, setEditor] = useState(null);
   const [viewing, setViewing] = useState(null);
@@ -249,8 +252,19 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
         || currentUser?.isDirectorFabrica;
       const qs = (!elevated && currentUser?.id) ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas${qs}`);
-      setFichas(await r.json());
-    } catch { /* noop */ } finally { setLoading(false); }
+      const d = await r.json();
+      // Un error de la API devuelve {detail: "..."}, no una lista. Metiendo eso
+      // en el estado, el primer `fichas.filter(...)` reventaba la pantalla
+      // entera con "le.filter is not a function" en vez de decir qué pasaba.
+      if (Array.isArray(d)) { setFichas(d); setLoadError(null); }
+      else {
+        setFichas([]);
+        setLoadError(d?.detail || d?.error || `No se pudo cargar el listado (HTTP ${r.status}).`);
+      }
+    } catch (e) {
+      setFichas([]);
+      setLoadError(`No se pudo conectar con el servidor: ${e.message || 'error de red'}`);
+    } finally { setLoading(false); }
     // Cuenta de clientes en vivo (ademas de la lista que se abre bajo demanda con "Clientes"),
     // para ver crecer el numero mientras se importan facturas que dan de alta clientes nuevos.
     try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { /* noop */ }
@@ -1014,7 +1028,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
   // Filtrado y ordenacion
   const baseFiltered = useMemo(() => {
-    let rows = fichas.filter(f => (f.docType || 'factura') === docType);
+    let rows = (Array.isArray(fichas) ? fichas : []).filter(f => (f.docType || 'factura') === docType);
 
     // Aplicar filtros por columna
     if (columnFilters.ref) {
@@ -1546,7 +1560,16 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
             })}
             {filteredAndSorted.length === 0 && (
               <tr><td colSpan={9} className="p-8 text-center text-slate-400">
-                {loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
+                {loading ? 'Cargando...'
+                  : loadError ? (
+                    <span className="text-amber-700 font-bold">
+                      ⚠️ {loadError}
+                      <span className="block font-normal text-slate-400 text-xs mt-1">
+                        Vuelve a entrar; si sigue igual, avisa a administración: es un permiso, no un dato perdido.
+                      </span>
+                    </span>
+                  )
+                  : hasActiveFilters ? 'Sin resultados con estos filtros' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
               </td></tr>
             )}
           </tbody>

@@ -25,11 +25,10 @@ logger = logging.getLogger(__name__)
 # (rol elevado o permiso canAccessRentabilidad), igual que la UI. Cierra el acceso
 # anónimo a costes, ingresos, fichas, márgenes y documentos adjuntos.
 try:
-    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS
+    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
 
     async def require_rentabilidad(user: dict = Depends(require_auth)):
-        if (any(user.get(f) for f in ADMIN_ROLE_FLAGS)
-                or user.get("canAccessRentabilidad") or user.get("isController")):
+        if await tiene_acceso_rentabilidad(user):
             return user
         raise HTTPException(status_code=403, detail="Sin acceso al módulo de Rentabilidad")
 

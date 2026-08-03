@@ -18,13 +18,12 @@ logger = logging.getLogger("reports")
 # ningun token: cualquiera que conociera la URL podia verlos. Mismo criterio
 # de acceso que el resto de Rentabilidad (rol elevado o canAccessRentabilidad).
 try:
-    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS
+    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
 
     async def require_reports_access(user: dict = Depends(require_auth)):
         # El perfil CONTROLLER entra aqui: los informes son de solo lectura (GET),
         # que es justo lo que debe poder consultar.
-        if (any(user.get(f) for f in ADMIN_ROLE_FLAGS)
-                or user.get("canAccessRentabilidad") or user.get("isController")):
+        if await tiene_acceso_rentabilidad(user):
             return user
         raise HTTPException(status_code=403, detail="Sin acceso a los informes de rentabilidad")
     _REPORTS_DEPS = [Depends(require_reports_access)]

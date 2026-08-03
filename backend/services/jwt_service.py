@@ -48,6 +48,12 @@ def create_access_token(user_data: Dict[str, Any], expires_delta: Optional[timed
         "isGerente": user_data.get("isGerente", False),
         "isDirectorComercial": user_data.get("isDirectorComercial", False),
         "isDirectorFabrica": user_data.get("isDirectorFabrica", False),
+        # Acceso a Rentabilidad SIN ser un rol elevado (perfil CONTROLLER y
+        # permiso suelto). Sin estos dos, el guardia de /api/rentabilidad solo
+        # dejaba pasar a los administradores: el CONTROLLER recibia un 403 y la
+        # pantalla se le caia ("le.filter is not a function").
+        "isController": user_data.get("isController", False),
+        "canAccessRentabilidad": user_data.get("canAccessRentabilidad", False),
         "iat": datetime.now(timezone.utc),
         "type": "access"
     }
@@ -139,7 +145,37 @@ def _payload_to_user(payload: Dict[str, Any]) -> Dict[str, Any]:
         "isGerente": payload.get("isGerente", False),
         "isDirectorComercial": payload.get("isDirectorComercial", False),
         "isDirectorFabrica": payload.get("isDirectorFabrica", False),
+        "isController": payload.get("isController", False),
+        "canAccessRentabilidad": payload.get("canAccessRentabilidad", False),
     }
+
+
+async def tiene_acceso_rentabilidad(user: Dict[str, Any]) -> bool:
+    """¿Puede este usuario ver el módulo de Rentabilidad?
+
+    Vale un rol elevado, el perfil CONTROLLER o el permiso suelto. Si el token
+    es ANTERIOR a que esos dos permisos viajaran dentro del JWT, se mira la
+    ficha del usuario en la base de datos, para no obligar a nadie a volver a
+    entrar. El dict recibido se completa, de modo que el resto de guardias de
+    la misma petición (p. ej. el de solo lectura del controller) ya lo ven.
+    """
+    if any(user.get(f) for f in ADMIN_ROLE_FLAGS) \
+       or user.get("isController") or user.get("canAccessRentabilidad"):
+        return True
+    uid = user.get("id")
+    if not uid:
+        return False
+    try:
+        from services.db_client import get_db
+        doc = await get_db().users.find_one(
+            {"id": uid}, {"_id": 0, "isController": 1, "canAccessRentabilidad": 1})
+    except Exception:
+        return False
+    if not doc:
+        return False
+    user["isController"] = bool(doc.get("isController"))
+    user["canAccessRentabilidad"] = bool(doc.get("canAccessRentabilidad"))
+    return user["isController"] or user["canAccessRentabilidad"]
 
 
 # Roles considerados "elevados" para acceso administrativo / de dirección.
