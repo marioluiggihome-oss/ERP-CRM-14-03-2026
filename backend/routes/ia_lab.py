@@ -346,6 +346,55 @@ DIM_ALTO_MM = (300, 2400)   # altillos 35 cm … columnas 220 cm
 DIM_FONDO_MM = (100, 700)   # altos ~330 · bajos ~580
 
 
+# ─── ¿Mueble o aparato? ───────────────────────────────────────────────────────
+# Tipos/subtipos que son electrodomésticos o accesorios, NO muebles del catálogo.
+# No deben contar como "producto no encontrado".
+APPLIANCE_TIPOS = {'ELECTRODOMESTICO', 'ELECTRODOMÉSTICO'}
+APPLIANCE_SUBTIPOS = {'CAMPANA', 'EXTRACTOR', 'PLACA', 'PLACA_COCCION', 'HORNO',
+                      'MICROONDAS', 'NEVERA', 'FRIGORIFICO', 'LAVAVAJILLAS',
+                      'FREGADERO', 'GRIFO', 'VITRO', 'INDUCCION'}
+
+# Tipos que son MUEBLE por definición, lleven el nombre que lleven. Un
+# "BAJO FREGADERO" o un "BAJO HORNO" son muebles que vendemos: el aparato va
+# DENTRO. Antes, cualquier cosa cuyo nombre contuviera FREGADERO, HORNO o
+# LAVAVAJILLAS se contaba como electrodoméstico y se caía del presupuesto,
+# que es justo lo que pasa con un croquis escrito a mano en palabras.
+FURNITURE_TIPOS = {'ALTO', 'BAJO', 'COLUMNA', 'SEMICOLUMNA', 'ALTILLO',
+                   'COSTADO', 'SOBRECOLUMNA', 'SOBRE_COLUMNA', 'MEDIACOLUMNA',
+                   'SOBREENCIMERA', 'PANEL', 'TABLERO'}
+
+# Aparatos que NO llevan mueble: van en un HUECO entre bajos. Aunque la IA
+# los clasifique como "BAJO", son electrodomésticos y no se fabrican.
+SIN_MUEBLE = ('LAVAVAJILLAS', 'LAVAVAJ', 'LAVAV', 'LAVADORA', 'SECADORA')
+# Una PUERTA (o frente) de integración SÍ la servimos nosotros: es un frente,
+# no el aparato. "Puerta lavavajillas" = 1 puerta de integración.
+ES_FRENTE = ('PUERTA', 'FRENTE', 'INTEGRACION', 'INTEGRACIÓN', 'PANEL')
+
+
+def es_electrodomestico(it: dict) -> bool:
+    tipo = (it.get('tipo') or '').upper()
+    subtipo = (it.get('subtipo') or '').upper()
+    nombre = (it.get('nombre') or it.get('descripcion') or '').upper()
+    texto = f"{subtipo} {nombre}"
+    # 1. Un frente de integración es material nuestro, aunque nombre al aparato.
+    if any(h in texto for h in ES_FRENTE):
+        return False
+    if tipo in APPLIANCE_TIPOS:
+        return True
+    # 2. Lavavajillas y similares: hueco, sin casco. Manda sobre el tipo.
+    if any(s in texto for s in SIN_MUEBLE):
+        return True
+    # 3. El resto: un BAJO FREGADERO o un BAJO HORNO son MUEBLES; el aparato
+    #    va dentro. Antes se caían del presupuesto por llevar esa palabra.
+    if tipo in FURNITURE_TIPOS:
+        return False
+    if any(s in subtipo for s in APPLIANCE_SUBTIPOS):
+        return True
+    if any(s in nombre for s in APPLIANCE_SUBTIPOS):
+        return True
+    return False
+
+
 async def enrich_detected_furniture(furniture_list: list, library: str = None) -> list:
     """
     Enriquece la lista de muebles detectados con información del catálogo.
@@ -355,36 +404,6 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
 
     # Valor de punto de la biblioteca (EUR/punto) para convertir puntos → euros.
     point_value = await _get_point_value(library)
-
-    # Tipos/subtipos que son electrodomésticos o accesorios, NO muebles del catálogo.
-    # No deben contar como "producto no encontrado".
-    APPLIANCE_TIPOS = {'ELECTRODOMESTICO', 'ELECTRODOMÉSTICO'}
-    APPLIANCE_SUBTIPOS = {'CAMPANA', 'EXTRACTOR', 'PLACA', 'PLACA_COCCION', 'HORNO',
-                          'MICROONDAS', 'NEVERA', 'FRIGORIFICO', 'LAVAVAJILLAS',
-                          'FREGADERO', 'GRIFO', 'VITRO', 'INDUCCION'}
-
-    # Tipos que son MUEBLE por definición, lleven el nombre que lleven. Un
-    # "BAJO FREGADERO" o un "BAJO HORNO" son muebles que vendemos: el aparato va
-    # DENTRO. Antes, cualquier cosa cuyo nombre contuviera FREGADERO, HORNO o
-    # LAVAVAJILLAS se contaba como electrodoméstico y se caía del presupuesto,
-    # que es justo lo que pasa con un croquis escrito a mano en palabras.
-    FURNITURE_TIPOS = {'ALTO', 'BAJO', 'COLUMNA', 'SEMICOLUMNA', 'ALTILLO',
-                       'COSTADO', 'SOBRECOLUMNA', 'SOBRE_COLUMNA', 'MEDIACOLUMNA',
-                       'SOBREENCIMERA', 'PANEL', 'TABLERO'}
-
-    def _is_appliance(it):
-        tipo = (it.get('tipo') or '').upper()
-        subtipo = (it.get('subtipo') or '').upper()
-        nombre = (it.get('nombre') or it.get('descripcion') or '').upper()
-        if tipo in APPLIANCE_TIPOS:
-            return True
-        if tipo in FURNITURE_TIPOS:
-            return False
-        if any(s in subtipo for s in APPLIANCE_SUBTIPOS):
-            return True
-        if any(s in nombre for s in APPLIANCE_SUBTIPOS):
-            return True
-        return False
 
     for item in furniture_list:
         code = item.get('codigo_sugerido', '')
@@ -444,7 +463,7 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
                 catalog_product.get('depth'), fondo_cm * 10, *DIM_FONDO_MM)
             enriched_item['product_id'] = catalog_product.get('id', '')
             enriched_item['biblioteca'] = catalog_product.get('library', library or 'ZC')
-        elif _is_appliance(item):
+        elif es_electrodomestico(item):
             # Electrodoméstico/accesorio: no es un mueble del catálogo. No cuenta como
             # "no encontrado" ni "encontrado"; se marca aparte para la sección propia.
             enriched_item['producto_encontrado'] = False
@@ -657,7 +676,11 @@ CROQUIS A MANO ESCRITO EN PALABRAS (muy habitual: foto de un cuaderno):
 - Vocabulario de taller (tradúcelo a tipo de MUEBLE, no a electrodoméstico: el
   aparato va DENTRO del mueble, y el mueble es lo que se fabrica):
   · ESCURRE / ESCURREPLATOS → ALTO escurreplatos
-  · LAVAV / LAVAVAJILLAS → BAJO (hueco para el lavavajillas)
+  · LAVAV / LAVAVAJILLAS a secas → ELECTRODOMÉSTICO: va en un HUECO entre
+    bajos y NO lleva mueble, así que no se fabrica ni se cotiza como casco.
+  · PUERTA LAVAV / PUERTA DE INTEGRACIÓN / FRENTE LAVAVAJILLAS → eso SÍ es
+    material nuestro: un frente de integración. Devuélvelo como tipo "PUERTA"
+    con "num_puertas": 1. No es un electrodoméstico.
   · FREGA / FREGADERO → BAJO fregadero
   · HORNO → BAJO horno (COLUMNA solo si el croquis lo dice)
   · COMBI / FRIGO / NEVERA → columna o hueco de frigorífico
