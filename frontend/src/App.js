@@ -878,9 +878,15 @@ const App = () => {
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
-          <Suspense fallback={<div className="p-6 text-slate-400">Cargando…</div>}>
-            <RentabilidadPanel currentUser={state.currentUser} />
-          </Suspense>
+          {/* Con ErrorBoundary, igual que la pestaña de rentabilidad del resto de
+              perfiles: el CONTROLLER entra DIRECTO aquí y sin esto un fallo del
+              módulo (o un chunk viejo en caché tras un despliegue) le tumbaba la
+              aplicación entera con la pantalla negra de "Algo ha fallado". */}
+          <ErrorBoundary>
+            <Suspense fallback={<div className="p-6 text-slate-400">Cargando…</div>}>
+              <RentabilidadPanel currentUser={state.currentUser} />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
     );
