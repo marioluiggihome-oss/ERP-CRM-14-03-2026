@@ -156,6 +156,7 @@ const Cascos = ({ state, setState }) => {
   const [presupuestoBloqueado, setPresupuestoBloqueado] = useState(false); // bloquear edición del presupuesto
   const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
   const [relacionRevisar, setRelacionRevisar] = useState(null); // muebles detectados pendientes de revisar
+  const [relacionNoLeidas, setRelacionNoLeidas] = useState([]);  // lo escrito que el lector no entendio
   const [descargandoPdf, setDescargandoPdf] = useState(false);
   const [menuImportar, setMenuImportar] = useState(false);   // menú de vías de importación
   const [sistemaRenta, setSistemaRenta] = useState(null);    // 'alvic' | 'mv' al abrir desde el menú
@@ -197,6 +198,9 @@ const Cascos = ({ state, setState }) => {
       if (!r.ok || !d.success) { alert(d.detail || 'No se pudo leer la relación del PDF.'); return; }
       if (!(d.muebles || []).length) { alert('No se detectaron muebles en la relación.'); return; }
       // Abrir panel de REVISIÓN (editar cantidades, borrar, buscar y añadir más).
+      // Se guarda también lo que el lector NO ha sabido interpretar, para
+      // enseñarlo: si no, esas líneas valen 0 € y el total sale corto sin avisar.
+      setRelacionNoLeidas(d.noLeidas || []);
       setRelacionRevisar(d.muebles);
     } catch (e) {
       alert(`No se pudo conectar para leer la relación (${e?.message || 'error de red'}).`);
@@ -773,6 +777,7 @@ const Cascos = ({ state, setState }) => {
       {relacionRevisar && (
         <RelacionReview
           muebles={relacionRevisar}
+          noLeidas={relacionNoLeidas}
           apiUrl={API_URL}
           authHeaders={auth}
           onClose={() => setRelacionRevisar(null)}

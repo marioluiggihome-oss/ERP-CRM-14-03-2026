@@ -32,6 +32,12 @@ def _load_index(tariff: str = "T1"):
         if isinstance(items, dict):
             for cod, e in items.items():
                 idx[cod.upper()] = {"fam": fam, "e": e, "t": info.get("type")}
+        # Las puertas no son una lista de códigos sino una matriz alto × ancho.
+        # Hay VARIAS familias en matriz (puertas rectas, de rincón…): se guardan
+        # todas; con una sola clave, la última pisaba a la anterior y una puerta
+        # normal acababa tarifada contra la matriz equivocada.
+        if info.get("type") == "matrix" and info.get("rows"):
+            idx.setdefault("__MATRICES__", {})[fam] = info
     return idx, pv
 
 
@@ -43,6 +49,35 @@ def _find_code(idx, letters, width, mano):
     for k in idx:
         if re.match(rf"^{re.escape(letters)}{width}(D/I|D|I)?$", k):
             return k
+    # La variante puede ir DESPUÉS del ancho: se escribe "ASFA 60x30" y en la
+    # tarifa es "ASF60A". Se prueba moviendo las últimas letras detrás del ancho,
+    # pero SOLO se acepta si el código resultante existe: no se inventa nada.
+    for corte in (1, 2):
+        if len(letters) > corte:
+            base, sufijo = letters[:-corte], letters[-corte:]
+            for c in (f"{base}{width}{sufijo}", f"{base}{width}{sufijo}D/I"):
+                if c in idx:
+                    return c
+    return None
+
+
+def _sugerencia(idx, letters, width):
+    """Código PARECIDO que sí existe, para poder avisar sin corregir por cuenta
+    propia. Devuelve None si no hay nada razonable."""
+    letters = (letters or "").upper()
+    if not letters:
+        return None
+    # Mismas letras, otro ancho.
+    mismos = [k for k in idx if re.match(rf"^{re.escape(letters)}\d", k)]
+    if mismos:
+        return sorted(mismos)[0]
+    # Mismo ancho, letras parecidas (una letra de más o de menos).
+    for cand in (letters[:-1], letters[:-2], letters + "E"):
+        if not cand:
+            continue
+        exactos = [k for k in idx if re.match(rf"^{re.escape(cand)}{width}(D/I|D|I)?$", k)]
+        if exactos:
+            return sorted(exactos)[0]
     return None
 
 
@@ -78,10 +113,57 @@ def _puntos(entry, alto):
 
 
 def parse_relacion_text(text: str, tariff: str = "T1"):
-    """Parsea un bloque de texto con la notación de relación. Devuelve lista de
-    muebles: {qty, cod, tipo, ancho, alto, fondo, mano, pts, pvp, raw}."""
+    """Compatibilidad: solo los muebles. Para saber además QUÉ no se ha podido
+    leer, usa `parse_relacion` (y no dejes nada por el camino en silencio)."""
+    return parse_relacion(text, tariff)["muebles"]
+
+
+def _puerta_suelta(idx, pv, tok, contexto):
+    """Nota de PUERTA SUELTA: '2 - 90 x 60' = 2 puertas de 90 alto × 60 ancho.
+
+    Solo se interpreta así cuando el recuadro del PDF es el de puertas (lo dice
+    su etiqueta): un '2 - 90 x 60' suelto, sin saber de qué familia es, sería
+    adivinar. La tarifa de puertas es una matriz alto × ancho.
+    """
+    if "PUERTA" not in (contexto or "").upper():
+        return None
+    m = re.match(r"^(\d+)\s*[-xX]?\s*(\d{2,3})\s*[xX*]\s*(\d{2,3})$", tok.strip())
+    if not m:
+        return None
+    qty, alto, ancho = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    matrices = idx.get("__MATRICES__") or {}
+    if not matrices:
+        return None
+    # Se busca en la matriz cuya etiqueta encaja con el recuadro; si no, en la
+    # primera que tenga esa medida exacta.
+    ctx = (contexto or "").upper().replace(" ", "_")
+    orden = sorted(matrices, key=lambda f: (0 if (f in ctx or ctx in f) else 1, f))
+    fam = pts = None
+    for f in orden:
+        fila = (matrices[f].get("rows") or {}).get(str(alto))
+        if fila and fila.get(f"P{ancho}") is not None:
+            fam, pts = f, fila[f"P{ancho}"]
+            break
+    if pts is None:
+        return None
+    return {
+        "qty": qty, "cod": f"P{ancho}x{alto}", "familia": fam, "tipo": "PUERTA",
+        "ancho": ancho, "alto": alto, "fondo": None, "mano": "",
+        "pts": pts, "pvp": round(pts * pv, 2), "raw": tok, "encontrado": True,
+    }
+
+
+def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
+    """Parsea un bloque de texto con la notación de relación.
+
+    Devuelve {muebles, noLeidas}. `noLeidas` son los trozos escritos que NO se
+    han sabido interpretar, con una sugerencia cuando hay un código parecido en
+    la tarifa. Antes se descartaban sin decir nada y el total salía corto sin
+    que nadie se enterara.
+    """
     idx, pv = _load_index(tariff)
     out = []
+    no_leidas = []
     # Cada renglón (o valor de campo) puede llevar varias piezas separadas por + , ;
     for linea in re.split(r"[\r\n]+", text or ""):
         val = linea.strip().lower()
@@ -94,13 +176,21 @@ def parse_relacion_text(text: str, tariff: str = "T1"):
             tok = tok.strip().strip("-").strip()
             if not tok:
                 continue
+            # Puerta suelta escrita como "2 - 90 x 60" (sin codigo).
+            suelta = _puerta_suelta(idx, pv, tok, contexto)
+            if suelta:
+                out.append(suelta)
+                continue
             mq = re.match(r"^(\d+)\s*[-]?\s*([a-z].*)$", tok)
             if not mq:
+                no_leidas.append({"texto": tok, "motivo": "no se reconoce la notación"})
                 continue
             qty = int(mq.group(1))
             rest = mq.group(2).strip()
-            mc = re.match(r"^([a-z]+)(\d{2,3})(.*)$", rest)
+            # Se admite separacion entre las letras y el ancho ("ASFA 60X30").
+            mc = re.match(r"^([a-z]+)[\s.\-]*(\d{2,3})(.*)$", rest)
             if not mc:
+                no_leidas.append({"texto": tok, "motivo": "falta el ancho en el código"})
                 continue
             letters, width, tail = mc.group(1), mc.group(2), mc.group(3)
             dims = re.findall(r"x\s*(\d{2,3})", tail)
@@ -112,6 +202,16 @@ def parse_relacion_text(text: str, tariff: str = "T1"):
                 mano = "I"
             cod = _find_code(idx, letters, width, mano)
             entry = idx.get(cod) if cod else None
+            if not cod:
+                # Un codigo que no esta en la tarifa vale 0 puntos: si no se
+                # avisa, el total sale corto y parece bueno. Se propone el
+                # parecido, pero NO se aplica solo.
+                sug = _sugerencia(idx, letters, width)
+                no_leidas.append({
+                    "texto": tok,
+                    "motivo": f"el código {letters.upper()}{width} no está en la tarifa",
+                    "sugerencia": sug,
+                })
             tipo = _tipo_de(letters)
             # Regla de fábrica: los BAJOS se fabrican SIEMPRE a altura 80 cm. Si no se
             # ha indicado altura para un bajo, se asume 80 (no hay otras alturas de bajo).
@@ -132,7 +232,7 @@ def parse_relacion_text(text: str, tariff: str = "T1"):
                 "raw": tok,
                 "encontrado": bool(cod),
             })
-    return out
+    return {"muebles": out, "noLeidas": no_leidas}
 
 
 def extract_form_and_text(pdf_bytes: bytes) -> str:
@@ -165,7 +265,46 @@ def extract_form_and_text(pdf_bytes: bytes) -> str:
     return "\n".join(texto)
 
 
+def extract_campos(pdf_bytes: bytes):
+    """Campos rellenados del PDF como [(etiqueta, valor)].
+
+    La etiqueta es la del recuadro (la familia a la que pertenece: "Puerta
+    suelta", "Bajo con cajones"…), y hace falta para entender una nota que no
+    lleva código, como "2 - 90 x 60" en el recuadro de puertas.
+    """
+    import fitz
+    fuera = []
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    for page in doc:
+        try:
+            for w in page.widgets() or []:
+                v = (w.field_value or "").strip()
+                if v:
+                    fuera.append(((w.field_label or w.field_name or "").strip(), v))
+        except Exception:
+            pass
+    doc.close()
+    return fuera
+
+
+def detectar_relacion(pdf_bytes: bytes, tariff: str = "T1"):
+    """Punto de entrada completo: {muebles, noLeidas}.
+
+    Cada recuadro se lee CON SU ETIQUETA, de modo que una nota sin código se
+    puede interpretar dentro de su familia en vez de tirarla.
+    """
+    campos = extract_campos(pdf_bytes)
+    if campos:
+        muebles, no_leidas = [], []
+        for etiqueta, valor in campos:
+            r = parse_relacion(valor, tariff, contexto=etiqueta)
+            muebles.extend(r["muebles"])
+            for nl in r["noLeidas"]:
+                no_leidas.append({**nl, "recuadro": etiqueta})
+        return {"muebles": muebles, "noLeidas": no_leidas}
+    return parse_relacion(extract_form_and_text(pdf_bytes), tariff)
+
+
 def detectar_relacion_pdf(pdf_bytes: bytes, tariff: str = "T1"):
-    """Punto de entrada: bytes de PDF -> muebles detectados de la relación."""
-    texto = extract_form_and_text(pdf_bytes)
-    return parse_relacion_text(texto, tariff)
+    """Compatibilidad: solo la lista de muebles."""
+    return detectar_relacion(pdf_bytes, tariff)["muebles"]
