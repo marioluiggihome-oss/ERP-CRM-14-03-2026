@@ -9,6 +9,13 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Sanitize HTML to prevent XSS attacks
 const sanitizeHTML = (html) => DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 
+// Una cota que no se conoce se deja en blanco, NUNCA con un número plausible:
+// un ancho inventado acaba en un mueble mal pedido en fábrica.
+const cota = (mm) => {
+  const v = Number(mm);
+  return Number.isFinite(v) && v > 0 ? Math.round(v) : '?';
+};
+
 const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -495,7 +502,13 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                           {furniture.nombre_catalogo || `${furniture.tipo} ${furniture.subtipo?.replace(/_/g, ' ')}`}
                         </p>
                         <p className="text-[10px] text-slate-400">
-                          {furniture.ancho_real || furniture.ancho_estimado}×{furniture.alto_real ? furniture.alto_real/10 : furniture.alto_estimado}×{furniture.fondo_real ? furniture.fondo_real/10 : furniture.fondo_estimado} mm
+                          {/* Ancho × alto × fondo, TODO en mm. Antes se dividía
+                              entre 10 lo que ya venía en cm y salían cotas
+                              imposibles: "600×7×3.3 mm". Lo que no se sabe se
+                              deja en «?», nunca con un número inventado. */}
+                          {cota(furniture.ancho_real ?? furniture.ancho_estimado)}×
+                          {cota(furniture.alto_real ?? (furniture.alto_estimado ? furniture.alto_estimado * 10 : null))}×
+                          {cota(furniture.fondo_real ?? (furniture.fondo_estimado ? furniture.fondo_estimado * 10 : null))} mm
                           {furniture.categoria && ` • ${furniture.categoria}`}
                         </p>
                       </div>

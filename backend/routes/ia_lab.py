@@ -183,8 +183,12 @@ async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filt
         # catálogo suele ser 0 y no sirve para emparejar).
         pw_cm = _product_width_cm(p)
         s = abs(pw_cm - width_cm)
-        if height_cm and _to_cm(p.get('height')):
-            s += abs(_to_cm(p.get('height')) - height_cm) * 0.3  # la altura pesa menos
+        # La altura del catálogo puede venir mal (o no venir) y en MV va en el
+        # sufijo del código: A60D/I-70 son 70 cm. Con la altura bien leída, un
+        # "altos de 90" deja de emparejarse con el de 70.
+        ph_mm = _altura_producto_mm(p)
+        if height_cm and ph_mm:
+            s += abs(ph_mm / 10.0 - height_cm) * 0.3  # el ancho sigue mandando
         return s
 
     candidates.sort(key=score)
@@ -194,6 +198,33 @@ async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filt
     if abs(_product_width_cm(best) - width_cm) > 8:
         return None
     return best
+
+
+def _altura_producto_mm(p: dict):
+    """Altura del producto en mm. Si el catálogo no la trae bien, se lee del
+    propio código MV, que la lleva de sufijo: "A60D/I-70" son 70 cm."""
+    h = _dim_mm(p.get("height"), None, *DIM_ALTO_MM)
+    if h:
+        return h
+    m = re.search(r"[-_](\d{2,3})$", (p.get("code") or "").strip())
+    if m:
+        return _dim_mm(int(m.group(1)), None, *DIM_ALTO_MM)
+    return None
+
+
+def _elige_por_altura(productos: list, height_mm: int) -> dict:
+    """De varios productos que encajan por código, se queda con el de la ALTURA
+    pedida. Sin esto se cogía el primero que devolvía la base de datos: pedías
+    altos de 90 y salían de 70."""
+    productos = [p for p in productos if p]
+    if not productos:
+        return None
+    if not height_mm:
+        return productos[0]
+    def dist(p):
+        h = _altura_producto_mm(p)
+        return abs(h - height_mm) if h else 10 ** 6
+    return sorted(productos, key=dist)[0]
 
 
 async def search_product_in_catalog(code: str, width: int = None, height: int = None,
@@ -246,15 +277,23 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
         if mv:
             letras, ancho_mv = mv.group(1), mv.group(2)
             # Prefijo exacto de familia + ancho; el resto (D/I, sufijos) es libre.
-            pattern_mv = f"^{letras}{ancho_mv}(D/I|D|I)?$"
-            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_mv, "$options": "i"}}, {"_id": 0})
-            if product:
-                return product
+            # Puede haber VARIAS alturas del mismo mueble (A60D/I-70 y
+            # A60D/I-90): se traen todas y manda la altura pedida.
+            pattern_mv = f"^{letras}{ancho_mv}(D/I|D|I)?([-_]\\d{{2,3}})?$"
+            productos = await db.products.find(
+                {**base_filter, "code": {"$regex": pattern_mv, "$options": "i"}}, {"_id": 0}
+            ).to_list(20)
+            elegido = _elige_por_altura(productos, height)
+            if elegido:
+                return elegido
             # Fallback: mismas letras iniciales + mismo ancho, sufijo cualquiera.
-            pattern_mv2 = f"^{letras}{ancho_mv}\\b"
-            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_mv2, "$options": "i"}}, {"_id": 0})
-            if product:
-                return product
+            pattern_mv2 = f"^{letras}{ancho_mv}"
+            productos = await db.products.find(
+                {**base_filter, "code": {"$regex": pattern_mv2, "$options": "i"}}, {"_id": 0}
+            ).to_list(20)
+            elegido = _elige_por_altura(productos, height)
+            if elegido:
+                return elegido
 
     # 4. Emparejamiento por TIPO + ANCHO (clave para que funcione en MV y ZC
     #    aunque el código sugerido por la IA no exista en esa biblioteca).
@@ -269,10 +308,42 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
             "width": {"$gte": width - 50, "$lte": width + 50},
             "height": {"$gte": height - 100, "$lte": height + 100}
         }, {"_id": 0}).limit(5).to_list(5)
-        if products:
-            return products[0]
+        elegido = _elige_por_altura(products, height)
+        if elegido:
+            return elegido
 
     return None
+
+
+def _dim_mm(valor, respaldo=None, minimo=0, maximo=0):
+    """Devuelve una medida EN MILÍMETROS, venga en mm o en cm.
+
+    El catálogo guarda unas medidas en cm (alto 70, fondo 33) y otras en mm
+    (ancho 600). Al mezclarlas salían cotas imposibles en pantalla —"600×7×3.3
+    mm"—, que es justo lo que la memoria del proyecto prohíbe pintar. Aquí se
+    decide por rango de fabricación: si el número no cabe como mm, se prueba
+    como cm; si tampoco, se usa el respaldo, y si no hay, se devuelve None
+    (mejor sin cota que con una cota falsa).
+    """
+    for candidato in (valor, (valor * 10) if isinstance(valor, (int, float)) and valor else None):
+        try:
+            v = float(candidato)
+        except (TypeError, ValueError):
+            continue
+        if minimo <= v <= maximo:
+            return int(round(v))
+    try:
+        r = float(respaldo)
+        if minimo <= r <= maximo:
+            return int(round(r))
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
+# Rangos REALES de fabricación (mm). Fuera de aquí, la medida es un error.
+DIM_ALTO_MM = (300, 2400)   # altillos 35 cm … columnas 220 cm
+DIM_FONDO_MM = (100, 700)   # altos ~330 · bajos ~580
 
 
 async def enrich_detected_furniture(furniture_list: list, library: str = None) -> list:
@@ -292,12 +363,23 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
                           'MICROONDAS', 'NEVERA', 'FRIGORIFICO', 'LAVAVAJILLAS',
                           'FREGADERO', 'GRIFO', 'VITRO', 'INDUCCION'}
 
+    # Tipos que son MUEBLE por definición, lleven el nombre que lleven. Un
+    # "BAJO FREGADERO" o un "BAJO HORNO" son muebles que vendemos: el aparato va
+    # DENTRO. Antes, cualquier cosa cuyo nombre contuviera FREGADERO, HORNO o
+    # LAVAVAJILLAS se contaba como electrodoméstico y se caía del presupuesto,
+    # que es justo lo que pasa con un croquis escrito a mano en palabras.
+    FURNITURE_TIPOS = {'ALTO', 'BAJO', 'COLUMNA', 'SEMICOLUMNA', 'ALTILLO',
+                       'COSTADO', 'SOBRECOLUMNA', 'SOBRE_COLUMNA', 'MEDIACOLUMNA',
+                       'SOBREENCIMERA', 'PANEL', 'TABLERO'}
+
     def _is_appliance(it):
         tipo = (it.get('tipo') or '').upper()
         subtipo = (it.get('subtipo') or '').upper()
         nombre = (it.get('nombre') or it.get('descripcion') or '').upper()
         if tipo in APPLIANCE_TIPOS:
             return True
+        if tipo in FURNITURE_TIPOS:
+            return False
         if any(s in subtipo for s in APPLIANCE_SUBTIPOS):
             return True
         if any(s in nombre for s in APPLIANCE_SUBTIPOS):
@@ -354,8 +436,12 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             # código/nombre. Se guarda en mm (como ancho_estimado) para el frontend.
             _cat_w_cm = _product_width_cm(catalog_product)
             enriched_item['ancho_real'] = int(_cat_w_cm * 10) if _cat_w_cm else width
-            enriched_item['alto_real'] = catalog_product.get('height', height)
-            enriched_item['fondo_real'] = catalog_product.get('depth', fondo_cm * 10)
+            # TODAS las medidas salen de aquí en MILÍMETROS. El catálogo mezcla
+            # unidades y el resultado eran cotas imposibles en pantalla.
+            enriched_item['alto_real'] = _dim_mm(
+                catalog_product.get('height'), height, *DIM_ALTO_MM)
+            enriched_item['fondo_real'] = _dim_mm(
+                catalog_product.get('depth'), fondo_cm * 10, *DIM_FONDO_MM)
             enriched_item['product_id'] = catalog_product.get('id', '')
             enriched_item['biblioteca'] = catalog_product.get('library', library or 'ZC')
         elif _is_appliance(item):
@@ -549,6 +635,48 @@ Responde SOLO con JSON válido:
 # Límite máximo: 10MB
 MAX_KITCHEN_IMAGE = 10 * 1024 * 1024
 MAX_KITCHEN_BASE64 = MAX_KITCHEN_IMAGE * 4 // 3
+
+
+# Croquis de taller: una foto de un cuaderno con una tabla escrita a mano, en
+# palabras y no en códigos ("ALTO 60 | ESCURRE | ALTO 60" arriba, "2 GAVET |
+# HORNO 60 | LAVAV 60" abajo). Es como se toman las medidas a pie de obra, y el
+# prompt general no lo contemplaba: la IA estimaba por proporción y se dejaba
+# muebles o los medía a ojo.
+CROQUIS_A_MANO = """
+
+CROQUIS A MANO ESCRITO EN PALABRAS (muy habitual: foto de un cuaderno):
+- La foto puede venir GIRADA 90º o 180º. Antes de nada, léela en la orientación
+  en la que el texto tenga sentido.
+- Muchos croquis son una TABLA de dos filas: la de ARRIBA son los ALTOS y la de
+  ABAJO los BAJOS. Cada casilla es UN mueble, y se leen de izquierda a derecha
+  en el mismo orden en que van en la pared. Una casilla vacía o tachada es un
+  hueco (sin mueble), no la rellenes.
+- En cada casilla se escribe la FUNCIÓN y el ANCHO EN CM. El número de la
+  casilla ES el ancho en cm: "ALTO 60" → ancho 600 mm; "HORNO 60" → bajo horno
+  de 600 mm.
+- Vocabulario de taller (tradúcelo a tipo de MUEBLE, no a electrodoméstico: el
+  aparato va DENTRO del mueble, y el mueble es lo que se fabrica):
+  · ESCURRE / ESCURREPLATOS → ALTO escurreplatos
+  · LAVAV / LAVAVAJILLAS → BAJO (hueco para el lavavajillas)
+  · FREGA / FREGADERO → BAJO fregadero
+  · HORNO → BAJO horno (COLUMNA solo si el croquis lo dice)
+  · COMBI / FRIGO / NEVERA → columna o hueco de frigorífico
+  · MICRO → microondas · CAMPANA → campana
+  · GAVET / GAVETA(S) → bajo de gavetas ("2 GAVET" = bajo de 2 gavetas)
+  · CAJ / CAJONES → bajo de cajones
+  · TAB / TABLERO → tablero o costado (no lleva puertas)
+- Una casilla con "60x30" son DOS medidas en cm: ANCHO × ALTO (60 de ancho, 30
+  de alto). No las confundas con el fondo.
+- Las anotaciones SUELTAS fuera de la tabla son GLOBALES y mandan sobre
+  cualquier estimación tuya:
+  · "ALTOS 90" → todos los altos miden 90 cm de alto.
+  · "BAJOS 80" → todos los bajos miden 80 cm de alto.
+  · Un color suelto ("BLANCO") es el acabado de toda la cocina: ponlo en
+    "observaciones", no lo conviertas en un mueble.
+- Si una casilla NO lleva número de ancho, deja "ancho_estimado": null y
+  "confianza": "BAJA". NO pongas un ancho plausible: un ancho inventado se
+  convierte en un mueble mal pedido en fábrica.
+"""
 
 
 def build_analysis_prompt(library: str) -> str:
