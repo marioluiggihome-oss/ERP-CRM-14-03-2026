@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
@@ -185,8 +185,13 @@ export default function ProformaImporter({ esMaster }) {
   const cambiarMarcaCaj = (m) => { setMarcaCaj(m); setP(prev => ({ ...prev, cajon: HERRAJE[m].cajon, gaveta: HERRAJE[m].gaveta })); };
   const cambiarMarcaBis = (m) => { setMarcaBis(m); setP(prev => ({ ...prev, bisagra: BISAGRA[m] })); };
 
-  // Persistir costes
-  useState(() => { try { localStorage.setItem('alvic_costes', JSON.stringify(p)); } catch { /* noop */ } });
+  // Persistir costes. OJO: esto era un `useState(() => …)`, que se ejecuta UNA
+  // sola vez al montar, asi que no guardaba nada de lo que se escribia: al
+  // volver a abrir, mano de obra, margen y descuentos aparecian como estaban
+  // antes y los totales salian mal. Tiene que ser un efecto sobre `p`.
+  useEffect(() => {
+    try { localStorage.setItem('alvic_costes', JSON.stringify(p)); } catch { /* noop */ }
+  }, [p]);
 
   const importar = async (file) => {
     if (!file) return;
@@ -242,20 +247,27 @@ export default function ProformaImporter({ esMaster }) {
         const ov = overrides[origIdx] || {};
         const acb = _match_acb(it, ov.tipo || null, ov.color || null, ov.grosor || null);
         const precioAcb = acb ? (Number(acb._precio) || 0) : 0;
-        const casco = precioAcb * facCasco;
-        const bisagras = (it.puertas || 0) * 2 * (Number(p.bisagra) || 0);
-        const patas = (it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0;
-        const colgadores = (it.tipo === 'alto') ? 2 * (Number(p.colgador) || 0) : 0;
-        const guias = (it.cajones || 0) * (Number(p.cajon) || 0) + (it.gavetas || 0) * (Number(p.gaveta) || 0);
+        // UNIDADES: una linea de 2 muebles cuesta el doble. Antes no se
+        // multiplicaba en ningun sitio (ni casco, ni herraje, ni mano de obra),
+        // asi que toda proforma con lineas de mas de una unidad salia barata.
+        const uds = Math.max(Number(it.cantidad) || 1, 1);
+        const casco = precioAcb * facCasco * uds;
+        const bisagras = (it.puertas || 0) * 2 * (Number(p.bisagra) || 0) * uds;
+        const patas = ((it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0) * uds;
+        const colgadores = ((it.tipo === 'alto') ? 2 * (Number(p.colgador) || 0) : 0) * uds;
+        const guias = ((it.cajones || 0) * (Number(p.cajon) || 0)
+          + (it.gavetas || 0) * (Number(p.gaveta) || 0)) * uds;
         const herraje = bisagras + patas + colgadores + guias;
         const herrajeEsp = _herraje_especial(it.descripcion);
 
         // Mano de obra: el valor general se aplica A CADA MUEBLE (los paneles,
         // puertas y regletas no llevan). Si la linea tiene valor propio, manda.
+        // Lo que se calcula solo va por unidades; lo que se teclea a mano en la
+        // linea es el importe FINAL de esa linea y se respeta tal cual.
         const moPropia = moLinea[origIdx];
         const moDeLinea = (moPropia !== undefined && moPropia !== '')
           ? (Number(moPropia) || 0)
-          : (acb ? moGeneral : 0);
+          : (acb ? moGeneral * uds : 0);
 
         // Puertas: por defecto m2 x precio/m2 (con las medidas del editor si se
         // han corregido); si la linea tiene precio propio, manda ese.
@@ -265,13 +277,13 @@ export default function ProformaImporter({ esMaster }) {
           const ovp = puertasEditadas[idxPuertaPorOrig[origIdx]] || {};
           const altoP = Number(ovp.alto ?? it.largo) || 0;
           const anchoP = Number(ovp.ancho ?? it.ancho) || 0;
-          if (altoP > 0 && anchoP > 0 && pm2 > 0) puertaDeLinea = (altoP / 1000) * (anchoP / 1000) * pm2;
+          if (altoP > 0 && anchoP > 0 && pm2 > 0) puertaDeLinea = (altoP / 1000) * (anchoP / 1000) * pm2 * uds;
         }
         const puertaPropia = puertaLinea[origIdx];
         if (puertaPropia !== undefined && puertaPropia !== '') puertaDeLinea = Number(puertaPropia) || 0;
 
         return {
-          ...it, _origIdx: origIdx, _acb: acb, _precioAcb: precioAcb,
+          ...it, _origIdx: origIdx, _acb: acb, _precioAcb: precioAcb, _uds: uds,
           _casco: casco, _herraje: herraje, _bis: bisagras, _pat: patas,
           _col: colgadores, _gui: guias, _mat: casco + herraje,
           _herrajeEsp: herrajeEsp,
@@ -301,7 +313,9 @@ export default function ProformaImporter({ esMaster }) {
     // La mano de obra ya no es un importe unico: es la suma de la de cada
     // mueble, con las lineas que se hayan retocado a mano.
     const totMo = rows.reduce((a, r) => a + r._mo, 0);
-    const nMuebles = rows.filter(r => r._acb).length;
+    // Muebles CONTADOS POR UNIDADES: es lo que hay que fabricar y a lo que se
+    // le aplica la mano de obra.
+    const nMuebles = rows.reduce((a, r) => a + (r._acb ? r._uds : 0), 0);
     const costePuertas = rows.reduce((a, r) => a + r._puerta, 0);
     const costeProduccion = totMat + totMo + costePuertas;
     const precioVenta = costeProduccion + margen;
@@ -589,6 +603,20 @@ export default function ProformaImporter({ esMaster }) {
                 <span className="text-[11px] font-black uppercase tracking-wide">Coste del casco</span>
               </div>
 
+              {/* Los descuentos los mete el usuario a mano y no se muestran en
+                  ningún texto. Pero con la casilla vacía el casco se cuenta a
+                  tarifa completa y el coste sale MUY por encima sin avisar: por
+                  eso se avisa (sin decir qué porcentaje debería ir). */}
+              {(p.desc1 === '' || p.desc1 === null || p.desc1 === undefined) && (
+                <div className="rounded-lg bg-amber-50 border border-amber-300 px-3 py-2 text-[11px] text-amber-800 mb-3 flex items-start gap-2">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-500" />
+                  <span>
+                    <b>Sin descuento de casco.</b> El coste se está calculando a tarifa
+                    completa. Rellena el descuento antes de dar el coste por bueno.
+                  </span>
+                </div>
+              )}
+
               {/* Descuento 1 + botón para mostrar descuento 2 */}
               <div className="flex items-end gap-2 mb-3 flex-wrap">
                 <label className="flex flex-col gap-1">
@@ -716,6 +744,7 @@ export default function ProformaImporter({ esMaster }) {
                     <th className="px-2 py-2">#</th>
                     <th className="px-2 py-2">Código</th>
                     <th className="px-2 py-2">Descripción</th>
+                    <th className="px-2 py-2 text-center" title="Unidades de la línea: multiplican casco, herraje, mano de obra y puertas">Uds</th>
                     <th className="px-2 py-2">Casco ACB (equiv.)</th>
                     <th className="px-2 py-2 text-center">P/C/G</th>
                     <th className="px-2 py-2 text-right text-slate-400">Val. Alvic</th>
@@ -861,6 +890,13 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
             </span>
           )}
         </div>
+      </td>
+      <td className="px-2 py-1.5 text-center">
+        {/* Unidades. Se ve siempre, y se resalta cuando la linea trae mas de una:
+            es lo que multiplica el coste y antes no se veia por ninguna parte. */}
+        <span className={r._uds > 1 ? 'font-black text-amber-700 bg-amber-100 rounded px-1.5 py-0.5' : 'text-slate-500'}>
+          {r._uds}
+        </span>
       </td>
       <td className="px-2 py-1.5 text-slate-600 min-w-[160px]">
         {editando && !bloqueado ? (

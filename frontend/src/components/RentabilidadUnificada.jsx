@@ -33,7 +33,9 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial, onClos
           </button>
         )}
       </div>
-      <div className="border-2 border-t-0 border-slate-700 rounded-b-2xl overflow-hidden">
+      {/* La tabla es larga: se le pone su propio alto y su propio scroll, para que
+          la cabecera con el selector MV/Alvic no se pierda al bajar. */}
+      <div className="border-2 border-t-0 border-slate-700 rounded-b-2xl bg-white overflow-auto max-h-[85vh]">
         {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} />}
       </div>
     </div>

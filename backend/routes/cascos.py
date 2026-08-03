@@ -131,8 +131,11 @@ _PROMPT_PROFORMA = (
     "Esta imagen es una página de una PROFORMA de muebles de cocina (cascos). "
     "Extrae la tabla de artículos. Devuelve SOLO un JSON: {\"items\":[{\"n\":1,"
     "\"cod\":\"80GF/1P1GIN\",\"descripcion\":\"...\",\"material\":\"MELAMINA ... ZENIT - MERIVOBOX\","
-    "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73}]}. "
-    "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual. "
+    "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73,\"importe\":402.73}]}. "
+    "'pvp' es la columna PRECIO (por unidad) e 'importe' es el TOTAL de la fila "
+    "(precio × cantidad); si la tabla solo trae una de las dos, pon null en la otra. "
+    "'cantidad' son las unidades de la fila: cópiala, es la que multiplica el importe. "
+    "Si una fila no es un mueble, inclúyela igual. "
     "La página puede estar girada 90º: léela en la orientación en que el texto tenga sentido. "
     "Copia los números EXACTAMENTE como aparecen; si un dato no se lee, pon null. NO lo inventes."
 )
@@ -147,11 +150,27 @@ def _filas_a_items(allrows: list) -> list:
         color, blum = _color_y_herraje(material)
         desc = r.get("descripcion") or ""
         fr = _cuenta_frentes(desc)
+        # Total de la linea: manda el importe de la proforma; si no viene, se
+        # calcula precio x unidades. Antes era `total = pvp` a secas, asi que
+        # una fila de 2 unidades contaba como una y el total salia corto.
+        try:
+            uds = float(r.get("cantidad") or 1.0) or 1.0
+        except (TypeError, ValueError):
+            uds = 1.0
+        try:
+            precio = float(r.get("pvp")) if r.get("pvp") is not None else None
+        except (TypeError, ValueError):
+            precio = None
+        try:
+            importe = float(r.get("importe")) if r.get("importe") is not None else None
+        except (TypeError, ValueError):
+            importe = None
+        total = importe if importe is not None else (precio * uds if precio is not None else None)
         items.append({
             "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": desc,
             "material": material, "color": color, "herrajeBlum": blum,
             "largo": r.get("largo"), "ancho": r.get("ancho"), "grueso": r.get("grueso"),
-            "cantidad": r.get("cantidad") or 1.0, "pvp": r.get("pvp"), "total": r.get("pvp"),
+            "cantidad": uds, "pvp": precio, "total": total,
             "puertas": fr["puertas"], "cajones": fr["cajones"], "gavetas": fr["gavetas"],
             "tipo": _tipo_mueble(desc), "esMueble": True,
         })

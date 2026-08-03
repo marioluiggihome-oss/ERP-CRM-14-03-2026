@@ -82,6 +82,13 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   // (no se pueden modificar, borrar ni desmarcar). Solo el master las desbloquea
   // manteniendo pulsada la tecla Shift un rato (secuencia que solo él conoce).
   const esMaster = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isMaster);
+  // Perfil CONTROLLER: consulta. Puede abrir cualquier documento y verlo
+  // entero (unidades, coste unitario e importe de coste incluidos), pero no
+  // guarda nada. El servidor ya rechaza cualquier escritura suya; aqui se
+  // refleja en la pantalla para que no parezca editable y luego falle.
+  const soloLectura = !!currentUser?.isController && !(currentUser?.isAdmin
+    || currentUser?.isGerente || currentUser?.isDirectorComercial
+    || currentUser?.isDirectorFabrica || currentUser?.isResponsableDelegacion);
   const [masterUnlock, setMasterUnlock] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [parsingMulti, setParsingMulti] = useState(false);
@@ -1833,7 +1840,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   <span className={feeding ? 'animate-pulse' : ''}>💰</span>
                   {feeding ? 'Alimentando...' : 'Alimentar costes (catálogo)'}
                 </button>
-                <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Anadir linea</button>
+                {!soloLectura && <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Anadir linea</button>}
                 <button onClick={() => setShowArticleCostsIA(true)} title="Dar de alta artículos nuevos en el catálogo de costes (captura, PDF o Excel + orden en texto libre), sin salir de esta factura." className="px-3 py-1.5 bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 rounded-lg text-xs font-bold flex items-center gap-1.5">
                   <Sparkles size={14} /> Costes de artículos (IA)
                 </button>
@@ -1888,11 +1895,12 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                       const costeUd = cant > 0 ? (Number(l.coste) || 0) / cant : (Number(l.coste) || 0);
                       return (
                         <tr key={l.id || i}>
-                          <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
-                          <td className="p-1"><input value={l.concepto} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
+                          <td className="p-1"><input value={l.ref} disabled={soloLectura} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs disabled:bg-slate-50 disabled:text-slate-600" /></td>
+                          <td className="p-1"><input value={l.concepto} disabled={soloLectura} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs disabled:bg-slate-50 disabled:text-slate-600" /></td>
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.cantidad ?? 1}
+                            disabled={soloLectura}
                             onChange={e => setLine(i, 'cantidad', e.target.value)}
                             onBlur={e => blurLine(i, 'cantidad', e.target.value)}
                             className="w-full px-1.5 py-1 border rounded text-xs text-right"
@@ -1900,6 +1908,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.costeUdRaw ?? (costeUd ? String(costeUd) : '')}
+                            disabled={soloLectura}
                             title="Coste unitario (Coste ÷ Cantidad). Editable: recalcula el coste total × cantidad."
                             onChange={e => { const lines = [...editor.lines]; lines[i] = { ...lines[i], costeUdRaw: e.target.value }; setEditor({ ...editor, lines }); }}
                             onBlur={e => { const v = parseDecimal(e.target.value); const lines = [...editor.lines]; const c = Number(lines[i].cantidad) || 1; lines[i] = { ...lines[i], coste: Number((v * c).toFixed(2)), costeUdRaw: undefined }; setEditor({ ...editor, lines }); }}
@@ -1908,6 +1917,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.coste}
+                            disabled={soloLectura}
                             onChange={e => setLine(i, 'coste', e.target.value)}
                             onBlur={e => blurLine(i, 'coste', e.target.value)}
                             placeholder="0"
@@ -1916,6 +1926,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.venta}
+                            disabled={soloLectura}
                             onChange={e => setLine(i, 'venta', e.target.value)}
                             onBlur={e => blurLine(i, 'venta', e.target.value)}
                             placeholder="0"
@@ -1923,7 +1934,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                           /></td>
                           <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
                           <td className={`p-1 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(2)}%`}</td>
-                          <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
+                          <td className="p-1 text-center">{!soloLectura && <button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button>}</td>
                         </tr>
                       );
                     })}
@@ -1942,9 +1953,15 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               )}
             </div>
             <div className="p-4 border-t shrink-0">
-              <button onClick={saveFicha} disabled={saving} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2">
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Guardar ficha
-              </button>
+              {soloLectura ? (
+                <p className="w-full py-3 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-xs text-center">
+                  Perfil de consulta · puedes verlo todo, pero no guardar cambios
+                </p>
+              ) : (
+                <button onClick={saveFicha} disabled={saving} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2">
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Guardar ficha
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -733,10 +733,16 @@ const Cascos = ({ state, setState }) => {
                   </div>
                 </>
               )}
-              {/* Panel Rentabilidad/Alvic: aparece debajo del botón Importar, alineado a la derecha */}
+              {/* Panel Rentabilidad/Alvic a pantalla completa.
+                   Antes colgaba del botón Importar como un desplegable de 700px:
+                   una tabla de 16 columnas metida en esa ventanita era imposible
+                   de usar, y encima la recortaba el contenedor. */}
               {showRenta && (
-                <div className="absolute right-0 mt-2 z-50 w-[700px] max-w-[90vw]" style={{top: '100%'}}>
-                  <RentabilidadUnificada esMaster={true} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
+                <div className="fixed inset-0 z-[9998] bg-slate-900/60 p-2 sm:p-4 overflow-y-auto"
+                  onMouseDown={(e) => { if (e.target === e.currentTarget) setShowRenta(false); }}>
+                  <div className="mx-auto w-full max-w-[1400px]">
+                    <RentabilidadUnificada esMaster={true} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
+                  </div>
                 </div>
               )}
             </div>
