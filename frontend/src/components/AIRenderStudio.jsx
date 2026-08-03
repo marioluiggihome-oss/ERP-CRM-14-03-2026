@@ -468,6 +468,11 @@ export default function AIRenderStudio({ state, setState }) {
   const [selMode, setSelMode] = useState(false);      // modo "unir proyectos" (selección múltiple)
   const [selIds, setSelIds] = useState([]);           // ids de proyectos seleccionados para unir
   const [busy, setBusy] = useState(false);
+  // Historial de fotos DEL PROYECTO (guardado en el servidor, no solo en memoria).
+  const [histInfo, setHistInfo] = useState({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
+  const [histSubiendo, setHistSubiendo] = useState(false);
+  const histYaSubidas = useRef(new Set()); // srcs ya guardados del proyecto abierto
+  const histEnCurso = useRef(false);       // evita dos subidas a la vez
   const [downloading, setDownloading] = useState(false);
   // Captura de medidas de la estancia (para proporción/escala reales).
   const [medidas, setMedidas] = useState({ ancho: '', fondo: '', altura: '', aberturas: '' });
@@ -857,6 +862,13 @@ export default function AIRenderStudio({ state, setState }) {
     if (typeof path === 'string' && path.startsWith('/api/ai-engine/asset')) {
       const token = getToken() || '';
       return `${API_URL}${path}&t=${encodeURIComponent(token)}`;
+    }
+    // Fotos guardadas del proyecto (pueden venir de Google Drive): se sirven por
+    // el propio ERP, con sesión. El token va en la URL porque una etiqueta <img>
+    // no puede mandar cabeceras.
+    if (typeof path === 'string' && path.startsWith('/api/ai-engine/designs/')) {
+      const token = getToken() || '';
+      return `${API_URL}${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(token)}`;
     }
     return path;
   };
@@ -1629,6 +1641,193 @@ export default function AIRenderStudio({ state, setState }) {
     });
   };
 
+  // ─── Historial de fotos DEL PROYECTO ────────────────────────────────────────
+  // Todo lo que se genera dentro de un proyecto (renders, variantes, planos y
+  // láminas) se guarda en el servidor junto al proyecto, no solo en memoria del
+  // navegador: al recargar la página el historial seguía perdiéndose y de un
+  // proyecto guardado solo quedaba UNA foto, la última.
+  //
+  // Cada imagen va en su propio documento (`render3d_images`), así que subir una
+  // foto nueva es una petición pequeña y no hay que reenviar las anteriores.
+
+  // Si ya viene reducida (JPEG pequeño, tal como la devuelve el servidor) se
+  // deja igual: volver a comprimirla cambiaría el contenido y el servidor la
+  // tomaría por una foto distinta, duplicando el historial en cada guardado.
+  const listaParaGuardar = async (src) => {
+    if (typeof src === 'string' && src.startsWith('data:image/jpeg') && src.length < 800000) return src;
+    return await shrinkForSave(src);
+  };
+
+  // Miniatura para la tira del historial (~25 KB). Cuando la foto grande va a
+  // Google Drive, esto es lo ÚNICO que queda en la base de datos.
+  const hacerMiniatura = async (src) => {
+    const dataUrl = await imageToDataUrl(src);
+    if (!dataUrl || !String(dataUrl).startsWith('data:image')) return null;
+    return await new Promise((resolve) => {
+      const im = new window.Image();
+      im.onload = () => {
+        try {
+          const escala = Math.min(1, 400 / Math.max(im.width, im.height));
+          const w = Math.max(Math.round(im.width * escala), 1);
+          const h = Math.max(Math.round(im.height * escala), 1);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(im, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', 0.7));
+        } catch (_) { resolve(null); }
+      };
+      im.onerror = () => resolve(null);
+      im.src = dataUrl;
+    });
+  };
+
+  // Render actual + todo el historial, sin repetir y de más reciente a más
+  // antiguo. La tira de miniaturas solo conserva las últimas ~12 (las viejas se
+  // caen sola al generar), así que se apunta aquí TODO lo que ha pasado por
+  // pantalla: si no, una foto generada y desplazada antes de subirse se perdía.
+  const histVistas = useRef(new Map()); // src → {descripcion, tipo}
+  const fotosDelProyecto = () => {
+    const meter = (src, descripcion, tipo) => {
+      if (typeof src !== 'string' || !src || histVistas.current.has(src)) return;
+      if (histVistas.current.size >= 200) return; // freno de memoria
+      histVistas.current.set(src, { descripcion: descripcion || '', tipo: tipo || 'render' });
+    };
+    // Todas las imágenes del resultado, no solo la primera: un proyecto unido
+    // trae varias a la vez y si no se recorren se guardaría solo una.
+    (renderResult?.result?.images || []).forEach(
+      im => meter(im, renderResult?.description || description, 'render'));
+    (renderHistory || []).forEach(h => (h?.result?.images || []).forEach(
+      im => meter(im, h?.description, h?.tipo)));
+    return [...histVistas.current.entries()].map(([src, v]) => ({ src, ...v }));
+  };
+
+  const subirFotosPendientes = async (designId, fotos, avisar) => {
+    if (!designId || histEnCurso.current) return;
+    const nuevas = (fotos || []).filter(f => !histYaSubidas.current.has(f.src));
+    if (!nuevas.length) return;
+    histEnCurso.current = true; setHistSubiendo(true);
+    try {
+      // De tres en tres: un lote grande vuelve a hacer el JSON enorme, que es
+      // justo lo que rompía el guardado con renders de 2K.
+      for (let i = 0; i < nuevas.length; i += 3) {
+        const lote = nuevas.slice(i, i + 3);
+        const imagenes = [];
+        const origen = []; // src de cada imagen enviada, en el mismo orden
+        for (const f of lote) {
+          try {
+            const dataUrl = await listaParaGuardar(f.src);
+            if (dataUrl) {
+              // La miniatura viaja siempre: es lo que se ve en el historial y lo
+              // único que se queda aquí cuando la grande se va a Drive.
+              const miniatura = await hacerMiniatura(dataUrl);
+              imagenes.push({ dataUrl, miniatura, descripcion: f.descripcion, tipo: f.tipo });
+              origen.push(f.src);
+            }
+          } catch (_) { /* una foto que no se puede leer no bloquea al resto */ }
+        }
+        if (!imagenes.length) continue;
+        const r = await fetch(`${API_URL}/api/ai-engine/designs/${designId}/imagenes`, {
+          method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imagenes }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!d?.success) throw new Error(d?.detail || d?.error || `HTTP ${r.status}`);
+        lote.forEach(f => histYaSubidas.current.add(f.src));
+        // Cada foto se queda con el id que le ha dado el servidor: sin él, la X
+        // del historial la quitaría de la pantalla pero seguiría en el proyecto.
+        const idPorSrc = new Map();
+        (d.resultados || []).forEach(res => {
+          if (res?.id && origen[res.indice]) idPorSrc.set(origen[res.indice], res.id);
+        });
+        if (idPorSrc.size) {
+          setRenderHistory(prev => prev.map(h => {
+            const src = h?.result?.images?.[0];
+            return (src && idPorSrc.has(src) && !h.guardadaId) ? { ...h, guardadaId: idPorSrc.get(src) } : h;
+          }));
+        }
+        setHistInfo(prev => ({
+          ...prev,
+          total: typeof d.total === 'number' ? d.total : prev.total,
+          enDrive: !!d.drive,
+        }));
+        if (d.driveAviso && avisar) setError(d.driveAviso);
+        if (d.lleno) {
+          if (avisar) setError('El proyecto ha llegado al tope de fotos guardadas; borra alguna del historial para seguir.');
+          break;
+        }
+      }
+    } catch (e) {
+      if (avisar) setError(`El proyecto se guardó, pero alguna foto del historial no: ${e.message || 'error de conexión'}`);
+    } finally { histEnCurso.current = false; setHistSubiendo(false); }
+  };
+
+  const cargarHistorialGuardado = async (designId, desde = 0) => {
+    try {
+      const r = await fetch(
+        `${API_URL}/api/ai-engine/designs/${designId}/imagenes?desde=${desde}&limite=12`,
+        { headers: getAuthHeaders() });
+      if (!r.ok) return;
+      const d = await r.json();
+      // Si la foto grande está en Drive, `dataUrl` es solo la miniatura: la
+      // grande se pide al ERP cuando hace falta (verla, PDF, descargar).
+      const items = (d.imagenes || []).map(im => ({
+        success: true, guardadaId: im.id, tipo: im.tipo || 'render',
+        description: im.descripcion || '',
+        timestamp: im.createdAt ? new Date(im.createdAt) : new Date(),
+        miniatura: im.dataUrl || null,
+        enDrive: !!im.enDrive,
+        result: {
+          images: [im.enDrive
+            ? `/api/ai-engine/designs/${designId}/imagenes/${im.id}/archivo`
+            : im.dataUrl],
+        },
+      })).filter(it => it.result.images[0]);
+      items.forEach(it => histYaSubidas.current.add(it.result.images[0]));
+      setRenderHistory(prev => {
+        const base = desde === 0 ? [] : prev;
+        const vistos = new Set(base.map(x => x?.result?.images?.[0]));
+        return [...base, ...items.filter(it => !vistos.has(it.result.images[0]))].slice(0, 60);
+      });
+      setHistInfo({ total: d.total || items.length, hayMas: !!d.hayMas,
+        cargadas: desde + items.length, enDrive: items.some(it => it.enDrive) });
+    } catch (_) { /* el proyecto se abre igual aunque el historial falle */ }
+  };
+
+  // La X del historial: si la foto está guardada en el proyecto, se borra
+  // también allí. Si solo se quitara de la pantalla, reaparecería al reabrir.
+  const quitarDelHistorial = async (i) => {
+    const item = renderHistory[i];
+    const src = item?.result?.images?.[0];
+    if (item?.guardadaId && savedId) {
+      if (!window.confirm('Esta foto está guardada en el proyecto. ¿La borro también del proyecto?')) return;
+      try {
+        const r = await fetch(
+          `${API_URL}/api/ai-engine/designs/${savedId}/imagenes/${item.guardadaId}`,
+          { method: 'DELETE', headers: getAuthHeaders() });
+        const d = await r.json().catch(() => null);
+        if (!d?.success) throw new Error(d?.detail || `HTTP ${r.status}`);
+        setHistInfo(prev => ({
+          ...prev,
+          total: typeof d.total === 'number' ? d.total : Math.max(prev.total - 1, 0),
+          cargadas: Math.max(prev.cargadas - 1, 0),
+        }));
+      } catch (e) { setError(`No se pudo borrar la foto del proyecto: ${e.message || 'error de conexión'}`); return; }
+    }
+    if (src) histYaSubidas.current.delete(src);
+    setRenderHistory(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  // Referencia viva a la subida, para que el efecto de auto-guardado no tenga
+  // que declararla como dependencia (y no salte el aviso de ESLint, que en el
+  // build de producción es un error).
+  const subirRef = useRef(null);
+  subirRef.current = () => subirFotosPendientes(savedId, fotosDelProyecto(), false);
+
+  // Con un proyecto ya guardado abierto, cada foto nueva se guarda sola.
+  useEffect(() => {
+    if (!savedId) return undefined;
+    const t = setTimeout(() => { if (subirRef.current) subirRef.current(); }, 2500);
+    return () => clearTimeout(t);
+  }, [savedId, renderHistory, renderResult]);
+
   const saveDesign = async () => {
     const img = currentImage();
     if (!img) { setError('Genera un render antes de guardar.'); return; }
@@ -1647,7 +1846,15 @@ export default function AIRenderStudio({ state, setState }) {
       });
       let d = null;
       try { d = await r.json(); } catch (_) { d = null; }
-      if (d?.success) { setSavedId(d.design.id); }
+      if (d?.success) {
+        const id = d.design.id;
+        // Proyecto distinto del que hubiera abierto: el registro de "ya subidas"
+        // no vale, hay que guardar todas las fotos en el nuevo.
+        if (id !== savedId) { histYaSubidas.current = new Set(); }
+        setSavedId(id);
+        // Y con el proyecto guardado, TODO el historial de fotos con él.
+        await subirFotosPendientes(id, fotosDelProyecto(), true);
+      }
       else setError(d?.error || d?.detail || `No se pudo guardar (HTTP ${r.status}).`);
     } catch { setError('Error de conexión al guardar el proyecto.'); }
     finally { setBusy(false); }
@@ -1664,6 +1871,11 @@ export default function AIRenderStudio({ state, setState }) {
     setCliente(dsg.cliente || ''); setRef(dsg.ref || ''); setDescription(dsg.description || '');
     if (dsg.style) setParams(p => ({ ...p, style: dsg.style }));
     setSavedId(dsg.id); setSavedList(null);
+    // Historial: se parte de cero y se rellena con las fotos guardadas de ESTE
+    // proyecto, para no mezclarlas con las del proyecto anterior.
+    histYaSubidas.current = new Set(); histVistas.current = new Map();
+    setRenderHistory([]);
+    setHistInfo({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
     if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
     // La lista ya no trae el referenceImage (payload); se carga el detalle completo
     // para poder Comparar con el plano/referencia original guardado.
@@ -1677,6 +1889,7 @@ export default function AIRenderStudio({ state, setState }) {
         if (full.referenceImage) { setRefImage(full.referenceImage); setOriginalRef(full.referenceImage); }
       }
     } catch { /* si falla el detalle, se queda con la miniatura de la lista */ }
+    await cargarHistorialGuardado(dsg.id, 0);
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
@@ -1764,6 +1977,8 @@ export default function AIRenderStudio({ state, setState }) {
     setMarks([]); setMarkTool(null); setSchematic(false);
     setOrbitFrames([]); setOrbitOn(false); setOrbitIndex(0);
     setSavedList(null); setSelMode(false); setSelIds([]); setError(null);
+    histYaSubidas.current = new Set(); histVistas.current = new Map();
+    setHistInfo({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
   };
 
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
@@ -3149,7 +3364,24 @@ export default function AIRenderStudio({ state, setState }) {
           {/* Historial de renders: tira horizontal compacta */}
           {renderHistory.length > 0 && !isGenerating && (
             <div className="shrink-0 border-t border-slate-200 pt-2 mt-1">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {savedId ? 'Fotos del proyecto' : 'Historial'}
+                </h4>
+                {savedId && histInfo.total > 0 && (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                    {histInfo.total} guardada{histInfo.total === 1 ? '' : 's'}
+                  </span>
+                )}
+                {savedId && histInfo.enDrive && (
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5"
+                    title="Las fotos a tamaño completo se guardan en la carpeta del proyecto en Google Drive">
+                    Drive
+                  </span>
+                )}
+                {histSubiendo && <span className="text-[10px] text-slate-400">guardando…</span>}
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {renderHistory.map((item, i) => (
                   <div key={i} className="relative shrink-0 group">
                     <button
@@ -3157,19 +3389,26 @@ export default function AIRenderStudio({ state, setState }) {
                       className="w-12 h-12 bg-slate-200 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all block"
                       title={item.description}
                     >
-                      {item?.result?.images?.[0] ? (
-                        <img src={assetSrc(item.result.images[0])} alt="" className="w-full h-full object-cover" />
+                      {(item?.miniatura || item?.result?.images?.[0]) ? (
+                        <img src={assetSrc(item.miniatura || item.result.images[0])} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-400">
                           <Image size={16} />
                         </div>
                       )}
                     </button>
-                    <button onClick={() => setRenderHistory(prev => prev.filter((_, idx) => idx !== i))}
+                    <button onClick={() => quitarDelHistorial(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Quitar del historial"><X size={11} /></button>
+                      title={item?.guardadaId ? 'Borrar también del proyecto guardado' : 'Quitar del historial'}><X size={11} /></button>
                   </div>
                 ))}
+                {savedId && histInfo.hayMas && (
+                  <button onClick={() => cargarHistorialGuardado(savedId, histInfo.cargadas)}
+                    className="shrink-0 w-16 h-16 rounded-xl border-2 border-dashed border-slate-300 text-[10px] font-bold text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+                    title="Cargar más fotos guardadas de este proyecto">
+                    +{Math.max(histInfo.total - histInfo.cargadas, 0)}<br />más
+                  </button>
+                )}
               </div>
             </div>
           )}

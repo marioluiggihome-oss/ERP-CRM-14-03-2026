@@ -23,7 +23,7 @@ const costeDe = (m, p) => {
     + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
 };
 
-export default function RelacionReview({ muebles: inicial, onConfirm, onClose, apiUrl, authHeaders }) {
+export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onClose, apiUrl, authHeaders }) {
   const [muebles, setMuebles] = useState(() => (inicial || []).map((m, i) => ({ ...m, _k: `${m.cod || 'x'}-${i}-${m.raw || ''}` })));
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
@@ -187,6 +187,23 @@ export default function RelacionReview({ muebles: inicial, onConfirm, onClose, a
             <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-2">
               {noEncontrados} mueble(s) sin código de tarifa (van igualmente, precio a ajustar).
             </p>
+          )}
+          {/* Lo que se escribió en el PDF y el lector NO ha sabido interpretar.
+              Antes se descartaba sin decir nada: el total salía corto y parecía
+              correcto. Se enseña tal cual, con el recuadro del que viene. */}
+          {(noLeidas || []).length > 0 && (
+            <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2">
+              <b>{noLeidas.length} anotación(es) del PDF sin leer</b> — NO están en los totales:
+              {noLeidas.map((n, i) => (
+                <span key={i} className="block mt-0.5">
+                  · {n.recuadro ? <b>{n.recuadro}: </b> : null}«{n.texto}» — {n.motivo}
+                  {n.sugerencia ? <> · ¿querías decir <b>{n.sugerencia}</b>?</> : null}
+                </span>
+              ))}
+              <span className="block mt-1 text-red-600">
+                Añádelas a mano con el buscador de aquí arriba.
+              </span>
+            </div>
           )}
           <table className="w-full text-sm">
             <thead>

@@ -131,8 +131,11 @@ _PROMPT_PROFORMA = (
     "Esta imagen es una página de una PROFORMA de muebles de cocina (cascos). "
     "Extrae la tabla de artículos. Devuelve SOLO un JSON: {\"items\":[{\"n\":1,"
     "\"cod\":\"80GF/1P1GIN\",\"descripcion\":\"...\",\"material\":\"MELAMINA ... ZENIT - MERIVOBOX\","
-    "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73}]}. "
-    "'pvp' es la columna PRECIO. Si una fila no es un mueble, inclúyela igual. "
+    "\"largo\":800,\"ancho\":500,\"grueso\":580,\"cantidad\":1,\"pvp\":402.73,\"importe\":402.73}]}. "
+    "'pvp' es la columna PRECIO (por unidad) e 'importe' es el TOTAL de la fila "
+    "(precio × cantidad); si la tabla solo trae una de las dos, pon null en la otra. "
+    "'cantidad' son las unidades de la fila: cópiala, es la que multiplica el importe. "
+    "Si una fila no es un mueble, inclúyela igual. "
     "La página puede estar girada 90º: léela en la orientación en que el texto tenga sentido. "
     "Copia los números EXACTAMENTE como aparecen; si un dato no se lee, pon null. NO lo inventes."
 )
@@ -147,15 +150,92 @@ def _filas_a_items(allrows: list) -> list:
         color, blum = _color_y_herraje(material)
         desc = r.get("descripcion") or ""
         fr = _cuenta_frentes(desc)
+        # Total de la linea: manda el importe de la proforma; si no viene, se
+        # calcula precio x unidades. Antes era `total = pvp` a secas, asi que
+        # una fila de 2 unidades contaba como una y el total salia corto.
+        try:
+            uds = float(r.get("cantidad") or 1.0) or 1.0
+        except (TypeError, ValueError):
+            uds = 1.0
+        try:
+            precio = float(r.get("pvp")) if r.get("pvp") is not None else None
+        except (TypeError, ValueError):
+            precio = None
+        try:
+            importe = float(r.get("importe")) if r.get("importe") is not None else None
+        except (TypeError, ValueError):
+            importe = None
+        total = importe if importe is not None else (precio * uds if precio is not None else None)
         items.append({
             "n": r.get("n"), "cod": r.get("cod") or "", "descripcion": desc,
             "material": material, "color": color, "herrajeBlum": blum,
             "largo": r.get("largo"), "ancho": r.get("ancho"), "grueso": r.get("grueso"),
-            "cantidad": r.get("cantidad") or 1.0, "pvp": r.get("pvp"), "total": r.get("pvp"),
+            "cantidad": uds, "pvp": precio, "total": total,
             "puertas": fr["puertas"], "cajones": fr["cajones"], "gavetas": fr["gavetas"],
             "tipo": _tipo_mueble(desc), "esMueble": True,
         })
     return items
+
+
+def _frentes_mv(m: dict) -> tuple:
+    """Puertas, cajones y gavetas de un mueble MV.
+
+    Regla de la casa (memoria del proyecto): un código con D/I lleva 1 puerta y
+    uno sin D/I lleva 2; los cajones y gavetas van en el nombre de la familia
+    (BAJO_3CAJ_1GAV). De aquí salen las bisagras del cálculo de herraje.
+    """
+    import re as _re
+    fam = (m.get("familia") or "").upper()
+    cajones = sum(int(x) for x in _re.findall(r"(\d)\s*CAJ", fam))
+    gavetas = sum(int(x) for x in _re.findall(r"(\d)\s*GAV", fam))
+    if cajones or gavetas:
+        return 0, cajones, gavetas
+    cod = (m.get("cod") or "").upper()
+    puertas = 1 if ("D/I" in cod or m.get("mano")) else 2
+    return puertas, 0, 0
+
+
+def _relacion_mv_como_items(pdf_bytes: bytes):
+    """Lee la plantilla de nomenclaturas MV rellenada y la deja con la misma
+    forma que las líneas de una proforma, para que el resto del importador
+    (equivalencia ACB, herraje, mano de obra, pedidos) funcione igual.
+
+    Devuelve None si el PDF no es una relación MV.
+    """
+    from services.mv_relacion import detectar_relacion
+    leido = detectar_relacion(pdf_bytes)
+    muebles = leido.get("muebles") or []
+    if not muebles:
+        return None
+    # Lo que se escribió y NO se supo leer viaja con el resultado: es preferible
+    # decir "esto no lo he entendido" a dejarlo caer en silencio.
+    no_leidas = leido.get("noLeidas") or []
+    items = []
+    for n, m in enumerate(muebles, start=1):
+        fam = (m.get("familia") or m.get("tipo") or "").replace("_", " ").strip()
+        ancho_cm = m.get("ancho")
+        desc = " ".join(x for x in [fam, str(ancho_cm) if ancho_cm else ""] if x).strip()
+        puertas, cajones, gavetas = _frentes_mv(m)
+        items.append({
+            "n": n,
+            "cod": m.get("cod") or (m.get("raw") or "").upper(),
+            "descripcion": desc or (m.get("raw") or "").upper(),
+            "material": "", "color": "", "herrajeBlum": False,
+            # La tarifa MV va en cm y el resto del importador trabaja en mm.
+            "largo": (m["alto"] * 10) if m.get("alto") else None,
+            "ancho": (ancho_cm * 10) if ancho_cm else None,
+            "grueso": (m["fondo"] * 10) if m.get("fondo") else None,
+            "cantidad": float(m.get("qty") or 1),
+            # El PVP de MV es precio de VENTA, no el coste de un proveedor: no se
+            # mete en la columna de la proforma para no mezclar tarifas. Viaja
+            # aparte, por si hace falta compararlo.
+            "pvp": None, "total": None,
+            "pvpMv": m.get("pvp"), "puntosMv": m.get("pts"),
+            "puertas": puertas, "cajones": cajones, "gavetas": gavetas,
+            "tipo": (m.get("tipo") or "").lower() or None,
+            "esMueble": True, "origen": "mv", "encontrado": bool(m.get("encontrado")),
+        })
+    return {"items": items, "noLeidas": no_leidas}
 
 
 async def _proforma_pagina_ia(idx: int, pg: str, timeout: float) -> tuple:
@@ -281,6 +361,23 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
         raise HTTPException(status_code=400, detail="PDF no válido.")
 
     from services.proforma_cascos import parse_proforma_text, extract_pdf_text_all_pages
+
+    # 0) ¿Es la PLANTILLA DE NOMENCLATURAS MV rellenada? Lo que se escribe en los
+    #    recuadros amarillos vive en los campos del formulario (AcroForm), NO en
+    #    el texto de la página: la visión IA no los ve y se inventaba las líneas
+    #    (todas a 48 €, sin código ni descripción). Aquí se leen de forma
+    #    determinista contra la tarifa MV, sin IA de por medio.
+    try:
+        mv = await _asyncio.get_running_loop().run_in_executor(
+            None, _relacion_mv_como_items, pdf_bytes)
+    except Exception as e:
+        logger.warning("proforma: fallo al probar la relación MV: %s", e)
+        mv = None
+    if mv and mv.get("items"):
+        return {"success": True, "estado": "listo", "origen": "mv",
+                "items": mv["items"], "count": len(mv["items"]),
+                "noLeidas": mv.get("noLeidas") or []}
+
     # 1) Intento por CAPA DE TEXTO (rápido y exacto): se responde en el acto.
     # Va al executor porque PyMuPDF es código nativo bloqueante y el servidor
     # corre con una sola réplica: un PDF pesado congelaría a todos los usuarios.
@@ -466,8 +563,10 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
     except Exception:
         raise HTTPException(status_code=400, detail="PDF no válido.")
     try:
-        from services.mv_relacion import detectar_relacion_pdf
-        muebles = detectar_relacion_pdf(pdf_bytes, tariff)
+        from services.mv_relacion import detectar_relacion
+        leido = detectar_relacion(pdf_bytes, tariff)
+        muebles = leido.get("muebles") or []
+        no_leidas = leido.get("noLeidas") or []
     except Exception as e:
         logger.error("mv detectar-relacion: %s", e)
         raise HTTPException(status_code=500, detail=f"No se pudo leer la relación: {e}")
@@ -482,6 +581,9 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
         "count": len(muebles),
         "totalUnidades": sum(int(x.get("qty") or 1) for x in muebles),
         "totalPvp": round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2),
+        # Lo escrito que no se ha sabido leer. Sin esto, esas lineas valian 0 y
+        # el total salia corto sin que nadie se enterase.
+        "noLeidas": no_leidas,
     }
 
 

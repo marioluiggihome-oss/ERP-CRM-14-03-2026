@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers } from 'lucide-react';
+import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers, Download, FileText } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
 import { getToken } from '../services/api';
 import DOMPurify from 'dompurify';
@@ -8,6 +8,13 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Sanitize HTML to prevent XSS attacks
 const sanitizeHTML = (html) => DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+
+// Una cota que no se conoce se deja en blanco, NUNCA con un número plausible:
+// un ancho inventado acaba en un mueble mal pedido en fábrica.
+const cota = (mm) => {
+  const v = Number(mm);
+  return Number.isFinite(v) && v > 0 ? Math.round(v) : '?';
+};
 
 const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analyzing, setAnalyzing] = useState(false);
@@ -132,6 +139,10 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     }
   };
 
+  // Master: es quien puede volcar a Cocina Desmontada (de momento solo el).
+  const esMaster = !!(state?.currentUser?.isAdmin || state?.currentUser?.isPrimaryAdmin
+    || state?.currentUser?.isMaster);
+
   // Push de bajo nivel a P1 (Presupuestador 2 / ZC, budgetItemsMontada). Sin routing.
   const pushToP1 = (furniture) => {
     if (!onAddToBudget) return;
@@ -171,6 +182,21 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         p2PendingLines: [...(p.p2PendingLines || []), ...lines],  // acumula (no pisa)
         ...(navigate ? { currentTab: 'presupuestador2' } : {}),
       }));
+    } else if (target === 'desmontada') {
+      // Cocina Desmontada trabaja en MILIMETROS y empareja por tipo + ancho.
+      const aMm = (v) => { const n = Number(v) || 0; return n > 0 && n < 320 ? Math.round(n * 10) : Math.round(n); };
+      const cabs = productos.map(f => ({
+        tipo: (f.tipo || f.subtipo || f.nombre_catalogo || 'Bajo').toString(),
+        ancho: aMm(f.ancho_real || f.ancho_estimado),
+        alto: aMm(f.alto_real || f.alto_estimado),
+        fondo: aMm(f.fondo_real || f.fondo_estimado),
+        qty: Number(f.cantidad) || 1,
+      }));
+      setState(p => ({
+        ...p,
+        cascosPendingCabinets: [...(p.cascosPendingCabinets || []), ...cabs],
+        ...(navigate ? { currentTab: 'cascos', analizadorReturn: true } : {}),
+      }));
     } else {
       productos.forEach(pushToP1);
       if (navigate) setState(p => ({ ...p, currentTab: 'budget' }));
@@ -180,7 +206,9 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     if (notify) {
       const totalUnidades = productos.reduce((sum, f) => sum + (Number(f.cantidad) || 1), 0);
       const totalPvp = productos.reduce((sum, f) => sum + (f.precio_pvp || 0) * (Number(f.cantidad) || 1), 0);
-      alert(`✅ ${totalUnidades} producto(s) añadido(s) al ${target === 'p2' ? 'Presupuestador (principal)' : 'Presupuestador 2'}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
+      const donde = target === 'p2' ? 'Presupuestador (principal)'
+        : target === 'desmontada' ? 'Cocina Desmontada' : 'Presupuestador 2';
+      alert(`✅ ${totalUnidades} producto(s) añadido(s) a ${donde}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
     }
   };
 
@@ -192,6 +220,11 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
       alert('No tienes ningún presupuestador activo para volcar los muebles.');
       return;
     }
+    if (dumpTarget === 'desmontada' && esMaster) {
+      doDump(productos, 'desmontada', opts);
+      return;
+    }
+    if (esMaster) { setDumpChoice({ productos, opts }); return; }
     if (dumpTarget && ((dumpTarget === 'p1' && canP1) || (dumpTarget === 'p2' && canP2))) {
       doDump(productos, dumpTarget, opts);
       return;
@@ -221,6 +254,55 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
       return;
     }
     resolveAndDump(productosEncontrados, { navigate: true, notify: true });
+  };
+
+  // Descarga la imagen del plano tal cual se subió.
+  const descargarImagen = (img, idx) => {
+    try {
+      const a = document.createElement('a');
+      a.href = img.dataUrl;
+      a.download = (img.name || `plano-pared-${idx + 1}`).replace(/\.[^.]*$/, '') + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) {
+      setError('No se pudo descargar la imagen.');
+    }
+  };
+
+  // Relación de muebles detectados en PDF RELLENABLE: se corrige en obra (una
+  // medida, unas unidades, un mueble que falta) y vuelve al ERP.
+  const [descargandoPdf, setDescargandoPdf] = useState(false);
+  const descargarRelacionPdf = async () => {
+    const det = analysisResult?.muebles_detectados || [];
+    if (!det.length) return;
+    setDescargandoPdf(true);
+    try {
+      const muebles = det.map(f => ({
+        cantidad: Number(f.cantidad) || 1,
+        codigo: f.codigo_catalogo || f.codigo_sugerido || '',
+        descripcion: f.nombre_catalogo || `${f.tipo || ''} ${(f.subtipo || '').replace(/_/g, ' ')}`.trim(),
+        ancho: f.ancho_real ?? f.ancho_estimado ?? null,
+        alto: f.alto_real ?? (f.alto_estimado ? f.alto_estimado * 10 : null),
+        fondo: f.fondo_real ?? (f.fondo_estimado ? f.fondo_estimado * 10 : null),
+        observaciones: f.producto_encontrado ? '' : 'sin código de catálogo',
+      }));
+      const r = await fetch(`${API_URL}/api/ia-lab/relacion-pdf`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muebles, observaciones: analysisResult?.observaciones || '' }),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.detail || `Error ${r.status}`);
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'relacion-muebles.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e) {
+      setError(`No se pudo generar el PDF: ${e.message || 'error de conexión'}`);
+    } finally { setDescargandoPdf(false); }
   };
 
   const clearAll = () => {
@@ -336,12 +418,23 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       <div className="absolute top-2 left-2 px-2 py-1 bg-indigo-900/80 text-white rounded-lg text-xs font-black">
                         PARED {idx + 1}
                       </div>
-                      <button
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={14} />
-                      </button>
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Descargar el plano/foto tal cual, sin salir de aquí. */}
+                        <button
+                          onClick={() => descargarImagen(img, idx)}
+                          title="Descargar esta imagen"
+                          className="p-1 bg-slate-900/80 text-white rounded-lg hover:bg-slate-900"
+                        >
+                          <Download size={14} />
+                        </button>
+                        <button
+                          onClick={() => removeImage(idx)}
+                          title="Quitar esta imagen"
+                          className="p-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -495,7 +588,13 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                           {furniture.nombre_catalogo || `${furniture.tipo} ${furniture.subtipo?.replace(/_/g, ' ')}`}
                         </p>
                         <p className="text-[10px] text-slate-400">
-                          {furniture.ancho_real || furniture.ancho_estimado}×{furniture.alto_real ? furniture.alto_real/10 : furniture.alto_estimado}×{furniture.fondo_real ? furniture.fondo_real/10 : furniture.fondo_estimado} mm
+                          {/* Ancho × alto × fondo, TODO en mm. Antes se dividía
+                              entre 10 lo que ya venía en cm y salían cotas
+                              imposibles: "600×7×3.3 mm". Lo que no se sabe se
+                              deja en «?», nunca con un número inventado. */}
+                          {cota(furniture.ancho_real ?? furniture.ancho_estimado)}×
+                          {cota(furniture.alto_real ?? (furniture.alto_estimado ? furniture.alto_estimado * 10 : null))}×
+                          {cota(furniture.fondo_real ?? (furniture.fondo_estimado ? furniture.fondo_estimado * 10 : null))} mm
                           {furniture.categoria && ` • ${furniture.categoria}`}
                         </p>
                       </div>
@@ -598,6 +697,16 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   </button>
                   );
                 })()}
+                {/* Relación en PDF EDITABLE: para revisarla en obra, corregir
+                    medidas o apuntar lo que falte, y volver a subirla. */}
+                <button
+                  onClick={descargarRelacionPdf}
+                  disabled={descargandoPdf}
+                  className="w-full mt-2 py-2.5 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {descargandoPdf ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+                  Descargar relación en PDF (editable)
+                </button>
               </div>
             </>
           )}
@@ -619,6 +728,14 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-black uppercase text-sm hover:bg-indigo-700 transition-colors">
                 Presupuestador 2 (ZC)
               </button>
+              {/* Cocina Desmontada: de momento solo el master, mientras se
+                  afina el emparejamiento con el catálogo de cascos. */}
+              {esMaster && (
+                <button onClick={() => doDump(dumpChoice.productos, 'desmontada', dumpChoice.opts)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white font-black uppercase text-sm hover:bg-slate-900 transition-colors">
+                  Cocina Desmontada · cascos
+                </button>
+              )}
               <button onClick={() => setDumpChoice(null)}
                 className="w-full px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors">
                 Cancelar

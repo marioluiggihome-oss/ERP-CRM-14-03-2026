@@ -57,8 +57,9 @@ jobs:
       # base de datos se sustituye por un doble en memoria.
       - name: Pruebas de calculo (pytest)
         run: |
-          # fastapi hace falta porque las pruebas de recarga cargan el router
-          # real (routes/render_packs.py) para comprobar los codigos 400/503.
-          # Mongo y Stripe si van simulados: no se instalan ni motor ni stripe.
+          # fastapi hace falta porque las pruebas cargan los routers reales
+          # (render_packs, ai_engine) para comprobar los codigos 400/403/503.
+          # Mongo, Stripe, httpx y python-multipart si van simulados dentro de
+          # las pruebas: no se instalan.
           python -m pip install --quiet pytest fastapi
           python -m pytest backend/tests/test_calculo_*.py -q
