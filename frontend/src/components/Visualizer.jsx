@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers, Download, FileText } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
 import { getToken } from '../services/api';
+import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import DOMPurify from 'dompurify';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -139,6 +140,28 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     }
   };
 
+  // ─── La sesión del analizador sobrevive al cambio de pestaña ────────────────
+  // Volcar al presupuesto cambia de módulo y este se desmonta: los planos
+  // subidos y el análisis se perdían, y había que volver a subir y volver a
+  // gastar una llamada a la IA solo para consultar algo.
+  const sesionRef = useRef(null);
+  sesionRef.current = { selectedImages, analysisResult, dumpTarget };
+  const estadoRef = useRef(state); estadoRef.current = state;
+  const setEstadoRef = useRef(setState); setEstadoRef.current = setState;
+
+  useEffect(() => {
+    const g = leerSesion(estadoRef.current, 'analizador');
+    if (g) {
+      if (g.selectedImages?.length) setSelectedImages(g.selectedImages);
+      if (g.analysisResult) setAnalysisResult(g.analysisResult);
+      if (g.dumpTarget) setDumpTarget(g.dumpTarget);
+    }
+    return () => {
+      const f = setEstadoRef.current;
+      if (f) guardarSesion(f, 'analizador', sesionRef.current);
+    };
+  }, []);
+
   // Master: es quien puede volcar a Cocina Desmontada (de momento solo el).
   const esMaster = !!(state?.currentUser?.isAdmin || state?.currentUser?.isPrimaryAdmin
     || state?.currentUser?.isMaster);
@@ -180,8 +203,10 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
       setState(p => ({
         ...p,
         p2PendingLines: [...(p.p2PendingLines || []), ...lines],  // acumula (no pisa)
-        ...(navigate ? { currentTab: 'presupuestador2' } : {}),
       }));
+      // Con miga de vuelta: desde el presupuesto se regresa al analizador tal
+      // como estaba, sin volver a subir los planos ni repetir el análisis.
+      if (navigate) irA(setState, 'presupuestador2');
     } else if (target === 'desmontada') {
       // Cocina Desmontada trabaja en MILIMETROS y empareja por tipo + ancho.
       const aMm = (v) => { const n = Number(v) || 0; return n > 0 && n < 320 ? Math.round(n * 10) : Math.round(n); };
@@ -195,11 +220,11 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
       setState(p => ({
         ...p,
         cascosPendingCabinets: [...(p.cascosPendingCabinets || []), ...cabs],
-        ...(navigate ? { currentTab: 'cascos', analizadorReturn: true } : {}),
       }));
+      if (navigate) irA(setState, 'cascos');
     } else {
       productos.forEach(pushToP1);
-      if (navigate) setState(p => ({ ...p, currentTab: 'budget' }));
+      if (navigate) irA(setState, 'budget');
     }
     setDumpTarget(target);
     setDumpChoice(null);

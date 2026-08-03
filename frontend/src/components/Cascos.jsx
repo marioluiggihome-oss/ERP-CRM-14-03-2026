@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
+import { guardarSesion, leerSesion } from '../services/navegacion';
 import RentabilidadUnificada from './RentabilidadUnificada';
 import RelacionReview from './RelacionReview';
 
@@ -235,6 +236,20 @@ const Cascos = ({ state, setState }) => {
   };
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
+  // El carrito sobrevive a salir a otro módulo y volver: si no, ir al analizador
+  // a comprobar una medida vaciaba el pedido a medio montar.
+  const sesionRef = useRef(null);
+  sesionRef.current = { cart };
+  const estadoRef = useRef(state); estadoRef.current = state;
+  const setEstadoRef = useRef(setState); setEstadoRef.current = setState;
+  useEffect(() => {
+    const g = leerSesion(estadoRef.current, 'cascos');
+    if (g?.cart?.length) setCart(g.cart);
+    return () => {
+      const f = setEstadoRef.current;
+      if (f) guardarSesion(f, 'cascos', sesionRef.current);
+    };
+  }, []);
   // Consume el herraje estimado que llega desde el diseñador 3D (líneas de plano).
   useEffect(() => {
     const pend = state?.cascosPendingLines;

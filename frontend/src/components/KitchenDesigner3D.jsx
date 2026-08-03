@@ -21,6 +21,7 @@ import {
   Upload, Video, Ruler, Box, FileText, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { getToken } from '../services/api';
+import { irA } from '../services/navegacion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -677,8 +678,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
           ...p,
           cascosPendingLines: [...(p.cascosPendingLines || []), ...hLines],
           cascosPendingCabinets: [...(p.cascosPendingCabinets || []), ...cabs],
-          currentTab: 'cascos', renderReturn: true,
         }));
+        irA(setState, 'cascos');
         alert(`✅ Volcado a Cocina Desmontada.\n\n• ${cabs.length} mueble(s) → se emparejan con el catálogo de Cascos (tipo y ancho).\n• Herraje estimado del plano: ${puertas * 2} bisagras, ${cajones} juego(s) de cajón/gaveta, ${bajos * 4} patas (líneas a 0€ para ajustar).`);
         return;
       }
@@ -687,8 +688,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         ...p, currentLibrary: lib,
         p2PendingLines: [...(p.p2PendingLines || []), ...p2Lines],
         p2PendingLibrary: lib,   // fuerza al Presupuestador 1 a la misma librería
-        currentTab: 'presupuestador2', renderReturn: true,
       }));
+      irA(setState, 'presupuestador2');
       alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (Cocina Montada, catálogo ${lib}). ${emparejados} emparejado(s) con el catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} sin emparejar (precio orientativo)` : ''}.`);
     } catch (e) { alert('No se pudo analizar el plano: ' + (e.message || '')); }
     finally { setIsBudgeting(false); }

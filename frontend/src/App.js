@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import GlobalEventReminder from './components/GlobalEventReminder';
 import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap } from 'lucide-react';
+import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -1559,7 +1560,27 @@ const App = () => {
             onOpenCalendar={(evt) => setState(p => ({ ...p, currentTab: 'crm-calendar', crmFocusEvent: evt || null }))}
           />
 
-          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 ${!sidebarOpen ? 'ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
+          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 flex flex-col ${!sidebarOpen ? 'ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
+            {/* Miga de vuelta: si has llegado aquí desde otro módulo (Estudio 3D →
+                analizador → presupuesto), esto te devuelve al punto exacto de
+                donde saliste, con su sesión intacta. Una sola barra para todos
+                los recorridos, en vez de un caso escrito a mano por pestaña. */}
+            {(state.volverA || []).length > 0 && state.currentTab === state.migaPara && (
+              <div className="shrink-0 flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
+                <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">
+                  Vienes de {NOMBRE_MODULO[state.volverA[state.volverA.length - 1]] || 'otro módulo'}
+                </span>
+                <button onClick={() => volverAtras(setState)}
+                  className="px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700">
+                  ← Volver a {NOMBRE_MODULO[state.volverA[state.volverA.length - 1]] || 'atrás'}
+                </button>
+                <button onClick={() => limpiarVuelta(setState)}
+                  className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
+                  Quedarme aquí
+                </button>
+              </div>
+            )}
+            <div className="flex-1 min-h-0 relative overflow-hidden">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
             {state.currentTab === 'welcome' && (
               <ErrorBoundary>
@@ -1592,22 +1613,13 @@ const App = () => {
             )}
             {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false) && (
               <ErrorBoundary>
-              {!state.renderReturn && state.currentUser?.canUseAIAnalysis && (
+              {!((state.volverA || []).length && state.currentTab === state.migaPara) && state.currentUser?.canUseAIAnalysis && (
                 <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-white border-b border-slate-200">
-                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio', estudio3dPreset: { tipo: 'cocina' } }))}
+                  <button onClick={() => irA(setState, 'renderStudio', { estudio3dPreset: { tipo: 'cocina' } })}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-sm"
                     title="Diseñar esta cocina en Estudio 3D (render IA fotorrealista)">
                     <Sparkles size={13} /> Diseñar en Estudio 3D
                   </button>
-                </div>
-              )}
-              {state.renderReturn && (
-                <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
-                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Vienes de Estudio 3D</span>
-                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio' }))}
-                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700">← Volver a Estudio 3D</button>
-                  <button onClick={() => setState(p => ({ ...p, renderReturn: false }))}
-                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">Quedarme en Presupuestador 1</button>
                 </div>
               )}
               <Presupuestador2
@@ -1627,15 +1639,6 @@ const App = () => {
             {state.currentTab === 'resumenCocinas' && state.currentUser?.canUseResumenTotales === true && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
             {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && (
               <ErrorBoundary>
-              {state.renderReturn && (
-                <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
-                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Vienes de Estudio 3D</span>
-                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio' }))}
-                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700">← Volver a Estudio 3D</button>
-                  <button onClick={() => setState(p => ({ ...p, renderReturn: false }))}
-                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">Quedarme en Cocina Desmontada</button>
-                </div>
-              )}
               <Cascos state={state} setState={setState} />
               </ErrorBoundary>
             )}
@@ -1712,6 +1715,7 @@ const App = () => {
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} initialTab={(state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined} focusEvent={state.crmFocusEvent} />}
             </Suspense>
+            </div>
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />

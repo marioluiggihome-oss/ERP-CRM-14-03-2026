@@ -15,6 +15,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap } from 'lucide-react';
 import { getToken } from '../services/api';
+import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
@@ -1641,6 +1642,48 @@ export default function AIRenderStudio({ state, setState }) {
     });
   };
 
+  // ─── La sesión sobrevive a cambiar de pestaña ───────────────────────────────
+  // Al ir al analizador o al presupuesto, este componente se desmonta y se
+  // perdía TODO: cliente, referencia, el render en pantalla y el historial.
+  // Aquí se deja una foto del trabajo en el estado global (que no se desmonta)
+  // y se recupera al volver. Las referencias evitan que el efecto dependa de
+  // valores que cambian a cada tecla.
+  const sesionRef = useRef(null);
+  sesionRef.current = {
+    cliente, ref, savedId, description, renderResult, renderHistory,
+    refImage, originalRef, floorPlan, params, medidas, tipo3d, histInfo,
+  };
+  const estadoRef = useRef(state); estadoRef.current = state;
+  const setEstadoRef = useRef(setState); setEstadoRef.current = setState;
+
+  useEffect(() => {
+    const g = leerSesion(estadoRef.current, 'estudio3d');
+    if (g) {
+      if (g.cliente) setCliente(g.cliente);
+      if (g.ref) setRef(g.ref);
+      if (g.savedId) setSavedId(g.savedId);
+      if (g.description) setDescription(g.description);
+      if (g.renderResult) setRenderResult(g.renderResult);
+      if (g.renderHistory?.length) setRenderHistory(g.renderHistory);
+      if (g.refImage) setRefImage(g.refImage);
+      if (g.originalRef) setOriginalRef(g.originalRef);
+      if (g.floorPlan) setFloorPlan(g.floorPlan);
+      if (g.params) setParams(p => ({ ...p, ...g.params }));
+      if (g.medidas) setMedidas(m => ({ ...m, ...g.medidas }));
+      if (g.tipo3d) setTipo3d(g.tipo3d);
+      if (g.histInfo) setHistInfo(g.histInfo);
+      // Lo ya guardado en el proyecto no se vuelve a subir al recuperar.
+      (g.renderHistory || []).forEach(h => {
+        const src = h?.result?.images?.[0];
+        if (src && h.guardadaId) histYaSubidas.current.add(src);
+      });
+    }
+    return () => {
+      const f = setEstadoRef.current;
+      if (f) guardarSesion(f, 'estudio3d', sesionRef.current);
+    };
+  }, []);
+
   // ─── Historial de fotos DEL PROYECTO ────────────────────────────────────────
   // Todo lo que se genera dentro de un proyecto (renders, variantes, planos y
   // láminas) se guarda en el servidor junto al proyecto, no solo en memoria del
@@ -1948,7 +1991,8 @@ export default function AIRenderStudio({ state, setState }) {
       try {
         const dataUrl = await imageToDataUrl(img);
         setAttached(true); setTimeout(() => setAttached(false), 4000);
-        setState(p => ({ ...p, analyzeRender: dataUrl, currentTab: 'visualizer' }));
+        // Con miga de vuelta: el analizador tendrá un «volver a Estudio 3D».
+        irA(setState, 'visualizer', { analyzeRender: dataUrl });
       } catch { setError('No se pudo enviar el render al analizador.'); }
       finally { setDownloading(false); }
       return;
@@ -1965,7 +2009,7 @@ export default function AIRenderStudio({ state, setState }) {
       localStorage.setItem('render3d_attach', JSON.stringify({ image: dataUrl, cliente, ref, ts: Date.now() }));
       setAttached(true);
       setTimeout(() => setAttached(false), 4000);
-      if (setState) setState(p => ({ ...p, currentTab: destTab, renderReturn: true }));
+      if (setState) irA(setState, destTab);
     } catch { setError('No se pudo adjuntar el render.'); }
     finally { setDownloading(false); }
   };
