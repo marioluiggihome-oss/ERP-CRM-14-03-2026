@@ -480,25 +480,34 @@ async def ai_usage_clients(user=Depends(require_admin)):
         uid = str(u.get("id") or "")
         plan_id = u.get("subscriptionPlan", "")
         plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+        is_admin = bool(u.get("isAdmin"))
         assigned = int(u.get("aiCreditsMonthly", 0) or plan.get("aiCreditsMonthly", 0) or 0)
         c = credits.get(uid, {})
         consumed = int(c.get("consumed", 0) or 0)
         extra = int(c.get("extra", 0) or 0)
-        total = assigned + extra
-        remaining = max(total - consumed, 0)
-        pct = round((consumed / total * 100), 0) if total > 0 else (100 if consumed > 0 else 0)
-        # Solo interesan clientes con plan/cupo o con consumo
-        if total == 0 and consumed == 0:
+        # Admin/master con aiCreditsMonthly=0 → ilimitado: siempre aparece
+        if is_admin and assigned == 0:
+            total = 0  # ilimitado
+            remaining = -1  # señal de ilimitado
+            pct = 0
+        else:
+            total = assigned + extra
+            remaining = max(total - consumed, 0)
+            pct = round((consumed / total * 100), 0) if total > 0 else (100 if consumed > 0 else 0)
+        # Solo interesan clientes con plan/cupo, consumo, o que sean admin
+        if total == 0 and consumed == 0 and not is_admin:
             continue
         out.append({
             "id": uid, "username": u.get("username"), "clientName": u.get("clientName", ""),
             "isCarpintero": bool(u.get("isCarpintero")),
+            "isAdmin": is_admin,
             "linkedCarpinteroAdminId": u.get("linkedCarpinteroAdminId", ""),
-            "planName": plan.get("name", "—"),
-            "asignados": assigned, "extra": extra, "total": total,
+            "planName": plan.get("name") or ("Enterprise" if is_admin else "—"),
+            "asignados": assigned if not (is_admin and assigned == 0) else -1,
+            "extra": extra, "total": total if not (is_admin and assigned == 0) else -1,
             "consumidos": consumed, "restantes": remaining, "pct": pct,
             "coste_estimado": round(consumed * cost_render, 2),
-            "agotado": total > 0 and consumed >= total,
+            "agotado": False if is_admin else (total > 0 and consumed >= total),
         })
     out.sort(key=lambda x: x["pct"], reverse=True)
     return {"success": True, "month": month, "cost_render": cost_render, "clients": out}

@@ -2694,6 +2694,9 @@ async def startup_event():
             "allowedModules": ["montada", "despiece", "armarios"],
             "active": True,
             "isActive": True,
+            "subscriptionPlan": "enterprise",
+            "planName": "Enterprise",
+            "aiCreditsMonthly": 0,
             "updatedAt": now,
         }
 

@@ -105,18 +105,27 @@ export default function AIMeterTab() {
                   </td>
                   <td className="p-2 text-xs text-slate-500">{c.planName}</td>
                   <td className="p-2">
-                    <div className="flex justify-between text-[11px] text-slate-500 mb-1">
-                      <span>{c.consumidos} / {c.total}{c.extra > 0 ? ` (+${c.extra} pack)` : ''}</span>
-                      <span className={c.agotado ? 'text-red-600 font-bold' : c.pct >= 80 ? 'text-amber-600 font-semibold' : 'text-slate-500'}>{c.pct}%</span>
-                    </div>
-                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div className={`h-full ${barColor(c)} rounded-full`} style={{ width: `${Math.min(c.pct, 100)}%` }} />
-                    </div>
+                    {c.isAdmin && c.asignados === -1 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-violet-600">{c.consumidos} usados</span>
+                        <span className="text-[10px] bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-bold">Ilimitado</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+                          <span>{c.consumidos} / {c.total}{c.extra > 0 ? ` (+${c.extra} pack)` : ''}</span>
+                          <span className={c.agotado ? 'text-red-600 font-bold' : c.pct >= 80 ? 'text-amber-600 font-semibold' : 'text-slate-500'}>{c.pct}%</span>
+                        </div>
+                        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div className={`h-full ${barColor(c)} rounded-full`} style={{ width: `${Math.min(c.pct, 100)}%` }} />
+                        </div>
+                      </>
+                    )}
                   </td>
                   <td className="p-2 text-right text-xs font-bold text-slate-600">{eur(c.coste_estimado)}</td>
                   <td className="p-2 whitespace-nowrap relative">
-                    <button onClick={() => setGranting(granting === c.id ? null : c.id)}
-                      className="px-2 py-1 rounded text-[11px] font-bold bg-orange-600 text-white hover:bg-orange-700 inline-flex items-center gap-1"><Plus size={12} /> Pack</button>
+                    {!c.isAdmin && <button onClick={() => setGranting(granting === c.id ? null : c.id)}
+                      className="px-2 py-1 rounded text-[11px] font-bold bg-orange-600 text-white hover:bg-orange-700 inline-flex items-center gap-1"><Plus size={12} /> Pack</button>}
                     {granting === c.id && (
                       <div className="absolute right-2 top-9 z-10 bg-white border border-slate-200 rounded-xl shadow-xl p-2 w-52">
                         <div className="flex items-center justify-between px-1 pb-1">
