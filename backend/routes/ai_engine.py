@@ -991,6 +991,87 @@ async def describe_reference(payload: dict, user=Depends(require_auth)):
         return {"success": False, "error": "No se pudo analizar la imagen de referencia. Inténtelo de nuevo."}
 
 
+@ai_engine_router.post("/describe-project")
+async def describe_project(payload: dict, user=Depends(require_auth)):
+    """Describe el proyecto ENTERO a partir de TODOS los dibujos a la vez.
+
+    Por qué no vale describir imagen por imagen: el plano en planta da la
+    distribución y cada alzado da UNA pared. Analizados por separado, cada uno
+    parece una cocina distinta ("distribución lineal") y nadie ata el conjunto:
+    ni que es en L, ni qué pared va con cuál, ni dónde está la torre de
+    columnas. Aquí van todas juntas, cada una con su papel.
+    """
+    from services.llm_vision import analyze_images_with_gemini
+
+    p = payload or {}
+    plano = p.get("floorPlan")
+    alzados = p.get("wallSketches") or []
+    referencias = p.get("referenceImages") or []
+    if not (plano or alzados or referencias):
+        raise HTTPException(status_code=400, detail="No hay ningún dibujo que analizar.")
+
+    imagenes = []
+    if plano:
+        imagenes.append({"data": plano, "papel":
+                         "PLANO EN PLANTA acotado. Manda en la DISTRIBUCIÓN: forma de la "
+                         "cocina (lineal, en L, en U, con isla), qué pared es cada una, el "
+                         "orden de los muebles en cada pared, sus anchos y las cotas. Las "
+                         "medidas escritas en el plano son la verdad."})
+    for i, a in enumerate(alzados[:5], start=1):
+        imagenes.append({"data": a, "papel":
+                         f"ALZADO de la PARED {i}: el diseño de esa pared (muebles altos, "
+                         f"bajos, columnas, electrodomésticos y acabados)."})
+    for r in referencias[:2]:
+        imagenes.append({"data": r, "papel":
+                         "REFERENCIA DE ACABADO: materiales, color y tirador. NO aporta "
+                         "distribución."})
+
+    try:
+        from services.criterios_cocina import CRITERIOS_ANALISIS
+    except Exception:
+        CRITERIOS_ANALISIS = ""
+
+    prompt = (
+        "Eres un diseñador de cocinas con un arquitecto técnico al lado. Tienes "
+        "VARIAS vistas del MISMO proyecto: descríbelo como UNA sola cocina, no una "
+        "por imagen.\n\n"
+        "Escribe un párrafo continuo, en español, que sirva de brief para generar un "
+        "render fotorrealista, con este contenido y en este orden:\n"
+        "1. Distribución del conjunto (lineal, en L, en U, con isla o península) y "
+        "medidas totales de cada tramo, tomadas del plano.\n"
+        "2. Pared por pared, de izquierda a derecha: los muebles en su orden real con "
+        "su ancho, qué lleva cada uno (puertas, cajones, gavetas), y los "
+        "electrodomésticos con su sitio exacto.\n"
+        "3. La torre de columnas, si la hay, y qué contiene.\n"
+        "4. Acabados: color y material de los frentes, encimera, tirador o gola, "
+        "zócalo y, si se ve, el suelo.\n"
+        "5. Ventanas y puertas de paso que condicionen la composición.\n\n"
+        "REGLAS:\n"
+        "- NO te inventes NINGUNA medida. Usa solo las que estén escritas en el plano; "
+        "si una no está, no la menciones. Una cota inventada acaba en un mueble mal "
+        "fabricado.\n"
+        "- NO añadas electrodomésticos, muebles ni elementos que no aparezcan.\n"
+        "- Si dos vistas se contradicen, manda el plano en la distribución y el alzado "
+        "en el diseño de su pared; dilo en una frase al final.\n"
+        "- Nada de listas ni títulos: texto corrido, claro y breve.\n"
+        + CRITERIOS_ANALISIS
+    )
+
+    try:
+        texto = await analyze_images_with_gemini(
+            imagenes, prompt, session_id=f"proyecto-{uuid.uuid4().hex[:8]}",
+            model="gemini-2.5-pro")
+    except Exception as e:
+        logger.error("describe-project: %s", e)
+        return {"success": False, "error": "No se pudo analizar el conjunto de dibujos."}
+
+    texto = (texto or "").strip().strip("`").strip()
+    if not texto:
+        return {"success": False, "error": "No se pudo interpretar los dibujos."}
+    return {"success": True, "description": get_engine()._sanitize_response(texto),
+            "imagenes": len(imagenes)}
+
+
 @ai_engine_router.post("/detect-installations")
 async def detect_installations(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Analiza un render de cocina con IA y devuelve los puntos de instalación

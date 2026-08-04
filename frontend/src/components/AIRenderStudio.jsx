@@ -2059,6 +2059,38 @@ export default function AIRenderStudio({ state, setState }) {
     } catch (_) { /* la imagen ya está adjunta aunque falle la descripción */ }
   };
 
+  // ─── Descripción del proyecto ENTERO ────────────────────────────────────────
+  // Describir imagen por imagen no vale: el plano da la distribución y cada
+  // alzado una pared. Por separado, cada una parece una cocina distinta
+  // ("distribución lineal") y nadie ata el conjunto. Aquí van todas juntas.
+  const [describiendoTodo, setDescribiendoTodo] = useState(false);
+  const describirProyecto = async () => {
+    const refs = refImages.length ? refImages : (refImage ? [refImage] : []);
+    if (!floorPlan && !wallSketches.length && !refs.length) {
+      setError('Sube al menos el plano en planta o un alzado.');
+      return;
+    }
+    setDescribiendoTodo(true); setError(null);
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/describe-project`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          floorPlan: floorPlan || undefined,
+          wallSketches,
+          referenceImages: refs.slice(0, 2),
+        }),
+      });
+      const d = await r.json();
+      if (d.success && d.description) {
+        setDescription(d.description);
+      } else {
+        setError(d.error || 'No se pudo describir el conjunto de dibujos.');
+      }
+    } catch (e) {
+      setError('Error de conexión al describir el proyecto.');
+    } finally { setDescribiendoTodo(false); }
+  };
+
   // Quita una referencia del array (y reajusta la principal).
   const removeReference = (i) => setRefImages(prev => {
     const next = prev.filter((_, idx) => idx !== i);
@@ -2717,6 +2749,16 @@ export default function AIRenderStudio({ state, setState }) {
                     </label>
                   )}
                 </div>
+                <button
+                  onClick={describirProyecto}
+                  disabled={describiendoTodo || isGenerating}
+                  title="Lee la planta y TODOS los alzados juntos y escribe una sola descripción del proyecto"
+                  className="w-full py-2.5 bg-white border-2 border-purple-200 text-purple-700 font-black uppercase tracking-wider text-[11px] rounded-xl hover:bg-purple-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {describiendoTodo
+                    ? <><Loader size={14} className="animate-spin" /> Leyendo todos los dibujos…</>
+                    : <><Sparkles size={14} /> Describir el proyecto con TODOS los dibujos</>}
+                </button>
                 <button
                   onClick={handleGenerateComposed}
                   disabled={isGenerating || (!floorPlan && wallSketches.length === 0)}

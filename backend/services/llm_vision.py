@@ -170,6 +170,98 @@ async def analyze_image_with_gemini(
     )
 
 
+async def analyze_images_with_gemini(
+    imagenes: list,
+    prompt: str,
+    session_id: str = "default",
+    model: str = "gemini-2.5-pro",
+) -> str:
+    """Analiza VARIAS imágenes A LA VEZ, en una sola llamada.
+
+    Hace falta cuando las imágenes solo se entienden juntas: el plano en planta
+    da la distribución y cada alzado da una pared. Descritas por separado, cada
+    una parece una cocina distinta y nadie ata el conjunto.
+
+    `imagenes` es una lista de {"data": base64|dataURL, "mime": "image/png",
+    "papel": "texto que explica qué es esa imagen"}. Los PDF se rasterizan.
+    """
+    from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+
+    await record_ai_usage("vision")
+    partes = []
+    etiquetas = []
+    for i, im in enumerate(imagenes or [], start=1):
+        raw = (im or {}).get("data") or ""
+        mime = (im or {}).get("mime") or "image/png"
+        if not raw:
+            continue
+        if raw.startswith("data:"):
+            cabecera, raw = raw.split(",", 1)
+            cl = cabecera.lower()
+            if "pdf" in cl:
+                mime = "application/pdf"
+            elif "png" in cl:
+                mime = "image/png"
+            elif "jpeg" in cl or "jpg" in cl:
+                mime = "image/jpeg"
+            elif "webp" in cl:
+                mime = "image/webp"
+        try:
+            if "pdf" in mime or is_pdf_base64(raw):
+                paginas = pdf_base64_to_png_base64(raw, dpi=150, max_pages=1) or []
+                if not paginas:
+                    continue
+                raw, mime = paginas[0], "image/png"
+        except Exception as e:
+            logger.warning("No se pudo preparar la imagen %d: %s", i, e)
+            continue
+        partes.append((base64.b64decode(raw), mime))
+        etiquetas.append(f"IMAGEN {len(partes)}: {(im or {}).get('papel') or 'referencia'}")
+
+    if not partes:
+        raise RuntimeError("No hay imágenes legibles que analizar.")
+
+    gemini_key = get_gemini_key()
+    if not (gemini_key and GOOGLE_GENAI_AVAILABLE):
+        raise RuntimeError(
+            "Vision IA no disponible. Falta la clave del motor de IA en el servidor.")
+
+    client = google_genai.Client(api_key=gemini_key)
+    texto = prompt + "\n\n" + "\n".join(etiquetas)
+    contenidos = [google_genai_types.Part.from_bytes(data=d, mime_type=m) for d, m in partes]
+    contenidos.append(texto)
+
+    def _sync_call(model_name):
+        return client.models.generate_content(
+            model=model_name,
+            contents=contenidos,
+            config=google_genai_types.GenerateContentConfig(
+                temperature=0, max_output_tokens=16384),
+        )
+
+    candidatos = []
+    for m in _con_preferido([model or "gemini-2.5-pro", "gemini-2.5-pro", "gemini-2.5-flash"]):
+        if m not in candidatos:
+            candidatos.append(m)
+    loop = asyncio.get_event_loop()
+    ultimo = None
+    for nombre in candidatos:
+        try:
+            resp = await loop.run_in_executor(None, _sync_call, nombre)
+            it, ot = usage_from_response(resp)
+            await record_ai_tokens("vision", nombre, it, ot, 0, count=False)
+            return resp.text or ""
+        except Exception as e:
+            msg = str(e)
+            if any(k in msg for k in ("NOT_FOUND", "404", "400", "403")) or \
+               any(k in msg.lower() for k in ("not found", "not available", "unsupported")):
+                ultimo = e
+                logger.warning("Modelo '%s' no disponible: %s", nombre, msg[:120])
+                continue
+            raise
+    raise ultimo or RuntimeError("Ningún modelo de Gemini disponible para esta clave")
+
+
 async def _analyze_with_google_genai(
     image_base64: str,
     prompt: str,
