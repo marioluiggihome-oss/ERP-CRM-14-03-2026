@@ -523,6 +523,8 @@ export default function AIRenderStudio({ state, setState }) {
   // UX móvil: colapso de secciones avanzadas por defecto
   const [showEstilo, setShowEstilo] = useState(false);
   const [showPlanos, setShowPlanos] = useState(false);
+  // Caso raro: querer ignorar el plano y generar solo desde el texto.
+  const [soloTexto, setSoloTexto] = useState(false);
   const [showMedidas, setShowMedidas] = useState(false);
   // Ref para auto-scroll al panel de render en móvil
   const renderPanelRef = useRef(null);
@@ -2116,6 +2118,10 @@ export default function AIRenderStudio({ state, setState }) {
           style: params.style,
           floorPlan: floorPlan || undefined,
           wallSketches,
+          // Todo a la vez: el plano manda en la distribución, los bocetos en
+          // cada pared y la referencia en el acabado. Antes, elegir plano
+          // significaba renunciar a la foto de referencia del cliente.
+          referenceImages: (refImages.length ? refImages : (refImage ? [refImage] : [])).slice(0, 2),
         }),
       });
       const data = await response.json();
@@ -2137,15 +2143,14 @@ export default function AIRenderStudio({ state, setState }) {
     if (!description.trim()) return;
     const err = guardTipo(description);
     if (err) { setError(err); return; }
-    // Guardarraíl: si hay plano o bocetos subidos, este botón los IGNORARÍA.
-    // Evitamos que el render salga genérico sin respetar el plano.
-    if (floorPlan || wallSketches.length > 0) {
-      const usePlan = window.confirm(
-        'Has subido un plano o boceto, pero "Generar desde la descripción" NO lo usa.\n\n' +
-        'Aceptar = generar RESPETANDO el plano/bocetos (recomendado).\n' +
-        'Cancelar = generar solo desde el texto (ignora el plano).'
-      );
-      if (usePlan) { await handleGenerateComposed(); return; }
+    // Si hay plano o bocetos, se usan SIEMPRE junto con el texto y la
+    // referencia de acabado: son fuentes complementarias, no alternativas.
+    // Antes esto abría un aviso de "o una cosa o la otra" que obligaba a
+    // renunciar a algo; para el caso raro de querer ignorar el plano está la
+    // opción "solo texto" en el propio panel.
+    if (!soloTexto && (floorPlan || wallSketches.length > 0)) {
+      await handleGenerateComposed();
+      return;
     }
         setIsGenerating(true);
     setError(null);
@@ -2664,7 +2669,10 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
               {showPlanos && <div className="px-3 pb-3 flex flex-col gap-2.5">
                 <p className="text-[11px] text-slate-500">
-                  El render seguirá la distribución del plano y el diseño de cada pared, con el acabado descrito en el paso 1.
+                  Cada fuente aporta una cosa distinta y se pueden usar TODAS a la vez:
+                  el <b>plano</b> manda en la distribución, cada <b>boceto</b> en el diseño de
+                  su pared, la <b>referencia</b> en el acabado y tu <b>descripción</b> en los
+                  cambios que pidas.
                 </p>
                 <label className={`text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${floorPlan ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50'}`}>
                   {floorPlan ? <><CheckCircle size={13} /> Plano en planta cargado</> : <><Image size={13} /> Subir plano en planta</>}
@@ -2683,12 +2691,38 @@ export default function AIRenderStudio({ state, setState }) {
                   <Image size={13} /> Añadir boceto de pared
                   <input type="file" accept="image/*" className="hidden" onChange={handleAddWallSketch} />
                 </label>
+                {/* Qué se va a usar de verdad en el render. Antes había que
+                    adivinarlo (y un aviso obligaba a elegir entre plano y texto). */}
+                <div className="rounded-lg bg-white border border-indigo-100 px-3 py-2">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-indigo-700 mb-1">
+                    Se usará
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      [!!floorPlan, 'Plano en planta'],
+                      [wallSketches.length > 0, `${wallSketches.length} boceto(s) de pared`],
+                      [!!(refImages.length || refImage), 'Referencia de acabado'],
+                      [!!description.trim(), 'Tu descripción'],
+                      [!!(medidas.ancho || medidas.fondo || medidas.altura), 'Medidas de la estancia'],
+                    ].map(([activo, etiqueta], i) => (
+                      <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${activo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200 line-through'}`}>
+                        {etiqueta}
+                      </span>
+                    ))}
+                  </div>
+                  {(floorPlan || wallSketches.length > 0) && (
+                    <label className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer">
+                      <input type="checkbox" checked={soloTexto} onChange={e => setSoloTexto(e.target.checked)} />
+                      Ignorar el plano y los bocetos: generar solo desde el texto
+                    </label>
+                  )}
+                </div>
                 <button
                   onClick={handleGenerateComposed}
                   disabled={isGenerating || (!floorPlan && wallSketches.length === 0)}
                   className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                                    {isGenerating ? <><Loader size={15} className="animate-spin" /> Generando…</> : <><Send size={15} /> Generar render (plano + bocetos)</>}
+                  {isGenerating ? <><Loader size={15} className="animate-spin" /> Generando…</> : <><Send size={15} /> Generar con todo lo marcado</>}
                 </button>
               </div>}
               </div>

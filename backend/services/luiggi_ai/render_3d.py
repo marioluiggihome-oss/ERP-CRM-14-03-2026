@@ -774,12 +774,17 @@ class Render3DService:
             "engine": self.config.brand_name,
         }
 
+    # Tope de imágenes que se mandan juntas. Más allá, el modelo empieza a
+    # mezclar unas con otras y el render pierde fidelidad.
+    MAX_IMAGENES_COMPUESTAS = 6
+
     async def generate_render_composed(
         self,
         description: str,
         floor_plan: Optional[str] = None,
         wall_sketches: Optional[list] = None,
         params_override: Optional[Dict[str, Any]] = None,
+        reference_images: Optional[list] = None,
     ) -> Dict[str, Any]:
         """Genera UN render fotorrealista combinando un PLANO EN PLANTA (distribución)
         y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos.
@@ -810,6 +815,8 @@ class Render3DService:
                 )
 
         for i, sk in enumerate(wall_sketches or []):
+            if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
+                break
             b64, mime = self._prepare_reference(sk, None)
             if b64:
                 images.append({"data": b64, "mime": mime})
@@ -817,6 +824,23 @@ class Render3DService:
                     f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
                     "it shows the exact design of that wall (cabinets, shelves, appliances, "
                     "finishes, proportions). Reproduce that wall faithfully, as shown."
+                )
+
+        # Referencias de ACABADO: la foto que trae el cliente ("quiero esta
+        # madera, este tirador"). Se pueden usar A LA VEZ que el plano: el plano
+        # manda en la distribución y la referencia manda en el acabado. Sin
+        # esto, elegir plano significaba renunciar a la referencia.
+        for ref in (reference_images or []):
+            if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
+                break
+            b64, mime = self._prepare_reference(ref, None)
+            if b64:
+                images.append({"data": b64, "mime": mime})
+                ref_lines.append(
+                    f"- IMAGE {len(images)} is a FINISH/STYLE reference: take from it ONLY the "
+                    "materials, colours, textures, handle system and general character. Do NOT "
+                    "take its layout, its cabinet sizes or its room: the layout comes from the "
+                    "floor plan and the wall references above."
                 )
 
         if not images:
