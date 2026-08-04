@@ -2091,6 +2091,19 @@ export default function AIRenderStudio({ state, setState }) {
     } finally { setDescribiendoTodo(false); }
   };
 
+  // Cada imagen tiene un PAPEL distinto y no se puede adivinar mirándola: la
+  // misma foto puede ser "así quiero el acabado" o "esta es mi pared". Aquí se
+  // reasigna sin volver a subir nada, para poder soltarlo todo en un sitio.
+  const asignarPapel = (i, papel) => {
+    const img = refImages[i];
+    if (!img) return;
+    if (papel === 'plano') setFloorPlan(img);
+    else if (papel === 'pared') setWallSketches(prev => [...prev, img]);
+    else return;
+    setShowPlanos(true);           // que se vea dónde ha ido a parar
+    removeReference(i);
+  };
+
   // Quita una referencia del array (y reajusta la principal).
   const removeReference = (i) => setRefImages(prev => {
     const next = prev.filter((_, idx) => idx !== i);
@@ -2562,6 +2575,14 @@ export default function AIRenderStudio({ state, setState }) {
                         ? 'Referencia adjunta — el render la respetará'
                         : `${refImages.length} referencias — se generará un render por cada una`}
                     </div>
+                    {refImages.length > 1 && (
+                      <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mb-1.5">
+                        Aquí cada imagen es una cocina <b>distinta</b> y sale un render por cada
+                        una. Si lo que subes son <b>el plano y las paredes del MISMO proyecto</b>,
+                        dile a cada una lo que es con el desplegable de abajo: se juntarán en un
+                        solo render.
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       {refImages.map((img, i) => (
                         <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-emerald-200 bg-slate-50">
@@ -2575,6 +2596,21 @@ export default function AIRenderStudio({ state, setState }) {
                             className="absolute top-0.5 right-0.5 bg-white/90 rounded-full text-slate-500 hover:text-red-500 shadow"
                             title="Quitar referencia"><X size={13} /></button>
                         </div>
+                      ))}
+                      </div>
+                      {/* Qué es cada imagen. Sin esto hay que acertar el botón
+                          de subida correcto antes de subir, que es justo lo que
+                          nadie sabe la primera vez. */}
+                      <div className="flex flex-wrap gap-2 mt-1.5">
+                      {refImages.map((img, i) => (
+                        <select key={`papel-${i}`} defaultValue="acabado"
+                          onChange={e => { asignarPapel(i, e.target.value); e.target.value = 'acabado'; }}
+                          title={`Qué es la imagen ${i + 1}`}
+                          className="w-16 text-[9px] border border-slate-200 rounded px-0.5 py-0.5 text-slate-600">
+                          <option value="acabado">acabado</option>
+                          <option value="plano">es el plano</option>
+                          <option value="pared">es una pared</option>
+                        </select>
                       ))}
                     </div>
                     {/* Amueblado virtual: botón específico (solo con permiso). */}
