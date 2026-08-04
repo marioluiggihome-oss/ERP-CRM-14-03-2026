@@ -3368,7 +3368,9 @@ export default function AIRenderStudio({ state, setState }) {
                   {renderResult?.parsed_params?.layout && (
                     <span>Layout: {renderResult.parsed_params.layout}</span>
                   )}
-                  <span className="ml-auto font-bold text-indigo-500">{renderResult.engine}</span>
+                  {/* El nombre del motor no se muestra: no aporta nada a quien
+                      mira el render y no tiene por qué salir en pantalla. El
+                      backend lo sigue devolviendo (`engine`) para el registro. */}
                 </div>
               )}
             </div>
