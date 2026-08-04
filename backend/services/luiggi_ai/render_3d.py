@@ -774,9 +774,12 @@ class Render3DService:
             "engine": self.config.brand_name,
         }
 
-    # Tope de imágenes que se mandan juntas. Más allá, el modelo empieza a
-    # mezclar unas con otras y el render pierde fidelidad.
-    MAX_IMAGENES_COMPUESTAS = 6
+    # Tope de imágenes que se mandan juntas. No es un límite del modelo (admite
+    # bastantes más): es un tope de criterio, porque cuantas más referencias se
+    # mandan, menos atención recibe cada una y el render se vuelve un promedio.
+    # Con 7 caben plano + 5 alzados + 1 referencia de acabado, o plano + 4
+    # alzados + 2 referencias, que cubre una cocina en U con acabado de muestra.
+    MAX_IMAGENES_COMPUESTAS = 7
 
     async def generate_render_composed(
         self,

@@ -1010,6 +1010,10 @@ async def describe_project(payload: dict, user=Depends(require_auth)):
     if not (plano or alzados or referencias):
         raise HTTPException(status_code=400, detail="No hay ningún dibujo que analizar.")
 
+    # Mismo tope que el render compuesto: 7 imágenes juntas. Más allá no es que
+    # falle, es que cada dibujo recibe menos atención y la descripción se
+    # generaliza.
+    MAX_JUNTAS = 7
     imagenes = []
     if plano:
         imagenes.append({"data": plano, "papel":
@@ -1017,11 +1021,15 @@ async def describe_project(payload: dict, user=Depends(require_auth)):
                          "cocina (lineal, en L, en U, con isla), qué pared es cada una, el "
                          "orden de los muebles en cada pared, sus anchos y las cotas. Las "
                          "medidas escritas en el plano son la verdad."})
-    for i, a in enumerate(alzados[:5], start=1):
+    for i, a in enumerate(alzados, start=1):
+        if len(imagenes) >= MAX_JUNTAS:
+            break
         imagenes.append({"data": a, "papel":
                          f"ALZADO de la PARED {i}: el diseño de esa pared (muebles altos, "
                          f"bajos, columnas, electrodomésticos y acabados)."})
-    for r in referencias[:2]:
+    for r in (referencias or [])[:2]:
+        if len(imagenes) >= MAX_JUNTAS:
+            break
         imagenes.append({"data": r, "papel":
                          "REFERENCIA DE ACABADO: materiales, color y tirador. NO aporta "
                          "distribución."})
