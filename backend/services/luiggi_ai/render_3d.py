@@ -398,13 +398,22 @@ class Render3DService:
         style_desc = style_instructions.get(style, style_instructions["photorealistic"])
 
         is_kitchen = "kitchen" in (space_type or "").lower() or "cocina" in (space_type or "").lower()
-        kitchen_scale = (
-            "Use real kitchen cabinetry scale: base units ~90 cm high with a recessed toe-kick "
-            "plinth, wall units mounted ~55-60 cm above a continuous worktop of uniform thickness "
-            "with a matching upstand/backsplash, and appliances integrated flush with the fronts; "
-            "keep reveal gaps between fronts uniform. "
-            if is_kitchen else ""
-        )
+        # OJO: aquí ponía "base units ~90 cm high", que contradice lo que se
+        # fabrica: el CASCO del bajo es de 80 y son el zócalo y la encimera los
+        # que suben la altura de trabajo a 90-94. El criterio completo (oficio,
+        # ergonomía, composición y qué hace vender una imagen) vive en
+        # services/criterios_cocina.py para no tenerlo repartido.
+        kitchen_scale = ""
+        if is_kitchen:
+            try:
+                from services.criterios_cocina import CRITERIOS_RENDER_COCINA
+                kitchen_scale = CRITERIOS_RENDER_COCINA
+            except Exception:
+                kitchen_scale = (
+                    "Use real kitchen cabinetry scale: 80 cm base carcasses on a 10-15 cm "
+                    "plinth so the worktop sits at 90-94 cm, wall units 70 or 90 cm tall "
+                    "hung 55-60 cm above a continuous worktop of uniform thickness. "
+                )
 
         parts = [
             f"{style_desc}.",

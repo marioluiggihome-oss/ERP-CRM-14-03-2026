@@ -25,16 +25,19 @@ C_LINE = HexColor("#cbd5e1")
 C_HEAD = HexColor("#f1f5f9")
 C_FIELD = HexColor("#fffbe6")
 C_FIELDB = HexColor("#f59e0b")
+C_ZEBRA = HexColor("#f8fafc")  # fila alterna: separa sin dibujar cuadrícula
 
-# Columnas: (título, ancho en mm, clave del dato, ¿rellenable?)
+# Columnas: (título, ancho en mm, clave del dato, ¿rellenable?, ¿es número?)
+# Los números van alineados a la derecha: así se comparan de un vistazo y un
+# error de coma salta solo (criterio gráfico, en criterios_cocina.py).
 COLUMNAS = [
-    ("Uds", 12, "cantidad", True),
-    ("Código", 30, "codigo", True),
-    ("Descripción", 62, "descripcion", True),
-    ("Ancho", 17, "ancho", True),
-    ("Alto", 17, "alto", True),
-    ("Fondo", 17, "fondo", True),
-    ("Observaciones", 40, "observaciones", True),
+    ("Uds", 12, "cantidad", True, True),
+    ("Código", 30, "codigo", True, False),
+    ("Descripción", 62, "descripcion", True, False),
+    ("Ancho", 17, "ancho", True, True),
+    ("Alto", 17, "alto", True, True),
+    ("Fondo", 17, "fondo", True, True),
+    ("Observaciones", 40, "observaciones", True, False),
 ]
 
 
@@ -57,6 +60,7 @@ def build_relacion_pdf(muebles: list, titulo: str = "", cliente: str = "",
     ancho_util = W - ML - MR
     escala = ancho_util / (sum(col[1] for col in COLUMNAS) * mm)
     campo = [0]
+    fila_par = [False]
 
     def cabecera(pagina: int):
         c.setFillColor(C_TXT)
@@ -64,7 +68,7 @@ def build_relacion_pdf(muebles: list, titulo: str = "", cliente: str = "",
         c.drawString(ML, H - MT, titulo or "Relación de muebles")
         c.setFillColor(C_MUT)
         c.setFont("Helvetica", 8)
-        sub = f"Luiggi Home ERP · {datetime.now().strftime('%d/%m/%Y')}"
+        sub = datetime.now().strftime("%d/%m/%Y")
         if cliente:
             sub = f"{cliente} · {sub}"
         c.drawString(ML, H - MT - 5 * mm, sub)
@@ -81,9 +85,17 @@ def build_relacion_pdf(muebles: list, titulo: str = "", cliente: str = "",
         c.setFillColor(C_MUT)
         c.setFont("Helvetica-Bold", 7)
         x = ML
-        for titulo_col, w, _clave, _ed in COLUMNAS:
-            c.drawString(x + 1.5 * mm, y - 4.2 * mm, titulo_col.upper())
-            x += w * mm * escala
+        for titulo_col, w, _clave, _ed, es_num in COLUMNAS:
+            cw = w * mm * escala
+            # Cabecera de las columnas numéricas a la derecha, que es donde cae
+            # la cifra. (reportlab no deja alinear el contenido de un campo de
+            # formulario, así que la comparación visual se apoya en la cabecera
+            # y en columnas estrechas.)
+            if es_num:
+                c.drawRightString(x + cw - 1.5 * mm, y - 4.2 * mm, titulo_col.upper())
+            else:
+                c.drawString(x + 1.5 * mm, y - 4.2 * mm, titulo_col.upper())
+            x += cw
         return y - 6 * mm
 
     pagina = 1
@@ -107,10 +119,14 @@ def build_relacion_pdf(muebles: list, titulo: str = "", cliente: str = "",
             "observaciones": str(m.get("observaciones") or "")[:40],
         }
         x = ML
+        if fila_par[0]:
+            c.setFillColor(C_ZEBRA)
+            c.rect(ML, y - alto_fila, ancho_util, alto_fila, stroke=0, fill=1)
+        fila_par[0] = not fila_par[0]
         c.setStrokeColor(C_LINE)
         c.setLineWidth(0.4)
         c.line(ML, y - alto_fila, W - MR, y - alto_fila)
-        for _titulo_col, w, clave, editable in COLUMNAS:
+        for _titulo_col, w, clave, editable, es_num in COLUMNAS:
             cw = w * mm * escala
             if editable:
                 campo[0] += 1
@@ -146,7 +162,7 @@ def build_relacion_pdf(muebles: list, titulo: str = "", cliente: str = "",
         c.setStrokeColor(C_LINE)
         c.setLineWidth(0.4)
         c.line(ML, y - alto_fila, W - MR, y - alto_fila)
-        for _titulo_col, w, clave, _ed in COLUMNAS:
+        for _titulo_col, w, clave, _ed, es_num in COLUMNAS:
             cw = w * mm * escala
             campo[0] += 1
             c.setFillColor(C_FIELD)

@@ -711,9 +711,13 @@ def build_analysis_prompt(library: str) -> str:
     catálogo de la biblioteca. Lo importante en ambas es detectar bien el
     TIPO y el ANCHO (que va rotulado en el plano).
     """
+    try:
+        from services.criterios_cocina import CRITERIOS_ANALISIS
+    except Exception:
+        CRITERIOS_ANALISIS = ""
     lib = (library or 'ZC').upper()
     if lib == 'MV':
-        return ANALYSIS_PROMPT_SINGLE + """
+        return ANALYSIS_PROMPT_SINGLE + CROQUIS_A_MANO + CRITERIOS_ANALISIS + """
 
 IMPORTANTE — BIBLIOTECA MV (MUEBLES VALENCIA):
 - Esta cocina usa el catálogo MV, cuya nomenclatura de códigos es DISTINTA a la
@@ -742,7 +746,7 @@ por proporción, usando anchos estándar (300/400/450/500/600/700/800/900/1000/1
 - El sistema emparejará "codigo_sugerido" contra el catálogo MV; por eso transcribir
   bien el código escrito es lo más importante para acertar el mueble y su precio.
 """
-    return ANALYSIS_PROMPT_SINGLE
+    return ANALYSIS_PROMPT_SINGLE + CROQUIS_A_MANO + CRITERIOS_ANALISIS
 
 
 @router.post("/relacion-pdf")
@@ -845,6 +849,16 @@ async def analyze_kitchen_plan(
                 'mensaje': f"{productos_encontrados} productos cotizados de {muebles_cotizables} muebles detectados",
                 'biblioteca': active_library
             }
+            # Repaso con criterio de oficio: alturas imposibles, anchos fuera de
+            # estandar y lo que un profesional echaria en falta (el bajo del
+            # fregadero, la campana, los remates de los extremos). Avisa, NO
+            # corrige: quien firma el proyecto decide.
+            try:
+                from services.criterios_cocina import revisar_composicion
+                data['avisos_profesionales'] = revisar_composicion(data['muebles_detectados'])
+            except Exception as e:
+                logger.warning("revision profesional: %s", e)
+                data['avisos_profesionales'] = []
         
         logger.info(f"Kitchen plan analyzed: {len(data.get('muebles_detectados', []))} furniture items detected for {active_library}")
         return {"success": True, "analysis": data, "library": active_library}
@@ -1010,6 +1024,13 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
             'electrodomesticos': electrodomesticos,
             'mensaje': f"{productos_encontrados} productos cotizados de {muebles_cotizables} muebles detectados"
         }
+        # Mismo repaso profesional que en el analisis de una sola pared.
+        try:
+            from services.criterios_cocina import revisar_composicion
+            avisos_prof = revisar_composicion(enriched_furniture)
+        except Exception as e:
+            logger.warning("revision profesional (multi): %s", e)
+            avisos_prof = []
         
         logger.info(f"Multi-wall kitchen plan analyzed: {len(enriched_furniture)} furniture items from {len(files)} walls for {active_library}")
         
@@ -1018,6 +1039,7 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
             "library": active_library,
             "analysis": {
                 "muebles_detectados": enriched_furniture,
+                "avisos_profesionales": avisos_prof,
                 "resumen": total_summary,
                 "paredes": all_summaries
             }

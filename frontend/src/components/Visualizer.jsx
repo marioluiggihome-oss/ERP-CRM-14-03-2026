@@ -722,6 +722,23 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   </button>
                   );
                 })()}
+                {/* Repaso con criterio de oficio: alturas imposibles, anchos
+                    fuera de estándar y lo que un profesional echaría en falta
+                    (el bajo del fregadero, la campana, los remates). Avisa; no
+                    corrige: quien firma el proyecto decide. */}
+                {(analysisResult?.avisos_profesionales || []).length > 0 && (
+                  <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-amber-800 mb-1">
+                      Revisión profesional
+                    </p>
+                    {analysisResult.avisos_profesionales.map((a, i) => (
+                      <p key={i} className={`text-[11px] leading-snug mt-0.5 ${a.nivel === 'error' ? 'text-red-700 font-bold' : 'text-amber-800'}`}>
+                        {a.nivel === 'error' ? '⛔' : '⚠️'} {a.texto}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
                 {/* Relación en PDF EDITABLE: para revisarla en obra, corregir
                     medidas o apuntar lo que falte, y volver a subirla. */}
                 <button
