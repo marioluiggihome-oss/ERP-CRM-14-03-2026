@@ -788,6 +788,8 @@ class Render3DService:
         wall_sketches: Optional[list] = None,
         params_override: Optional[Dict[str, Any]] = None,
         reference_images: Optional[list] = None,
+        provider: Optional[str] = None,
+        project_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Genera UN render fotorrealista combinando un PLANO EN PLANTA (distribución)
         y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos.
@@ -801,7 +803,9 @@ class Render3DService:
         parsed_params = self.parse_natural_language(description or "")
         if params_override:
             parsed_params.update(params_override)
-        space_type = self.detect_space_type(description or "cocina")
+        # El TIPO lo dice la pantalla (cocina/armario/baño); solo si no viene se
+        # adivina del texto. Adivinarlo teniendo el dato es perder informacion.
+        space_type = self.detect_space_type(project_type or description or "cocina")
         parsed_params["space_type"] = space_type
 
         images = []       # [{"data","mime"}] para la generación multi-imagen
@@ -887,8 +891,13 @@ class Render3DService:
         prompt = task_prompt
         parsed_params["hasReference"] = True
         parsed_params["referenceCount"] = len(images)
-        return await self._render_with_gemini(
-            task_prompt, prompt, parsed_params, reference_images=images,
+        # OJO: esto llamaba DIRECTAMENTE a Gemini estandar y se saltaba el motor
+        # elegido en pantalla (IA 1/2/3/4). Al enrutar el boton principal por
+        # aqui cuando hay plano, el usuario creia seguir en su motor y no lo
+        # estaba. Va por el mismo repartidor que el resto de renders.
+        return await self._render_dispatch(
+            task_prompt, prompt, parsed_params,
+            provider=provider, reference_images=images,
         )
 
     def _is_sketch_reference(self, reference_image, reference_mime):

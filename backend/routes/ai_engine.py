@@ -368,6 +368,8 @@ class RenderComposeRequest(BaseModel):
     wallSketches: Optional[list] = Field(None, description="Bocetos por pared (lista base64/dataURL)")
     referenceImages: Optional[list] = Field(
         None, description="Referencias de ACABADO (foto de estilo). Se usan A LA VEZ que el plano")
+    provider: Optional[str] = Field(None, description="Motor elegido en pantalla (IA 1/2/3/4)")
+    projectType: Optional[str] = Field(None, description="cocina|armario|bano|otro")
 
 
 class RenderParamsRequest(BaseModel):
@@ -565,6 +567,8 @@ async def generate_render_compose(request: RenderComposeRequest, user=Depends(re
         wall_sketches=request.wallSketches or [],
         reference_images=request.referenceImages or [],
         params_override=overrides or None,
+        provider=request.provider,
+        project_type=request.projectType,
     )
     logger.info(
         f"Render compuesto por {user.get('username')}: "

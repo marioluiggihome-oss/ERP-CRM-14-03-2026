@@ -2212,6 +2212,11 @@ export default function AIRenderStudio({ state, setState }) {
         body: JSON.stringify({
           description: conMedidas(description.trim()),
           style: params.style,
+          // El motor elegido en pantalla y el tipo de proyecto viajan TAMBIÉN
+          // por aquí: sin ellos, generar con plano se salía del motor elegido
+          // sin decirlo y perdía el tipo (cocina/armario/baño).
+          provider: providerOf(),
+          projectType: tipo3d,
           floorPlan: floorPlan || undefined,
           wallSketches,
           // Todo a la vez: el plano manda en la distribución, los bocetos en
