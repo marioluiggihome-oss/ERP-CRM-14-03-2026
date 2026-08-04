@@ -118,3 +118,70 @@ def test_se_conservan_codigo_y_descripcion(cascos):
     assert it["cod"] == "60BC"
     assert it["descripcion"] == "BAJO CON BALDA 600"
     assert it["tipo"] == "bajo", "sin tipo, la linea se queda sin casco equivalente"
+
+
+def test_una_proforma_normal_no_se_confunde_con_una_relacion_mv(cascos):
+    """El importador de Alvic prueba primero si el PDF es la plantilla MV
+    rellenada. Ese atajo SOLO vale si el PDF trae recuadros rellenados: sin el
+    freno, una proforma con una linea tipo "2 BAJO 600" se leeria contra la
+    tarifa MV en vez de con el lector de proformas."""
+    import sys, types
+    falso = types.ModuleType("services.mv_relacion")
+    falso.extract_campos = lambda b: []          # un PDF normal: sin formulario
+    falso.detectar_relacion = lambda b: {        # aunque "parezca" una relacion
+        "muebles": [{"cod": "B60D/I", "encontrado": True, "qty": 1,
+                     "familia": "BAJO", "tipo": "BAJO", "ancho": 60,
+                     "alto": 80, "fondo": 58, "raw": "1b60d", "mano": "D"}],
+        "noLeidas": [],
+    }
+    sys.modules["services.mv_relacion"] = falso
+    setattr(sys.modules["services"], "mv_relacion", falso)
+    try:
+        assert cascos._relacion_mv_como_items(b"%PDF-falso") is None, \
+            "una proforma normal se estaba leyendo como relacion MV"
+    finally:
+        sys.modules.pop("services.mv_relacion", None)
+
+
+def test_si_casi_nada_encaja_en_la_tarifa_tampoco_es_una_relacion_mv(cascos):
+    import sys, types
+    falso = types.ModuleType("services.mv_relacion")
+    falso.extract_campos = lambda b: [("Notas", "texto cualquiera")]
+    falso.detectar_relacion = lambda b: {
+        "muebles": [{"cod": None, "encontrado": False, "qty": 1, "familia": None,
+                     "tipo": "BAJO", "ancho": 60, "alto": 80, "fondo": 58,
+                     "raw": "1xx60", "mano": ""} for _ in range(4)],
+        "noLeidas": [],
+    }
+    sys.modules["services.mv_relacion"] = falso
+    setattr(sys.modules["services"], "mv_relacion", falso)
+    try:
+        assert cascos._relacion_mv_como_items(b"%PDF-falso") is None
+    finally:
+        sys.modules.pop("services.mv_relacion", None)
+
+
+def test_la_plantilla_mv_rellenada_si_se_reconoce(cascos):
+    import sys, types
+    falso = types.ModuleType("services.mv_relacion")
+    falso.extract_campos = lambda b: [("Bajo", "1B60D")]
+    falso.detectar_relacion = lambda b: {
+        "muebles": [{"cod": "B60D/I", "encontrado": True, "qty": 2,
+                     "familia": "BAJO_3CAJ_1GAV", "tipo": "BAJO", "ancho": 60,
+                     "alto": 80, "fondo": 58, "raw": "2b60d", "mano": "D",
+                     "pvp": 163.17, "pts": 49}],
+        "noLeidas": [{"texto": "2 - 90 x 60", "motivo": "no se reconoce"}],
+    }
+    sys.modules["services.mv_relacion"] = falso
+    setattr(sys.modules["services"], "mv_relacion", falso)
+    try:
+        r = cascos._relacion_mv_como_items(b"%PDF-falso")
+        assert r is not None
+        it = r["items"][0]
+        assert it["cantidad"] == 2.0
+        assert it["ancho"] == 600 and it["largo"] == 800, "la tarifa MV va en cm y aqui se trabaja en mm"
+        assert it["cajones"] == 3 and it["gavetas"] == 1, "los frentes salen del nombre de la familia"
+        assert it["pvp"] is None, "el PVP de MV es venta, no coste de proveedor: no se mezcla"
+        assert r["noLeidas"], "lo que no se supo leer tiene que llegar a la pantalla"
+    finally:
+        sys.modules.pop("services.mv_relacion", None)

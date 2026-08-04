@@ -169,6 +169,10 @@ export default function ProformaImporter({ esMaster }) {
   const [excluidas, setExcluidas] = useState({});   // { origIdx: true } -> fuera del pedido
   const [destinoLinea, setDestinoLinea] = useState({}); // { origIdx: 'cascos'|... }
   const [exportando, setExportando] = useState(false);
+  // Lectura del PDF: de dónde salió y qué NO se pudo interpretar. Si esto no
+  // se enseña, esas anotaciones valen 0 y el total sale corto sin avisar.
+  const [origenLectura, setOrigenLectura] = useState(null); // 'mv' | null
+  const [noLeidas, setNoLeidas] = useState([]);
 
   const HERRAJE = {
     blum: { cajon: 41.34, gaveta: 54.37 },
@@ -196,6 +200,7 @@ export default function ProformaImporter({ esMaster }) {
   const importar = async (file) => {
     if (!file) return;
     setCargando(true); setError(null); setItems([]); setProgreso(''); setOverrides({}); setDeletedRows(new Set());
+    setOrigenLectura(null); setNoLeidas([]);
     try {
       const b64 = await new Promise((res, rej) => {
         const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
@@ -220,7 +225,11 @@ export default function ProformaImporter({ esMaster }) {
         setError('El análisis está tardando demasiado. Prueba a subir solo las páginas con la tabla de partidas.');
         return;
       }
-      if (d.success) setItems(d.items || []);
+      if (d.success) {
+        setItems(d.items || []);
+        setOrigenLectura(d.origen || null);
+        setNoLeidas(d.noLeidas || []);
+      }
       else setError(d.detail || d.error || 'No se pudieron detectar los muebles.');
     } catch (e) {
       setError(await _diagnostico(e));
@@ -305,7 +314,7 @@ export default function ProformaImporter({ esMaster }) {
     const puertas = items.filter((it, i) => !deletedRows.has(i) && /^PTA |PUERTA DE INTEGRACION/i.test(it.descripcion || ''));
     const costados = items.filter((it, i) => !deletedRows.has(i) && /COSTADO/i.test(it.descripcion || ''));
     const regletas = items.filter((it, i) => !deletedRows.has(i) && /^REG |REGLETA|COPETE|ZOCALO|ZÓCALO/i.test(it.descripcion || ''));
-    const totPuertas = rows.reduce((a, r) => a + (r.puertas || 0), 0);
+    const totPuertas = rows.reduce((a, r) => a + (r.puertas || 0) * (r._uds || 1), 0);
     const sinMatch = rows.filter(r => r.esMueble && !r._acb).length;
     const herrajesEsp = rows.filter(r => r._herrajeEsp);
     const mo = Number(p.manoObra) || 0;
@@ -429,11 +438,15 @@ export default function ProformaImporter({ esMaster }) {
           const piezas = {};
           const sumar = (nombre, n) => { if (n > 0) piezas[nombre] = (piezas[nombre] || 0) + n; };
           for (const r of lineas) {
-            sumar(`Bisagra ${marcaBis.toUpperCase()}`, (r.puertas || 0) * 2);
-            sumar('Pata regulable', (r.tipo === 'bajo' || r.tipo === 'columna') ? 4 : 0);
-            sumar('Colgador', r.tipo === 'alto' ? 2 : 0);
-            sumar(`Cajón ${marcaCaj.toUpperCase()}`, r.cajones || 0);
-            sumar(`Gaveta ${marcaCaj.toUpperCase()}`, r.gavetas || 0);
+            // POR UNIDADES: una linea de 4 muebles lleva herraje para 4. Sin
+            // esto se pedian bisagras y patas para uno solo y el montaje se
+            // quedaba parado esperando material.
+            const u = r._uds || 1;
+            sumar(`Bisagra ${marcaBis.toUpperCase()}`, (r.puertas || 0) * 2 * u);
+            sumar('Pata regulable', ((r.tipo === 'bajo' || r.tipo === 'columna') ? 4 : 0) * u);
+            sumar('Colgador', (r.tipo === 'alto' ? 2 : 0) * u);
+            sumar(`Cajón ${marcaCaj.toUpperCase()}`, (r.cajones || 0) * u);
+            sumar(`Gaveta ${marcaCaj.toUpperCase()}`, (r.gavetas || 0) * u);
           }
           const filas = Object.entries(piezas).map(([n, c]) => [n, String(c)]);
           if (!filas.length) { continue; }
@@ -448,7 +461,7 @@ export default function ProformaImporter({ esMaster }) {
             r.descripcion || '',
             r._acb ? `${r._acb.tipo} ${r._acb.ancho}` : '',
             [r.largo, r.ancho, r.grueso].filter(Boolean).join(' × ') || '',
-            String(r.cantidad || 1),
+            String(r._uds || 1),
           ]);
           autoTable(doc, {
             startY: 36,
@@ -533,6 +546,12 @@ export default function ProformaImporter({ esMaster }) {
           </button>
           <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => importar(e.target.files?.[0])} />
           {items.length > 0 && <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><FileText size={13} /> {items.length - deletedRows.size} líneas</span>}
+          {origenLectura === 'mv' && (
+            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5"
+              title="Leído de los recuadros del PDF contra la tarifa MV, sin IA de por medio">
+              relación MV · lectura exacta
+            </span>
+          )}
 
           {/* Guardar proyecto */}
           {items.length > 0 && !bloqueado && (
@@ -685,6 +704,22 @@ export default function ProformaImporter({ esMaster }) {
                 </label>
               </div>
             </div>
+
+            {/* Lo escrito en el PDF que NO se ha sabido interpretar. Se enseña
+                tal cual, con el recuadro del que sale y el codigo parecido que
+                si existe: esas lineas NO estan en los totales. */}
+            {noLeidas.length > 0 && (
+              <div className="rounded-lg bg-red-50 border border-red-300 px-3 py-2 text-xs text-red-800">
+                <b>{noLeidas.length} anotación(es) del PDF sin leer</b> — no están en los totales:
+                {noLeidas.map((n, i) => (
+                  <span key={i} className="block mt-0.5">
+                    · {n.recuadro ? <b>{n.recuadro}: </b> : null}«{n.texto}» — {n.motivo}
+                    {n.sugerencia ? <> · ¿querías decir <b>{n.sugerencia}</b>?</> : null}
+                  </span>
+                ))}
+                <span className="block mt-1">Añádelas a mano con «+ Añadir línea».</span>
+              </div>
+            )}
 
             {/* Alertas herraje especial */}
             {calc.herrajesEsp.length > 0 && (

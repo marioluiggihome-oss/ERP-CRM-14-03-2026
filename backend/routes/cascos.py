@@ -202,10 +202,21 @@ def _relacion_mv_como_items(pdf_bytes: bytes):
 
     Devuelve None si el PDF no es una relación MV.
     """
-    from services.mv_relacion import detectar_relacion
+    from services.mv_relacion import detectar_relacion, extract_campos
+    # SOLO se trata como relación MV si el PDF trae RECUADROS RELLENADOS, que es
+    # lo que identifica a la plantilla de nomenclaturas. Sin este freno, una
+    # proforma normal con una línea del tipo "2 BAJO 600" se colaría por aquí y
+    # se leería con la tarifa MV en vez de con el lector de proformas.
+    if not extract_campos(pdf_bytes):
+        return None
     leido = detectar_relacion(pdf_bytes)
     muebles = leido.get("muebles") or []
     if not muebles:
+        return None
+    # Y además la mayoría tiene que existir de verdad en la tarifa: si casi nada
+    # encaja, esto no era una relación MV.
+    encontrados = sum(1 for m in muebles if m.get("encontrado"))
+    if encontrados * 2 < len(muebles):
         return None
     # Lo que se escribió y NO se supo leer viaja con el resultado: es preferible
     # decir "esto no lo he entendido" a dejarlo caer en silencio.
