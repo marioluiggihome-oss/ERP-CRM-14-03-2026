@@ -105,7 +105,7 @@ const DirectorTab = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `LUIGGI_${type}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.download = `${type}_${new Date().toISOString().split('T')[0]}.xlsx`;
         a.click();
         window.URL.revokeObjectURL(url);
       }
@@ -148,7 +148,7 @@ const DirectorTab = () => {
         <div className="flex gap-2">
           <a
             href="/catalogo_productos_completo.xlsx"
-            download="LUIGGI_Catalogo_Productos.xlsx"
+            download="Catalogo_Productos.xlsx"
             className="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-colors"
             title="Exportar Catálogo Productos"
             data-testid="export-productos-btn"

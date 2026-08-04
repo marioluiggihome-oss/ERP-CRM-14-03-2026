@@ -1722,7 +1722,7 @@ const App = () => {
                <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">
                  {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers)
                    ? 'CARPINTER.IO ERP v4.1'
-                   : 'LUIGGI HOME ERP v4.1'}
+                   : 'ERP v4.1'}
                </span>
             </div>
           </main>

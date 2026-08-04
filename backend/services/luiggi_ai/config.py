@@ -19,7 +19,11 @@ class AIConfig:
     """Configuración del motor LuiggiAI."""
 
     # ─── Branding White-Label ──────────────────────────────────────────────
-    brand_name: str = "LuiggiAI"
+    # El nombre del motor viaja en CADA respuesta de la API (`engine`) y se veia
+    # en pantalla. Neutro por defecto y ajustable por variable de entorno, para
+    # que no salga el nombre de la casa ni en el navegador ni en un render
+    # compartido con un cliente.
+    brand_name: str = field(default_factory=lambda: os.environ.get("AI_BRAND_NAME", "Motor 3D"))
     brand_version: str = "1.0.0"
     brand_description: str = "Motor de Inteligencia Artificial para diseño y gestión"
 

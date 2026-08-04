@@ -200,7 +200,7 @@ const clearConsole = () => {
   const clear = () => {
     console.clear();
     console.log('%c⚠️ SISTEMA PROTEGIDO', 'color: red; font-size: 30px; font-weight: bold;');
-    console.log('%cLUIGGI HOME - Acceso no autorizado prohibido', 'color: orange; font-size: 14px;');
+    console.log('%cAcceso no autorizado prohibido', 'color: orange; font-size: 14px;');
   };
   
   // Mostrar aviso de marca una sola vez. NOTA: no se limpia la consola periódicamente
@@ -219,7 +219,7 @@ const preventIframeEmbed = () => {
 // Añadir marca de agua invisible (fingerprint)
 const addWatermark = () => {
   const watermark = document.createElement('div');
-  watermark.id = 'luiggi-watermark';
+  watermark.id = 'app-watermark';
   watermark.style.cssText = `
     position: fixed;
     bottom: 10px;
@@ -230,7 +230,9 @@ const addWatermark = () => {
     z-index: 99999;
     font-family: monospace;
   `;
-  watermark.textContent = `LUIGGI-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Huella para rastrear copias. Sin nombre de marca: en movil este texto se
+  // llega a ver, y no tiene por que salir el nombre de la casa en pantalla.
+  watermark.textContent = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   document.body.appendChild(watermark);
 };
 

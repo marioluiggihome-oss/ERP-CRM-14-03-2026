@@ -520,7 +520,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `LUIGGI_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Export_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -2851,7 +2851,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               const url = window.URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
-                              a.download = `LUIGGI_Clientes_${new Date().toISOString().split('T')[0]}.xlsx`;
+                              a.download = `Clientes_${new Date().toISOString().split('T')[0]}.xlsx`;
                               a.click();
                               window.URL.revokeObjectURL(url);
                             }
