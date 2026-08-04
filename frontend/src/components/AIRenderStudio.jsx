@@ -547,7 +547,15 @@ export default function AIRenderStudio({ state, setState }) {
   // un 6%, porque ahí pasa a limitarlo el ancho. El corte está sobre los 1800.
   const barraLateral = anchoVentana >= 1800;
   useEffect(() => {
-    const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(240, Math.min(420, e.clientX - 8))); };
+    // El tope estaba en 420px: la barra se plantaba ahí aunque siguieras
+    // arrastrando. Ahora llega hasta el 70% de la ventana, que es lo que hace
+    // falta para leer una descripción larga o comparar acabados a gusto; se
+    // deja siempre un hueco mínimo para que el render no desaparezca.
+    const onMove = (e) => {
+      if (!resizingPanel.current) return;
+      const maximo = Math.max(420, Math.round(window.innerWidth * 0.7));
+      setPanelW(Math.max(240, Math.min(maximo, e.clientX - 8)));
+    };
     const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -2476,7 +2484,7 @@ export default function AIRenderStudio({ state, setState }) {
           }
           fixed lg:relative z-50 lg:z-auto
           top-0 left-0 h-full lg:h-auto
-          w-[85vw] sm:w-80 lg:max-w-[40vw]
+          w-[85vw] sm:w-80 lg:max-w-[75vw]
           shrink-0 border-r border-slate-200 bg-white
           flex flex-col min-h-0 overflow-y-auto
           transition-transform duration-300 ease-in-out
