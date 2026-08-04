@@ -17,7 +17,8 @@ const NAV_LINKS = [
   { label: "Producto", href: "#producto" },
   { label: "IA", href: "#ia" },
   { label: "Precios", href: "#precios" },
-  { label: "Demo", href: "#demo" },
+  { label: "Vídeo", href: "#video" },
+  { label: "Contacto", href: "#contacto" },
 ];
 
 const FEATURES = [
@@ -123,7 +124,7 @@ function Nav({ onEnter }) {
         {/* Logo wordmark */}
         <a href="#top" className="s3k-logo-link">
           <img
-            src={scrolled ? "/manus-storage/1000249933_73ce80f5.png" : "/manus-storage/studio3k-wordmark-white_94870fba.png"}
+            src={scrolled ? "/studio3k-logo-light.png" : "/studio3k-logo-white.png"}
             alt="studio3k"
             className="s3k-logo-img"
           />
@@ -161,7 +162,7 @@ function Hero({ onEnter }) {
   return (
     <section className="s3k-hero" id="top">
       {/* Fondo: imagen de cocina premium con overlay oscuro */}
-      <div className="s3k-hero-bg" style={{ backgroundImage: "url(/manus-storage/studio3k-hero-bg_88582bd0.jpg)" }} />
+      <div className="s3k-hero-bg" style={{ backgroundImage: "url(/studio3k-hero-bg.jpg)" }} />
       <div className="s3k-hero-overlay" />
       <div className="s3k-wrap s3k-hero-content">
         <Eyebrow light>DISEÑO DE COCINAS · INTELIGENCIA ARTIFICIAL</Eyebrow>
@@ -174,11 +175,11 @@ function Hero({ onEnter }) {
         Cierra más ventas, en la misma visita.
         </p>
         <div className="s3k-hero-actions">
-          <a href="#acceso" onClick={enter} className="s3k-btn-solid s3k-btn-lg">
-            Solicitar demo gratuita <ArrowRight size={18} />
+          <a href="#contacto" className="s3k-btn-solid s3k-btn-lg">
+            Contactar <ArrowRight size={18} />
           </a>
-          <a href="#producto" className="s3k-btn-ghost-light s3k-btn-lg">
-            Ver cómo funciona <ChevronDown size={18} />
+          <a href="#video" className="s3k-btn-ghost-light s3k-btn-lg">
+            Ver el vídeo <ChevronDown size={18} />
           </a>
         </div>
         <div className="s3k-hero-stats">
@@ -207,7 +208,7 @@ function DemoSection() {
         </div>
         <div className="s3k-demo-img-wrap" data-reveal>
           <img
-            src="/manus-storage/studio3k-render-example_ce79c638.jpg"
+            src="/studio3k-render-example.jpg"
             alt="Comparativa: boceto vs render fotorrealista"
             className="s3k-demo-img"
           />
@@ -302,7 +303,7 @@ function AISection() {
         </div>
         <div className="s3k-ai-img-wrap" data-reveal>
           <img
-            src="/manus-storage/studio3k-kitchen2_fb2e801c.jpg"
+            src="/studio3k-kitchen2.jpg"
             alt="Cocina de diseño generada con IA"
             className="s3k-ai-img"
           />
@@ -410,6 +411,107 @@ function FAQ() {
   );
 }
 
+function VideoSection() {
+  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setPlaying(true); }
+    else { v.pause(); setPlaying(false); }
+  };
+  return (
+    <section className="s3k-sec s3k-sec-dark" id="video">
+      <div className="s3k-wrap" data-reveal>
+        <Eyebrow light>VÍDEO DEMOSTRATIVO</Eyebrow>
+        <h2 className="s3k-sec-h2" style={{ color: '#fff', marginBottom: 8 }}>
+          Véalo en <span className="s3k-accent">acción.</span>
+        </h2>
+        <p style={{ color: 'rgba(255,255,255,0.55)', marginBottom: 32, maxWidth: 520 }}>
+          Del boceto a mano alzada al render fotorrealista. En menos de 10 segundos.
+        </p>
+        <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(59,91,219,0.3)', boxShadow: '0 0 60px rgba(59,91,219,0.15)' }}>
+          <video
+            ref={videoRef}
+            src="/studio3k-promo.mp4"
+            style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }}
+            playsInline
+            onEnded={() => setPlaying(false)}
+          />
+          {!playing && (
+            <div
+              onClick={togglePlay}
+              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,18,0.55)', cursor: 'pointer' }}
+            >
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--s3k-indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(59,91,219,0.6)' }}>
+                <Play size={28} fill="white" style={{ marginLeft: 4 }} />
+              </div>
+            </div>
+          )}
+          {playing && (
+            <button
+              onClick={togglePlay}
+              style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(10,10,18,0.75)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)' }}
+            >
+              Pausar
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ContactForm() {
+  const [sent, setSent] = useState(false);
+  const [form, setForm] = useState({ nombre: '', empresa: '', email: '', telefono: '', mensaje: '' });
+  const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(59,91,219,0.25)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' };
+  const handleFocus = e => (e.currentTarget.style.borderColor = 'var(--s3k-indigo)');
+  const handleBlur = e => (e.currentTarget.style.borderColor = 'rgba(59,91,219,0.25)');
+  if (sent) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '24px 0' }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--s3k-indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Check size={22} color="#fff" />
+        </div>
+        <div>
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>Mensaje enviado</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '4px 0 0' }}>Te respondemos en menos de 24h.</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={e => { e.preventDefault(); setSent(true); }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Nombre</label>
+          <input type="text" required placeholder="Tu nombre" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Empresa</label>
+          <input type="text" placeholder="Nombre de tu tienda" value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Email</label>
+          <input type="email" required placeholder="tu@empresa.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Teléfono</label>
+          <input type="tel" placeholder="+34 600 000 000" value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mensaje</label>
+        <textarea rows={4} placeholder="Cuéntanos sobre tu tienda y lo que necesitas..." value={form.mensaje} onChange={e => setForm(f => ({ ...f, mensaje: e.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} onFocus={handleFocus} onBlur={handleBlur} />
+      </div>
+      <button type="submit" className="s3k-btn-white s3k-btn-lg" style={{ alignSelf: 'flex-start' }}>
+        Enviar mensaje <ArrowRight size={16} />
+      </button>
+    </form>
+  );
+}
+
 function CTASection({ onEnter }) {
   const enter = (e) => { if (e) e.preventDefault(); onEnter && onEnter(); };
   return (
@@ -421,16 +523,9 @@ function CTASection({ onEnter }) {
           <span className="s3k-accent">Solo falta que entres.</span>
         </h2>
         <p className="s3k-cta-sub">
-          Demo gratuita de 30 minutos. Sin compromiso. Te configuramos el catálogo en la misma sesión.
+          Cuéntanos tu proyecto y te respondemos en menos de 24h.
         </p>
-        <div className="s3k-cta-actions">
-          <a href="#acceso" onClick={enter} className="s3k-btn-white s3k-btn-lg">
-            Solicitar demo gratuita <ArrowRight size={18} />
-          </a>
-          <a href="mailto:hola@studio3k.io" className="s3k-btn-ghost-light s3k-btn-lg">
-            <Phone size={16} /> Hablar con el equipo
-          </a>
-        </div>
+        <ContactForm />
       </div>
     </section>
   );
@@ -441,7 +536,7 @@ function Footer() {
     <footer className="s3k-footer">
       <div className="s3k-wrap s3k-footer-inner">
         <div className="s3k-footer-brand">
-          <img src="/manus-storage/studio3k-wordmark-white_94870fba.png" alt="studio3k" className="s3k-footer-logo" />
+          <img src="/studio3k-logo-white.png" alt="studio3k" className="s3k-footer-logo" />
           <p className="s3k-footer-tagline">Diseño de cocinas con inteligencia artificial.<br />Para tiendas que quieren vender más.</p>
         </div>
         <div className="s3k-footer-links">
@@ -494,6 +589,7 @@ export default function Studio3kLanding({ onEnter }) {
       <Pricing onEnter={onEnter} />
       <Testimonials />
       <FAQ />
+      <VideoSection />
       <CTASection onEnter={onEnter} />
       <Footer />
     </div>
