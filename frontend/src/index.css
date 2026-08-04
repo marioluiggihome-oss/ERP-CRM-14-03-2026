@@ -189,3 +189,19 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+/* Barra de progreso INDETERMINADA. Una llamada a la IA no informa de su avance,
+   así que un porcentaje seria inventado: la barra se mueve para decir "sigo
+   trabajando" y al lado va el tiempo transcurrido, que sí es un dato real. */
+@keyframes barra-indeterminada {
+  0%   { left: -35%; }
+  100% { left: 100%; }
+}
+.barra-indeterminada {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  border-radius: 9999px;
+  animation: barra-indeterminada 1.3s ease-in-out infinite;
+}

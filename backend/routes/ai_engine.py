@@ -1076,8 +1076,16 @@ async def describe_project(payload: dict, user=Depends(require_auth)):
     texto = (texto or "").strip().strip("`").strip()
     if not texto:
         return {"success": False, "error": "No se pudo interpretar los dibujos."}
+    # Se devuelve el DESGLOSE de lo que se ha mirado de verdad. Sin esto no hay
+    # forma de saber si la IA leyó los cinco dibujos o solo el primero.
     return {"success": True, "description": get_engine()._sanitize_response(texto),
-            "imagenes": len(imagenes)}
+            "imagenes": len(imagenes),
+            "analizado": {
+                "plano": bool(plano) and any("PLANO" in i["papel"] for i in imagenes),
+                "alzados": sum(1 for i in imagenes if i["papel"].startswith("ALZADO")),
+                "referencias": sum(1 for i in imagenes if i["papel"].startswith("REFERENCIA")),
+                "descartados": max(len(alzados) + len(referencias) + (1 if plano else 0) - len(imagenes), 0),
+            }}
 
 
 @ai_engine_router.post("/detect-installations")

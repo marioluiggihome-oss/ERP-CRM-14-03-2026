@@ -1,3 +1,30 @@
+// Barra de progreso de un análisis. Una llamada a la IA no informa de su avance,
+// así que poner un porcentaje seria inventarlo: la barra se mueve para decir
+// "sigo", y al lado va el TIEMPO transcurrido y, cuando se procesan varias
+// imágenes, cuántas van. Al terminar se dice qué se ha mirado, que es lo que
+// hacia falta para saber si habia leido todos los planos o solo el primero.
+function BarraAnalisis({ texto, hechas, total }) {
+  const [seg, setSeg] = useState(0);
+  useEffect(() => {
+    const t0 = Date.now();
+    const t = setInterval(() => setSeg(Math.round((Date.now() - t0) / 1000)), 500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2">
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="text-[11px] font-black text-indigo-800 uppercase tracking-wide">{texto}</span>
+        <span className="text-[11px] font-bold text-indigo-500 tabular-nums">
+          {total ? `${hechas}/${total} · ` : ''}{seg}s
+        </span>
+      </div>
+      <div className="relative h-1.5 w-full rounded-full bg-indigo-100 overflow-hidden">
+        <span className="barra-indeterminada bg-gradient-to-r from-indigo-500 to-purple-500" />
+      </div>
+    </div>
+  );
+}
+
 /**
  * AIRenderStudio - Componente de Render 3D con Voz + Texto
  * =========================================================
@@ -2078,13 +2105,17 @@ export default function AIRenderStudio({ state, setState }) {
   // alzado una pared. Por separado, cada una parece una cocina distinta
   // ("distribución lineal") y nadie ata el conjunto. Aquí van todas juntas.
   const [describiendoTodo, setDescribiendoTodo] = useState(false);
+  // Qué ha mirado de verdad la IA en el último análisis. Sin esto no hay forma
+  // de saber si leyó los cinco dibujos o se quedó en el primero.
+  const [analizado, setAnalizado] = useState(null);
+  const [progresoRefs, setProgresoRefs] = useState(null); // {hechas, total}
   const describirProyecto = async () => {
     const refs = refImages.length ? refImages : (refImage ? [refImage] : []);
     if (!floorPlan && !wallSketches.length && !refs.length) {
       setError('Sube al menos el plano en planta o un alzado.');
       return;
     }
-    setDescribiendoTodo(true); setError(null);
+    setDescribiendoTodo(true); setError(null); setAnalizado(null);
     try {
       const r = await fetch(`${API_URL}/api/ai-engine/describe-project`, {
         method: 'POST', headers: getAuthHeaders(),
@@ -2097,6 +2128,7 @@ export default function AIRenderStudio({ state, setState }) {
       const d = await r.json();
       if (d.success && d.description) {
         setDescription(d.description);
+        setAnalizado(d.analizado || null);
       } else {
         setError(d.error || 'No se pudo describir el conjunto de dibujos.');
       }
@@ -2132,14 +2164,19 @@ export default function AIRenderStudio({ state, setState }) {
     setAnalyzingRef(true);
     setError(null);
     try {
+      setProgresoRefs({ hechas: 0, total: files.length });
+      let n = 0;
       for (const file of files) {
         const b64 = await downscaleImage(file);
         await addReference(b64, 'subida');
+        n += 1;
+        setProgresoRefs({ hechas: n, total: files.length });
       }
     } catch (err) {
       setError('No se pudo subir la imagen de referencia. Inténtelo de nuevo.');
     } finally {
       setAnalyzingRef(false);
+      setProgresoRefs(null);
     }
   };
 
@@ -2541,7 +2578,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <button
                   onClick={toggleMic}
                   disabled={!isSupported}
-                  className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg shrink-0 ${
                     isListening
                       ? 'bg-red-500 text-white animate-pulse scale-110 shadow-red-300'
                       : isSupported
@@ -2550,7 +2587,7 @@ export default function AIRenderStudio({ state, setState }) {
                   }`}
                   title={isListening ? 'Detener grabación' : 'Iniciar grabación de voz'}
                 >
-                  {isListening ? <MicOff size={36} /> : <Mic size={36} />}
+                  {isListening ? <MicOff size={22} /> : <Mic size={22} />}
                 </button>
               </div>
 
@@ -2581,6 +2618,12 @@ export default function AIRenderStudio({ state, setState }) {
                     <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
                   </label>
                 </div>
+                {analyzingRef && (
+                  <div className="mb-2">
+                    <BarraAnalisis texto="Analizando las imágenes subidas"
+                      hechas={progresoRefs?.hechas} total={progresoRefs?.total} />
+                  </div>
+                )}
                 {refImages.length > 0 && (
                   <div className="mb-2">
                     <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-700 mb-1.5">
@@ -2617,14 +2660,18 @@ export default function AIRenderStudio({ state, setState }) {
                           nadie sabe la primera vez. */}
                       <div className="flex flex-wrap gap-2 mt-1.5">
                       {refImages.map((img, i) => (
-                        <select key={`papel-${i}`} defaultValue="acabado"
-                          onChange={e => { asignarPapel(i, e.target.value); e.target.value = 'acabado'; }}
-                          title={`Qué es la imagen ${i + 1}`}
-                          className="w-16 text-[9px] border border-slate-200 rounded px-0.5 py-0.5 text-slate-600">
-                          <option value="acabado">acabado</option>
-                          <option value="plano">es el plano</option>
-                          <option value="pared">es una pared</option>
-                        </select>
+                        <label key={`papel-${i}`} className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                            Imagen {i + 1} es…
+                          </span>
+                          <select defaultValue="acabado"
+                            onChange={e => { asignarPapel(i, e.target.value); e.target.value = 'acabado'; }}
+                            className="min-w-[150px] text-[13px] font-bold border-2 border-indigo-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                            <option value="acabado">Referencia de acabado</option>
+                            <option value="plano">El plano en planta</option>
+                            <option value="pared">Un alzado de pared</option>
+                          </select>
+                        </label>
                       ))}
                     </div>
                     {/* Amueblado virtual: botón específico (solo con permiso). */}
@@ -2799,6 +2846,27 @@ export default function AIRenderStudio({ state, setState }) {
                     </label>
                   )}
                 </div>
+                {describiendoTodo && (
+                  <BarraAnalisis texto="Leyendo la planta y los alzados"
+                    total={(floorPlan ? 1 : 0) + wallSketches.length
+                           + Math.min(refImages.length || (refImage ? 1 : 0), 2)} />
+                )}
+                {analizado && !describiendoTodo && (
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[11px] text-emerald-800">
+                    <b>Revisado:</b>{' '}
+                    {[
+                      analizado.plano ? 'el plano en planta' : null,
+                      analizado.alzados ? `${analizado.alzados} alzado(s) de pared` : null,
+                      analizado.referencias ? `${analizado.referencias} referencia(s) de acabado` : null,
+                    ].filter(Boolean).join(' · ') || 'nada'}
+                    {analizado.descartados > 0 && (
+                      <span className="block mt-0.5 text-amber-700">
+                        {analizado.descartados} dibujo(s) NO se han analizado: se llegó al tope de
+                        7 imágenes juntas. Quita alguno o describe el resto aparte.
+                      </span>
+                    )}
+                  </div>
+                )}
                 <button
                   onClick={describirProyecto}
                   disabled={describiendoTodo || isGenerating}
