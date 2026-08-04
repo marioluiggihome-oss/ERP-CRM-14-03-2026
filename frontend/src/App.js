@@ -787,7 +787,7 @@ const App = () => {
         || path === '/s3k' || path.endsWith('/s3k');
     } catch { return false; }
   })();
-  const STUDIO3K_LANDING_PUBLISHED = true;
+  const STUDIO3K_LANDING_PUBLISHED = false;
   const _studio3kPreview = (() => {
     try {
       const sp = new URLSearchParams(window.location.search);
