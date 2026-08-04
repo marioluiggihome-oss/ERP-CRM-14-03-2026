@@ -3246,6 +3246,17 @@ export default function AIRenderStudio({ state, setState }) {
                   title="Nuevo render (limpia el resultado actual)">
                   <RotateCcw size={14} className="text-slate-500" />
                 </button>
+                {/* Instalaciones: aprovecha el hueco que sobra a la derecha de
+                    la barra en vez de gastar una fila entera debajo. */}
+                <button onClick={() => setShowInstall(v => !v)}
+                  title="Instalaciones y planos técnicos"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                    barraLateral ? '' : 'ml-auto'} ${
+                    showInstall ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  <PlugZap size={13} />
+                  <span className="hidden sm:inline truncate">Instalaciones</span>
+                  <ChevronRight size={12} className={`transition-transform ${showInstall ? 'rotate-90' : ''}`} />
+                </button>
               </div>
 
               {/* Todo el resultado (imagen, catálogo, edición, historial) va en
@@ -3275,14 +3286,10 @@ export default function AIRenderStudio({ state, setState }) {
               ) : (
               /* Imagen del render */
               <>
-              {renderResult?.result?.images?.[0] && !imgError && !interactiveMode && (
+              {renderResult?.result?.images?.[0] && !imgError && !interactiveMode && showInstall && (
                 <div className="shrink-0 mb-2">
-                  {/* Botón que despliega el panel: oculto por defecto para no saturar la vista */}
-                  <button onClick={() => setShowInstall(s => !s)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${showInstall ? 'bg-indigo-600 text-white' : 'bg-white/70 backdrop-blur text-slate-600 hover:bg-white'}`}>
-                    <PlugZap size={13} /> Instalaciones y planos técnicos
-                    <ChevronRight size={13} className={`transition-transform ${showInstall ? 'rotate-90' : ''}`} />
-                  </button>
+                  {/* El botón que abre esto vive en la barra de acciones: aquí
+                      ocupaba una fila entera para un solo botón. */}
                   {showInstall && (
                   <div className="mt-2 flex items-center gap-1.5 flex-wrap bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
