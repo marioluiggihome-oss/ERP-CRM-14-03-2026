@@ -526,7 +526,18 @@ export default function AIRenderStudio({ state, setState }) {
   const [showMedidas, setShowMedidas] = useState(false);
   // Ref para auto-scroll al panel de render en móvil
   const renderPanelRef = useRef(null);
-  const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
+  // Ancho de la ventana COMO ESTADO: antes se leía window.innerWidth durante el
+  // render, así que al girar el móvil o cambiar el tamaño la pantalla se
+  // quedaba con el ancho de antes.
+  const [ventanaAncha, setVentanaAncha] = useState(
+    () => typeof window === 'undefined' || window.innerWidth >= 1024);
+  useEffect(() => {
+    const mirar = () => setVentanaAncha(window.innerWidth >= 1024);
+    mirar();
+    window.addEventListener('resize', mirar);
+    return () => window.removeEventListener('resize', mirar);
+  }, []);
+  const isWide = () => ventanaAncha;
   useEffect(() => {
     const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(240, Math.min(420, e.clientX - 8))); };
     const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
@@ -2396,21 +2407,27 @@ export default function AIRenderStudio({ state, setState }) {
           <div className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
             onClick={() => setPanelHidden(true)} />
         )}
+        {/* OJO con el ancho de este panel: llevaba `lg:w-auto` y, al plegarlo,
+            `lg:w-0`. Son dos utilidades de anchura peleándose y en el CSS
+            generado gana `w-auto`, no la que se pone después en el string: al
+            pulsar el botón de plegar, el panel se estiraba hasta el ancho de su
+            contenido y echaba el render fuera de la pantalla. En pantalla
+            grande el ancho se fija AQUÍ, en el estilo, que no admite empates. */}
         <div className={`
           ${panelHidden
-            ? 'translate-x-[-100%] lg:translate-x-0 lg:w-0 lg:overflow-hidden'
+            ? 'translate-x-[-100%] lg:translate-x-0 lg:overflow-hidden'
             : 'translate-x-0'
           }
           fixed lg:relative z-50 lg:z-auto
           top-0 left-0 h-full lg:h-auto
-          w-[85vw] sm:w-80 lg:w-auto
+          w-[85vw] sm:w-80 lg:max-w-[40vw]
           shrink-0 border-r border-slate-200 bg-white
           flex flex-col min-h-0 overflow-y-auto
           transition-transform duration-300 ease-in-out
           lg:transition-none
           shadow-2xl lg:shadow-none
         `}
-          style={isWide() && !panelHidden ? { width: panelW } : undefined}>
+          style={isWide() ? { width: panelHidden ? 0 : panelW } : undefined}>
           {/* Cabecera del drawer en móvil: título + botón cerrar */}
           <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white sticky top-0 z-10">
             <span className="text-sm font-black text-slate-700 uppercase tracking-wide">Opciones de diseño</span>
@@ -2889,7 +2906,7 @@ export default function AIRenderStudio({ state, setState }) {
         )}
 
         {/* Panel derecho - Área de render principal (ocupa todo el espacio disponible) */}
-        <div ref={renderPanelRef} className="flex-1 flex flex-col p-3 sm:p-4 min-h-0 overflow-hidden bg-slate-50">
+        <div ref={renderPanelRef} className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 min-h-0 overflow-hidden bg-slate-50">
           {/* Barra superior del área render: botón abrir opciones (móvil) + info */}
           <div className="flex items-center gap-2 mb-2 shrink-0">
             {/* Botón flotante para abrir el drawer de opciones en móvil/tablet */}
