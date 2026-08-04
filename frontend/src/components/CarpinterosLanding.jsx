@@ -9,8 +9,9 @@ import { useEffect, useState, useRef } from "react";
 import CarpinterLogo, { CarpinterMark } from "./CarpinterLogo";
 import {
   FileText, Sparkles, TrendingUp, Ruler, CheckCircle2, ChevronDown,
-  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star, Play,
+  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star, Play, Check,
 } from "lucide-react";
+
 
 /* ─── DATOS ──────────────────────────────────────────────────────────────── */
 
@@ -386,18 +387,64 @@ function FAQ() {
   );
 }
 
-function CTASection({ onEnter }) {
-  const enter = (e) => { if (e) e.preventDefault(); onEnter && onEnter(); };
+function CarpinterContactForm() {
+  const [sent, setSent] = useState(false);
+  const [form, setForm] = useState({ nombre: '', empresa: '', email: '', telefono: '', mensaje: '' });
+  const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(196,98,45,0.3)', background: 'rgba(255,255,255,0.06)', color: '#F5F0E7', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s', fontFamily: 'inherit' };
+  const handleFocus = e => (e.currentTarget.style.borderColor = '#C4622D');
+  const handleBlur = e => (e.currentTarget.style.borderColor = 'rgba(196,98,45,0.3)');
+  if (sent) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '24px 0' }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: '#C4622D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Check size={22} color="#fff" />
+        </div>
+        <div>
+          <p style={{ color: '#F5F0E7', fontWeight: 700, fontSize: 18, margin: 0 }}>Mensaje enviado</p>
+          <p style={{ color: 'rgba(245,240,231,0.5)', fontSize: 14, margin: '4px 0 0' }}>Te respondemos en menos de 24h.</p>
+        </div>
+      </div>
+    );
+  }
   return (
-    <section className="sec cta" id="acceso">
+    <form onSubmit={e => { e.preventDefault(); setSent(true); }} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8, width: '100%', maxWidth: 640, textAlign: 'left' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(245,240,231,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Nombre</label>
+          <input type="text" required placeholder="Tu nombre" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(245,240,231,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Empresa</label>
+          <input type="text" placeholder="Nombre de tu taller" value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(245,240,231,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Email</label>
+          <input type="email" required placeholder="tu@taller.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ color: 'rgba(245,240,231,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Teléfono</label>
+          <input type="tel" placeholder="+34 600 000 000" value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={{ color: 'rgba(245,240,231,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mensaje</label>
+        <textarea rows={4} placeholder="Cuéntanos sobre tu taller y lo que necesitas..." value={form.mensaje} onChange={e => setForm(f => ({ ...f, mensaje: e.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} onFocus={handleFocus} onBlur={handleBlur} />
+      </div>
+      <button type="submit" className="btn-bone btn-lg" style={{ alignSelf: 'flex-start' }}>
+        Enviar mensaje <ArrowRight size={16} />
+      </button>
+    </form>
+  );
+}
+
+function CTASection({ onEnter }) {
+  return (
+    <section className="sec cta" id="contacto">
       <div className="wrap cta-inner" data-reveal>
         <CarpinterMark size={64} orange="#F5F0E7" />
-        <h2 className="cta-h2">Tu taller ya está listo.<br /><span className="accent">Solo falta que entres.</span></h2>
-        <p className="cta-sub">Sin permanencia. Alta y puesta en marcha con acompañamiento.</p>
-        <div className="cta-actions">
-          <a href="#acceso" onClick={enter} className="btn-bone btn-lg">Acceder al programa <ArrowRight size={18} /></a>
-          <a href="tel:+34900000000" className="btn-ghost btn-lg" style={{ color: "#F5F0E7", borderColor: "rgba(245,240,231,.35)" }}><Phone size={16} /> Hablar con el equipo</a>
-        </div>
+        <h2 className="cta-h2">Hablemos de tu taller.<br /><span className="accent">Te respondemos en 24h.</span></h2>
+        <p className="cta-sub">Cuéntanos tu proyecto y te ayudamos a encontrar la mejor solución.</p>
+        <CarpinterContactForm />
       </div>
     </section>
   );
