@@ -66,6 +66,38 @@ Cualquier cifra fuera de estos rangos es un ERROR, no una variante: corregir.
 — es decir, partiendo del **PVP de venta del ERP** se aplica −50% y −28%. Neto
 equivale a `base × 0,72`. El −50% solo se aplica si se parte del PVP del ERP.
 
+## Habilidades BLOQUEADAS — no se tocan sin permiso del master
+
+Lo que ya funciona y está en uso NO se cambia por iniciativa propia, ni "de
+paso" mientras se arregla otra cosa. Vale para cualquiera que trabaje en este
+repo, personas o IAs. **Si crees que hay que cambiar algo de esta lista, pídeselo
+al master ANTES y explícale qué se gana y qué se pierde.**
+
+Por qué existe esta lista: el 03/08 se enrutó el botón principal del Estudio 3D
+por el render compuesto, y ese camino llamaba directamente a Gemini estándar. El
+usuario pulsaba con IA 1 seleccionada, creía seguir en su motor y no lo estaba.
+Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
+
+1. **Motor de render del Estudio 3D.** El motor elegido en pantalla manda
+   siempre, por cualquier camino (texto, referencia, plano+bocetos):
+   `IA 1 → gemini` · `IA 2 → manus` · `IA 3 → gemini_premium` · `IA 4 → gemini_flash`.
+   Todo render pasa por `_render_dispatch`; nadie llama directo a un motor.
+2. **Plano, bocetos, referencia de acabado y descripción se usan A LA VEZ**, cada
+   uno mandando en lo suyo. No se vuelve al "o una cosa o la otra".
+3. **Tope de 7 imágenes juntas** en render y descripción de proyecto.
+4. **Las unidades multiplican**: coste, mano de obra, puertas y el pedido al
+   proveedor. Una línea de 4 muebles lleva herraje para 4.
+5. **Los descuentos no se muestran en ningún texto ni etiqueta.** Los mete el
+   master a mano.
+6. **Lavavajillas = electrodoméstico** (va en hueco, sin casco). Su **puerta de
+   integración = material nuestro**. Bajo fregadero y bajo horno son MUEBLES.
+7. **Nunca inventar una cota.** Lo que no se sabe va vacío o con "?".
+
+El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
+el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
+pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
+hacer.
+
 ## Reglas técnicas del repo
 
 - **Verificar el build ANTES de push del frontend**: `cd frontend && CI=true npx craco build`.
