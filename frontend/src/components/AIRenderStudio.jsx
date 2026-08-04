@@ -3171,7 +3171,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <button onClick={downloadRender} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                   {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
-                  <span className="hidden sm:inline truncate">PNG</span>
+                  <span className="hidden sm:inline truncate">Imagen</span>
                 </button>
                 <button onClick={descargarTodo} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar render actual + historial completo">
