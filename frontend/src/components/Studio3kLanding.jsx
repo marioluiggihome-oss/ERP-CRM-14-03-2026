@@ -123,7 +123,7 @@ function Nav({ onEnter }) {
         {/* Logo wordmark */}
         <a href="#top" className="s3k-logo-link">
           <img
-            src={scrolled ? "/manus-storage/s3k-final-light_17ebe7c8.png" : "/manus-storage/s3k-final-dark_d57fcc06.png"}
+            src={scrolled ? "/manus-storage/1000249933_73ce80f5.png" : "/manus-storage/studio3k-wordmark-white_94870fba.png"}
             alt="studio3k"
             className="s3k-logo-img"
           />
@@ -441,7 +441,7 @@ function Footer() {
     <footer className="s3k-footer">
       <div className="s3k-wrap s3k-footer-inner">
         <div className="s3k-footer-brand">
-          <img src="/manus-storage/s3k-final-dark_d57fcc06.png" alt="studio3k" className="s3k-footer-logo" />
+          <img src="/manus-storage/studio3k-wordmark-white_94870fba.png" alt="studio3k" className="s3k-footer-logo" />
           <p className="s3k-footer-tagline">Diseño de cocinas con inteligencia artificial.<br />Para tiendas que quieren vender más.</p>
         </div>
         <div className="s3k-footer-links">
