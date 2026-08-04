@@ -175,10 +175,50 @@ async def set_threshold(threshold: int):
 # ─── CRÉDITOS DE IA POR USUARIO (ligados a la suscripción) ───────────────────
 # Roles con acceso ILIMITADO (nunca se les descuentan créditos).
 _UNLIMITED_FLAGS = ("isAdmin", "isPrimaryAdmin", "isGerente", "isDirectorComercial", "isMaster")
+# Cuentas de la casa (master/administrador). A estas SÍ se les puede poner cupo,
+# para medir de primera mano lo que da de sí una bolsa de renders: con acceso
+# ilimitado no se entera uno de cuánto se gasta ni de si el aviso de "sin
+# renders" funciona.
+_MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
+# Cupo del master. 0 = ilimitado (como antes). Se puede cambiar sin tocar código
+# escribiendo `master_credits` en ai_usage_config.
+CUPO_MASTER_POR_DEFECTO = 40
+
+
+def _es_master(user: dict) -> bool:
+    return bool(user) and any(user.get(f) for f in _MASTER_FLAGS)
+
+
+async def _cupo_master() -> int:
+    """Renders al mes para las cuentas de la casa. 0 = sin límite."""
+    try:
+        cfg = await db.ai_usage_config.find_one({"_id": "cfg"}) or {}
+        v = cfg.get("master_credits", CUPO_MASTER_POR_DEFECTO)
+        return max(int(v if v is not None else CUPO_MASTER_POR_DEFECTO), 0)
+    except Exception:
+        return CUPO_MASTER_POR_DEFECTO
+
+
+async def _sin_limite(user: dict) -> bool:
+    """¿Este usuario no gasta créditos?
+
+    Dirección (gerente, director comercial) sigue sin límite. El master pasa a
+    tener cupo si está configurado, para poder medirlo.
+    """
+    if not user:
+        return False
+    if not any(user.get(f) for f in _UNLIMITED_FLAGS):
+        return False
+    if _es_master(user):
+        return await _cupo_master() <= 0
+    return True
 
 
 def _is_unlimited(user: dict) -> bool:
-    """Admin/master (y roles equivalentes) tienen créditos ILIMITADOS."""
+    """Compatibilidad para código que no puede esperar (no consulta la config).
+
+    OJO: no distingue el cupo del master; usa `_sin_limite` donde se pueda.
+    """
     if not user:
         return False
     return any(user.get(f) for f in _UNLIMITED_FLAGS)
@@ -227,7 +267,7 @@ async def get_user_credits(user: dict) -> dict:
     """
     if db is None:
         return {"asignados": 0, "consumidos_mes": 0, "restantes": 0, "ilimitado": True}
-    if _is_unlimited(user):
+    if await _sin_limite(user):
         return {"asignados": 0, "consumidos_mes": 0, "restantes": 0, "ilimitado": True}
 
     default_credits, _ = await _get_credits_config()
@@ -237,6 +277,11 @@ async def get_user_credits(user: dict) -> dict:
         assigned = 0
     if assigned <= 0:
         assigned = default_credits
+    # El cupo de la casa manda sobre el del plan: es el que se quiere medir.
+    if _es_master(user):
+        cupo = await _cupo_master()
+        if cupo > 0:
+            assigned = cupo
 
     uid = str(user.get("id") or user.get("_id") or "")
     consumed = 0
@@ -296,7 +341,7 @@ async def consume_credits(user: dict, kind: str) -> dict:
     Admin/master no consumen. Devuelve el estado de créditos actualizado.
     Best-effort: si algo falla, no lanza (el enforcement decide si bloquea).
     """
-    if db is None or _is_unlimited(user):
+    if db is None or await _sin_limite(user):
         return await get_user_credits(user)
 
     _, credits_per = await _get_credits_config()

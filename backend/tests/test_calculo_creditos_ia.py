@@ -135,9 +135,37 @@ def test_el_saldo_nunca_queda_negativo_y_la_recarga_llega_entera(ai_usage):
     asyncio.run(escenario())
 
 
-def test_admin_tiene_renders_ilimitados(ai_usage):
+def test_el_master_tiene_cupo_para_poder_medirlo(ai_usage):
+    """La cuenta de la casa gasta como una mas: con acceso ilimitado no hay
+    forma de saber cuanto da de si una bolsa de renders ni de comprobar que el
+    aviso de "sin renders" funciona."""
+    c = asyncio.run(ai_usage.get_user_credits({"id": "adm", "isAdmin": True}))
+    assert c["ilimitado"] is False
+    assert c["asignados"] == ai_usage.CUPO_MASTER_POR_DEFECTO == 40
+
+
+def test_el_master_vuelve_a_ser_ilimitado_poniendo_el_cupo_a_cero(ai_usage):
+    """Se cambia desde la configuracion, sin tocar codigo ni desplegar."""
+    ai_usage.db.ai_usage_config.docs[0]["master_credits"] = 0
     c = asyncio.run(ai_usage.get_user_credits({"id": "adm", "isAdmin": True}))
     assert c["ilimitado"] is True
+
+
+def test_direccion_sigue_sin_limite(ai_usage):
+    """El cupo es para la cuenta de la casa, no para gerencia."""
+    c = asyncio.run(ai_usage.get_user_credits({"id": "ger", "isGerente": True}))
+    assert c["ilimitado"] is True
+
+
+def test_el_master_gasta_de_verdad_sus_renders(ai_usage):
+    async def esc():
+        usuario = {"id": "adm", "isAdmin": True}
+        for _ in range(3):
+            await ai_usage.consume_credits(usuario, "render")
+        c = await ai_usage.get_user_credits(usuario)
+        assert c["consumidos_mes"] == 3, "al master no se le estaba descontando nada"
+        assert c["restantes"] == 37
+    asyncio.run(esc())
 
 
 def test_se_respetan_los_packs_del_formato_antiguo(ai_usage):
