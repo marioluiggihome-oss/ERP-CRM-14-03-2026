@@ -3180,9 +3180,13 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
               </div>
 
+              {/* Todo el resultado (imagen, catálogo, edición, historial) va en
+                  su propia columna: el contenedor de arriba solo reparte entre
+                  ESTA columna y la barra de acciones. */}
+              <div className="flex-1 min-w-0 order-1 flex flex-col gap-2 min-h-0">
               {/* Comparativa referencia vs render */}
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
-                <div className="flex-1 min-w-0 order-1 grid grid-cols-2 gap-2 min-h-0">
+                <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 min-h-0">
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
                     {(originalRef || refImage).startsWith('data:image') ? (
                       <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
@@ -3276,7 +3280,7 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                 </div>
               )}
-              <div className="flex-1 min-w-0 order-1 min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
+              <div className="flex-1 min-w-0 min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
@@ -3522,6 +3526,7 @@ export default function AIRenderStudio({ state, setState }) {
                       backend lo sigue devolviendo (`engine`) para el registro. */}
                 </div>
               )}
+              </div>
             </div>
           ) : (
             /* Estado vacío */
