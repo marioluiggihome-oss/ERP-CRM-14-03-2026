@@ -531,15 +531,21 @@ export default function AIRenderStudio({ state, setState }) {
   // Ancho de la ventana COMO ESTADO: antes se leía window.innerWidth durante el
   // render, así que al girar el móvil o cambiar el tamaño la pantalla se
   // quedaba con el ancho de antes.
-  const [ventanaAncha, setVentanaAncha] = useState(
-    () => typeof window === 'undefined' || window.innerWidth >= 1024);
+  const [anchoVentana, setAnchoVentana] = useState(
+    () => (typeof window === 'undefined' ? 1600 : window.innerWidth));
   useEffect(() => {
-    const mirar = () => setVentanaAncha(window.innerWidth >= 1024);
+    const mirar = () => setAnchoVentana(window.innerWidth);
     mirar();
     window.addEventListener('resize', mirar);
     return () => window.removeEventListener('resize', mirar);
   }, []);
-  const isWide = () => ventanaAncha;
+  const isWide = () => anchoVentana >= 1024;
+  // Barra de acciones EN COLUMNA a la derecha. Solo compensa cuando sobra ancho
+  // de verdad: el render es 16:9 y casi siempre lo limita el ALTO, así que
+  // quitarle 120px de ancho solo sale a cuenta si aun así lo sigue limitando el
+  // alto. Medido: a 1920 gana un 14% de superficie, pero a 1440 y a 1680 PIERDE
+  // un 6%, porque ahí pasa a limitarlo el ancho. El corte está sobre los 1800.
+  const barraLateral = anchoVentana >= 1800;
   useEffect(() => {
     const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(240, Math.min(420, e.clientX - 8))); };
     const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
@@ -3059,16 +3065,17 @@ export default function AIRenderStudio({ state, setState }) {
                propio scroll: ocupaba una franja entera arriba y le quitaba alto
                al render, que es lo que de verdad hay que ver. En movil se queda
                arriba como estaba, que es donde llega el pulgar. */
-            <div className="flex-1 flex flex-col lg:flex-row gap-2 overflow-hidden min-h-0">
-              <div className="shrink-0 flex flex-wrap items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1.5
-                              lg:order-2 lg:flex-col lg:flex-nowrap lg:items-stretch lg:w-[112px]
-                              lg:overflow-y-auto lg:overflow-x-hidden lg:max-h-full lg:py-2">
+            <div className={`flex-1 flex gap-2 overflow-hidden min-h-0 ${barraLateral ? 'flex-row' : 'flex-col'}`}>
+              <div className={`shrink-0 flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1.5 ${
+                barraLateral
+                  ? 'order-2 flex-col flex-nowrap items-stretch w-[112px] overflow-y-auto overflow-x-hidden max-h-full py-2'
+                  : 'flex-wrap'}`}>
                 {/* Grupo IA: acciones que generan nueva imagen */}
                 <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
                   title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
                   {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  <span className="hidden sm:inline lg:truncate">Decorador/a</span><span className="sm:hidden">Deco</span>
+                  <span className="hidden sm:inline truncate">Decorador/a</span><span className="sm:hidden">Deco</span>
                 </button>
                 <button onClick={mejorarResolucion} disabled={editing || downloading || !currentImage()}
                   title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
@@ -3088,19 +3095,19 @@ export default function AIRenderStudio({ state, setState }) {
                 <button onClick={downloadRender} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                   {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
-                  <span className="hidden sm:inline lg:truncate">PNG</span>
+                  <span className="hidden sm:inline truncate">PNG</span>
                 </button>
                 <button onClick={descargarTodo} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar render actual + historial completo">
                   {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
-                  <span className="hidden sm:inline lg:truncate">Todo</span>
+                  <span className="hidden sm:inline truncate">Todo</span>
                 </button>
                 <button onClick={() => setWatermarkOn(v => !v)}
                   title={state?.logo ? (watermarkOn ? 'Marca de agua ACTIVADA: tu logo se estampa al descargar' : 'Activar marca de agua con tu logo al descargar') : 'Sube tu logo en Ajustes para usar marca de agua'}
                   className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${watermarkOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} disabled:opacity-40`}
                   disabled={!state?.logo}>
                   <Image size={12} />
-                  <span className="hidden sm:inline lg:truncate">Logo</span>
+                  <span className="hidden sm:inline truncate">Logo</span>
                 </button>
                 <button onClick={exportPDF} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
@@ -3109,17 +3116,17 @@ export default function AIRenderStudio({ state, setState }) {
                 <button onClick={exportDossierPDF} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white rounded-lg text-[11px] font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
                   <BookOpen size={12} />
-                  <span className="hidden sm:inline lg:truncate">Dossier</span>
+                  <span className="hidden sm:inline truncate">Dossier</span>
                 </button>
                 <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded-lg text-[11px] font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
                   <Share2 size={12} />
-                  <span className="hidden sm:inline lg:truncate">WhatsApp</span>
+                  <span className="hidden sm:inline truncate">WhatsApp</span>
                 </button>
                 <button onClick={attachToBudget} disabled={downloading || !currentImage()}
                   className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
                   title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
-                  {attached ? <><CheckCircle size={12} /> <span className="hidden sm:inline lg:truncate">Adjuntado</span></> : <><Send size={12} /> <span className="hidden sm:inline lg:truncate">{tipo3d === 'armario' ? 'Armarios' : 'Presup.'}</span></>}
+                  {attached ? <><CheckCircle size={12} /> <span className="hidden sm:inline truncate">Adjuntado</span></> : <><Send size={12} /> <span className="hidden sm:inline truncate">{tipo3d === 'armario' ? 'Armarios' : 'Presup.'}</span></>}
                 </button>
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
@@ -3128,7 +3135,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <button onClick={() => setCompareOn(v => !v)}
                     className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                     title="Comparar la imagen original subida con el render">
-                    <Image size={12} /> <span className="hidden sm:inline lg:truncate">Comparar</span>
+                    <Image size={12} /> <span className="hidden sm:inline truncate">Comparar</span>
                   </button>
                 )}
                 {canUseRender360 && (orbitFrames.length >= 2 ? (
@@ -3142,7 +3149,7 @@ export default function AIRenderStudio({ state, setState }) {
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors"
                     title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos de IA)">
                     {orbitLoading ? <Loader size={12} className="animate-spin" /> : <RotateCw size={12} />}
-                    <span className="hidden sm:inline lg:truncate">{orbitLoading ? 'Generando…' : '360º'}</span>
+                    <span className="hidden sm:inline truncate">{orbitLoading ? 'Generando…' : '360º'}</span>
                   </button>
                 ))}
                 <button
@@ -3167,7 +3174,7 @@ export default function AIRenderStudio({ state, setState }) {
 
               {/* Comparativa referencia vs render */}
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
-                <div className="flex-1 min-w-0 lg:order-1 grid grid-cols-2 gap-2 min-h-0">
+                <div className="flex-1 min-w-0 order-1 grid grid-cols-2 gap-2 min-h-0">
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
                     {(originalRef || refImage).startsWith('data:image') ? (
                       <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
@@ -3261,7 +3268,7 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                 </div>
               )}
-              <div className="flex-1 min-w-0 lg:order-1 min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
+              <div className="flex-1 min-w-0 order-1 min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
