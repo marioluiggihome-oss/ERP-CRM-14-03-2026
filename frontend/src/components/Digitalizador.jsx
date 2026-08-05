@@ -1366,21 +1366,7 @@ const Digitalizador = ({ state, setState }) => {
                             className="w-full bg-transparent font-medium text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 resize-none overflow-hidden leading-snug"
                           />
                         </td>
-                        {/* Margen de líneas manuales: SIEMPRE visible aunque isValorado=false */}
-                        {line.isManual && !isValorado && (
-                          <td className="px-4 py-3 text-center" title="Margen (%)">
-                            <input
-                              type="text"
-                              value={line.discount}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(',', '.');
-                                updateLine(line.id, 'discount', parseFloat(value) || 0);
-                              }}
-                              placeholder="0"
-                              className="w-16 bg-orange-50 rounded px-2 py-1 text-center font-bold text-orange-600 outline-none border border-orange-200 hover:border-orange-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 cursor-text"
-                            />
-                          </td>
-                        )}
+                        {/* Descuento de líneas manuales solo visible en modo valorado (igual que el resto de columnas de precio) */}
                         {/* Precio y Descuento solo si valorado */}
                         {isValorado && (
                         <>
