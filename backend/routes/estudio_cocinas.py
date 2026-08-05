@@ -1655,10 +1655,18 @@ async def generar_alzado(payload: ProyectoBase):
             "elementos": (dist.elementos if dist else []) or [],
         })
         if not _val.get("ok"):
-            raise HTTPException(
-                status_code=422,
-                detail=("No se puede dibujar el alzado sin medidas reales válidas. "
-                        f"{_val.get('motivo') or ''} " + " ".join(_val.get('avisos') or [])).strip())
+            # Sin paredes NO se dibuja (regla de oro: no se inventa una cota). Pero
+            # el aviso tiene que decir QUÉ HACER: antes solo decía que no había
+            # medidas válidas y el usuario se quedaba mirando un error sin salida.
+            detalle = ("No se puede dibujar el alzado sin las medidas de las paredes. "
+                       "Elige la distribución (lineal, L, U…) en el panel de la "
+                       "izquierda y escribe el ancho real de cada pared; o pulsa "
+                       "«Detectar distribución» sobre un render para deducirlas.")
+            causa = " ".join(x for x in [(_val.get("motivo") or "").strip(),
+                                         *(_val.get("avisos") or [])] if x).strip()
+            if causa:
+                detalle += f" ({causa})"
+            raise HTTPException(status_code=422, detail=detalle)
         paredes = _val["paredes"]
         elementos = _val["elementos"]
         _avisos_geom = _val.get("avisos") or []
@@ -1844,8 +1852,14 @@ async def generar_alzado(payload: ProyectoBase):
                 "avisos": _avisos_geom,
                 "herraje": {"puertas": puertas, "cajones": cajones, "bisagras": bisagras,
                             "guias": guias, "tiradores": tiradores}}
+    except HTTPException:
+        # Un 422 con instrucciones ("elige la distribución") NO puede acabar
+        # convertido en un 500 genérico: HTTPException hereda de Exception, así
+        # que sin esto el `except` de abajo se lo tragaba y el usuario leía
+        # "no se pudo generar" con un "422:" incrustado dentro.
+        raise
     except Exception as e:
-        logger.error(f"alzado error: {e}")
+        logger.error(f"alzado error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"No se pudo generar la vista alámbrica: {e}")
 
 
