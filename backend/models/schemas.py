@@ -882,6 +882,7 @@ class DigitalizadorLine(BaseModel):
     price: float = 0
     discount: float = 0
     isManual: bool = False
+    lineMarkup: Optional[float] = None  # INC% por línea; None = usar globalMarkup; 0 = sin incremento
     matchedProducts: List[DigitalizadorMatchedProduct] = []
 
 

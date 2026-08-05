@@ -121,11 +121,12 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
         for line in request.lines:
             line_price = line.price * line.quantity
             line_discount = line.discount if line.isManual else max(line.discount, request.globalDiscount)
-            total_neto += line_price * (1 - line_discount / 100)
-        
-        # Apply markup if exists
-        if request.globalMarkup > 0:
-            total_neto = total_neto * (1 + request.globalMarkup / 100)
+            net_line = line_price * (1 - line_discount / 100)
+            # Respetar lineMarkup por línea: si está definido (incluso 0), usarlo; si no, usar globalMarkup
+            effective_markup = line.lineMarkup if line.lineMarkup is not None else request.globalMarkup
+            if effective_markup > 0:
+                net_line = net_line * (1 + effective_markup / 100)
+            total_neto += net_line
         
         total_con_iva = total_neto * (1 + request.ivaRate / 100)
         

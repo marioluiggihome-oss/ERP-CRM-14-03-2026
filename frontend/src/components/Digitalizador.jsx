@@ -466,7 +466,8 @@ const Digitalizador = ({ state, setState }) => {
       description: 'NUEVA LÍNEA PERSONALIZADA...',
       price: 0,
       discount: 0,
-      isManual: true
+      isManual: true,
+      lineMarkup: 0  // Las líneas manuales no aplican el incremento global por defecto
     };
     setLines(prev => [...prev, newLine]);
   };
@@ -536,7 +537,8 @@ const Digitalizador = ({ state, setState }) => {
     const linePrice = line.price * qtyOf(line);
     let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
     let netPrice = linePrice * (1 - lineDiscount / 100);
-    // Usar lineMarkup si está definido (por línea), sino el global
+    // Si lineMarkup está definido (incluso 0), usarlo — 0 significa sin incremento.
+    // Si no está definido (undefined/null/''), usar el globalMarkup.
     const effectiveMarkup = (line.lineMarkup != null && line.lineMarkup !== '') ? Number(line.lineMarkup) : globalMarkup;
     if (effectiveMarkup > 0) {
       netPrice = netPrice * (1 + effectiveMarkup / 100);
@@ -635,9 +637,10 @@ const Digitalizador = ({ state, setState }) => {
         const desc = clean(line.description || '');
         if (!isValorado) return [String(cant), ref, desc];
         const lineDiscount = line.isManual ? line.discount : Math.max(line.discount || 0, globalDiscount || 0);
-        // La casilla Precio debe reflejar el INCREMENTO global (como el importe y la
-        // vista de pantalla): precio unitario con el markup aplicado.
-        const precioUnit = globalMarkup > 0 ? line.price * (1 + globalMarkup / 100) : line.price;
+        // La casilla Precio debe reflejar el INCREMENTO por línea (o global si no hay por línea).
+        // Si lineMarkup es 0 explícitamente, no se aplica incremento.
+        const effectiveMarkupPdf = (line.lineMarkup != null && line.lineMarkup !== '') ? Number(line.lineMarkup) : globalMarkup;
+        const precioUnit = effectiveMarkupPdf > 0 ? line.price * (1 + effectiveMarkupPdf / 100) : line.price;
         return [String(cant), ref, desc, eur(precioUnit), `${lineDiscount || 0}%`, eur(getLineNet(line))];
       });
 
@@ -1314,9 +1317,11 @@ const Digitalizador = ({ state, setState }) => {
                   <tbody className="divide-y divide-indigo-50">
                     {(currentPage === -1 ? lines : (pages[currentPage] || [])).map((line) => {
                       // Calcular precio a mostrar según estado del candado
+                      // Respetar lineMarkup por línea: si está definido (incluso 0), usarlo; si no, usar globalMarkup
                       const originalPrice = line.price;
-                      const priceWithMarkup = originalPrice * (1 + globalMarkup / 100);
-                      const displayPrice = isLocked && globalMarkup > 0 ? priceWithMarkup : originalPrice;
+                      const effectiveMarkupForDisplay = (line.lineMarkup != null && line.lineMarkup !== '') ? Number(line.lineMarkup) : globalMarkup;
+                      const priceWithMarkup = originalPrice * (1 + effectiveMarkupForDisplay / 100);
+                      const displayPrice = isLocked && effectiveMarkupForDisplay > 0 ? priceWithMarkup : originalPrice;
                       
                       return (
                       <tr key={line.id} className={`hover:bg-indigo-50/50 transition-colors ${line.isManual ? 'bg-orange-50/30' : ''}`}>
