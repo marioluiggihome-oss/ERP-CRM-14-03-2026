@@ -153,6 +153,10 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
 const Cascos = ({ state, setState }) => {
   const currentUser = state?.currentUser;
   const esMasterCascos = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isGerente);
+  // Rentabilidad va MÁS cerrado que el resto de Cascos: ahí están el coste real,
+  // el descuento de proveedor y el margen. Un gerente entra a Cascos, pero a
+  // esto NO: solo el master.
+  const esMasterRenta = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isMaster);
   const [showRenta, setShowRenta] = useState(false); // módulo unificado de rentabilidad (Alvic/MV, solo master)
   const [presupuestoBloqueado, setPresupuestoBloqueado] = useState(false); // bloquear edición del presupuesto
   const [importandoRel, setImportandoRel] = useState(false); // importar relación de muebles (PDF nomenclaturas)
@@ -732,6 +736,7 @@ const Cascos = ({ state, setState }) => {
                         <span className="block text-[10px] text-slate-400">Sube la plantilla rellenada con los códigos MV</span>
                       </span>
                     </button>
+                    {esMasterRenta && (
                     <button onClick={() => { setMenuImportar(false); setSistemaRenta('alvic'); setShowRenta(true); }}
                       className="w-full text-left px-3 py-2.5 hover:bg-amber-50 flex items-start gap-2.5 border-t border-slate-100">
                       <Package size={16} className="text-amber-600 mt-0.5 shrink-0" />
@@ -740,6 +745,7 @@ const Cascos = ({ state, setState }) => {
                         <span className="block text-[10px] text-slate-400">Proforma Alvic → equivalencia de cascos ACB</span>
                       </span>
                     </button>
+                    )}
                     <button onClick={() => { setMenuImportar(false); descargarNomenclaturas(); }}
                       disabled={descargandoPdf}
                       className="w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-start gap-2.5 border-t border-slate-100 disabled:opacity-50">
@@ -756,11 +762,11 @@ const Cascos = ({ state, setState }) => {
                    Antes colgaba del botón Importar como un desplegable de 700px:
                    una tabla de 16 columnas metida en esa ventanita era imposible
                    de usar, y encima la recortaba el contenedor. */}
-              {showRenta && (
+              {showRenta && esMasterRenta && (
                 <div className="fixed inset-0 z-[9998] bg-slate-900/60 p-2 sm:p-4 overflow-y-auto"
                   onMouseDown={(e) => { if (e.target === e.currentTarget) setShowRenta(false); }}>
                   <div className="mx-auto w-full max-w-[1400px]">
-                    <RentabilidadUnificada esMaster={true} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
+                    <RentabilidadUnificada esMaster={esMasterRenta} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
                   </div>
                 </div>
               )}
@@ -772,10 +778,10 @@ const Cascos = ({ state, setState }) => {
           {esMasterCascos && (
             <button
               onClick={(e) => {
-                if (e.shiftKey) { setSistemaRenta('mv'); setShowRenta(v => !v); }
+                if (e.shiftKey) { if (esMasterRenta) { setSistemaRenta('mv'); setShowRenta(v => !v); } }
                 else { setPresupuestoBloqueado(v => !v); }
               }}
-              title={presupuestoBloqueado ? 'Desbloquear edición del presupuesto (Shift+clic = Rentabilidad)' : 'Bloquear edición del presupuesto (Shift+clic = Rentabilidad)'}
+              title={`${presupuestoBloqueado ? 'Desbloquear' : 'Bloquear'} edición del presupuesto${esMasterRenta ? ' (Shift+clic = Rentabilidad)' : ''}`}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs transition-colors ${
                 presupuestoBloqueado
                   ? 'bg-red-500 text-white hover:bg-red-600'

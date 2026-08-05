@@ -118,8 +118,16 @@ async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depen
 
 
 # ─── IMPORTADOR DE PROFORMA DE PROVEEDOR (solo MASTER) ──────────────────────────
+# OJO: master de verdad, no "rol alto". ADMIN_ROLE_FLAGS incluye isGerente e
+# isDirectorComercial, que sirven para ver Cascos pero NO para esto: por aquí
+# pasan la tarifa del proveedor, el descuento y el margen. La pantalla ya lo
+# cierra a master, y si aquí se dejara la lista ancha el cierre sería de adorno
+# (basta llamar a la API a mano).
+_MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
+
+
 def _es_master(user: Optional[dict]) -> bool:
-    return bool(user and any(user.get(f) for f in list(ADMIN_ROLE_FLAGS) + ["isPrimaryAdmin"]))
+    return bool(user and any(user.get(f) for f in _MASTER_FLAGS))
 
 
 _TAREAS_PROFORMA = set()
