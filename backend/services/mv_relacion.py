@@ -242,31 +242,13 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
 def extract_form_and_text(pdf_bytes: bytes) -> str:
     """Devuelve TODO el texto útil del PDF: valores de los campos de formulario
     (AcroForm) + la capa de texto. Los campos van primero, uno por línea."""
-    import fitz
-    campos = []
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    for page in doc:
-        try:
-            for w in page.widgets() or []:
-                v = (w.field_value or "").strip()
-                if v:
-                    campos.append(v)
-        except Exception:
-            pass
+    from services.pdf_utils import campos_de_formulario, texto_de_pdf
+    campos = [v for _etiqueta, v in campos_de_formulario(pdf_bytes)]
     # Si el PDF es de formulario y tiene campos rellenados, esos SON la relación.
-    # La capa de texto de un PDF con AcroForm suele DUPLICAR esos valores, así que
-    # solo usamos el texto plano cuando NO hay campos rellenados (relación suelta).
+    # Solo se usa el texto plano cuando NO hay campos rellenados (relación suelta).
     if campos:
-        doc.close()
         return "\n".join(campos)
-    texto = []
-    for page in doc:
-        try:
-            texto.append(page.get_text())
-        except Exception:
-            pass
-    doc.close()
-    return "\n".join(texto)
+    return texto_de_pdf(pdf_bytes)
 
 
 def extract_campos(pdf_bytes: bytes):
@@ -276,19 +258,8 @@ def extract_campos(pdf_bytes: bytes):
     suelta", "Bajo con cajones"…), y hace falta para entender una nota que no
     lleva código, como "2 - 90 x 60" en el recuadro de puertas.
     """
-    import fitz
-    fuera = []
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    for page in doc:
-        try:
-            for w in page.widgets() or []:
-                v = (w.field_value or "").strip()
-                if v:
-                    fuera.append(((w.field_label or w.field_name or "").strip(), v))
-        except Exception:
-            pass
-    doc.close()
-    return fuera
+    from services.pdf_utils import campos_de_formulario
+    return campos_de_formulario(pdf_bytes)
 
 
 def detectar_relacion(pdf_bytes: bytes, tariff: str = "T1"):

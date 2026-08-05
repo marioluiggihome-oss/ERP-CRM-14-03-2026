@@ -9,7 +9,7 @@ Extrae la relación de muebles de un PDF de presupuesto/proforma para, después,
 calcular NUESTRO coste (casco + herraje BLUM + mano de obra).
 
 Estrategia de lectura:
-1) Capa de texto (PyMuPDF) si el PDF la tiene -> parseo determinista y gratis.
+1) Capa de texto (pypdf) si el PDF la tiene -> parseo determinista y gratis.
 2) Si no hay texto (PDF escaneado/imagen) -> visión IA (Gemini) como respaldo.
 
 Multipágina: se procesan TODAS las páginas.
@@ -155,10 +155,9 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
 
 
 def extract_pdf_text_all_pages(pdf_bytes: bytes) -> str:
-    """Texto de TODAS las páginas (PyMuPDF)."""
-    import fitz
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    return "\n".join(page.get_text() for page in doc)
+    """Texto de TODAS las páginas."""
+    from services.pdf_utils import texto_de_pdf
+    return texto_de_pdf(pdf_bytes)
 
 
 def pdf_pages_to_png_b64(pdf_bytes: bytes, max_pages: int = 12) -> List[str]:
@@ -172,18 +171,16 @@ def pdf_pages_to_png_b64(pdf_bytes: bytes, max_pages: int = 12) -> List[str]:
     conexión. El filtro solo actúa si el documento es de ese tipo (alguna página
     con muchos trazos); en un PDF escaneado de verdad se queda inerte.
     """
-    import fitz, base64
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    paginas = list(doc)[:max_pages]
-    trazos = [len(pg.get_drawings()) for pg in paginas]
-    utiles = paginas
+    import base64
+    from services.pdf_utils import contar_trazos, paginas_a_png
+
+    trazos = contar_trazos(pdf_bytes, max_pages=max_pages)
+    utiles = list(range(len(trazos)))
     if trazos and max(trazos) >= 400:
         umbral = max(trazos) * 0.2
-        con_tabla = [pg for pg, n in zip(paginas, trazos) if n >= umbral]
+        con_tabla = [i for i, n in enumerate(trazos) if n >= umbral]
         if con_tabla:
             utiles = con_tabla
-    out = []
-    for pg in utiles:
-        pix = pg.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))
-        out.append(base64.b64encode(pix.tobytes("png")).decode("utf-8"))
-    return out
+    # Escala 2,0 = 144 dpi, la misma imagen que se venía enviando a la IA.
+    return [base64.b64encode(p).decode("utf-8")
+            for p in paginas_a_png(pdf_bytes, dpi=144, paginas=utiles)]

@@ -186,6 +186,24 @@ COPIADO_DENTRO = [
      "nota": "Helper `cn` (clsx + tailwind-merge)."},
 ]
 
+NOTA_RESUELTO_PYMUPDF = [
+    "PyMuPDF (`fitz`), que era **AGPL-3.0**, se retiró el 05/08/2026 y lo "
+    "sustituyen `pypdf` (BSD-3-Clause) y `pypdfium2` (Apache-2.0 / BSD-3), "
+    "ambas permisivas. Todo el trato con PDF pasa ahora por un único módulo, "
+    "`backend/services/pdf_utils.py`.",
+    "",
+    "Por qué había que quitarlo: la AGPL obliga a poner el código fuente a "
+    "disposición de quien usa el programa **incluso a través de la red**. Un "
+    "carpintero entrando en `erp.luiggihome.es` activaba esa obligación sin que "
+    "hiciera falta vender ni entregar nada.",
+    "",
+    "La sustitución se validó contra los PDFs reales del proyecto: mismos "
+    "campos de formulario, mismas páginas, mismo tamaño de imagen y mismo "
+    "recuento de trazos; en el render la diferencia media es de 1,1 sobre 255 "
+    "(antialiasing). Lo protege `backend/tests/test_calculo_lectura_pdf.py`, "
+    "que se pone en rojo si alguien vuelve a importar `fitz`.",
+]
+
 ORDEN = {"FUERTE": 0, "DESCONOCIDA": 1, "DÉBIL": 2, "PERMISIVA": 3}
 
 # Explicación escrita a mano del único riesgo real detectado. Va aquí y no
@@ -252,18 +270,31 @@ def informe_md(npm, pip, aviso_npm, aviso_pip):
     L.append("")
 
     fuertes = [f for f in npm + pip if f["clase"] == "FUERTE"]
+    declaradas = [f for f in fuertes if f["directa"]]
+    residuales = [f for f in fuertes if not f["directa"]]
     L.append("## Hallazgo principal")
     L.append("")
-    if not fuertes:
-        L.append("Ninguna dependencia con copyleft fuerte. Nada que impida "
-                 "licenciar el ERP como producto cerrado.")
+    if not declaradas:
+        L.append("**Ninguna dependencia declarada del producto tiene copyleft "
+                 "fuerte.** Nada impide licenciar el ERP como producto cerrado.")
         L.append("")
+        if any(f["paquete"].lower() == "pymupdf" for f in residuales):
+            L.extend(NOTA_RESUELTO_PYMUPDF)
+            L.append("")
     else:
-        for f in fuertes:
+        for f in declaradas:
             L.append(f"### `{f['paquete']}` {f['version']} — {f['licencia']}")
             L.append("")
-        L.extend(NOTA_PYMUPDF if any(f["paquete"].lower() == "pymupdf" for f in fuertes) else [])
-    L.append("")
+        if any(f["paquete"].lower() == "pymupdf" for f in declaradas):
+            L.extend(NOTA_PYMUPDF)
+        L.append("")
+    if residuales:
+        L.append("> Nota: " + ", ".join(f"`{f['paquete']}`" for f in residuales) +
+                 " aparece(n) instalada(s) en la máquina donde se generó este "
+                 "informe pero **no** en `backend/requirements.txt`, así que no "
+                 "viaja(n) con el producto. Es residuo del entorno, no una "
+                 "dependencia.")
+        L.append("")
 
     for titulo, filas, aviso in (("Frontend (npm)", npm, aviso_npm), ("Backend (Python)", pip, aviso_pip)):
         L.append(f"## {titulo}")
@@ -328,15 +359,22 @@ def main():
             f.write(informe_md(npm, pip, aviso_npm, aviso_pip))
         print(f"✓ informe escrito en {os.path.relpath(destino, RAIZ)}")
 
-    riesgos = [f for f in npm + pip if f["clase"] == "FUERTE"]
+    # Solo cuenta como riesgo lo que el producto DECLARA: lo que este instalado
+    # en la maquina del informe y no en requirements.txt no se distribuye.
+    riesgos = [f for f in npm + pip if f["clase"] == "FUERTE" and f["directa"]]
     for titulo, filas, aviso in (("npm", npm, aviso_npm), ("python", pip, aviso_pip)):
         print(f"\n{titulo}: {len(filas)} paquetes — " +
               " · ".join(f"{k}: {v}" for k, v in sorted(resumen(filas).items(),
                                                         key=lambda kv: ORDEN.get(kv[0], 9))))
         if aviso:
             print(f"  ⚠️  {aviso}")
+    otras = [f for f in npm + pip if f["clase"] == "FUERTE" and not f["directa"]]
+    if otras:
+        print("\n· copyleft fuerte instalado pero NO declarado (residuo del "
+              "entorno, no viaja con el producto): " +
+              ", ".join(f["paquete"] for f in otras))
     if riesgos:
-        print(f"\n✗ {len(riesgos)} dependencia(s) COPYLEFT FUERTE (GPL/AGPL):")
+        print(f"\n✗ {len(riesgos)} dependencia(s) DECLARADA(S) con COPYLEFT FUERTE (GPL/AGPL):")
         for f in riesgos:
             print(f"    {f['paquete']} {f['version']} — {f['licencia']} "
                   f"({'directa' if f['directa'] else 'transitiva'})")

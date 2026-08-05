@@ -65,8 +65,22 @@ jobs:
           # (render_packs, ai_engine) para comprobar los codigos 400/403/503.
           # Mongo, Stripe, httpx y python-multipart si van simulados dentro de
           # las pruebas: no se instalan.
-          python -m pip install --quiet pytest fastapi
+          # pypdf/pypdfium2/reportlab son dependencias REALES del backend y las
+          # pruebas de lectura de PDF se saltan solas si no estan: sin ellas el
+          # CI daria verde sin haber comprobado el importador de la plantilla MV,
+          # que es de donde sale el presupuesto.
+          python -m pip install --quiet pytest fastapi pypdf pypdfium2 reportlab pillow
           python -m pytest backend/tests/test_calculo_*.py -q
+
+      # Ninguna prueba puede quedarse fuera por falta de librerias: si alguna se
+      # salta, el CI no esta comprobando lo que cree comprobar.
+      - name: Ninguna prueba saltada por falta de dependencias
+        run: |
+          python -m pytest backend/tests/test_calculo_*.py -q 2>&1 | tee /tmp/pt.log
+          if grep -qE '[0-9]+ skipped' /tmp/pt.log; then
+            echo "::error::hay pruebas saltadas; falta alguna dependencia en el CI"
+            exit 1
+          fi
 
       # Aviso de copyright en cada fichero propio. Es la prueba mas barata de
       # titularidad y la mas facil de perder: basta con que un fichero nuevo

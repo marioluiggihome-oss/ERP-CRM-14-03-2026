@@ -152,11 +152,9 @@ Decisiones **comerciales**, no jurídicas, que hay que cerrar antes de publicarl
 3. **Punto 10** — modelo de precios y qué ocurre con los datos tras la baja.
 4. **Punto 11** — tope de responsabilidad.
 
-Además, este documento presupone que se resuelve el punto abierto de licencias
-de terceros descrito en [`AUDITORIA-LICENCIAS.md`](AUDITORIA-LICENCIAS.md):
-licenciar a un tercero un sistema que incorpora una dependencia AGPL sin haber
-comprado la licencia comercial es precisamente el escenario que esa licencia
-alcanza.
+En cuanto a licencias de terceros, no hay nada que impida licenciar el sistema
+como producto cerrado: la dependencia AGPL que había (PyMuPDF) se retiró el
+05/08/2026. Ver [`AUDITORIA-LICENCIAS.md`](AUDITORIA-LICENCIAS.md).
 
 ---
 
