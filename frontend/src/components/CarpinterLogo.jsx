@@ -38,10 +38,10 @@ export default function CarpinterLogo({ height = 40, tone = 'dark', orange = ORA
     <span className={`inline-flex items-center gap-2.5 ${className}`} style={{ height }}>
       <CarpinterMark size={height} orange={orange} ink={ink} />
       <span
-        className="leading-none"
-        style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: height * 0.56, fontWeight: 700, letterSpacing: '0.01em', color: ink }}
+        className="font-black tracking-tight leading-none"
+        style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: height * 0.62, color: ink }}
       >
-        carpinter<span style={{ color: orange, fontWeight: 800 }}>.io</span>
+        carpinter<span style={{ color: orange }}>.io</span>
       </span>
     </span>
   );
