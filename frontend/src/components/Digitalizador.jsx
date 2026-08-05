@@ -460,7 +460,9 @@ const Digitalizador = ({ state, setState }) => {
     const newLine = {
       id: `MANUAL-${Date.now()}`,
       quantity: 1,
-      reference: 'MANUAL',
+      // Sin referencia: la escribe quien crea la linea. Poner "MANUAL" obligaba
+      // a borrarlo antes de teclear la referencia de verdad.
+      reference: '',
       description: 'NUEVA LÍNEA PERSONALIZADA...',
       price: 0,
       discount: 0,
@@ -1338,7 +1340,8 @@ const Digitalizador = ({ state, setState }) => {
                           {/* Campo REF ahora es EDITABLE */}
                           <input
                             type="text"
-                            value={line.reference || (line.isManual ? 'MANUAL' : 'AUTO')}
+                            value={line.reference || (line.isManual ? '' : 'AUTO')}
+                            placeholder={line.isManual ? 'ref.' : ''}
                             onChange={(e) => updateLine(line.id, 'reference', e.target.value)}
                             className={`w-20 bg-transparent text-center text-xs font-bold uppercase outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 ${line.isManual ? 'text-orange-600' : 'text-indigo-400'}`}
                           />
