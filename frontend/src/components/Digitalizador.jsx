@@ -485,18 +485,17 @@ const Digitalizador = ({ state, setState }) => {
       brutoLineas += linePrice;
     });
 
-    // Calculate base with discounts
+        // Calculate base with discounts + markup por línea
     let baseImponible = 0;
     lines.forEach(line => {
       const linePrice = line.price * qtyOf(line);
       let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
-      baseImponible += linePrice * (1 - lineDiscount / 100);
+      let netLine = linePrice * (1 - lineDiscount / 100);
+      // Usar lineMarkup si está definido, sino el global
+      const effectiveMarkup = (line.lineMarkup != null && line.lineMarkup !== '') ? Number(line.lineMarkup) : globalMarkup;
+      if (effectiveMarkup > 0) netLine = netLine * (1 + effectiveMarkup / 100);
+      baseImponible += netLine;
     });
-
-    // Aplicar incremento global de margen (SIEMPRE si existe, independiente del candado)
-    if (globalMarkup > 0) {
-      baseImponible = baseImponible * (1 + globalMarkup / 100);
-    }
 
     const iva = baseImponible * (ivaRate / 100);
     const total = baseImponible + iva;
@@ -533,16 +532,15 @@ const Digitalizador = ({ state, setState }) => {
   const costTotals = calculateCostTotals();
 
   // Get net price for a line (con incremento de margen si aplica)
-  const getLineNet = (line) => {
+    const getLineNet = (line) => {
     const linePrice = line.price * qtyOf(line);
     let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
     let netPrice = linePrice * (1 - lineDiscount / 100);
-    
-    // Aplicar incremento global de margen (SIEMPRE si existe, independiente del candado)
-    if (globalMarkup > 0) {
-      netPrice = netPrice * (1 + globalMarkup / 100);
+    // Usar lineMarkup si está definido (por línea), sino el global
+    const effectiveMarkup = (line.lineMarkup != null && line.lineMarkup !== '') ? Number(line.lineMarkup) : globalMarkup;
+    if (effectiveMarkup > 0) {
+      netPrice = netPrice * (1 + effectiveMarkup / 100);
     }
-    
     return netPrice;
   };
 
@@ -1426,8 +1424,22 @@ const Digitalizador = ({ state, setState }) => {
                         )}
                         {/* Columna INC% solo visible cuando está desbloqueado y valorado */}
                         {isValorado && !isLocked && globalMarkup > 0 && (
-                          <td className="px-4 py-3 text-center">
-                            <span className="text-emerald-600 font-bold">{globalMarkup}</span>
+                          <td className="px-4 py-3 text-center" title="INC% de esta línea (vacío = usa el global)">
+                            <input
+                              type="text"
+                              value={line.lineMarkup != null && line.lineMarkup !== '' ? line.lineMarkup : ''}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw === '' || raw === '-') {
+                                  updateLine(line.id, 'lineMarkup', '');
+                                } else {
+                                  const num = parseFloat(raw.replace(',', '.'));
+                                  updateLine(line.id, 'lineMarkup', isNaN(num) ? '' : num);
+                                }
+                              }}
+                              placeholder={String(globalMarkup)}
+                              className="w-14 bg-emerald-50 rounded px-2 py-1 text-center font-bold text-emerald-700 outline-none border border-emerald-200 hover:border-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 cursor-text"
+                            />
                           </td>
                         )}
                         {/* Neto solo si valorado */}
