@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Recarga de renders con tarjeta: lo que puede costar dinero.
 
 Stripe y Mongo se simulan; el router y el servicio son el codigo real. Se atacan

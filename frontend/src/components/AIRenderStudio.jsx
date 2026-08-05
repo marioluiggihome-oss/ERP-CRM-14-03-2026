@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 // Barra de progreso de un análisis. Una llamada a la IA no informa de su avance,
 // así que poner un porcentaje seria inventarlo: la barra se mueve para decir
 // "sigo", y al lado va el TIEMPO transcurrido y, cuando se procesan varias

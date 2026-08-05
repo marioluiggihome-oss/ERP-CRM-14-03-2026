@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Cobro con tarjeta de los packs de renders (Stripe Checkout).
 
 Queda INERTE mientras no existan las variables de entorno: sin claves, el

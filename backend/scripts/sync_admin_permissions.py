@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Sincroniza el usuario admin principal con TODOS los permisos posibles.
 El usuario admin es el que se loguea con mario@luiggihome.es / Mario2025*

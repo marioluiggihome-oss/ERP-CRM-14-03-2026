@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 mv_relacion.py — Lee una RELACIÓN de muebles MV escrita a mano en el PDF de
 nomenclaturas rellenable (o cualquier PDF/texto con esa notación) y devuelve los

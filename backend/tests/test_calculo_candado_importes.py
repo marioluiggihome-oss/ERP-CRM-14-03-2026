@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """CANDADO de Rentabilidad: quien entra, y que se ve cuando esta echado.
 
 Dos promesas que pidio el master el 05/08 y que no se cambian sin permiso:

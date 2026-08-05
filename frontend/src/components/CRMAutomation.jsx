@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 /**
  * CRMAutomation — Automatizaciones / Workflows (fase 4): reglas "disparador →
  * acción" sobre los contactos, evaluadas al entrar (sin email) y con botón

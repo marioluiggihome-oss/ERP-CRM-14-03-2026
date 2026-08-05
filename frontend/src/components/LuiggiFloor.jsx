@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 /**
  * Luiggi Floor — división de suelo SPC porcelánico.
  * 3 colores (Roble Volare, Roble Fusión, Roble Vera) en fichas llamativas.

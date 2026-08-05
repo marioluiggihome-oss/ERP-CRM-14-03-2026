@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Criterio profesional: lo que un buen equipo miraria antes de pedir.
 
 No inventa nada ni corrige por su cuenta: AVISA. Y avisa de lo que de verdad

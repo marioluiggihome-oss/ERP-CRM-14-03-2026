@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 PropData AI — Prospección de obra nueva (promociones inmobiliarias) con Gemini.
 Basado en el app de AI Studio "PropData AI": extrae promociones desde portales

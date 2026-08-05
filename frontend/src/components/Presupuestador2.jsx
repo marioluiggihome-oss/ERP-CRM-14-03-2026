@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,

@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 // Tira de características del suelo SPC (uso doméstico/comercial, antiestático,
 // ignífugo, calefacción radiante, antideslizante, UNICLIC, CE) como data-URI.
 // Generado desde assets/floor-features.jpg — no editar a mano.

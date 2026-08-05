@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Cocinas IA 2 — Render fotorrealista de cocina a partir de planos/alzados (Gemini
 image). Portado de "KitchAI Design Studio". Reutiliza services.llm_vision.

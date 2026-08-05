@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 /**
  * CRMMarketing — Marketing Hub (fase 1): segmentación de la base de contactos +
  * campañas de email (SendGrid). Define un segmento con filtros, previsualiza el

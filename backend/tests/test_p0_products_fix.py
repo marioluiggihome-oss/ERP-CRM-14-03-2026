@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Test P0 Bug Fix: 733 new products (COSTADOS, REGLETAS, ZOCALOS, CORNISAS, ESTANTES, VITRINAS) 
 now have module='montada' and appear in frontend.

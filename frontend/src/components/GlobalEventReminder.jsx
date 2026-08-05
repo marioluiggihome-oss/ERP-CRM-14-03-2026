@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { Clock, X, User, CalendarClock, MapPin, AlignLeft, CalendarDays } from 'lucide-react';
 import { crmCalendarAPI } from '../services/api';

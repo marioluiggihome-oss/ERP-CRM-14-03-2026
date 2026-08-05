@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Corrige el pointValue de la biblioteca MV a 3.33 EUR/punto (valor oficial MV)
 si está mal seteado (p.ej. 1.0 por el valor por defecto antiguo).

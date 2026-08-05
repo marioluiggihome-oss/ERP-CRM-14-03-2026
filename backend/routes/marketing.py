@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 marketing.py — Marketing Hub del CRM (fase 1): SEGMENTACIÓN de la base de
 contactos + CAMPAÑAS de email (envío por SendGrid) con estadísticas básicas.

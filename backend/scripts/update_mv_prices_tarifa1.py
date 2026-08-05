@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Script para actualizar TODOS los precios de productos MV según TARIFA 1
 Basado en extracción manual de las 5 páginas de tarifa proporcionadas por el usuario

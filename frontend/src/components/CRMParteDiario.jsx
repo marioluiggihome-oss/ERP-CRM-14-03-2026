@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 /**
  * CRMParteDiario - Parte/Informe de visitas por VOZ (IA), solo CRM.
  * Dictas las visitas de la mañana -> la IA estructura el informe -> exportar a

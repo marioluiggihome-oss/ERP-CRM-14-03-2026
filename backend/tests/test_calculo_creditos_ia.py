@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Créditos de IA: los renders comprados NO caducan.
 
 Protege el fallo que se corrigió el 02/08: los packs se guardaban en la ficha del

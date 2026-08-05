@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Genera el PowerPoint comercial de Luiggi Home ERP (deck de venta SaaS).
 
 Uso: python3 scripts/generate_pitch_deck.py

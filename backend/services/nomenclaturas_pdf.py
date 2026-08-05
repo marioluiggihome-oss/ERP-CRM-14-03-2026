@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 nomenclaturas_pdf.py — Genera el catálogo de NOMENCLATURAS MV en PDF, bien
 maquetado, con un DIBUJO por familia y CAMPOS RELLENABLES (formulario AcroForm)

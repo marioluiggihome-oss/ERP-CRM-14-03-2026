@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Script para recrear los 9 comerciales en la BD Atlas si no existen.
 Idempotente: si el usuario ya existe (por username), se actualizan sus permisos.
