@@ -18,6 +18,12 @@ const AIUsageCard = () => {
   const [cVision, setCVision] = useState('');
   const [spendUrl, setSpendUrl] = useState('');
   const [defCredits, setDefCredits] = useState('');
+  // Cupo de las cuentas de la casa. Se puso a 40 a proposito para medir lo
+  // que da de si una bolsa de renders; hasta ahora solo se cambiaba tocando
+  // codigo, asi que al agotarlo no habia salida hasta el dia 1.
+  const [masterCredits, setMasterCredits] = useState('');
+  const [reiniciando, setReiniciando] = useState(false);
+  const [avisoBolsa, setAvisoBolsa] = useState('');
   const [saving, setSaving] = useState(false);
   const [probing, setProbing] = useState(false);
   const [probe, setProbe] = useState(null);
@@ -45,6 +51,7 @@ const AIUsageCard = () => {
         setCVision(d.cost_per?.vision != null ? String(d.cost_per.vision) : '');
         setSpendUrl(d.spend_url || '');
         setDefCredits(d.default_credits ? String(d.default_credits) : '');
+        setMasterCredits(d.master_credits != null ? String(d.master_credits) : '');
       }
     } catch {}
   };
@@ -59,10 +66,28 @@ const AIUsageCard = () => {
           cost_per: { render: Number(cRender) || 0, vision: Number(cVision) || 0 },
           spend_url: spendUrl || '',
           default_credits: Number(defCredits) || 0,
+          master_credits: Number(masterCredits) || 0,
         }),
       });
       if (r.ok) setData(await r.json());
     } catch {} finally { setSaving(false); }
+  };
+  const reiniciarBolsa = async () => {
+    setReiniciando(true); setAvisoBolsa('');
+    try {
+      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage/reiniciar-bolsa`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: '{}',
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.success) {
+        const quedan = d.credits?.restantes;
+        setAvisoBolsa(quedan != null ? `Hecho: ${quedan} renders` : 'Bolsa reiniciada');
+        load();
+      } else {
+        setAvisoBolsa(d.detail || 'No se ha podido reiniciar');
+      }
+    } catch { setAvisoBolsa('Error de red'); }
+    finally { setReiniciando(false); }
   };
   if (!data) return null;
   const kinds = Object.entries(data.by_kind || {}).sort((a, b) => b[1] - a[1]);
@@ -148,6 +173,18 @@ const AIUsageCard = () => {
           <input type="number" min="0" value={defCredits} onChange={e => setDefCredits(e.target.value)} placeholder="0"
             className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />
           <span className="text-xs text-slate-400">créditos IA/mes por usuario (si no tiene valor propio)</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500 w-28">Mi bolsa (master)</span>
+          <input type="number" min="0" value={masterCredits} onChange={e => setMasterCredits(e.target.value)} placeholder="0"
+            className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />
+          <span className="text-xs text-slate-400">renders/mes · 0 = sin límite</span>
+          <button onClick={reiniciarBolsa} disabled={reiniciando}
+            title="Pone a cero lo gastado este mes. No toca los renders comprados."
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">
+            {reiniciando ? 'Reiniciando…' : 'Reiniciar mi bolsa'}
+          </button>
+          {avisoBolsa && <span className="text-xs font-semibold text-emerald-600">{avisoBolsa}</span>}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-500 w-28">Panel del proveedor</span>

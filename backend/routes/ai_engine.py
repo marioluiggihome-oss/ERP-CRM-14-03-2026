@@ -487,13 +487,12 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     # Defensivo: si el contador falla por un error interno, NO se bloquea; solo
     # se bloquea cuando realmente no quedan créditos (restantes <= 0).
     try:
-        from services.ai_usage import get_user_credits, consume_credits
+        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
         credits = await get_user_credits(user)
         if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
             raise HTTPException(
                 status_code=402,
-                detail=(f"Sin créditos de IA: has agotado tu bolsa mensual "
-                        f"({int(credits.get('asignados', 0) or 0)}). Contacta con tu administrador."),
+                detail=mensaje_sin_creditos(user, credits),
             )
         await consume_credits(user, "render")
     except HTTPException:
@@ -607,7 +606,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
     # Enforcement de créditos: cada vista cuesta un render. Bloquea solo si no hay
     # créditos suficientes; el contador nunca bloquea por error interno.
     try:
-        from services.ai_usage import get_user_credits, consume_credits
+        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
         credits = await get_user_credits(user)
         if not credits.get("ilimitado"):
             restantes = int(credits.get("restantes", 0) or 0)

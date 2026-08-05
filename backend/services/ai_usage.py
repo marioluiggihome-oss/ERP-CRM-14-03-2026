@@ -142,6 +142,7 @@ async def get_usage_summary():
             "images": cur.get("images", {}),
         },
         "spend_url": cfg.get("spend_url", ""),
+        "master_credits": int(cfg.get("master_credits", CUPO_MASTER_POR_DEFECTO) or 0),
         "default_credits": int(cfg.get("default_credits", 0) or 0),
         "credits_per": cfg.get("credits_per", {"render": 1, "vision": 0}) or {"render": 1, "vision": 0},
     }
@@ -163,6 +164,11 @@ async def set_config(payload: dict):
         upd["default_credits"] = int(p.get("default_credits", 0) or 0)
     if "credits_per" in p and isinstance(p["credits_per"], dict):
         upd["credits_per"] = {k: int(v or 0) for k, v in p["credits_per"].items()}
+    # Cupo de las cuentas de la casa. 0 = ilimitado. Se toca desde Ajustes →
+    # Consumo de IA; antes solo se podia cambiar editando el codigo, asi que el
+    # master se quedaba sin renders y sin forma de seguir hasta el dia 1.
+    if "master_credits" in p:
+        upd["master_credits"] = max(int(p.get("master_credits", 0) or 0), 0)
     if upd:
         await db.ai_usage_config.update_one({"_id": "cfg"}, {"$set": upd}, upsert=True)
 
@@ -315,6 +321,44 @@ async def get_user_credits(user: dict) -> dict:
         "restantes": restante_plan + saldo,
         "ilimitado": False,
     }
+
+
+def mensaje_sin_creditos(user: dict, credits: dict) -> str:
+    """Aviso de bolsa agotada, dicho a quien lo lee.
+
+    A un cliente hay que decirle que hable con su administrador. Al master eso
+    no le sirve de nada: el administrador ES él, y quedarse mirando el mensaje
+    sin saber dónde se toca el cupo es exactamente lo que pasaba.
+    """
+    bolsa = int((credits or {}).get("asignados", 0) or 0)
+    base = f"Sin créditos de IA: has agotado tu bolsa mensual ({bolsa})."
+    if _es_master(user):
+        return (f"{base} Es el cupo que te pusiste para medir: cámbialo o "
+                f"reinicia la bolsa en Ajustes → Consumo de IA.")
+    return f"{base} Contacta con tu administrador."
+
+
+async def reiniciar_consumo_mes(user_id: str) -> bool:
+    """Pone a cero lo consumido ESTE MES por un usuario.
+
+    Es el "vuelve a empezar" de la bolsa mensual, sin esperar al día 1 y sin
+    tocar el saldo comprado (que es dinero pagado y vive aparte, en
+    `ai_credit_balance`). Sirve para que el master no se quede tirado cuando
+    agota el cupo que él mismo se puso para medir.
+    """
+    if db is None or not user_id:
+        return False
+    try:
+        await db.ai_credits.update_one(
+            {"user_id": str(user_id), "month": _month()},
+            {"$set": {"consumed": 0, "gastado_saldo": 0,
+                      "reiniciado": datetime.now(timezone.utc).isoformat()},
+             "$setOnInsert": {"user_id": str(user_id), "month": _month()}},
+            upsert=True,
+        )
+        return True
+    except Exception:
+        return False
 
 
 async def añadir_saldo(user_id: str, renders: int) -> int:

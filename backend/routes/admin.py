@@ -323,6 +323,28 @@ async def ai_usage_config(payload: dict, user=Depends(require_admin)):
     return {"success": True, **(await get_usage_summary())}
 
 
+@router.post("/ai-usage/reiniciar-bolsa")
+async def ai_usage_reiniciar_bolsa(payload: dict = None, user=Depends(require_admin)):
+    """Pone a cero la bolsa de renders del mes.
+
+    Sin `user_id` reinicia la del propio master, que es el caso para el que se
+    hizo: se pone cupo a su cuenta para medir lo que da de sí una bolsa, lo
+    agota, y hasta ahora no había forma de seguir sin editar código o esperar
+    al día 1. No toca el saldo COMPRADO: eso es dinero pagado y vive aparte.
+    """
+    from services.ai_usage import reiniciar_consumo_mes, get_user_credits
+    destino = str((payload or {}).get("user_id") or "").strip() or str((user or {}).get("id") or "")
+    if not destino:
+        raise HTTPException(status_code=400, detail="No se sabe a quién reiniciarle la bolsa.")
+    ok = await reiniciar_consumo_mes(destino)
+    if not ok:
+        raise HTTPException(status_code=500, detail="No se ha podido reiniciar la bolsa.")
+    # El estado que se devuelve es el del usuario reiniciado si es el propio
+    # master; para otro usuario haría falta su ficha, y aquí no la tenemos.
+    creditos = await get_user_credits(user) if destino == str((user or {}).get("id") or "") else None
+    return {"success": True, "user_id": destino, "credits": creditos}
+
+
 @router.post("/ai-usage/probe")
 async def ai_usage_probe(payload: dict = None, user=Depends(require_admin)):
     """Medidor en tiempo real: lanza UNA petición real a Gemini y devuelve los
