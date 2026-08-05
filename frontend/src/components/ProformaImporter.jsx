@@ -143,7 +143,12 @@ export default function ProformaImporter({ esMaster }) {
   const [items, setItems] = useState([]);
   const [overrides, setOverrides] = useState({}); // { idx: { tipo, color, grosor } }
   const [deletedRows, setDeletedRows] = useState(new Set());
-  const [bloqueado, setBloqueado] = useState(false);
+  // Candado = OCULTAR DINERO, no bloquear la edición. Esta pantalla se enseña
+  // a veces con alguien delante (cliente, montador, proveedor) y lo que no
+  // puede verse es el coste, el descuento y el margen; seguir tocando medidas,
+  // códigos o el pedido no molesta a nadie. Bloquear la edición no servía para
+  // nada: quien entra aquí ya es master.
+  const [ocultarImportes, setOcultarImportes] = useState(false);
   const [showDesc2, setShowDesc2] = useState(false);
   const fileRef = useRef(null);
 
@@ -522,21 +527,27 @@ export default function ProformaImporter({ esMaster }) {
   if (!esMaster) return null;
 
   return (
-    <div className={`bg-white border-2 rounded-2xl overflow-hidden shadow-sm mb-4 ${bloqueado ? 'border-slate-400' : 'border-amber-300'}`}>
+    <div className={`bg-white border-2 rounded-2xl overflow-hidden shadow-sm mb-4 ${ocultarImportes ? 'border-slate-400' : 'border-amber-300'}`}>
       {/* Cabecera */}
-      <div className={`flex items-center justify-between gap-3 px-4 py-3 border-b ${bloqueado ? 'bg-slate-100 border-slate-300' : 'bg-amber-50 border-amber-200'}`}>
+      <div className={`flex items-center justify-between gap-3 px-4 py-3 border-b ${ocultarImportes ? 'bg-slate-100 border-slate-300' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-200 px-2 py-0.5 rounded">Solo master</span>
           <h3 className="text-sm font-black text-amber-900">Importar presupuesto de venta → coste / precio</h3>
         </div>
         <div className="flex items-center gap-2">
-          {bloqueado && <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bloqueado</span>}
+          {ocultarImportes && (
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+              Importes ocultos
+            </span>
+          )}
           <button
-            onClick={() => setBloqueado(v => !v)}
-            title={bloqueado ? 'Desbloquear edición' : 'Bloquear edición'}
-            className={`p-1.5 rounded-lg transition-colors ${bloqueado ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+            onClick={() => setOcultarImportes(v => !v)}
+            title={ocultarImportes
+              ? 'Volver a ver precios, costes y margen'
+              : 'Ocultar precios, costes y margen (para enseñar la pantalla)'}
+            className={`p-1.5 rounded-lg transition-colors ${ocultarImportes ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
           >
-            {bloqueado ? <Lock size={15} /> : <Unlock size={15} />}
+            {ocultarImportes ? <Lock size={15} /> : <Unlock size={15} />}
           </button>
         </div>
       </div>
@@ -545,8 +556,8 @@ export default function ProformaImporter({ esMaster }) {
         {/* Botones de acción */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => !bloqueado && fileRef.current?.click()}
-            disabled={cargando || bloqueado}
+            onClick={() => fileRef.current?.click()}
+            disabled={cargando}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-sm text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
           >
             {cargando ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
@@ -562,7 +573,7 @@ export default function ProformaImporter({ esMaster }) {
           )}
 
           {/* Guardar proyecto */}
-          {items.length > 0 && !bloqueado && (
+          {items.length > 0 && (
             <div className="flex items-center gap-1 ml-auto">
               <input
                 type="text"
@@ -623,7 +634,18 @@ export default function ProformaImporter({ esMaster }) {
 
         {items.length > 0 && (
           <>
-            {/* Panel de costes */}
+            {/* Panel de costes. Con el candado echado no se enseña: aquí están
+                el descuento, el precio del herraje, la mano de obra y el margen,
+                que es justo lo que no puede leer nadie que no sea el master. */}
+            {ocultarImportes ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-center gap-2 text-slate-500">
+                <Lock size={13} />
+                <span className="text-[11px] font-black uppercase tracking-wide">
+                  Precios, costes y margen ocultos
+                </span>
+                <span className="text-[11px]">— abre el candado para verlos.</span>
+              </div>
+            ) : (
             <div className="rounded-xl border border-slate-200 p-3">
               <div className="flex items-center gap-1.5 mb-3 text-slate-600">
                 <Calculator size={14} />
@@ -650,8 +672,8 @@ export default function ProformaImporter({ esMaster }) {
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Dto casco 1 %</span>
                   <input
                     type="number" step="any" value={p.desc1} onChange={setNum('desc1')}
-                    disabled={bloqueado}
-                    className="px-2 py-1.5 border-2 border-amber-200 rounded-lg text-sm font-bold w-28 disabled:opacity-60"
+                   
+                    className="px-2 py-1.5 border-2 border-amber-200 rounded-lg text-sm font-bold w-28"
                   />
                 </label>
                 {showDesc2
@@ -663,8 +685,8 @@ export default function ProformaImporter({ esMaster }) {
                       </span>
                       <input
                         type="number" step="any" value={p.desc2} onChange={setNum('desc2')}
-                        disabled={bloqueado}
-                        className="px-2 py-1.5 border-2 border-amber-100 rounded-lg text-sm font-bold w-28 disabled:opacity-60"
+                       
+                        className="px-2 py-1.5 border-2 border-amber-100 rounded-lg text-sm font-bold w-28"
                       />
                     </label>
                   )
@@ -683,12 +705,12 @@ export default function ProformaImporter({ esMaster }) {
               <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <span className="text-[11px] font-black uppercase tracking-wide text-slate-600">Herraje (set + fondo)</span>
                 <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">Cajones/gavetas:
-                  <select value={marcaCaj} onChange={e => cambiarMarcaCaj(e.target.value)} disabled={bloqueado} className="border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold disabled:opacity-60">
+                  <select value={marcaCaj} onChange={e => cambiarMarcaCaj(e.target.value)} className="border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold">
                     <option value="blum">BLUM</option><option value="gtv">GTV</option>
                   </select>
                 </label>
                 <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">Bisagras:
-                  <select value={marcaBis} onChange={e => cambiarMarcaBis(e.target.value)} disabled={bloqueado} className="border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold disabled:opacity-60">
+                  <select value={marcaBis} onChange={e => cambiarMarcaBis(e.target.value)} className="border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold">
                     <option value="blum">BLUM</option><option value="emuca">EMUCA</option>
                   </select>
                 </label>
@@ -697,21 +719,22 @@ export default function ProformaImporter({ esMaster }) {
                 {[['bisagra', 'Bisagra € (×2/puerta)'], ['pata', 'Pata € (×4/bajo)'], ['colgador', 'Colgador € (×2/alto)'], ['cajon', 'Cajón €'], ['gaveta', 'Gaveta €']].map(([k, l]) => (
                   <label key={k} className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">{l}</span>
-                    <input type="number" step="any" value={p[k]} onChange={setNum(k)} disabled={bloqueado} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-60" />
+                    <input type="number" step="any" value={p[k]} onChange={setNum(k)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
                   </label>
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <label className="flex flex-col gap-1">
                   <span className="text-[10px] font-black text-emerald-600 uppercase">Mano de obra € (coste producción)</span>
-                  <input type="number" step="any" value={p.manoObra} onChange={setNum('manoObra')} disabled={bloqueado} className="px-2 py-1.5 border-2 border-emerald-200 rounded-lg text-sm font-bold disabled:opacity-60" />
+                  <input type="number" step="any" value={p.manoObra} onChange={setNum('manoObra')} className="px-2 py-1.5 border-2 border-emerald-200 rounded-lg text-sm font-bold" />
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className="text-[10px] font-black text-indigo-600 uppercase">Margen € a ganar (0 = coste)</span>
-                  <input type="number" step="any" value={p.margen} onChange={setNum('margen')} disabled={bloqueado} className="px-2 py-1.5 border-2 border-indigo-200 rounded-lg text-sm font-bold disabled:opacity-60" />
+                  <input type="number" step="any" value={p.margen} onChange={setNum('margen')} className="px-2 py-1.5 border-2 border-indigo-200 rounded-lg text-sm font-bold" />
                 </label>
               </div>
             </div>
+            )}
 
             {/* Lo escrito en el PDF que NO se ha sabido interpretar. Se enseña
                 tal cual, con el recuadro del que sale y el codigo parecido que
@@ -764,22 +787,24 @@ export default function ProformaImporter({ esMaster }) {
                 {exportando ? <Loader size={11} className="animate-spin" /> : <Download size={11} />} Todos
               </button>
               <span className="mx-1 w-px h-4 bg-indigo-200" />
-              <button onClick={() => setExcluidas({})} disabled={bloqueado}
+              <button onClick={() => setExcluidas({})}
                 className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
                 Marcar todas
               </button>
-              <button onClick={() => setExcluidas(Object.fromEntries(calc.rows.map(r => [r._origIdx, true])))} disabled={bloqueado}
+              <button onClick={() => setExcluidas(Object.fromEntries(calc.rows.map(r => [r._origIdx, true])))}
                 className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
                 Desmarcar todas
               </button>
-              <button onClick={anadirLinea} disabled={bloqueado}
+              <button onClick={anadirLinea}
                 className="ml-auto px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40">
                 + Añadir línea
               </button>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full min-w-[1180px] text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {/* Con el candado echado la tabla pierde las ocho columnas de dinero
+                  (y por eso también el ancho mínimo: sin ellas cabe de sobra). */}
+              <table className={`w-full text-xs ${ocultarImportes ? 'min-w-[640px]' : 'min-w-[1180px]'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
                 <thead className="bg-slate-50 text-slate-500 [&_th]:whitespace-nowrap">
                   <tr className="text-left">
                     <th className="px-2 py-2 w-6"></th>
@@ -790,14 +815,16 @@ export default function ProformaImporter({ esMaster }) {
                     <th className="px-2 py-2 text-center" title="Unidades de la línea: multiplican casco, herraje, mano de obra y puertas">Uds</th>
                     <th className="px-2 py-2">Casco ACB (equiv.)</th>
                     <th className="px-2 py-2 text-center">P/C/G</th>
-                    <th className="px-2 py-2 text-right text-slate-400">Val. Alvic</th>
-                    <th className="px-2 py-2 text-right">Tarifa ACB</th>
-                    <th className="px-2 py-2 text-right">Casco coste</th>
-                    <th className="px-2 py-2 text-right">Herraje</th>
-                    <th className="px-2 py-2 text-right">Coste mat.</th>
-                    <th className="px-2 py-2 text-right">Mano obra</th>
-                    <th className="px-2 py-2 text-right">Puertas</th>
-                    <th className="px-2 py-2 text-right font-black">Total línea</th>
+                    {!ocultarImportes && <>
+                      <th className="px-2 py-2 text-right text-slate-400">Val. Alvic</th>
+                      <th className="px-2 py-2 text-right">Tarifa ACB</th>
+                      <th className="px-2 py-2 text-right">Casco coste</th>
+                      <th className="px-2 py-2 text-right">Herraje</th>
+                      <th className="px-2 py-2 text-right">Coste mat.</th>
+                      <th className="px-2 py-2 text-right">Mano obra</th>
+                      <th className="px-2 py-2 text-right">Puertas</th>
+                      <th className="px-2 py-2 text-right font-black">Total línea</th>
+                    </>}
                     <th className="px-2 py-2">Pedido a</th>
                   </tr>
                 </thead>
@@ -806,7 +833,7 @@ export default function ProformaImporter({ esMaster }) {
                     <FilaMueble
                       key={r._origIdx}
                       r={r}
-                      bloqueado={bloqueado}
+                      ocultarImportes={ocultarImportes}
                       override={overrides[r._origIdx] || {}}
                       onOverride={(ov) => setOverrides(prev => ({ ...prev, [r._origIdx]: { ...(prev[r._origIdx] || {}), ...ov } }))}
                       onDelete={() => setDeletedRows(prev => new Set([...prev, r._origIdx]))}
@@ -824,7 +851,9 @@ export default function ProformaImporter({ esMaster }) {
               </table>
             </div>
 
-            {/* Resumen económico */}
+            {/* Resumen económico. Es lo primero que se lee de un vistazo: con el
+                candado echado no se enseña ni en gris, se quita. */}
+            {!ocultarImportes && (
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border border-slate-200 p-3 text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-slate-400 text-xs">Valor Alvic (presupuesto proveedor)</span><b className="text-slate-400">{eur(calc.totAlvic)}</b></div>
@@ -854,21 +883,22 @@ export default function ProformaImporter({ esMaster }) {
                 <div className="flex justify-between border-t border-indigo-200 pt-1 text-base"><span className="font-black text-indigo-900">PRECIO DE VENTA</span><b className="text-indigo-900">{eur(calc.precioVenta)}</b></div>
               </div>
             </div>
+            )}
 
             {/* Aviso puertas + sin equivalencia */}
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span>
                   <b>Puertas a cotizar:</b> {calc.totPuertas} puerta(s) — el casco ACB va desnudo.
-                  {calc.puertas.length > 0 && (
+                  {calc.puertas.length > 0 && !ocultarImportes && (
                     <label className="ml-3 inline-flex items-center gap-1">
                       <span className="text-slate-500">€/m²:</span>
                       <input
                         type="number" step="any" value={precioM2Puerta}
                         onChange={e => setPrecioM2Puerta(e.target.value)}
-                        disabled={bloqueado}
+                       
                         placeholder="0"
-                        className="w-16 px-1.5 py-0.5 border border-amber-300 rounded text-xs font-bold disabled:opacity-60"
+                        className="w-16 px-1.5 py-0.5 border border-amber-300 rounded text-xs font-bold"
                       />
                     </label>
                   )}
@@ -895,7 +925,7 @@ export default function ProformaImporter({ esMaster }) {
                 costePuertas={calc.costePuertas}
                 puertasEditadas={puertasEditadas}
                 setPuertasEditadas={setPuertasEditadas}
-                bloqueado={bloqueado}
+                ocultarImportes={ocultarImportes}
                 onExportar={exportarPedidoPuertas}
               />
             )}
@@ -907,7 +937,7 @@ export default function ProformaImporter({ esMaster }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod }) {
+function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod }) {
   const [editando, setEditando] = useState(false);
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
   const colorActual = override.color || (r._acb ? r._acb._color : 'grafito');
@@ -916,29 +946,23 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
   return (
     <tr className={`border-t border-slate-100 ${r._herrajeEsp ? 'bg-orange-50' : ''}`}>
       <td className="px-1 py-1.5">
-        {!bloqueado && (
-          <button onClick={onDelete} className="text-slate-300 hover:text-red-500 transition-colors">
-            <Trash2 size={12} />
-          </button>
-        )}
+        <button onClick={onDelete} className="text-slate-300 hover:text-red-500 transition-colors">
+          <Trash2 size={12} />
+        </button>
       </td>
       <td className="px-1 py-1.5 text-center">
-        <input type="checkbox" checked={r._pedir} disabled={bloqueado}
+        <input type="checkbox" checked={r._pedir}
           onChange={e => onPedir(e.target.checked)} title="Incluir esta línea en el pedido" />
       </td>
       <td className="px-2 py-1.5">{r.n}</td>
       <td className="px-2 py-1.5 font-mono">
-        {bloqueado ? r.cod : (
-          <input value={r.cod || ''} onChange={e => onCod(e.target.value)} placeholder="código"
-            className="w-24 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
-        )}
+        <input value={r.cod || ''} onChange={e => onCod(e.target.value)} placeholder="código"
+          className="w-24 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
       </td>
       <td className="px-2 py-1.5 max-w-[180px]">
-        {bloqueado
-          ? <span className="truncate block" title={`${r.descripcion} · ${r.color}`}>{r.descripcion}</span>
-          : <input value={r.descripcion || ''} onChange={e => onDescripcion(e.target.value)}
-              title={`${r.descripcion} · ${r.color}`}
-              className="w-full min-w-[150px] px-1 py-0.5 border border-slate-200 rounded text-xs" />}
+        <input value={r.descripcion || ''} onChange={e => onDescripcion(e.target.value)}
+          title={`${r.descripcion} · ${r.color}`}
+          className="w-full min-w-[150px] px-1 py-0.5 border border-slate-200 rounded text-xs" />
         <div className="flex items-center gap-1 flex-wrap">
           {r.herrajeBlum && <span className="text-[9px] font-black text-orange-600">BLUM</span>}
           {r._herrajeEsp && (
@@ -956,7 +980,7 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
         </span>
       </td>
       <td className="px-2 py-1.5 text-slate-600 min-w-[160px]">
-        {editando && !bloqueado ? (
+        {editando ? (
           <div className="flex flex-col gap-1">
             <select
               value={tipoActual}
@@ -995,7 +1019,7 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
                 ? `${r._acb.tipo} ${r._acb.ancho} · ${r._acb._colorLbl} ${r._acb.grosor}`
                 : (r.esMueble ? <span className="text-red-500 font-bold">sin equivalencia</span> : '—')}
             </span>
-            {!bloqueado && r.esMueble && (
+            {r.esMueble && (
               <button onClick={() => setEditando(true)} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-indigo-600">
                 <Edit2 size={10} />
               </button>
@@ -1004,16 +1028,19 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
         )}
       </td>
       <td className="px-2 py-1.5 text-center">{r.puertas}/{r.cajones}/{r.gavetas}</td>
-      <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>
-      <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>
-      <td className="px-2 py-1.5 text-right whitespace-nowrap">{eur(r._casco)}</td>
-      <td className="px-2 py-1.5 text-right whitespace-nowrap" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
-        {r._herraje ? eur(r._herraje) : '—'}
-      </td>
-      <td className="px-2 py-1.5 text-right text-slate-600 whitespace-nowrap">{eur(r._mat)}</td>
-      {/* Mano de obra de ESTA linea: vacia = la general del mueble. */}
-      <td className="px-2 py-1.5 text-right">
-        {bloqueado ? eur(r._mo) : (
+      {/* Dinero de la línea. Con el candado echado no se pinta ninguna de estas
+          celdas: tienen que caer a la vez que sus cabeceras o la tabla se
+          descuadra (una fila con más <td> que <th>). */}
+      {!ocultarImportes && <>
+        <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>
+        <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>
+        <td className="px-2 py-1.5 text-right whitespace-nowrap">{eur(r._casco)}</td>
+        <td className="px-2 py-1.5 text-right whitespace-nowrap" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
+          {r._herraje ? eur(r._herraje) : '—'}
+        </td>
+        <td className="px-2 py-1.5 text-right text-slate-600 whitespace-nowrap">{eur(r._mat)}</td>
+        {/* Mano de obra de ESTA linea: vacia = la general del mueble. */}
+        <td className="px-2 py-1.5 text-right">
           <input
             type="number" step="any"
             value={moLinea ?? ''}
@@ -1022,38 +1049,39 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
             title="Vacío = mano de obra general. Escribe un valor para esta línea."
             className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${moLinea !== undefined && moLinea !== '' ? 'border-emerald-400 font-bold text-emerald-700' : 'border-slate-200 text-slate-500'}`}
           />
-        )}
-      </td>
-      {/* Puertas: vacio = m2 x precio/m2. Solo tiene sentido en las puertas. */}
-      <td className="px-2 py-1.5 text-right">
-        {!r._esPuerta ? <span className="text-slate-300">—</span> : bloqueado ? eur(r._puerta) : (
-          <input
-            type="number" step="any"
-            value={puertaLinea ?? ''}
-            placeholder={r._puerta ? r._puerta.toFixed(2) : '0'}
-            onChange={e => onPuerta(e.target.value)}
-            title="Vacío = área × precio/m². Escribe un precio para esta puerta."
-            className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
-          />
-        )}
-      </td>
-      <td className="px-2 py-1.5 text-right font-black text-slate-800 whitespace-nowrap">{eur(r._coste)}</td>
+        </td>
+        {/* Puertas: vacio = m2 x precio/m2. Solo tiene sentido en las puertas. */}
+        <td className="px-2 py-1.5 text-right">
+          {!r._esPuerta ? <span className="text-slate-300">—</span> : (
+            <input
+              type="number" step="any"
+              value={puertaLinea ?? ''}
+              placeholder={r._puerta ? r._puerta.toFixed(2) : '0'}
+              onChange={e => onPuerta(e.target.value)}
+              title="Vacío = área × precio/m². Escribe un precio para esta puerta."
+              className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
+            />
+          )}
+        </td>
+        <td className="px-2 py-1.5 text-right font-black text-slate-800 whitespace-nowrap">{eur(r._coste)}</td>
+      </>}
       <td className="px-2 py-1.5">
-        {bloqueado ? DESTINOS[r._destino].label : (
-          <select value={r._destino} onChange={e => onDestino(e.target.value)}
-            title="Proveedor al que se pedirá esta línea"
-            className="border border-slate-200 rounded px-1 py-0.5 text-[10px]"
-            style={{ color: DESTINOS[r._destino].color }}>
-            {Object.values(DESTINOS).filter(d => d.id !== 'herrajes').map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </select>
-        )}
+        <select value={r._destino} onChange={e => onDestino(e.target.value)}
+          title="Proveedor al que se pedirá esta línea"
+          className="border border-slate-200 rounded px-1 py-0.5 text-[10px]"
+          style={{ color: DESTINOS[r._destino].color }}>
+          {Object.values(DESTINOS).filter(d => d.id !== 'herrajes').map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+        </select>
       </td>
     </tr>
   );
 }
 
 // ── Editor de pedido de puertas/costados/regletas ────────────────────────────
-function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertasEditadas, setPuertasEditadas, bloqueado, onExportar }) {
+function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertasEditadas, setPuertasEditadas, ocultarImportes, onExportar }) {
+  // Con el candado echado el precio/m2 y el total en euros no se ensenan; las
+  // medidas si, que es lo que se corrige aqui.
+  const verEuros = pm2 > 0 && !ocultarImportes;
   const setMedida = (i, campo, val) => {
     setPuertasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
@@ -1074,7 +1102,7 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
       {puertas.length > 0 && (
         <div>
           <div className="text-[10px] font-black text-slate-600 uppercase mb-1.5">
-            Puertas ({puertas.length}) {pm2 > 0 && <span className="text-amber-700">— {pm2}€/m² → Total: {costePuertas.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>}
+            Puertas ({puertas.length}) {verEuros && <span className="text-amber-700">— {pm2}€/m² → Total: {costePuertas.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -1087,7 +1115,7 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                   <th className="px-2 py-1 text-center">Alto mm</th>
                   <th className="px-2 py-1 text-center">Ancho mm</th>
                   <th className="px-2 py-1 text-right">Área m²</th>
-                  {pm2 > 0 && <th className="px-2 py-1 text-right">Total €</th>}
+                  {verEuros && <th className="px-2 py-1 text-right">Total €</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1104,17 +1132,13 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                       <td className="px-2 py-1 max-w-[160px] truncate" title={it.descripcion}>{it.descripcion}</td>
                       <td className="px-2 py-1 text-center">{it.cantidad || 1}</td>
                       <td className="px-2 py-1 text-center">
-                        {!bloqueado
-                          ? <input type="number" value={ov.alto ?? (it.largo || '')} onChange={e => setMedida(i, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
-                          : (it.largo || '—')}
+                        <input type="number" value={ov.alto ?? (it.largo || '')} onChange={e => setMedida(i, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
                       </td>
                       <td className="px-2 py-1 text-center">
-                        {!bloqueado
-                          ? <input type="number" value={ov.ancho ?? (it.ancho || '')} onChange={e => setMedida(i, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
-                          : (it.ancho || '—')}
+                        <input type="number" value={ov.ancho ?? (it.ancho || '')} onChange={e => setMedida(i, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
                       </td>
                       <td className="px-2 py-1 text-right font-mono">{area ? area.toFixed(4) : '—'}</td>
-                      {pm2 > 0 && <td className="px-2 py-1 text-right font-bold">{total ? eur(total) : '—'}</td>}
+                      {verEuros && <td className="px-2 py-1 text-right font-bold">{total ? eur(total) : '—'}</td>}
                     </tr>
                   );
                 })}

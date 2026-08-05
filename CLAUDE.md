@@ -94,6 +94,17 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 6. **Lavavajillas = electrodoméstico** (va en hueco, sin casco). Su **puerta de
    integración = material nuestro**. Bajo fregadero y bajo horno son MUEBLES.
 7. **Nunca inventar una cota.** Lo que no se sabe va vacío o con "?".
+8. **Rentabilidad (Cascos → Alvic/MV) es SOLO del master** (05/08). Ni gerente,
+   ni director comercial, ni CONTROLLER: por ahí pasan la tarifa del proveedor,
+   el descuento y el margen. Cerrado en pantalla Y en el backend (`_es_master`
+   de `routes/cascos.py`); si solo se cierra la pantalla, el cierre es de
+   adorno. No confundir con `/api/rentabilidad`, el informe de solo lectura,
+   que sí abre el master a CONTROLLER.
+9. **El candado de Rentabilidad OCULTA IMPORTES, no bloquea la edición**
+   (05/08, a petición del master). Echado: se van precios, tarifas, coste,
+   mano de obra, margen, precio de venta y €/m². Se quedan códigos,
+   descripciones, unidades, medidas y el pedido — y todo eso se sigue pudiendo
+   tocar. Sirve para enseñar la pantalla con alguien delante.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
