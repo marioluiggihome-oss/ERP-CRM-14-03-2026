@@ -4,6 +4,14 @@ import Logo from './Logo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Normaliza las líneas al cargarlas: asegura que las líneas manuales sin lineMarkup
+// definido reciban lineMarkup:0 (no aplican el incremento global por defecto).
+const normalizeLines = (lines) =>
+  (lines || []).map(line => ({
+    ...line,
+    lineMarkup: line.lineMarkup != null ? line.lineMarkup : (line.isManual ? 0 : '')
+  }));
+
 const Digitalizador = ({ state, setState }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -155,7 +163,7 @@ const Digitalizador = ({ state, setState }) => {
     setCostados(inc.costados || '');
     setGlobalDiscount(inc.globalDiscount || 0);
     setIvaRate(inc.ivaRate || 21);
-    setLines(inc.lines || []);
+    setLines(normalizeLines(inc.lines));
     if (inc.expNumber) setExpNumber(inc.expNumber);
     if (typeof setState === 'function') setState(prev => ({ ...prev, digiIncoming: null }));
     setSuccessMessage('Proyecto cargado en el Digitalizador para retoques');
@@ -350,7 +358,7 @@ const Digitalizador = ({ state, setState }) => {
     if (typeof item.isValorado === 'boolean') setIsValorado(item.isValorado);
     if (typeof item.showTotals === 'boolean') setShowTotals(item.showTotals);
     if (item.expNumber) setExpNumber(item.expNumber);
-    setLines(item.lines || []);
+    setLines(normalizeLines(item.lines));
     setShowHistory(false);
   };
 
@@ -421,7 +429,7 @@ const Digitalizador = ({ state, setState }) => {
 
       if (data.success) {
         setProjectName(data.projectName || '');
-        setLines(data.lines || []);
+        setLines(normalizeLines(data.lines));
         
         // Save to history
         const historyEntry = {
