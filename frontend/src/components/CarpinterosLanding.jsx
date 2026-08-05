@@ -42,9 +42,9 @@ const PLANS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Marcos Ruiz", role: "Ebanista · Taller Ruiz e Hijos, Sevilla", text: "Antes tardaba dos horas en un presupuesto. Ahora lo hago en diez minutos y el cliente lo tiene en el móvil al instante. Me ha cambiado la forma de trabajar." },
-  { name: "Ana Lorente", role: "Carpintería Lorente, Valencia", text: "El render de IA es lo que más me sorprendió. El cliente ve el mueble antes de que yo haya cortado ni una tabla. Cierro más ventas y con menos dudas." },
-  { name: "Javier Molina", role: "Muebles a Medida Molina, Madrid", text: "Por fin sé cuánto gano en cada proyecto. Llevaba años trabajando sin saber si ganaba o perdía en algunas obras. Ahora tengo el control." },
+  { name: "Marcos", role: "Ebanista", text: "Antes tardaba dos horas en un presupuesto. Ahora lo hago en diez minutos y el cliente lo tiene en el móvil al instante. Me ha cambiado la forma de trabajar." },
+  { name: "Ana", role: "Carpintera", text: "El render de IA es lo que más me sorprendió. El cliente ve el mueble antes de que yo haya cortado ni una tabla. Cierro más ventas y con menos dudas." },
+  { name: "Javier", role: "Carpintero a medida", text: "Por fin sé cuánto gano en cada proyecto. Llevaba años trabajando sin saber si ganaba o perdía en algunas obras. Ahora tengo el control." },
 ];
 
 const FAQS = [
