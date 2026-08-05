@@ -588,41 +588,56 @@ const Digitalizador = ({ state, setState }) => {
           pdf.setFont(undefined, 'normal');
         }
 
-        pdf.setFontSize(15); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+        // El título baja de 15 a 13: con títulos largos (los edita el usuario)
+        // el texto alineado a la derecha se comía el ancho de la hoja.
+        pdf.setFontSize(13); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
         pdf.text(clean(documentTitle || 'Presupuesto Técnico'), W - M, hy + 4, { align: 'right' });
         pdf.setFont(undefined, 'normal');
-        pdf.setFontSize(9); pdf.setTextColor(120);
-        pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 10, { align: 'right' });
+        pdf.setFontSize(8.5); pdf.setTextColor(120);
+        pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 9, { align: 'right' });
         // El sello "VALORADO" solo si lo está (nunca "SIN VALORACIÓN"). La FECHA se
-        // mantiene siempre; se quita el nombre de usuario.
+        // mantiene siempre; se quita el nombre de usuario. Sin sello, la fecha
+        // sube a su hueco en vez de dejar una línea en blanco.
         if (isValorado) {
           pdf.setTextColor(234, 120, 40); pdf.setFont(undefined, 'bold');
-          pdf.text('DOCUMENTO VALORADO', W - M, hy + 15, { align: 'right' });
+          pdf.text('DOCUMENTO VALORADO', W - M, hy + 14, { align: 'right' });
           pdf.setFont(undefined, 'normal');
         }
         pdf.setTextColor(120);
-        pdf.text(new Date().toLocaleDateString('es-ES'), W - M, hy + 20, { align: 'right' });
+        pdf.text(new Date().toLocaleDateString('es-ES'), W - M, hy + (isValorado ? 19 : 14), { align: 'right' });
       };
 
+      // Alto real de la cabecera: manda el logo (14+16=30) salvo que el sello
+      // VALORADO baje más. De aquí sale tanto dónde empieza el cuerpo como el
+      // margen superior de las páginas 2 y siguientes, que antes iba a 32 fijo
+      // y se solapaba con la fecha.
+      const headerBottom = isValorado ? 34 : 31;
+
       drawHeader();
-      y += 26;
+      y = headerBottom + 3;
 
       // Proyecto (+ referencia/cliente). Si el texto es largo, se parte en varias
       // líneas para que NO se salga del margen.
       if (projectName || customerName) {
-        pdf.setFontSize(13); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
+        pdf.setFontSize(12); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
         const full = `Proyecto: ${clean(projectName).toUpperCase()}${customerName ? '  /  ' + clean(customerName).toUpperCase() : ''}`;
         const wrapped = pdf.splitTextToSize(full, W - 2 * M);
-        wrapped.forEach((ln, idx) => { pdf.text(ln, M, y + idx * 6); });
-        pdf.setFont(undefined, 'normal'); y += wrapped.length * 6;
+        wrapped.forEach((ln, idx) => { pdf.text(ln, M, y + idx * 5.5); });
+        pdf.setFont(undefined, 'normal'); y += wrapped.length * 5.5;
       }
       const cfg = [];
       if ((acabado || '').trim()) cfg.push(`${clean(labelAcabado) || 'Acabado'}: ${clean(acabado)}`);
       if ((armazon || '').trim()) cfg.push(`${clean(labelArmazon) || 'Armazón'}: ${clean(armazon)}`);
       if ((costados || '').trim()) cfg.push(`${clean(labelCostados) || 'Costados'}: ${clean(costados)}`);
       if (cfg.length) {
-        pdf.setFontSize(9); pdf.setTextColor(90);
-        pdf.text(cfg.join('     '), M, y); y += 5;
+        // Acabado / Armazón / Costados es UNA línea con tres textos largos que
+        // escribe el usuario: se salía por el lado derecho de la hoja. Se parte
+        // igual que el nombre del proyecto, y el separador pasa de cinco
+        // espacios a " · " para que quepa más en cada línea.
+        pdf.setFontSize(8); pdf.setTextColor(90);
+        const lineas = pdf.splitTextToSize(cfg.join('  ·  '), W - 2 * M);
+        lineas.forEach((ln, idx) => { pdf.text(ln, M, y + idx * 4); });
+        y += lineas.length * 4;
       }
       y += 2;
 
@@ -653,7 +668,7 @@ const Digitalizador = ({ state, setState }) => {
           ? { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 22 }, 2: { cellWidth: 'auto' },
               3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 14, halign: 'right' }, 5: { cellWidth: 24, halign: 'right' } }
           : { 0: { cellWidth: 16, halign: 'center' }, 1: { cellWidth: 28 }, 2: { cellWidth: 'auto' } },
-        margin: { top: 32, left: M, right: M },
+        margin: { top: headerBottom + 3, left: M, right: M },
         didDrawPage: (data) => {
           if (data.pageNumber > 1) drawHeader();
         },
