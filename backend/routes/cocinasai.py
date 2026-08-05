@@ -89,14 +89,13 @@ async def cocinasai_design(payload: dict, current_user: Optional[dict] = Depends
     """Genera un render de cocina a partir de uno o varios planos/alzados."""
     # ENFORCEMENT de créditos de IA por usuario
     try:
-        from services.ai_usage import get_user_credits, consume_credits
+        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
         if current_user:
             credits = await get_user_credits(current_user)
             if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
                 raise HTTPException(
                     status_code=402,
-                    detail=(f"Sin créditos de IA: has agotado tu bolsa mensual "
-                            f"({int(credits.get('asignados', 0) or 0)}). Contacta con tu administrador."),
+                    detail=mensaje_sin_creditos(current_user, credits),
                 )
             await consume_credits(current_user, "render")
     except HTTPException:
@@ -138,14 +137,13 @@ async def cocinasai_edit(payload: dict, current_user: Optional[dict] = Depends(g
     """Edita un render existente en lenguaje natural."""
     # ENFORCEMENT de créditos de IA por usuario
     try:
-        from services.ai_usage import get_user_credits, consume_credits
+        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
         if current_user:
             credits = await get_user_credits(current_user)
             if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
                 raise HTTPException(
                     status_code=402,
-                    detail=(f"Sin créditos de IA: has agotado tu bolsa mensual "
-                            f"({int(credits.get('asignados', 0) or 0)}). Contacta con tu administrador."),
+                    detail=mensaje_sin_creditos(current_user, credits),
                 )
             await consume_credits(current_user, "render")
     except HTTPException:
