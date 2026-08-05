@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2, LayoutGrid, DoorOpen, Truck, Send } from 'lucide-react';
 import { despieceAPI, settingsAPI } from '../services/api';

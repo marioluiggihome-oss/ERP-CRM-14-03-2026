@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Datos de la Tarifa MV con estructura correcta
 Sistema de TARIFAS T1-T21 con matriz de precios por ALTO x ANCHO

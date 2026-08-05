@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone, LifeBuoy, Zap } from 'lucide-react';
 import CRMDashboard from './CRMDashboard';

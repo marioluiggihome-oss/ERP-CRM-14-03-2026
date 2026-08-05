@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Extractor de precios de la tarifa MV desde imágenes JPG
 Procesa todas las imágenes y extrae códigos de producto con sus precios por tarifa

@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 /**
  * SubscriptionTab — Panel de Suscripciones SaaS
  * Gestión de planes y créditos de IA por usuario (solo Admin/Master)

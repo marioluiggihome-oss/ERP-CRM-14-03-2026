@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Script to seed MV library products from TARIFA 1
 Run this script to populate the MongoDB database with MV products

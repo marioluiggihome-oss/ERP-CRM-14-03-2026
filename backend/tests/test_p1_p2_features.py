@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Test P1 and P2 Features:
 - P1: Business type filtering (cocina/armarios) in CRM Pipeline

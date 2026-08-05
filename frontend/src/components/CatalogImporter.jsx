@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useRef } from 'react';
 import { authHeaders } from '../services/api';
 import { Upload, Loader2, FileText, Check, AlertCircle, Package, Trash2, Download } from 'lucide-react';

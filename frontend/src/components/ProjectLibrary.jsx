@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect } from 'react';
 import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy, Receipt, Table2 } from 'lucide-react';
 import { projectsAPI, crmOpportunitiesAPI, invoicesAPI } from '../services/api';

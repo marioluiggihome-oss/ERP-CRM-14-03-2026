@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChefHat, Sparkles, Image as ImageIcon, Loader, Upload, Download, Maximize2, X, Trash2, FolderOpen, Save, AlertTriangle, Zap } from 'lucide-react';
 import { getToken } from '../services/api';

@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect } from 'react';
 import { LogIn, User as UserIcon, Key, ShieldAlert, Loader, Building2, Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft, Shield } from 'lucide-react';
 import Logo from './Logo';

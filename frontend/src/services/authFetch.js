@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 // Interceptor global de `fetch`: adjunta el JWT a TODAS las peticiones al backend
 // propio. Así la app sigue funcionando cuando el backend exija autenticación de
 // forma global (Fase 2), sin tener que tocar las ~300 llamadas una por una.

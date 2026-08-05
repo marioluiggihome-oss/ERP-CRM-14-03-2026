@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';

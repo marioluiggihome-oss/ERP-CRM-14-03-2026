@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Pencil, Trash2, Users, Building2, Phone, Mail, MapPin, Save, X, Upload, Download, UserCheck, AlertCircle } from 'lucide-react';
 import { shopClientsAPI } from '../../services/api';

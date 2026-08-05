@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 import React, { useState } from 'react';
 import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X, Clock, Printer, CheckCircle2, CircleDashed } from 'lucide-react';
 import { getToken } from '../services/api';

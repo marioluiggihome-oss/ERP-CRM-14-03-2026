@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """
 Test P0 and P1 features for multi-library pricing system (ZC and MV)
 - P0: CATÁLOGO MODELOS button visibility based on currentLibrary

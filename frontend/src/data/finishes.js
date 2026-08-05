@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 // Acabados/colores por fabricante para el diseñador de Armarios y Cocinas 3D.
 // Tonos = aproximación visual fiel de la muestra impresa del catálogo.
 

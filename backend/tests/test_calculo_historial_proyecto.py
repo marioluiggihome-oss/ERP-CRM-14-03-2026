@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Historial de fotos por proyecto (Estudio 3D).
 
 Antes, un proyecto guardaba UNA sola foto: el historial vivía en memoria del

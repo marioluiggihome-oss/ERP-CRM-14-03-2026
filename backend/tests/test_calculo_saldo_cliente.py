@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Saldo de cliente: lo facturado menos lo cobrado.
 
 Protege los dos errores que es facil cometer aqui y que falsean el saldo:

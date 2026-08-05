@@ -1,3 +1,9 @@
+/*
+ * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
 // Catálogo de CASCOS (Grupo ACB) generado desde la tarifa oficial (PDF).
 // Gamas: "en kit" (16/19mm) + Diseño Grueso 16mm Roble, 18mm Olmo y Especiales Blanco 16mm.
 // Cada módulo: { id, tipo, grosor, dibujo, fondo, alto, ancho, gama, precios:{colorId:€|null} }.

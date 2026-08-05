@@ -8,6 +8,8 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "frontend/src/**"
+      - "herramientas/**"
       - ".github/workflows/backend-check.yml"
   push:
     branches:
@@ -15,6 +17,8 @@ on:
       - "claude/**"
     paths:
       - "backend/**"
+      - "frontend/src/**"
+      - "herramientas/**"
       - ".github/workflows/backend-check.yml"
 
 concurrency:
@@ -63,3 +67,9 @@ jobs:
           # las pruebas: no se instalan.
           python -m pip install --quiet pytest fastapi
           python -m pytest backend/tests/test_calculo_*.py -q
+
+      # Aviso de copyright en cada fichero propio. Es la prueba mas barata de
+      # titularidad y la mas facil de perder: basta con que un fichero nuevo
+      # entre sin el. Se arregla con un comando, que sale en el propio error.
+      - name: Aviso de copyright en el codigo propio
+        run: python3 herramientas/cabeceras_copyright.py --verificar

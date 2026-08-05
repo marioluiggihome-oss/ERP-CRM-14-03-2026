@@ -125,3 +125,20 @@ hacer.
 - Secciones y clientes DISTINTOS: la intranet `erp.luiggihome.es` y la web
   `carpinter.io` son productos separados (vídeos, marca y contenidos propios). No
   mezclar recursos de una en la otra.
+
+## Propiedad intelectual — qué NO se puede romper
+
+- **Todo fichero propio lleva aviso de copyright.** El CI lo comprueba
+  (`herramientas/cabeceras_copyright.py --verificar`). Si añades ficheros,
+  ejecuta `python3 herramientas/cabeceras_copyright.py` antes del push.
+- **El código de terceros NO se firma como propio.** `frontend/src/components/ui/`
+  es shadcn/ui (MIT) y `frontend/src/lib/utils.js` también. Si copias más código
+  ajeno al repo, añádelo a `EXCLUIDOS` de esa herramienta Y a `COPIADO_DENTRO`
+  de `herramientas/licencias_dependencias.py`. Firmar código ajeno no protege
+  nada y es falso.
+- **Antes de meter una dependencia nueva, mira su licencia**:
+  `python3 herramientas/licencias_dependencias.py`. Una GPL/AGPL en un producto
+  que se licencia a clientes es un problema serio, no un detalle.
+  Punto abierto hoy: **PyMuPDF es AGPL** (ver `AUDITORIA-LICENCIAS.md`).
+- Antes de un depósito notarial o registro:
+  `python3 herramientas/inventario_codigo.py` regenera las huellas SHA-256.

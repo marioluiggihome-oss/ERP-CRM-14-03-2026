@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Relación de muebles MV escrita en la plantilla de nomenclaturas.
 
 Protege los fallos del 03/08, cuando "se importaba bien pero no calculaba bien":
