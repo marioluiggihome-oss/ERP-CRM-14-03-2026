@@ -905,6 +905,22 @@ export default function AIRenderStudio({ state, setState }) {
   }, []);
   useEffect(() => { fetchCredits(); }, [fetchCredits]);
 
+  // Recarga de la bolsa del mes (solo master, desde el propio contador). Pone a
+  // cero lo gastado ESTE MES; no toca el saldo comprado, que es dinero pagado.
+  const [reiniciandoBolsa, setReiniciandoBolsa] = useState(false);
+  const reiniciarBolsa = useCallback(async () => {
+    setReiniciandoBolsa(true);
+    try {
+      const r = await fetch(`${API_URL}/api/admin/ai-usage/reiniciar-bolsa`, {
+        method: 'POST', headers: getAuthHeaders(), body: '{}',
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.success) { setError(null); await fetchCredits(); }
+      else setError(d.detail || 'No se ha podido recargar la bolsa.');
+    } catch { setError('Error de red al recargar la bolsa.'); }
+    finally { setReiniciandoBolsa(false); }
+  }, [fetchCredits]);
+
   // Las imágenes del render se sirven por el proxy interno (marca blanca). Como
   // un <img> no puede enviar cabeceras, el token JWT viaja como query param.
   // Al cambiar el render base, descarta el giro 360º anterior (era de otra cocina).
@@ -2427,19 +2443,41 @@ export default function AIRenderStudio({ state, setState }) {
               <h1 className="text-base font-black text-slate-900 uppercase tracking-wide leading-tight">Estudio 3D</h1>
               <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Motor de IA</p>
             </div>
-            {/* Créditos de IA del usuario (bolsa mensual). Admin/master = ilimitado. */}
+            {/* Créditos de IA del usuario (bolsa mensual).
+                Para el MASTER el contador es además el botón de recarga: el
+                cupo se lo pone él para medir, y cuando lo agota el aviso de
+                "contacta con tu administrador" no le sirve de nada. Tener que
+                irse a Ajustes desde el móvil para volver a empezar tampoco. */}
             {aiCredits && (
-              <span
-                title="Créditos de IA disponibles este mes"
-                className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black ${
-                  aiCredits.ilimitado
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : (aiCredits.restantes <= 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700')
-                }`}
-              >
-                <Sparkles size={12} />
-                {aiCredits.ilimitado ? 'Créditos: ilimitado' : `Créditos: ${aiCredits.restantes} restantes`}
-              </span>
+              isMaster && !aiCredits.ilimitado ? (
+                <button
+                  onClick={reiniciarBolsa}
+                  disabled={reiniciandoBolsa}
+                  title="Pulsa para volver a llenar tu bolsa de renders de este mes (no toca los renders comprados)"
+                  className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black transition-colors disabled:opacity-60 ${
+                    aiCredits.restantes <= 0
+                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                      : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                  }`}
+                >
+                  <Sparkles size={12} />
+                  {reiniciandoBolsa
+                    ? 'Recargando…'
+                    : `Créditos: ${aiCredits.restantes} restantes${aiCredits.restantes <= 0 ? ' · recargar' : ''}`}
+                </button>
+              ) : (
+                <span
+                  title="Créditos de IA disponibles este mes"
+                  className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black ${
+                    aiCredits.ilimitado
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : (aiCredits.restantes <= 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700')
+                  }`}
+                >
+                  <Sparkles size={12} />
+                  {aiCredits.ilimitado ? 'Créditos: ilimitado' : `Créditos: ${aiCredits.restantes} restantes`}
+                </span>
+              )
             )}
           </div>
 
