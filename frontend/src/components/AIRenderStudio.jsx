@@ -1158,19 +1158,39 @@ export default function AIRenderStudio({ state, setState }) {
     if (editing) return;
     setEditing(true); setError(null);
     try {
+      // Dos vías para sacar la distribución: del render y de la descripción. La
+      // segunda era CÓDIGO MUERTO: `postJson` lanza cuando el servidor contesta
+      // con error, así que un 422 del render ("no se pudo deducir la
+      // distribución") saltaba directo al catch y la descripción no se probaba
+      // nunca. Ahora cada vía se intenta por separado y solo se falla si fallan
+      // las dos.
       let distribucion = null;
+      const motivos = [];
       const img = currentImage();
       if (img) {
-        const dataUrl = await imageToDataUrl(img);
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) distribucion = dj.distribucion;
+        try {
+          const dataUrl = await imageToDataUrl(img);
+          const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+          if (dj?.success) distribucion = dj.distribucion;
+        } catch (e) {
+          motivos.push(`del render: ${e?.message || 'no se pudo leer'}`);
+        }
       }
       if (!distribucion && (description || '').trim()) {
-        const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
-        if (dt?.success) distribucion = dt.distribucion;
+        try {
+          const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
+          if (dt?.success) distribucion = dt.distribucion;
+        } catch (e) {
+          motivos.push(`de la descripción: ${e?.message || 'no se pudo leer'}`);
+        }
       }
       if (!distribucion) {
-        setError('Necesito un render o una descripción con los módulos para dibujar la vista alámbrica.');
+        // El alzado se dibuja con medidas REALES: si no se han podido deducir, lo
+        // que hay que decir es DÓNDE se escriben, no solo que no salió.
+        const falta = !medidas.ancho
+          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
+          : ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").';
+        setError(`No he podido deducir la distribución${motivos.length ? ` (${motivos.join(' · ')})` : ''}.${falta}`);
         return;
       }
       const ar = await postJson('/api/estudio-cocinas/alzado', {
