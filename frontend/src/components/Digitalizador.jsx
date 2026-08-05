@@ -1355,6 +1355,21 @@ const Digitalizador = ({ state, setState }) => {
                             className="w-full bg-transparent font-medium text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 resize-none overflow-hidden leading-snug"
                           />
                         </td>
+                        {/* Margen de líneas manuales: SIEMPRE visible aunque isValorado=false */}
+                        {line.isManual && !isValorado && (
+                          <td className="px-4 py-3 text-center" title="Margen (%)">
+                            <input
+                              type="text"
+                              value={line.discount}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(',', '.');
+                                updateLine(line.id, 'discount', parseFloat(value) || 0);
+                              }}
+                              placeholder="0"
+                              className="w-16 bg-orange-50 rounded px-2 py-1 text-center font-bold text-orange-600 outline-none border border-orange-200 hover:border-orange-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 cursor-text"
+                            />
+                          </td>
+                        )}
                         {/* Precio y Descuento solo si valorado */}
                         {isValorado && (
                         <>
@@ -1390,7 +1405,7 @@ const Digitalizador = ({ state, setState }) => {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" title="Margen (%)">
                           {/* Descuento SIEMPRE editable - casilla más ancha */}
                           <input
                             type="text"
@@ -1400,7 +1415,11 @@ const Digitalizador = ({ state, setState }) => {
                               updateLine(line.id, 'discount', parseFloat(value) || 0);
                             }}
                             placeholder={line.isManual ? "0" : (globalDiscount > 0 ? String(globalDiscount) : "0")}
-                            className={`w-16 bg-indigo-50 rounded px-2 py-1 text-center font-bold outline-none border border-transparent hover:border-indigo-200 focus:border-orange-500 ${line.isManual ? 'text-orange-600 bg-orange-50' : (line.discount > 0 ? 'text-orange-600' : 'text-indigo-600')}`}
+                            className={`w-16 rounded px-2 py-1 text-center font-bold outline-none border cursor-text ${
+                              line.isManual
+                                ? 'bg-orange-50 text-orange-600 border-orange-200 hover:border-orange-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-200'
+                                : (line.discount > 0 ? 'bg-indigo-50 text-orange-600 border-transparent hover:border-indigo-200 focus:border-orange-500' : 'bg-indigo-50 text-indigo-600 border-transparent hover:border-indigo-200 focus:border-orange-500')
+                            }`}
                           />
                         </td>
                         </>
