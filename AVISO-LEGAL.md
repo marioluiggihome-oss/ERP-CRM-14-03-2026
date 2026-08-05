@@ -59,9 +59,12 @@ inventario y la clasificación de riesgo están en
 [`AUDITORIA-LICENCIAS.md`](AUDITORIA-LICENCIAS.md). Nada de lo anterior se
 reclama como propio.
 
-> ⚠️ **Punto abierto:** la auditoría ha detectado una dependencia con licencia
-> **AGPL-3.0** (PyMuPDF). Antes de licenciar el ERP a terceros hay que resolverlo
-> — ver el detalle y las tres salidas posibles en ese informe.
+> ✅ **Resuelto el 05/08/2026.** La auditoría detectó una dependencia con
+> licencia **AGPL-3.0** (PyMuPDF), que habría obligado a publicar el código
+> fuente por el simple hecho de servir el ERP por Internet. Se ha retirado y la
+> sustituyen `pypdf` y `pypdfium2`, ambas permisivas. **Hoy no hay ninguna
+> dependencia declarada con copyleft fuerte**, así que nada impide licenciar el
+> ERP como producto cerrado.
 
 ## 4. Confidencialidad
 
@@ -114,7 +117,7 @@ No forma parte del aviso legal; es la hoja de ruta de protección.
 | Licencia propietaria en el repositorio | [`LICENSE`](LICENSE) |
 | Aviso de copyright en cada fichero propio | 278 ficheros — `herramientas/cabeceras_copyright.py` |
 | Inventario con huellas SHA-256 | [`INVENTARIO-CODIGO.md`](INVENTARIO-CODIGO.md) |
-| Auditoría de licencias de terceros | [`AUDITORIA-LICENCIAS.md`](AUDITORIA-LICENCIAS.md) |
+| Auditoría de licencias de terceros | [`AUDITORIA-LICENCIAS.md`](AUDITORIA-LICENCIAS.md) — sin copyleft fuerte |
 | Repositorio privado y acceso restringido | GitHub |
 
 ### Lo que falta, por orden de urgencia
@@ -122,14 +125,13 @@ No forma parte del aviso legal; es la hoja de ruta de protección.
 1. **Registrar las marcas.** `Luiggi Home`, `carpinter.io` y `Studio3K` no están
    protegidas por nada. Es lo más barato, lo más rápido y lo único que se puede
    perder porque otro se adelante. OEPM (España) o EUIPO (Unión Europea).
-2. **Resolver la AGPL de PyMuPDF** antes de la primera licencia a un tercero.
-3. **Depositar el código.** Con el inventario y su huella global ya generados,
+2. **Depositar el código.** Con el inventario y su huella global ya generados,
    basta un acta notarial o un sellado de tiempo para fijar fecha y contenido.
    Opcionalmente, inscripción en el Registro de la Propiedad Intelectual.
-4. **Papeles con las personas.** Acuerdo de confidencialidad y cláusula de
+3. **Papeles con las personas.** Acuerdo de confidencialidad y cláusula de
    cesión de derechos con cualquiera que toque el código o vea Rentabilidad.
    Sin cesión expresa, el trabajo encargado a un tercero puede no ser tuyo.
-5. **Medidas de secreto documentadas.** La Ley 1/2019 solo protege lo que se
+4. **Medidas de secreto documentadas.** La Ley 1/2019 solo protege lo que se
    trata como secreto: control de accesos, contraseñas y registro de quién entra.
    Buena parte ya existe en el sistema; conviene dejarlo por escrito.
 

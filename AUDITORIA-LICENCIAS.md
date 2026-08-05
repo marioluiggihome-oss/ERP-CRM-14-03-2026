@@ -13,25 +13,15 @@ El ERP es **software propietario** que se licencia a clientes. Una dependencia c
 
 ## Hallazgo principal
 
-### `pymupdf` 1.28.0 — Dual Licensed - GNU AFFERO GPL 3.0 or Artifex Commercial License
+**Ninguna dependencia declarada del producto tiene copyleft fuerte.** Nada impide licenciar el ERP como producto cerrado.
 
-**Este es el punto a resolver con un abogado.** PyMuPDF (`fitz`) se distribuye con licencia doble: **AGPL-3.0** o una licencia comercial de pago de Artifex. Mientras no se compre la comercial, aplica la AGPL.
+PyMuPDF (`fitz`), que era **AGPL-3.0**, se retiró el 05/08/2026 y lo sustituyen `pypdf` (BSD-3-Clause) y `pypdfium2` (Apache-2.0 / BSD-3), ambas permisivas. Todo el trato con PDF pasa ahora por un único módulo, `backend/services/pdf_utils.py`.
 
-La AGPL no es como la GPL normal: tiene una cláusula de **uso en red**. No hace falta vender ni entregar el programa — basta con que un tercero lo use a través de Internet, que es exactamente lo que pasa cuando un carpintero entra en `erp.luiggihome.es`. En esa lectura, la obligación de poner el código fuente a disposición de ese usuario se activa sola.
+Por qué había que quitarlo: la AGPL obliga a poner el código fuente a disposición de quien usa el programa **incluso a través de la red**. Un carpintero entrando en `erp.luiggihome.es` activaba esa obligación sin que hiciera falta vender ni entregar nada.
 
-Dónde se usa hoy (3 ficheros, todo lectura y rasterizado de PDF):
+La sustitución se validó contra los PDFs reales del proyecto: mismos campos de formulario, mismas páginas, mismo tamaño de imagen y mismo recuento de trazos; en el render la diferencia media es de 1,1 sobre 255 (antialiasing). Lo protege `backend/tests/test_calculo_lectura_pdf.py`, que se pone en rojo si alguien vuelve a importar `fitz`.
 
-- `backend/services/pdf_utils.py`
-- `backend/services/proforma_cascos.py` — páginas de la proforma a imagen
-- `backend/services/mv_relacion.py` — lectura de los campos de la plantilla MV
-
-**Tres salidas, de menos a más trabajo:**
-
-1. **Comprar la licencia comercial de Artifex.** Cero cambios de código. Es la opción si el ERP se va a vender a terceros. Hay que pedirles precio.
-2. **Sustituir PyMuPDF por librerías permisivas.** Es viable porque el uso que se le da es sencillo: `pypdf` (BSD) lee los campos AcroForm de la plantilla MV, y `pypdfium2` (Apache-2.0 / BSD-3) rasteriza páginas a imagen. Ambas permiten producto cerrado sin pagar nada.
-3. **Asumir la AGPL.** Solo tiene sentido si el ERP nunca sale de casa. En cuanto haya un cliente externo usándolo por web, deja de valer.
-
-> Ojo: esto es un aviso técnico, no un dictamen. La lectura de la cláusula de red de la AGPL tiene matices y conviene que lo confirme un abogado de propiedad intelectual antes de firmar la primera licencia con un cliente.
+> Nota: `pymupdf` aparece(n) instalada(s) en la máquina donde se generó este informe pero **no** en `backend/requirements.txt`, así que no viaja(n) con el producto. Es residuo del entorno, no una dependencia.
 
 ## Frontend (npm)
 
@@ -47,7 +37,7 @@ Dónde se usa hoy (3 ficheros, todo lectura y rasterizado de PDF):
 
 ## Backend (Python)
 
-> ⚠️ **Análisis incompleto.** 107 paquete(s) de requirements.txt no instalados aquí: --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/, aiohappyeyeballs, aiohttp, aiosignal, apscheduler, attrs, bcrypt, black, boto3, botocore, cffi, click
+> ⚠️ **Análisis incompleto.** 109 paquete(s) de requirements.txt no instalados aquí: --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/, aiohappyeyeballs, aiohttp, aiosignal, apscheduler, attrs, bcrypt, black, boto3, botocore, cffi, click
 >
 > Estos paquetes no están instalados en la máquina donde se generó el informe, así que su licencia NO se ha comprobado. Para un informe completo hay que ejecutarlo en el entorno de producción o tras `pip install -r backend/requirements.txt`.
 
@@ -57,7 +47,7 @@ Dónde se usa hoy (3 ficheros, todo lectura y rasterizado de PDF):
 
 | Paquete | Versión | Licencia | Clase | ¿Directa? |
 |---|---|---|---|---|
-| `pymupdf` | 1.28.0 | Dual Licensed - GNU AFFERO GPL 3.0 or Artifex Commercial License | FUERTE | sí |
+| `pymupdf` | 1.28.0 | Dual Licensed - GNU AFFERO GPL 3.0 or Artifex Commercial License | FUERTE | transitiva |
 | `annotated-doc` | 0.0.5 | — | DESCONOCIDA | transitiva |
 | `anyio` | 4.14.2 | — | DESCONOCIDA | sí |
 | `fastapi` | 0.141.1 | — | DESCONOCIDA | sí |

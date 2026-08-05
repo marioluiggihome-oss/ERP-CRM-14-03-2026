@@ -402,7 +402,7 @@ async def importar_proforma(payload: dict, current_user: Optional[dict] = Depend
                 "noLeidas": mv.get("noLeidas") or []}
 
     # 1) Intento por CAPA DE TEXTO (rápido y exacto): se responde en el acto.
-    # Va al executor porque PyMuPDF es código nativo bloqueante y el servidor
+    # Va al executor porque PDFium es código nativo bloqueante y el servidor
     # corre con una sola réplica: un PDF pesado congelaría a todos los usuarios.
     items = []
     try:

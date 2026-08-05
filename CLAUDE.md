@@ -139,6 +139,9 @@ hacer.
 - **Antes de meter una dependencia nueva, mira su licencia**:
   `python3 herramientas/licencias_dependencias.py`. Una GPL/AGPL en un producto
   que se licencia a clientes es un problema serio, no un detalle.
-  Punto abierto hoy: **PyMuPDF es AGPL** (ver `AUDITORIA-LICENCIAS.md`).
+  **PyMuPDF (`fitz`) esta PROHIBIDO**: es AGPL y obliga a publicar el codigo
+  al servir el ERP por red. Se retiro el 05/08. Todo el trato con PDF va por
+  `backend/services/pdf_utils.py` (pypdf + pypdfium2); hay una prueba que se
+  pone roja si alguien vuelve a importar `fitz`.
 - Antes de un depósito notarial o registro:
   `python3 herramientas/inventario_codigo.py` regenera las huellas SHA-256.
