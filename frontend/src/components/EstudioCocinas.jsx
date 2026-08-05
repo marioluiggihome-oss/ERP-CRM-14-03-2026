@@ -987,6 +987,15 @@ export default function EstudioCocinas({ state, setState }) {
 
   // ── Vista alámbrica (alzados por pared, con cotas) ──
   const genAlzado = useCallback(async () => {
+    // El alzado se dibuja con las medidas REALES de las paredes; sin ellas no se
+    // inventa nada. Se avisa aquí en vez de mandar una petición que va a fallar:
+    // el usuario veía un error del servidor sin saber que le faltaba elegir la
+    // distribución en el panel de la izquierda.
+    if (!distribucion || !(distribucion.paredes || []).some(p => Number(p.ancho) > 0)) {
+      setAlzado(s => ({ ...s, status: 'error', b64: null,
+        msg: 'Falta la distribución: elígela en el panel de la izquierda (lineal, L, U…) y pon el ancho de cada pared.' }));
+      return;
+    }
     setAlzado(s => ({ ...s, status: 'loading', msg: 'Generando vista alámbrica…', b64: null }));
     try {
       const r = await apiPost('/alzado', { ...proy, distribucion_estructurada: distribucion });
