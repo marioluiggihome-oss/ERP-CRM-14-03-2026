@@ -329,7 +329,15 @@ export default function ProformaImporter({ esMaster }) {
     const costeProduccion = totMat + totMo + costePuertas;
     const precioVenta = costeProduccion + margen;
 
-    return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, herrajesEsp,
+    // Texto del descuento aplicado, para poder verlo en pantalla. Vacio si no
+    // se ha metido ninguno (ahi ya avisa el recuadro de arriba).
+    const d1 = Number(p.desc1) || 0;
+    const d2 = Number(p.desc2) || 0;
+    const dtoTexto = d1 || d2
+      ? `−${[d1, d2].filter(Boolean).map(x => `${x}%`).join(' −')} · queda el ${(facCasco * 100).toFixed(1)}%`
+      : '';
+
+    return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, herrajesEsp, dtoTexto,
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
              puertas, costados, regletas, costePuertas, pm2 };
   }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas]);
@@ -820,7 +828,21 @@ export default function ProformaImporter({ esMaster }) {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border border-slate-200 p-3 text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-slate-400 text-xs">Valor Alvic (presupuesto proveedor)</span><b className="text-slate-400">{eur(calc.totAlvic)}</b></div>
-                <div className="flex justify-between border-t border-slate-100 pt-1 mt-1"><span className="text-slate-500">Cascos ACB</span><b>{eur(calc.totCasco)}</b></div>
+                <div className="flex justify-between border-t border-slate-100 pt-1 mt-1">
+                  <span className="text-slate-500">
+                    Cascos ACB
+                    {/* El descuento que teclea el master SE VE aquí (pantalla
+                        interna, solo master): sin verlo no hay forma de saber
+                        sobre qué se está calculando el coste. No sale en
+                        ningún PDF ni en nada que vea un cliente. */}
+                    {calc.dtoTexto && (
+                      <span className="ml-1.5 text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                        {calc.dtoTexto}
+                      </span>
+                    )}
+                  </span>
+                  <b>{eur(calc.totCasco)}</b>
+                </div>
                 <div className="flex justify-between"><span className="text-slate-500">Herraje (bisagras, patas, colgadores, guías)</span><b>{eur(calc.totHerr)}</b></div>
                 {calc.costePuertas > 0 && <div className="flex justify-between"><span className="text-slate-500">Puertas ({calc.pm2}€/m²)</span><b>{eur(calc.costePuertas)}</b></div>}
                 <div className="flex justify-between border-t border-slate-100 pt-1"><span className="text-slate-600 font-bold">Materiales</span><b>{eur(calc.totMat + calc.costePuertas)}</b></div>

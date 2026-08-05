@@ -87,8 +87,10 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 3. **Tope de 7 imágenes juntas** en render y descripción de proyecto.
 4. **Las unidades multiplican**: coste, mano de obra, puertas y el pedido al
    proveedor. Una línea de 4 muebles lleva herraje para 4.
-5. **Los descuentos no se muestran en ningún texto ni etiqueta.** Los mete el
-   master a mano.
+5. **Los descuentos no salen en nada que vea un cliente** (PDF, presupuesto,
+   etiqueta comercial). Los mete el master a mano. En la pantalla interna de
+   Rentabilidad SÍ se ve el que ha tecleado (04/08, a peticion del master): sin
+   verlo no hay forma de saber sobre qué se está calculando el coste.
 6. **Lavavajillas = electrodoméstico** (va en hueco, sin casco). Su **puerta de
    integración = material nuestro**. Bajo fregadero y bajo horno son MUEBLES.
 7. **Nunca inventar una cota.** Lo que no se sabe va vacío o con "?".
