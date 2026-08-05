@@ -779,8 +779,8 @@ export default function ProformaImporter({ esMaster }) {
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                <thead className="bg-slate-50 text-slate-500">
+              <table className="w-full min-w-[1180px] text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <thead className="bg-slate-50 text-slate-500 [&_th]:whitespace-nowrap">
                   <tr className="text-left">
                     <th className="px-2 py-2 w-6"></th>
                     <th className="px-2 py-2 w-6" title="Marcar para incluir en el pedido">Pedir</th>
@@ -1004,13 +1004,13 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
         )}
       </td>
       <td className="px-2 py-1.5 text-center">{r.puertas}/{r.cajones}/{r.gavetas}</td>
-      <td className="px-2 py-1.5 text-right text-slate-400">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>
-      <td className="px-2 py-1.5 text-right text-slate-400">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>
-      <td className="px-2 py-1.5 text-right">{eur(r._casco)}</td>
-      <td className="px-2 py-1.5 text-right" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
+      <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>
+      <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>
+      <td className="px-2 py-1.5 text-right whitespace-nowrap">{eur(r._casco)}</td>
+      <td className="px-2 py-1.5 text-right whitespace-nowrap" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
         {r._herraje ? eur(r._herraje) : '—'}
       </td>
-      <td className="px-2 py-1.5 text-right text-slate-600">{eur(r._mat)}</td>
+      <td className="px-2 py-1.5 text-right text-slate-600 whitespace-nowrap">{eur(r._mat)}</td>
       {/* Mano de obra de ESTA linea: vacia = la general del mueble. */}
       <td className="px-2 py-1.5 text-right">
         {bloqueado ? eur(r._mo) : (
@@ -1037,7 +1037,7 @@ function FilaMueble({ r, bloqueado, override, onOverride, onDelete, moLinea, onM
           />
         )}
       </td>
-      <td className="px-2 py-1.5 text-right font-black text-slate-800">{eur(r._coste)}</td>
+      <td className="px-2 py-1.5 text-right font-black text-slate-800 whitespace-nowrap">{eur(r._coste)}</td>
       <td className="px-2 py-1.5">
         {bloqueado ? DESTINOS[r._destino].label : (
           <select value={r._destino} onChange={e => onDestino(e.target.value)}
