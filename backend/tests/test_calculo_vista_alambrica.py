@@ -89,3 +89,39 @@ def test_la_pantalla_avisa_antes_de_llamar_al_servidor():
         "la pantalla vuelve a mandar el alzado sin comprobar que hay paredes"
     assert bloque.index("Falta la distribución") < bloque.index("apiPost"), \
         "el aviso llega DESPUÉS de llamar al servidor: no sirve de nada"
+
+
+# ── Estudio 3D: la misma vista alámbrica, por otro camino ────────────────────
+# El botón «Alámbrica c/ medidas» del Estudio 3D no manda paredes: primero
+# deduce la distribución del render y, si no puede, de la descripción. Esa
+# segunda vía era código muerto.
+
+ESTUDIO_3D = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
+
+
+def _bloque_vista_alambrica():
+    with open(ESTUDIO_3D, encoding="utf-8") as f:
+        fuente = f.read()
+    ini = fuente.index("const generarVistaAlambrica")
+    fin = fuente.index("const generarPlanosExactos", ini)
+    return fuente[ini:fin]
+
+
+def test_si_falla_el_render_todavia_se_prueba_la_descripcion():
+    """CANDADO: `postJson` lanza al recibir un error del servidor. Sin un try
+    propio, un 422 del render se llevaba por delante la vía de la descripción,
+    que podría haber funcionado."""
+    bloque = _bloque_vista_alambrica()
+    detectar = bloque.index("detect-distribucion")
+    desde_texto = bloque.index("distribucion-desde-texto")
+    # Entre una llamada y otra tiene que haber un catch: si no, la segunda es
+    # inalcanzable cuando la primera devuelve error.
+    assert "catch" in bloque[detectar:desde_texto], (
+        "la vía de la descripción ha vuelto a ser código muerto: un error del "
+        "render salta al catch general y nunca se prueba el texto.")
+
+
+def test_el_aviso_dice_donde_se_escriben_las_medidas():
+    bloque = _bloque_vista_alambrica()
+    assert "Medidas de la estancia" in bloque, \
+        "el aviso ya no dice dónde se escribe el ancho de la pared"
