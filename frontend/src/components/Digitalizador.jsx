@@ -7,6 +7,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
+// El router del digitalizador exige permiso (`canUseDigitalizador`), asi que
+// TODA peticion necesita el token. Iban sin el: el servidor contestaba 401 y
+// el guardado no llegaba a la base de datos.
+import { authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -76,7 +80,7 @@ const Digitalizador = ({ state, setState }) => {
       const clientCodeToUse = useClientCode && customerCode ? customerCode : null;
       const response = await fetch(`${API_URL}/api/digitalizador/generate-exp-number`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ 
           userId: state?.currentUser?.id || 'anonymous',
           clientCode: clientCodeToUse
@@ -207,7 +211,7 @@ const Digitalizador = ({ state, setState }) => {
       if (saveToHistory) {
         const historyResponse = await fetch(`${API_URL}/api/digitalizador/save`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             projectName: projectName || 'Sin nombre',
             customerName,
@@ -235,6 +239,12 @@ const Digitalizador = ({ state, setState }) => {
 
         if (historyResponse.ok) {
           savedItems.push('Historial');
+        } else {
+          // Antes esto se ignoraba: el servidor contestaba 401 y la pantalla
+          // decia "guardado" igual. El presupuesto no aparecia en el historial
+          // y nadie sabia por que.
+          const d = await historyResponse.json().catch(() => ({}));
+          throw new Error(d.detail || `No se pudo guardar en el historial (error ${historyResponse.status}).`);
         }
       }
 
@@ -242,7 +252,7 @@ const Digitalizador = ({ state, setState }) => {
       if (saveToPresupuestos) {
         const presupuestoResponse = await fetch(`${API_URL}/api/presupuestos`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             budgetNumber: expNumber,
             projectName: projectName || 'Sin nombre',
@@ -275,6 +285,9 @@ const Digitalizador = ({ state, setState }) => {
 
         if (presupuestoResponse.ok) {
           savedItems.push('Presupuestos');
+        } else {
+          const d = await presupuestoResponse.json().catch(() => ({}));
+          throw new Error(d.detail || `No se pudo guardar en Presupuestos (error ${presupuestoResponse.status}).`);
         }
       }
 
@@ -283,7 +296,7 @@ const Digitalizador = ({ state, setState }) => {
         // Primero crear/buscar contacto
         const contactResponse = await fetch(`${API_URL}/api/crm/contacts`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             name: crmContactName,
             email: crmContactEmail || '',
@@ -301,7 +314,7 @@ const Digitalizador = ({ state, setState }) => {
           // Crear oportunidad
           const oppResponse = await fetch(`${API_URL}/api/crm/opportunities`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
               title: projectName || `Presupuesto ${crmContactName}`,
               description: `Presupuesto digitalizado - ${lines.length} líneas\nAcabado: ${acabado || 'N/A'}\nArmazón: ${armazon || 'N/A'}`,
@@ -419,7 +432,7 @@ const Digitalizador = ({ state, setState }) => {
       const activeLibrary = state?.currentLibrary || 'ZC';
       const response = await fetch(`${API_URL}/api/digitalizador/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           imageBase64: base64,
           filename: file.name,
@@ -758,7 +771,7 @@ const Digitalizador = ({ state, setState }) => {
     try {
       const response = await fetch(`${API_URL}/api/digitalizador/export-csv`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           lines: lines,
           materialCode: "40-ESTEITEX16",
@@ -825,7 +838,7 @@ const Digitalizador = ({ state, setState }) => {
       // First, create or find a contact
       const contactResponse = await fetch(`${API_URL}/api/crm/contacts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: crmContactName || customerName || 'Cliente sin nombre',
           email: crmContactEmail || customerEmail || '',
@@ -846,7 +859,7 @@ const Digitalizador = ({ state, setState }) => {
       // Now create the opportunity
       const opportunityResponse = await fetch(`${API_URL}/api/crm/opportunities`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           title: projectName || `Presupuesto ${crmContactName || customerName || 'Cliente'}`,
           description: `Presupuesto digitalizado - ${lines.length} líneas\nAcabado: ${acabado || 'N/A'}\nArmazón: ${armazon || 'N/A'}\nCostados: ${costados || 'N/A'}`,

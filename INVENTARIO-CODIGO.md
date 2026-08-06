@@ -1,12 +1,12 @@
 # Inventario del código fuente — Luiggi Home
 
-**Huella global SHA-256:** `d438b9e23357f4c88c80c234e3215ebb7c7e8743190d4460003ebebd52e2f317`
+**Huella global SHA-256:** `e3ceaef5b32033e737c2b7f02c4b53b18a913fdb7bb020c7e1028f0ab41650c7`
 
 | Dato | Valor |
 |---|---|
-| Generado (UTC) | 2026-08-06 10:59:52 |
-| Commit | `1ebd827ccf7ae746d740e88aab245ad58429c744` |
-| Fecha del commit | 2026-08-06T07:31:23+00:00 |
+| Generado (UTC) | 2026-08-06 11:17:08 |
+| Commit | `1d9b37ab246ecf893ec7e015dcfad89ebb4e63ed` |
+| Fecha del commit | 2026-08-06T10:59:53+00:00 |
 | Rama | claude/previous-session-debug-acegtg |
 | Ficheros inventariados | 1253 |
 | — de autoría Luiggi Home | 1206 |
@@ -39,7 +39,7 @@ python3 herramientas/inventario_codigo.py --verificar
 | `.part` | 3 | 67066 KB |
 | `.png` | 60 | 7790 KB |
 | `.mp4` | 2 | 7751 KB |
-| `.jsx` | 108 | 3681 KB |
+| `.jsx` | 108 | 3682 KB |
 | `.wav` | 1 | 3641 KB |
 | `.py` | 194 | 3169 KB |
 | `.xlsx` | 9 | 2492 KB |
