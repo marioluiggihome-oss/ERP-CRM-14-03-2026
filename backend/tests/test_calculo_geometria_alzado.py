@@ -140,3 +140,97 @@ def test_si_no_cuadra_no_se_dibuja(geom):
 def test_se_distingue_un_alto_de_un_bajo(geom, eid, label, esperado):
     """De esto depende en qué fila cae cada módulo, o sea, si la suma cuadra."""
     assert geom.es_alto(eid, label) is esperado, f"«{label}» mal clasificado"
+
+
+# ── Las medidas ESCRITAS mandan sobre lo que estima la IA ────────────────────
+# Croquis acotado a mano del master: 30+60+60+60+2+60+1+60+2+70+2 = 407 cm.
+# La IA estimaba la pared en 280 y el codigo aplastaba contra ese 280 las cotas
+# escritas: los muebles salian encogidos y la cocina no era la del croquis.
+
+_CROQUIS = [("cajonera", "Bajo 3 cajones", 30), ("placa", "Placa", 60),
+            ("mueble", "Mueble bajo", 60), ("mueble_fregadero", "Bajo fregadero", 60),
+            ("relleno", "Relleno", 2), ("columna_hornos", "Columna horno", 60),
+            ("relleno", "Relleno", 1), ("frigorifico", "Frigorífico", 60),
+            ("relleno", "Relleno", 2), ("despensa", "Columna despensa", 70),
+            ("relleno", "Relleno", 2)]
+SUMA_CROQUIS = sum(w for _i, _l, w in _CROQUIS)   # 407
+
+
+def _dist_croquis(ancho_ia, escrito=True, ancho_escrito=False):
+    x, els = 0, []
+    for eid, lab, w in _CROQUIS:
+        els.append({"id": eid, "label": lab, "pared_idx": 0, "posicion_cm": x,
+                    "ancho": w, "medida_escrita": escrito})
+        x += w
+    return {"tipo": "lineal",
+            "paredes": [{"nombre": "P", "ancho": ancho_ia, "alto": 240,
+                         "ancho_escrito": ancho_escrito}],
+            "elementos": els}
+
+
+def test_el_ancho_de_pared_sale_de_las_cotas_escritas(geom):
+    r = geom.validar_distribucion(_dist_croquis(ancho_ia=280))
+    assert r["paredes"][0]["ancho"] == SUMA_CROQUIS, (
+        f"la pared sigue valiendo {r['paredes'][0]['ancho']} cm (lo que estimó la "
+        f"IA) en vez de los {SUMA_CROQUIS} cm que suman las cotas escritas.")
+
+
+def test_ninguna_medida_escrita_se_toca_para_cuadrar(geom):
+    """Una cota escrita es un DATO. Si no cuadra se dice, no se falsea."""
+    r = geom.validar_distribucion(_dist_croquis(ancho_ia=280))
+    anchos = [e["ancho"] for e in r["elementos"] if e.get("fila") == "bajo"]
+    assert anchos == [w for _i, _l, w in _CROQUIS], \
+        f"se han modificado medidas escritas del croquis: {anchos}"
+
+
+def test_lo_que_teclea_el_usuario_manda_incluso_sobre_el_croquis(geom):
+    """Orden de verdad: usuario > cota escrita > suma de módulos > estimación."""
+    r = geom.validar_distribucion(_dist_croquis(ancho_ia=280), ancho_real=420)
+    assert r["paredes"][0]["ancho"] == 420
+
+
+def test_una_cota_de_pared_escrita_manda_sobre_la_suma(geom):
+    """Si el plano dice cuánto mide la pared, esa cota gana: lo que falte es un
+    hueco real, no un error de la cota."""
+    r = geom.validar_distribucion(
+        _dist_croquis(ancho_ia=430, ancho_escrito=True))
+    assert r["paredes"][0]["ancho"] == 430
+
+
+def test_sin_medidas_escritas_se_sigue_cuadrando_como_antes(geom):
+    """Si nada está acotado, todo son estimaciones y el reparto es el de siempre:
+    los módulos se reparten el ancho de pared que dice la IA."""
+    r = geom.validar_distribucion(_dist_croquis(ancho_ia=380, escrito=False))
+    assert r["ok"] is True, r.get("motivo")
+    assert r["paredes"][0]["ancho"] == 380
+    suelo = [e for e in r["elementos"] if e.get("fila") == "bajo"]
+    assert sum(e["ancho"] for e in suelo) == 380
+
+
+def test_sin_cotas_escritas_y_sin_sitio_no_se_dibuja(geom):
+    """407 cm de módulos estimados no caben en una pared de 300: antes se
+    dibujaban igual, saliéndose. Ahora se rechaza y se explica."""
+    r = geom.validar_distribucion(_dist_croquis(ancho_ia=300, escrito=False))
+    assert r["ok"] is False, "una composición que no cabe no puede darse por buena"
+    assert "suman" in (r.get("motivo") or "") or "caben" in (r.get("motivo") or "")
+
+
+def test_un_relleno_no_se_ajusta_a_un_ancho_de_catalogo(geom):
+    """El relleno es una pieza a medida. Al revalidar, uno de 10 cm pasaba a 15 y
+    descuadraba la pared que ya cuadraba."""
+    r = geom.validar_distribucion(_dist_croquis(ancho_ia=280))
+    rellenos = [e["ancho"] for e in r["elementos"] if e["id"] == "relleno"]
+    assert rellenos == [2, 1, 2, 2], f"los rellenos se han redondeado: {rellenos}"
+
+
+def test_la_distribucion_ya_validada_sobrevive_a_una_segunda_validacion(geom):
+    """detect-distribucion valida, y /alzado vuelve a validar lo que aquella
+    devolvió. La segunda pasada no puede romper lo que la primera cuadró."""
+    primera = geom.validar_distribucion(_dist_croquis(ancho_ia=280))
+    segunda = geom.validar_distribucion(
+        {"tipo": "lineal", "paredes": primera["paredes"], "elementos": primera["elementos"]})
+    assert segunda["ok"] is True, segunda.get("motivo")
+    suelo_1 = [(e["label"], e["ancho"]) for e in primera["elementos"] if e.get("fila") == "bajo"]
+    suelo_2 = [(e["label"], e["ancho"]) for e in segunda["elementos"] if e.get("fila") == "bajo"]
+    assert suelo_1 == suelo_2, \
+        f"la segunda validación ha cambiado la composición:\n{suelo_1}\n{suelo_2}"

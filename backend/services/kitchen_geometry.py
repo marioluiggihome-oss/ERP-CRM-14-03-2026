@@ -143,7 +143,11 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             avisos.append(f"Pared {i+1}: alto {alt} cm no es una altura de techo real; se usa 240.")
             alt = 240
         paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"),
-                        "ancho": anc, "alto": alt})
+                        "ancho": anc, "alto": alt,
+                        # Si la cota está ESCRITA en el plano, manda sobre la suma
+                        # de módulos. La bandera tiene que sobrevivir a la ida y
+                        # vuelta (detectar → dibujar), o la regla no sirve de nada.
+                        "ancho_escrito": bool(p.get("ancho_escrito"))})
 
     if not paredes:
         # Sin datos válidos NO se inventa una cocina: se deja explícito.
@@ -156,6 +160,7 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             avisos.append(f"Pared 1: se usa el ancho REAL del usuario ({ancho_real} cm) "
                           f"en lugar del estimado ({paredes[0]['ancho']} cm).")
         paredes[0]["ancho"] = int(ancho_real)
+        paredes[0]["ancho_escrito"] = True
     if alto_real and en_rango(alto_real, "alto_pared"):
         paredes[0]["alto"] = int(alto_real)
 
@@ -168,11 +173,18 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         except (TypeError, ValueError):
             continue
         eid = str(e.get("id") or "mueble").lower().strip().replace(" ", "_")
-        anc_snap = snap_ancho(anc)
-        if not en_rango(anc, "ancho_modulo"):
-            avisos.append(f"Módulo «{eid}»: ancho {int(anc)} cm no es fabricable; "
-                          f"se ajusta a {anc_snap} cm.")
+        if eid == "relleno":
+            # El relleno es una pieza a medida: su ancho ES el hueco que sobra.
+            # Ajustarlo a un estándar descuadraba la pared que ya cuadraba (se
+            # veía al revalidar: "relleno: 10 cm no es fabricable, se ajusta a 15").
+            anc_snap = max(1, int(round(anc)))
+        else:
+            anc_snap = snap_ancho(anc)
+            if not en_rango(anc, "ancho_modulo"):
+                avisos.append(f"Módulo «{eid}»: ancho {int(anc)} cm no es fabricable; "
+                              f"se ajusta a {anc_snap} cm.")
         etiqueta = str(e.get("label") or eid or "Módulo")[:24]
+        escrita = bool(e.get("medida_escrita"))
         # La FILA (suelo o colgado) se decide aquí, una sola vez, y viaja con el
         # módulo. El dibujo ya no tiene que adivinarlo por el id.
         fila = "alto" if es_alto(eid, etiqueta) else "bajo"
@@ -180,12 +192,41 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             "id": eid,
             "label": etiqueta,
             "fila": fila,
+            "medida_escrita": escrita,
             "pared_idx": max(0, min(pidx, len(paredes) - 1)),
             "posicion_cm": max(0, int(round(pos))),
             "ancho": anc_snap,
             "alto": ALTOS_ALTURAS[0] if fila == "alto" else altura_modulo(eid),
             "fondo": FONDO_ALTOS if fila == "alto" else fondo_modulo(eid),
         })
+
+    # ── DE DÓNDE SALE EL ANCHO DE LA PARED ──────────────────────────────────
+    # Orden de verdad, de más fiable a menos:
+    #   1. El que ha tecleado el usuario (ancho_real). Manda siempre.
+    #   2. El que está ESCRITO en el plano/croquis (ancho_escrito).
+    #   3. La SUMA de los módulos cuyas medidas están escritas.
+    #   4. La estimación visual de la IA. Es la última, no la primera.
+    # Antes se usaba siempre la 4 y se aplastaban contra ella las medidas
+    # escritas: un croquis acotado a mano que sumaba 406 cm acababa metido en
+    # una pared "de 280" y todos los muebles encogidos. Al revés.
+    for pidx, pared in enumerate(paredes):
+        if ancho_real and pidx == 0:
+            continue                       # el dato del usuario ya se aplicó
+        if pared.get("ancho_escrito"):
+            continue                       # la cota del plano manda sobre la suma
+        del_suelo = [e for e in elementos
+                     if e["pared_idx"] == pidx and e.get("fila") == "bajo"]
+        escritos = [e for e in del_suelo if e.get("medida_escrita")]
+        # Hace falta que la mayoría estén acotados: con una medida suelta escrita
+        # no se puede deducir el ancho de toda la pared.
+        if not del_suelo or len(escritos) * 2 < len(del_suelo):
+            continue
+        suma = sum(e["ancho"] for e in del_suelo)
+        if suma != pared["ancho"] and en_rango(suma, "ancho_pared"):
+            avisos.append(
+                f"Pared {pidx+1}: el ancho pasa de {pared['ancho']} cm (estimado) a "
+                f"{suma} cm, que es lo que suman las medidas escritas en el plano.")
+            pared["ancho"] = int(suma)
 
     # Cuadrar cada pared: la suma de anchos DEBE coincidir con el ancho de pared.
     # Criterio de arquitecto técnico:
@@ -242,6 +283,14 @@ def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
     de la pared, y meter un "relleno colgado" para cuadrar sería inventarse un
     mueble. Lo que sí se exige es que no se pase del ancho.
     """
+    # Un RELLENO calculado es una consecuencia, no un dato: se tira y se vuelve a
+    # calcular. Si se deja, el reparto proporcional lo trata como un mueble más y
+    # `snap_ancho` lo sube al mínimo de catálogo: cuatro rellenos de 1-2 cm se
+    # convertían en cuatro de 15, o sea 60 cm de relleno inventado que hacían que
+    # la composición dejara de caber. (El relleno ESCRITO en un plano sí es un
+    # dato y se respeta.)
+    grupo = [e for e in grupo
+             if not (e["id"] == "relleno" and not e.get("medida_escrita"))]
     grupo = sorted(grupo, key=lambda e: e["posicion_cm"])
     if not grupo:
         return [], False, None
@@ -252,6 +301,10 @@ def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
     for e in grupo:
         if e["id"] in ANCHO_FIJO:
             e["ancho"] = ANCHO_FIJO[e["id"]]
+            e["anchoFijo"] = True
+        elif e.get("medida_escrita"):
+            # Una medida escrita en el plano es un DATO, no una estimación: no se
+            # reescala para cuadrar. Si al final no cuadra, se dice — no se falsea.
             e["anchoFijo"] = True
     fijos = [e for e in grupo if e.get("anchoFijo")]
     flex = [e for e in grupo if not e.get("anchoFijo")]

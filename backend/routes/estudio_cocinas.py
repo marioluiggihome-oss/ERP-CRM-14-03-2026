@@ -1633,17 +1633,25 @@ async def generar_alzado(payload: ProyectoBase):
         SINK = {"fregadero", "seno", "lavabo"}
 
         def _frentes_gavetas(body_h, label_tipo):
-            """Devuelve las alturas (cm) de los frentes de una cajonera, de arriba
-            abajo. Cajón superior más bajo + gavetas iguales."""
+            """Alturas (cm) de los frentes de una cajonera, de arriba abajo.
+
+            Enteras y sumando EXACTAMENTE el cuerpo. Antes salían 15,2 y 32,4:
+            un frente no se corta a décimas de centímetro, y encima la suma no
+            cerraba el módulo. El cajón superior va más bajo (es el de cubiertos)
+            y el sobrante de la división entera se reparte por arriba.
+            """
             t = (label_tipo or "").lower()
             n = 3
             for k in ("4", "cuatro"):
                 if k in t: n = 4
             for k in ("2", "dos"):
                 if k in t and "cajon" in t: n = 3  # 2 gavetas + 1 cajon
-            top = round(body_h * 0.19, 1)           # cajón superior ~19%
-            resto = round((body_h - top) / (n - 1), 1)
-            return [top] + [resto] * (n - 1)
+            body = int(round(body_h))
+            top = max(12, int(round(body * 0.19)))   # cajón superior ~19%
+            resto = (body - top) // (n - 1)
+            fondos = [resto] * (n - 1)
+            top += body - top - sum(fondos)          # el descuadre, al de arriba
+            return [top] + fondos
 
         dist = payload.distribucion_estructurada
         # NUNCA inventar una pared por defecto (antes caía a 400x240 en silencio, lo
@@ -1717,6 +1725,19 @@ async def generar_alzado(payload: ProyectoBase):
             # Un carácter de una fuente proporcional ocupa ~0,6 × su cuerpo.
             return (fontsize * 0.6 / 72.0) / max(pulg_por_cm, 1e-9)
 
+        def _texto_vertical(ax, cx, cy, txt, largo_disponible, color=None):
+            """Rótulo girado 90º, recortado a lo que mide el módulo A LO ALTO.
+
+            Girado, el hueco no es el ancho del mueble sino su altura. Sin este
+            recorte, "Columna horno y microondas" en una columna se salía por
+            arriba y por abajo y se metía en las cotas.
+            """
+            cabe = max(4, int(largo_disponible * 0.92 / _cm_por_caracter(ax, 6.5)))
+            t = str(txt).replace("\n", " · ")
+            ax.text(cx, cy, t if len(t) <= cabe else t[:max(1, cabe - 1)] + "…",
+                    ha="center", va="center", fontsize=6.5, rotation=90,
+                    color=color or C_LINE)
+
         def _texto_modulo(ax, x, w, cy, txt):
             """Etiqueta dentro del módulo, ajustada a lo ancho que sea.
 
@@ -1731,12 +1752,7 @@ async def generar_alzado(payload: ProyectoBase):
                           for l in txt.split("\n")]
                 ax.text(x + w / 2, cy, "\n".join(lineas), ha="center", va="center", fontsize=6.5)
             elif w >= 22:
-                # Girado, el hueco disponible es el ALTO del módulo, no su ancho.
-                alto_util = (ENC_Y - ZOC_Y) * 0.9
-                cabe = max(4, int(alto_util / _cm_por_caracter(ax, 6)))
-                t = txt.replace("\n", " · ")
-                ax.text(x + w / 2, cy, t if len(t) <= cabe else t[:max(1, cabe - 1)] + "…",
-                        ha="center", va="center", fontsize=6, rotation=90)
+                _texto_vertical(ax, x + w / 2, cy, txt, ENC_Y - ZOC_Y)
             # Por debajo de 22 cm no cabe ni girado: lo dice la cota, no la etiqueta.
 
         herr = {"puertas": 0, "cajones": 0}  # recuento de herraje para el resumen
@@ -1744,7 +1760,7 @@ async def generar_alzado(payload: ProyectoBase):
             ancho = int(pared.get("ancho") or 400)
             alto = int(pared.get("alto") or 240)
             ax.set_facecolor(C_BG); ax.set_aspect("equal"); ax.axis("off")
-            ax.set_xlim(-70, ancho + 78); ax.set_ylim(-45, alto + 40)
+            ax.set_xlim(-70, ancho + 78); ax.set_ylim(-58, alto + 40)
             # contorno de pared y líneas guía
             wire(ax, 0, 0, ancho, alto, lw=2)
             for gy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
@@ -1752,6 +1768,12 @@ async def generar_alzado(payload: ProyectoBase):
 
             elems = sorted([e for e in elementos if e.get("pared_idx", 0) == idx],
                            key=lambda e: e.get("posicion_cm", 0) or 0)
+            # La campana se sitúa ANTES de dibujar nada: va sobre la placa por
+            # física, y ahí no puede haber un mueble alto. Calcularla al final
+            # hacía que se pintara ENCIMA de un alto ya dibujado.
+            zonas_campana = [(int(e.get("posicion_cm") or 0), int(e.get("ancho") or 60))
+                             for e in elems
+                             if str(e.get("id") or "").lower() in HOB]
             pos = 0
             cotas = []
             hob_zones = []   # (x, w) de las placas → la campana va justo encima
@@ -1768,11 +1790,18 @@ async def generar_alzado(payload: ProyectoBase):
                 x = int(e.get("posicion_cm") or pos)
                 if tipo in COLS:
                     wire(ax, x, ZOC_Y, w, COL_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, COL_Y - ZOC_Y)
-                    ax.text(x + w / 2, (ZOC_Y + COL_Y) / 2, label, ha="center", va="center", fontsize=7, rotation=90)
+                    _texto_vertical(ax, x + w / 2, (ZOC_Y + COL_Y) / 2, label, COL_Y - ZOC_Y)
                     # Tiradores verticales de la columna (puerta superior e inferior).
                     tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.30, length=18)
                     tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.72, length=18)
                     herr["puertas"] += 2
+                elif (fila == "alto" or tipo in ALTOS) and any(
+                        min(cx + cw, x + w) - max(cx, x) > w * 0.5
+                        for (cx, cw) in zonas_campana):
+                    # La campana se come más de medio módulo: ahí no cabe el alto.
+                    # (Rozarla no basta: un alto de 60 no desaparece porque le
+                    # pisen 10 cm; en obra se estrecha, no se quita.)
+                    continue
                 elif fila == "alto" or tipo in ALTOS:
                     # Fila COLGADA. Antes un "Mueble alto" caía en el `else` y se
                     # dibujaba a ras de suelo, rotulado "30×80": un alto no mide
@@ -1791,13 +1820,16 @@ async def generar_alzado(payload: ProyectoBase):
                     for fh in fronts:
                         yy -= fh
                         ax.plot([x, x + w], [yy, yy], color=C_FRENTE, lw=0.8, zorder=3)
-                        if _con_cotas:
+                        if _con_cotas and w >= 40:
                             ax.text(x + w / 2, yy + fh / 2, f"{fh:g}", ha="center", va="center",
                                     fontsize=6, color=C_FRENTE)
                         # Tirador horizontal centrado, junto al canto superior del frente.
                         tirador_h(ax, x + w / 2, yy + fh - 3, length=min(16, w * 0.5))
                         herr["cajones"] += 1
-                    ax.text(x + w / 2, ZOC_Y - 3, label, ha="center", va="top", fontsize=6.5, color=C_LINE)
+                    # Dentro del módulo, no debajo: ahí abajo están las cotas y se
+                    # pisaban ("Módulo bajo cajone…" encima del 10 del zócalo).
+                    _texto_vertical(ax, x + w / 2, (ZOC_Y + ENC_Y) / 2, label,
+                                    ENC_Y - ZOC_Y, color=C_LINE)
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
                     _txt = f"{label}\n{w}×{ENC_Y - ZOC_Y}" if _con_cotas else label
@@ -1853,13 +1885,29 @@ async def generar_alzado(payload: ProyectoBase):
             ax.plot([0, ancho], [ZOC_Y, ZOC_Y], color=C_LINE, lw=1.2, zorder=4)
             # COTAS: solo si se piden (la vista alámbrica "limpia" va sin ellas).
             if _con_cotas:
-                for (a, b, t) in cotas:
-                    cota_h(ax, a, b, -12, t)
-                cota_h(ax, 0, ancho, -32, f"{ancho} cm")
+                def _cadena_de_cotas(lista, y_base, sentido=1):
+                    """Dibuja una cadena de cotas escalonando las que no caben.
+
+                    Dos módulos estrechos y contiguos escribían sus números
+                    pegados y se leía "2060" en vez de "20" y "60". Cuando el
+                    número no cabe en su tramo, baja (o sube) un escalón.
+                    """
+                    ancho_num = _cm_por_caracter(ax, 7.5)
+                    ultimo_alto = -1e9
+                    for (x0, x1, t) in lista:
+                        estrecho = (x1 - x0) < len(t) * ancho_num * 1.6
+                        # Solo se escalona si el anterior no estaba ya escalonado,
+                        # para no hacer una escalera infinita.
+                        escalon = 1 if (estrecho and x0 > ultimo_alto) else 0
+                        if escalon:
+                            ultimo_alto = x1
+                        cota_h(ax, x0, x1, y_base - sentido * escalon * 9, t)
+
+                _cadena_de_cotas(cotas, -12, sentido=1)
+                cota_h(ax, 0, ancho, -40, f"{ancho} cm")
                 # Las cotas de la fila colgada van SOBRE los altos: mezclarlas con
                 # las de suelo daba una tira que no sumaba el ancho de la pared.
-                for (a, b, t) in cotas_altos:
-                    cota_h(ax, a, b, ALTOS_Y1 + 5, t)
+                _cadena_de_cotas(cotas_altos, ALTOS_Y1 + 5, sentido=-1)
                 for gy, t in ((ZOC_Y, str(ZOC_Y)), (ENC_TOP, str(ENC_TOP)), (ALTOS_Y0, str(ALTOS_Y0)),
                               (ALTOS_Y1, str(ALTOS_Y1)), (alto, str(alto))):
                     ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
@@ -1967,18 +2015,31 @@ async def detect_distribucion(payload: dict):
             if ancho_real else "\n"
         )
         prompt = (
-            "Eres proyectista de cocinas. Analiza esta imagen (render de cocina) y deduce su DISTRIBUCIÓN. "
-            "Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, en cada pared, "
-            "la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho aproximado en cm "
-            "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles cuentan como módulos "
-            "(frigorífico, columna horno/microondas, lavavajillas, fregadero, placa/cocina, campana...).\n"
+            "Eres proyectista de cocinas. Analiza esta imagen (render o croquis de cocina) y deduce su "
+            "DISTRIBUCIÓN. Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, "
+            "en cada pared, la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho en cm "
+            "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles "
+            "cuentan como módulos (frigorífico, columna horno/microondas, lavavajillas, fregadero, "
+            "placa/cocina, campana...).\n"
+            "\nREGLA MÁS IMPORTANTE — LAS MEDIDAS ESCRITAS MANDAN:\n"
+            "Si en la imagen hay NÚMEROS ESCRITOS (un croquis acotado a mano, cotas sobre un render), esos "
+            "números son la VERDAD. Cópialos literalmente y marca `\"medida_escrita\": true` en ese módulo. "
+            "NO los redondees, NO los ajustes y NO los sustituyas por tu estimación visual. "
+            "Si solo puedes estimar el ancho mirando la proporción, marca `\"medida_escrita\": false`.\n"
+            "El ancho de la pared: si está escrito en la imagen, cópialo y pon `\"ancho_escrito\": true`. "
+            "Si NO está escrito pero los módulos sí lo están, pon `\"ancho_escrito\": false` y deja que el "
+            "ancho sea la SUMA de los módulos escritos: nunca inventes un ancho de pared menor que esa suma.\n"
             + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"
-            "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240}],"
-            "\"elementos\":[{\"id\":\"frigorifico\",\"label\":\"Frigorífico\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":60}]}. "
-            "'ancho' de pared en cm (suma de sus módulos). 'posicion_cm' es la distancia desde el inicio de la pared. "
+            "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240,"
+            "\"ancho_escrito\":false}],"
+            "\"elementos\":[{\"id\":\"frigorifico\",\"label\":\"Frigorífico\",\"pared_idx\":0,"
+            "\"posicion_cm\":0,\"ancho\":60,\"medida_escrita\":false}]}. "
+            "'posicion_cm' es la distancia desde el inicio de la pared. "
             "id usa palabras clave: frigorifico, congelador, columna_hornos, horno, microondas, lavavajillas, "
-            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca."
+            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca. "
+            "Distingue CAJONERA (frentes de cajón apilados) de mueble de PUERTA: son cosas distintas y el "
+            "herraje no es el mismo."
         )
         text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")
         m = _re.search(r"\{[\s\S]*\}", text or "")
@@ -1997,7 +2058,9 @@ async def detect_distribucion(payload: dict):
             except (TypeError, ValueError):
                 continue
             if anc > 0:
-                paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"), "ancho": anc, "alto": alt or 240})
+                paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"),
+                                "ancho": anc, "alto": alt or 240,
+                                "ancho_escrito": bool(p.get("ancho_escrito"))})
         elementos = []
         for e in (data.get("elementos") or [])[:40]:
             try:
@@ -2010,49 +2073,21 @@ async def detect_distribucion(payload: dict):
                 "id": str(e.get("id") or "mueble").lower().strip().replace(" ", "_"),
                 "label": str(e.get("label") or e.get("id") or "Módulo")[:24],
                 "pared_idx": max(0, pidx), "posicion_cm": max(0, pos), "ancho": max(10, anc),
+                "medida_escrita": bool(e.get("medida_escrita")),
             })
         if not paredes:
             raise HTTPException(status_code=422, detail="No se pudo deducir la distribución del render.")
 
-        # ── NORMALIZACIÓN DE MEDIDAS ────────────────────────────────────────────
-        # La IA estima anchos por proporción visual (impreciso). Se corrige:
-        #  1) Si el usuario dio el ancho REAL de la estancia, la pared principal (0)
-        #     usa ESE ancho como verdad.
-        #  2) En cada pared, los módulos se reescalan para SUMAR el ancho de la pared,
-        #     se ajustan a tamaños de fabricación estándar y se recolocan contiguos
-        #     de izquierda a derecha (sin huecos ni solapes). Así las cotas cuadran.
-        STD = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120]
-        def _snap(w):
-            return min(STD, key=lambda s: abs(s - w))
+        # Las medidas las cuadra kitchen_geometry, que es la única fuente de
+        # verdad. Aquí había una segunda normalización que reescalaba TODOS los
+        # módulos contra el ancho de pared estimado: eso aplastaba las medidas
+        # ESCRITAS del croquis contra un ancho que la IA se había inventado
+        # (400 cm de módulos acotados a mano metidos en una pared de 280).
         if ancho_real and paredes:
             paredes[0]["ancho"] = ancho_real
+            paredes[0]["ancho_escrito"] = True
             if alto_real:
                 paredes[0]["alto"] = alto_real
-        norm_elems = []
-        for pidx, pared in enumerate(paredes):
-            grupo = sorted([e for e in elementos if e["pared_idx"] == pidx],
-                           key=lambda e: e["posicion_cm"])
-            if not grupo:
-                continue
-            suma = sum(e["ancho"] for e in grupo) or 1
-            objetivo = pared["ancho"]
-            factor = objetivo / suma
-            # Reescala y ajusta a estándar
-            for e in grupo:
-                e["ancho"] = max(15, _snap(e["ancho"] * factor))
-            # Cuadra la suma exactamente con el ancho de pared: el desfase se absorbe
-            # en el módulo más ancho (normalmente un mueble base, no un electrodoméstico).
-            desfase = objetivo - sum(e["ancho"] for e in grupo)
-            if desfase and grupo:
-                idx_max = max(range(len(grupo)), key=lambda i: grupo[i]["ancho"])
-                grupo[idx_max]["ancho"] = max(15, grupo[idx_max]["ancho"] + desfase)
-            # Recoloca contiguos de izquierda a derecha
-            x = 0
-            for e in grupo:
-                e["posicion_cm"] = x
-                x += e["ancho"]
-            norm_elems.extend(grupo)
-        elementos = norm_elems or elementos
         # VALIDACIÓN DE GEOMETRÍA REAL (obligatoria, ver CLAUDE.md): ninguna medida
         # imposible llega al dibujo; los electrodomésticos no se reescalan.
         from services.kitchen_geometry import validar_distribucion
