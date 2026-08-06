@@ -489,6 +489,10 @@ export default function AIRenderStudio({ state, setState }) {
   const [renderResult, setRenderResult] = useState(null);
   const [renderHistory, setRenderHistory] = useState([]);
   const [error, setError] = useState(null);
+  // Avisos: la vista SÍ se generó, pero hubo que corregir algo (un ancho
+  // ajustado, un relleno añadido). En rojo y con la palabra «Error» delante
+  // parecía que había fallado, y no.
+  const [avisoGeom, setAvisoGeom] = useState(null);
   // Créditos de IA del usuario (bolsa mensual ligada a su suscripción).
   const [aiCredits, setAiCredits] = useState(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -1156,7 +1160,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Es el mismo motor vectorial determinista: nunca hay medidas inventadas.
   const generarVistaAlambrica = async (conCotas) => {
     if (editing) return;
-    setEditing(true); setError(null);
+    setEditing(true); setError(null); setAvisoGeom(null);
     try {
       // Dos vías para sacar la distribución: del render y de la descripción. La
       // segunda era CÓDIGO MUERTO: `postJson` lanza cuando el servidor contesta
@@ -1208,7 +1212,7 @@ export default function AIRenderStudio({ state, setState }) {
       };
       setRenderResult(lamina);
       setRenderHistory(prev => [lamina, ...prev].slice(0, 14));
-      if (ar.avisos?.length) setError(`Vista generada. Revisa: ${ar.avisos.join(' · ')}`);
+      setAvisoGeom(ar.avisos?.length ? ar.avisos : null);
     } catch (e) {
       setError(`Error al generar la vista alámbrica: ${e?.message || 'error desconocido'}.`);
     } finally { setEditing(false); }
@@ -3178,6 +3182,19 @@ export default function AIRenderStudio({ state, setState }) {
               <Palette size={14} /> Opciones
             </button>
           </div>
+          {avisoGeom && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900">
+              <div className="flex items-start gap-2">
+                <span className="font-black shrink-0">Vista generada · revisa esto:</span>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {avisoGeom.map((a, i) => <li key={i}>{a}</li>)}
+                </ul>
+                <button onClick={() => setAvisoGeom(null)} className="ml-auto text-amber-500 hover:text-amber-700 shrink-0">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
               <span className="text-red-500 font-bold">Error:</span> {error}
