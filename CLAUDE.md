@@ -106,6 +106,17 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    descripciones, unidades, medidas y el pedido — y todo eso se sigue pudiendo
    tocar. Sirve para enseñar la pantalla con alguien delante.
 
+10. **El MODELO de imagen de IA 1 no se cambia** (06/08). El candado de motores
+   protege QUÉ motor usa cada botón; este protege QUÉ MODELO usa por dentro,
+   que es por donde se coló el problema: `gemini-3-pro-image-preview` pasó a
+   principal y IA 1 dejó de seguir el boceto —hace imágenes más bonitas pero se
+   inventa la distribución—, y IA 3 pasó de `flux-1.1-pro` a `flux-schnell` por
+   coste. Ninguno de los dos rompió nada: solo empeoró el resultado, y eso no
+   sale en ningún error. **IA 1 es la de producción y su modelo es
+   `gemini-2.5-flash-image`.** IA 2/3/4 son motores de pruebas del master: ahí
+   puede cambiar, pero dejándolo escrito en
+   `backend/tests/test_calculo_modelos_imagen.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

@@ -1069,7 +1069,11 @@ class Render3DService:
                 async with httpx.AsyncClient(timeout=120) as client:
                     # Crear predicción
                     resp = await client.post(
-                        "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions",
+                        # flux-1.1-pro, NO flux-schnell. Schnell genera en 4 pasos de difusion
+                        # frente a los ~25-50 del Pro: sale mas barato (~0,003 $/img)
+                        # pero la calidad no es la que el master eligio para IA 3.
+                        # Se cambio a Schnell por coste el 01/08 y se revirtio el 06/08.
+                        "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions",
                         headers=headers,
                         json={"input": flux_input},
                     )
@@ -1108,7 +1112,7 @@ class Render3DService:
                 "success": True,
                 "status": "completed",
                 "result": {"images": [data_url]},
-                "engine": f"{self.config.brand_name} (Flux Schnell)",
+                "engine": f"{self.config.brand_name} (Flux Pro)",
                 "duration_seconds": round(time.time() - start, 1),
                 "prompt_used": prompt,
             }
