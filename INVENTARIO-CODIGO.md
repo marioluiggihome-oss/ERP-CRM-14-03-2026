@@ -1,23 +1,23 @@
 # Inventario del código fuente — Luiggi Home
 
-**Huella global SHA-256:** `8d7e2ed3c8e1585893b4026db3a454ea22fa676a6f1dc79c4ed7dbabe94cf839`
+**Huella global SHA-256:** `41abc03411db800380ededb2b6a6705d15b77248730b16c384bd7fc41e02e2d3`
 
 | Dato | Valor |
 |---|---|
-| Generado (UTC) | 2026-08-06 11:51:19 |
-| Commit | `b79a21a2fe7d14769e1b3cdd62ccfb67ab4f9dff` |
-| Fecha del commit | 2026-08-06T11:43:59+00:00 |
+| Generado (UTC) | 2026-08-06 11:57:31 |
+| Commit | `d7aa24c6dbd44ce05f08ff9170268323abefac32` |
+| Fecha del commit | 2026-08-06T11:52:32+00:00 |
 | Rama | claude/previous-session-debug-acegtg |
-| Ficheros inventariados | 1254 |
-| — de autoría Luiggi Home | 1207 |
+| Ficheros inventariados | 1255 |
+| — de autoría Luiggi Home | 1208 |
 | — de terceros (ver AUDITORIA-LICENCIAS.md) | 47 |
-| Tamaño total | 1049.51 MB |
+| Tamaño total | 1049.52 MB |
 
 ## Para qué sirve este documento
 
 Acredita **qué contenía** el código en la fecha de arriba. La huella SHA-256 de un fichero cambia si cambia un solo carácter, así que comparar la huella de un fichero de hoy con la de esta lista demuestra si es o no el mismo. La *huella global* resume todo el conjunto en una sola cadena: es la que conviene hacer constar en un acta notarial o en un sellado de tiempo, porque protege la lista entera con un solo dato.
 
-El detalle fichero a fichero está en [`INVENTARIO-CODIGO.csv`](INVENTARIO-CODIGO.csv) (1254 líneas), que es el que se adjunta al depósito.
+El detalle fichero a fichero está en [`INVENTARIO-CODIGO.csv`](INVENTARIO-CODIGO.csv) (1255 líneas), que es el que se adjunta al depósito.
 
 ## Cómo comprobar que un fichero no ha cambiado
 
@@ -39,9 +39,9 @@ python3 herramientas/inventario_codigo.py --verificar
 | `.part` | 3 | 67066 KB |
 | `.png` | 60 | 7790 KB |
 | `.mp4` | 2 | 7751 KB |
-| `.jsx` | 108 | 3685 KB |
+| `.jsx` | 108 | 3687 KB |
 | `.wav` | 1 | 3641 KB |
-| `.py` | 195 | 3172 KB |
+| `.py` | 196 | 3179 KB |
 | `.xlsx` | 9 | 2492 KB |
 | `.xls` | 2 | 1897 KB |
 | `.js` | 25 | 659 KB |

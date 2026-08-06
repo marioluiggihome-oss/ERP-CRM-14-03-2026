@@ -104,3 +104,31 @@ def test_el_motivo_de_cada_modelo_queda_escrito_en_el_codigo():
         "se ha borrado la nota que explica por qué manda gemini-2.5-flash-image"
     assert "NO flux-schnell" in _leer(RENDER), \
         "se ha borrado la nota que explica por qué IA 3 va con Flux Pro"
+
+
+# ── Qué modelo hay detrás NO se le enseña al cliente ─────────────────────────
+
+ESTUDIO_3D = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
+PANEL_MASTER = os.path.join(
+    RAIZ, "frontend", "src", "components", "settings", "UsageReportTab.jsx")
+
+
+def test_el_modelo_no_se_ensena_en_la_pantalla_del_cliente():
+    """Qué motor y qué modelo hay detrás es SECRETO INDUSTRIAL (Ley 1/2019, y
+    está en las condiciones de uso). El Estudio 3D lo ve cualquier carpintero
+    con cuenta: ahí no se escribe el nombre del modelo."""
+    fuente = _leer(ESTUDIO_3D)
+    visibles = [m for m in ("gemini-2.5-flash-image", "gemini-3-pro-image-preview",
+                            "flux-1.1-pro", "flux-schnell")
+                if m in "\n".join(l.split("//")[0] for l in fuente.splitlines())]
+    assert not visibles, (
+        f"el nombre del modelo {visibles} ha llegado a la pantalla del Estudio "
+        f"3D, que ve cualquier cliente. Eso va en Ajustes → Consumo de IA, que "
+        f"está cerrado a master.")
+
+
+def test_el_master_si_puede_ver_que_modelos_se_estan_usando():
+    """Sin poder verlo, un cambio de modelo vuelve a ser invisible hasta que
+    salga un render malo."""
+    assert "by_model" in _leer(PANEL_MASTER), \
+        "el panel de master ya no enseña los modelos realmente usados"

@@ -158,6 +158,45 @@ const AIUsageCard = () => {
           {probe?.error && <span className="text-xs text-red-600">{probe.error}</span>}
         </div>
       </div>
+      {/* MODELOS REALMENTE USADOS este mes. Va AQUÍ y no en el Estudio 3D a
+          propósito: qué motor y qué modelo hay detrás es secreto industrial y
+          no lo puede ver un cliente. Este panel ya está cerrado a master.
+          Sirve para detectar de un vistazo que alguien ha cambiado el modelo:
+          un cambio así no da ningún error, solo empeora los renders. */}
+      {Object.keys(data.by_model?.calls || {}).length > 0 && (
+        <div className="border-t border-slate-100 pt-3 mb-3">
+          <p className="text-xs text-slate-500 mb-1.5">
+            Modelos usados este mes <span className="text-slate-400">· solo master</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(data.by_model.calls)
+              .sort((a, b) => b[1] - a[1])
+              .map(([modelo, n]) => {
+                const nombre = modelo.replace(/_/g, '.');
+                // El de producción de IA 1. Si aparece otro de imagen por
+                // encima, es que alguien lo ha cambiado.
+                const esPrincipal = nombre.includes('2.5-flash-image');
+                const esImagen = nombre.includes('image') || nombre.includes('flux');
+                return (
+                  <span key={modelo}
+                    title={esImagen ? 'Modelo de imagen (render)' : 'Modelo de texto/visión'}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold tabular-nums border ${
+                      esImagen
+                        ? (esPrincipal
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-800 border-amber-300')
+                        : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                    {nombre} · {n}
+                  </span>
+                );
+              })}
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1.5">
+            En ámbar, los modelos de imagen que NO son el de producción
+            (gemini-2.5-flash-image). Si ves uno, alguien lo ha cambiado.
+          </p>
+        </div>
+      )}
       <div className="border-t border-slate-100 pt-3 space-y-2.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-500 w-28">Alerta al superar</span>
