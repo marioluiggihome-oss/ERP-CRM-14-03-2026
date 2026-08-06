@@ -157,20 +157,21 @@ def test_el_detector_no_revienta_con_basura(servicio):
 # ── La consecuencia: por qué rama se va el render ────────────────────────────
 
 def _capturar_prompt(servicio):
-    caja = {}
+    caja = {"expand_brief_llamado": False}
 
     async def falso(task_prompt, prompt, parsed_params=None, **kw):
         caja["task_prompt"] = task_prompt
+        caja["parsed_params"] = parsed_params
         caja.update(kw)
         return {"success": True, "result": {"images": ["data:image/png;base64,x"]}}
 
+    async def falso_expand(description, space_type):
+        caja["expand_brief_llamado"] = True
+        return description
+
     servicio._render_dispatch = falso
-    servicio._expand_brief = lambda *a, **k: _corutina("")
+    servicio._expand_brief = falso_expand
     return caja
-
-
-async def _corutina(valor):
-    return valor
 
 
 def test_el_croquis_no_se_trata_como_una_cocina_ya_montada(servicio):
@@ -207,6 +208,74 @@ def test_el_croquis_viaja_de_verdad_hasta_el_modelo(servicio):
     assert caja.get("reference_image_base64"), (
         "el croquis se detecta pero NO se le pasa al modelo: renderiza solo "
         "con el texto y no puede seguir el dibujo.")
+
+
+def test_el_croquis_no_pasa_por_el_brief_expandido(servicio):
+    """CANDADO DURO — la segunda mitad del fallo del 06/08.
+
+    `_expand_brief` le pide a un LLM que redacte la distribución y los módulos
+    de izquierda a derecha A PARTIR DEL TEXTO y SIN VER el dibujo. Con un
+    croquis delante eso es una cocina INVENTADA, y encima ocupa casi todo el
+    prompt: el modelo de imagen obedece al texto largo en vez de al croquis.
+
+    Ya estaba escrito en el render compuesto —«un texto largo de dirección de
+    arte compite con las imágenes y el modelo acaba inventando una cocina
+    genérica»— pero en esta rama no se había aplicado."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="cocina en L, roble y blanco",
+        reference_image=_a_data_url(croquis_a_lapiz()),
+        reference_mime="image/jpeg",
+        provider="gemini"))
+    assert caja["expand_brief_llamado"] is False, (
+        "el croquis vuelve a pasar por _expand_brief: se le manda al modelo una "
+        "distribución inventada por un LLM que NO ha visto el dibujo.")
+    assert caja["parsed_params"].get("fromSketch") is True, (
+        "el render ya no se marca como hecho a partir de croquis")
+
+
+def test_con_croquis_manda_el_dibujo_y_el_texto_solo_pone_acabados(servicio):
+    """El reparto de mando: geometría del dibujo, acabados del texto."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="roble y blanco mate",
+        reference_image=_a_data_url(croquis_a_lapiz()),
+        reference_mime="image/jpeg",
+        provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert "Design brief (follow it precisely)" not in prompt, (
+        "el croquis ha vuelto al prompt largo de dirección de arte "
+        "(build_render_prompt), que es el que tapa el dibujo.")
+    assert "roble y blanco mate" in prompt, "se ha perdido el acabado pedido"
+    assert "geometry comes 100% from the drawing" in prompt, (
+        "ya no se le dice al modelo que la geometría sale del dibujo")
+
+
+def test_el_render_compuesto_avisa_de_que_el_plano_va_a_mano(servicio):
+    """El botón principal, con plano subido, va por el render COMPUESTO. Ahí el
+    prompt daba por hecho que las referencias eran fotos o renders. Si el plano
+    va a lápiz hay que decirlo, o el modelo toma el trazo por el acabado —o
+    «mejora» una distribución que le parece tosca por estar dibujada a mano."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render_composed(
+        description="roble y blanco",
+        floor_plan=_a_data_url(croquis_a_lapiz()),
+        provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert "HAND-DRAWN" in prompt, (
+        "al modelo ya no se le dice que el plano va a mano: puede dibujar el "
+        "papel y el lápiz, o rehacer la distribución por parecerle tosca.")
+    assert "do NOT 'tidy up', simplify or upgrade the layout" in prompt
+
+
+def test_el_render_compuesto_no_avisa_de_croquis_si_es_una_foto(servicio):
+    """Con una foto real no se le puede decir que es un dibujo a mano."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render_composed(
+        description="cambia el color",
+        floor_plan=_a_data_url(foto_de_cocina_blanca()),
+        provider="gemini"))
+    assert "HAND-DRAWN" not in caja.get("task_prompt", "")
 
 
 def test_una_foto_de_cocina_si_se_edita(servicio):

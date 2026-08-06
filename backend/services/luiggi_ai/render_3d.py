@@ -636,6 +636,58 @@ class Render3DService:
                 provider=provider, reference_images=extra_imgs or None,
             )
 
+        # ── CROQUIS / PLANO A MANO = el DIBUJO manda ───────────────────────────
+        # El croquis NO puede compartir camino con «diseñar desde cero». Ahí se
+        # llama a `_expand_brief`, que le pide a un LLM que redacte la
+        # distribución y los módulos de izquierda a derecha **a partir del texto
+        # y SIN haber visto el dibujo**. Esa especificación inventada acaba
+        # ocupando casi todo el prompt, y el modelo de imagen la obedece a ella
+        # en vez de al croquis: sale una cocina genérica que no es la del
+        # cliente. Es lo mismo que ya estaba escrito en el render compuesto —
+        # «un texto largo de dirección de arte compite con las imágenes» — pero
+        # aquí no se había aplicado.
+        #
+        # Con un croquis delante, el prompt va CORTO y centrado en el dibujo, y
+        # el texto se queda solo con lo suyo: acabados, materiales y colores.
+        if ref_b64 and is_sketch:
+            parsed_params["briefExpanded"] = False
+            parsed_params["fromSketch"] = True
+            brief_txt = (description or "").strip()
+            task_prompt = (
+                "You are given a TECHNICAL 2D DRAWING of ONE specific kitchen: a hand-drawn "
+                "floor plan, elevation or blueprint, possibly with handwritten dimensions. "
+                "Produce a single photorealistic interior photograph of THAT SAME kitchen, "
+                "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
+                "NOT a new design — do not 'improve' it and do not substitute a nicer layout.\n\n"
+                "THE DRAWING IS THE GROUND TRUTH FOR GEOMETRY:\n"
+                "- Reproduce the EXACT overall SHAPE of the kitchen (linear, L-shaped, U-shaped, "
+                "with island or peninsula) as drawn. If it is drawn as an L, it must be an L.\n"
+                "- Reproduce the NUMBER and the ORDER of the modules from left to right, and "
+                "their relative widths and heights as drawn.\n"
+                "- Reproduce EVERY element that appears in the drawing, each in its drawn "
+                "position: base units, wall units, tall/column units, fridge and freezer "
+                "columns, broom/larder units, oven, microwave, hob, hood, dishwasher, washing "
+                "machine, sink, worktop and breakfast bar. Nothing drawn may be missing.\n"
+                "- Reproduce the OPENINGS: every window and door at the same position, width "
+                "and height as drawn.\n"
+                "- Do NOT add, remove, resize, merge, duplicate or rearrange any module, "
+                "appliance or opening, and do NOT invent extra furniture that is not drawn.\n"
+                "- Use a wide-angle corner viewpoint so the COMPLETE layout is visible at once.\n\n"
+                + (f"FINISHES (this is the ONLY thing the text decides — geometry comes 100% "
+                   f"from the drawing): {brief_txt}\n\n" if brief_txt else
+                   "Use plausible, restrained modern finishes; the geometry still comes 100% "
+                   "from the drawing.\n\n")
+                + "Photorealistic result: realistic PBR materials, natural light, soft real "
+                "shadows and reflections, 16:9. It must look like a real professional interior "
+                "photograph, not a cartoon or videogame render. No text, dimension lines, "
+                "watermarks, logos or people in the image."
+            )
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                reference_image_base64=ref_b64, reference_mime=ref_mime,
+                provider=provider, reference_images=reference_images or None,
+            )
+
         # ── SIN REFERENCIA = diseño desde cero ─────────────────────────────────
         # Expandir el brief con un LLM potente (gemini-2.5-pro) para que las órdenes
         # sean mucho más explícitas y el render obedezca con detalle.
@@ -663,22 +715,10 @@ class Render3DService:
         )
 
         # Crear tarea de generación de imagen (genérica, dirigida por el brief)
-        if ref_b64 and is_sketch:
-            ref_note = (
-                "A TECHNICAL 2D DRAWING (hand-drawn floor plan, elevation or blueprint) "
-                "has been attached. Treat it in STRICT STRUCTURE / PRECISE MODE: it is "
-                "the ground truth for GEOMETRY, not decoration. You MUST reproduce the "
-                "EXACT distribution drawn: the SHAPE (linear, L-shaped, U-shaped), the "
-                "NUMBER and ORDER of modules from left to right, the POSITION of each "
-                "appliance (sink, dishwasher, washing machine, oven, hob, fridge), the "
-                "TALL COLUMNS, and — critically — the OPENINGS: every window and door "
-                "(vano) must appear at the SAME position, width and height as in the "
-                "drawing, and the overall PROPORTIONS and module widths must match the "
-                "drawing to scale. Do NOT add, remove, resize or rearrange any module or "
-                "opening. Only the FINISHES, MATERIALS and COLORS come from the written "
-                "brief; the geometry comes 100% from the drawing. "
-            )
-        elif ref_b64:
+        # OJO: el caso del CROQUIS ya ha salido por su propia rama más arriba,
+        # con prompt corto y sin brief expandido. Aquí solo llegan la referencia
+        # que no es un dibujo y el diseño desde cero.
+        if ref_b64:
             ref_note = (
                 "An IMAGE has been attached as visual reference (a photo, a sketch or a "
                 "technical breakdown/despiece). Work in PRECISE / STRUCTURE MODE: respect "
@@ -814,6 +854,7 @@ class Render3DService:
 
         images = []       # [{"data","mime"}] para la generación multi-imagen
         ref_lines = []    # descripción textual de cada imagen para el prompt
+        hay_croquis = False  # ¿alguna de las que manda la geometría va a mano?
 
         if floor_plan:
             b64, mime = self._prepare_reference(floor_plan, None)
@@ -824,6 +865,7 @@ class Render3DService:
                     "exact LAYOUT — position and length of every wall, placement of cabinets/"
                     "furniture, doors and windows. Respect these positions and proportions."
                 )
+                hay_croquis = hay_croquis or self._parece_dibujo_a_mano(b64)
 
         for i, sk in enumerate(wall_sketches or []):
             if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
@@ -836,6 +878,7 @@ class Render3DService:
                     "it shows the exact design of that wall (cabinets, shelves, appliances, "
                     "finishes, proportions). Reproduce that wall faithfully, as shown."
                 )
+                hay_croquis = hay_croquis or self._parece_dibujo_a_mano(b64)
 
         # Referencias de ACABADO: la foto que trae el cliente ("quiero esta
         # madera, este tirador"). Se pueden usar A LA VEZ que el plano: el plano
@@ -873,8 +916,19 @@ class Render3DService:
             "You are given reference images of ONE specific kitchen. Recreate THAT SAME kitchen "
             "as a single photorealistic interior photograph. This is a FAITHFUL re-render of the "
             "references, NOT a new design — copy what the images show.\n"
-            + refs_block + "\n\n"
-            "STRICT RULES:\n"
+            + refs_block + "\n"
+            # Si lo que manda la geometría es un DIBUJO A MANO, hay que decirlo.
+            # Sin esto el modelo puede tomar el trazo a lápiz por el acabado, o
+            # "mejorar" una distribución que le parece tosca por estar dibujada
+            # a mano: es el croquis del cliente, no un borrador a pulir.
+            + ("\nIMPORTANT: the drawing(s) above are HAND-DRAWN by the designer (pencil or pen "
+               "on paper, possibly with handwritten dimensions). They are a TECHNICAL SPECIFICATION, "
+               "not a style reference. Read the geometry from them and build it exactly: do NOT "
+               "reproduce the paper, the pencil strokes or the handwriting in the final image, and "
+               "do NOT 'tidy up', simplify or upgrade the layout because it looks rough — a "
+               "hand-drawn L-shaped kitchen must come out as that same L-shaped kitchen.\n"
+               if hay_croquis else "")
+            + "\nSTRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "
             "part of the kitchen (e.g. the tall fridge/oven columns, an end run or the island). "

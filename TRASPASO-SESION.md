@@ -45,8 +45,29 @@ contraria también estropea el render, tirando la referencia real del cliente.
 Probado contra el peor caso posible, la foto de una cocina **blanca**: saturación
 0,14 frente al 0,10 del umbral, no se cuela.
 
-Candado: `backend/tests/test_calculo_croquis_render.py` (7 pruebas, las dos
-direcciones).
+**Y una segunda causa, encadenada con la primera.** Detectar el croquis no
+bastaba: la rama a la que se le enviaba **compartía camino con «diseñar desde
+cero»**, que llama a `_expand_brief`. Eso le pide a gemini-2.5-pro que redacte
+la distribución y **los módulos de izquierda a derecha a partir del TEXTO y sin
+haber visto el dibujo** — o sea, una cocina inventada — y además la mete en un
+prompt largo de dirección de arte (`build_render_prompt` + criterios + estilo).
+El croquis viajaba, sí, pero compitiendo contra una especificación enorme de
+OTRA cocina. El modelo obedecía al texto.
+
+Lo curioso es que esto ya estaba escrito en el propio repo, en el comentario del
+render compuesto: *«un texto largo de dirección de arte compite con las imágenes
+y el modelo acaba inventando una cocina genérica»*. Estaba aplicado allí y no
+aquí. Ahora el croquis tiene rama propia con prompt CORTO centrado en el dibujo:
+la geometría sale 100 % del croquis y el texto se queda solo con acabados,
+materiales y colores.
+
+**Tercera pieza, en el render compuesto** (el camino del botón principal cuando
+subes el plano): el prompt daba por hecho que las referencias eran fotos o
+renders. Si el plano va a lápiz ahora se le dice, para que no dibuje el papel y
+el trazo, ni «mejore» una distribución que le parece tosca por estar hecha a
+mano.
+
+Candado: `backend/tests/test_calculo_croquis_render.py` (11 pruebas).
 
 **Sobre las tres pistas de esta sección — la nº 1 estaba del revés:**
 
