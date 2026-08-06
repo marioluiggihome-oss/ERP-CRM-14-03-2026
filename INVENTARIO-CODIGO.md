@@ -1,17 +1,17 @@
 # Inventario del código fuente — Luiggi Home
 
-**Huella global SHA-256:** `37e3f8b1d2b6e637612f2055ac66361ee4500f7e1f0544b0c843d8af4d223a88`
+**Huella global SHA-256:** `c34f64483e368316e795f7dc91423d3022f5f55cb23ce41f47a82194083468a3`
 
 | Dato | Valor |
 |---|---|
-| Generado (UTC) | 2026-08-05 22:25:31 |
-| Commit | `c3ea2d6e7cd63d6993c4b24a02b6361de79bf89d` |
-| Fecha del commit | 2026-08-05T22:19:14+00:00 |
+| Generado (UTC) | 2026-08-06 05:03:42 |
+| Commit | `e8634736d3e4458172a218e41e2a6325a4a866ad` |
+| Fecha del commit | 2026-08-05T22:25:31+00:00 |
 | Rama | claude/previous-session-debug-acegtg |
 | Ficheros inventariados | 1250 |
 | — de autoría Luiggi Home | 1203 |
 | — de terceros (ver AUDITORIA-LICENCIAS.md) | 47 |
-| Tamaño total | 1049.45 MB |
+| Tamaño total | 1049.46 MB |
 
 ## Para qué sirve este documento
 
@@ -41,7 +41,7 @@ python3 herramientas/inventario_codigo.py --verificar
 | `.mp4` | 2 | 7751 KB |
 | `.jsx` | 108 | 3679 KB |
 | `.wav` | 1 | 3641 KB |
-| `.py` | 191 | 3119 KB |
+| `.py` | 191 | 3129 KB |
 | `.xlsx` | 9 | 2492 KB |
 | `.xls` | 2 | 1897 KB |
 | `.js` | 25 | 659 KB |
