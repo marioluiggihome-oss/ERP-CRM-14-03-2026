@@ -473,10 +473,13 @@ async def search_with_gemini(
 # ============================================================================
 
 # Modelos de imagen candidatos (cascada ante retirada/renombrado de modelos)
+# gemini-2.5-flash-image es el principal: sigue mejor las instrucciones de
+# fidelidad al boceto que gemini-3-pro-image-preview (que es más "creativo"
+# e ignora el layout). gemini-3-pro va como respaldo de calidad.
 GEMINI_IMAGE_MODELS = [
-    "gemini-3-pro-image-preview",
     "gemini-2.5-flash-image",
     "gemini-2.5-flash-image-preview",
+    "gemini-3-pro-image-preview",
 ]
 
 
