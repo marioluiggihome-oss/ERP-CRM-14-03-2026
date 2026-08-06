@@ -1698,12 +1698,53 @@ async def generar_alzado(payload: ProyectoBase):
                         arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
             ax.text((x0 + x1) / 2, y + 4, txt, ha="center", va="bottom", fontsize=7.5, color=C_COTA)
 
+        def _cm_por_caracter(ax, fontsize):
+            """Cuántos cm de dibujo ocupa un carácter en este eje.
+
+            No se puede estimar a ojo: el eje va con `aspect="equal"`, así que la
+            escala real la impone el lado que más aprieta (aquí el alto, no el
+            ancho). Suponer "unos 2,6 cm por letra" es lo que hacía que
+            "Placa vitrocerámica" se saliera de un módulo de 60 cm. Esto se
+            deriva de la figura, que es la única que sabe cuánto mide un punto.
+            """
+            fig = ax.figure
+            ancho_in, alto_in = fig.get_size_inches()
+            caja = ax.get_position()
+            x0, x1 = ax.get_xlim()
+            y0, y1 = ax.get_ylim()
+            pulg_por_cm = min((ancho_in * caja.width) / max(x1 - x0, 1e-6),
+                              (alto_in * caja.height) / max(y1 - y0, 1e-6))
+            # Un carácter de una fuente proporcional ocupa ~0,6 × su cuerpo.
+            return (fontsize * 0.6 / 72.0) / max(pulg_por_cm, 1e-9)
+
+        def _texto_modulo(ax, x, w, cy, txt):
+            """Etiqueta dentro del módulo, ajustada a lo ancho que sea.
+
+            Con módulos estrechos el texto horizontal se salía por los lados y se
+            pisaba con el del vecino: en el alzado del 05/08 se leía
+            "Mueble fregadeMueble altoMueble bajMueble alto". Por debajo de 45 cm
+            se gira 90º, que es como se rotula un módulo estrecho en un plano.
+            """
+            if w >= 45:
+                cabe = max(4, int(w * 0.92 / _cm_por_caracter(ax, 6.5)))
+                lineas = [l if len(l) <= cabe else l[:max(1, cabe - 1)] + "…"
+                          for l in txt.split("\n")]
+                ax.text(x + w / 2, cy, "\n".join(lineas), ha="center", va="center", fontsize=6.5)
+            elif w >= 22:
+                # Girado, el hueco disponible es el ALTO del módulo, no su ancho.
+                alto_util = (ENC_Y - ZOC_Y) * 0.9
+                cabe = max(4, int(alto_util / _cm_por_caracter(ax, 6)))
+                t = txt.replace("\n", " · ")
+                ax.text(x + w / 2, cy, t if len(t) <= cabe else t[:max(1, cabe - 1)] + "…",
+                        ha="center", va="center", fontsize=6, rotation=90)
+            # Por debajo de 22 cm no cabe ni girado: lo dice la cota, no la etiqueta.
+
         herr = {"puertas": 0, "cajones": 0}  # recuento de herraje para el resumen
         for idx, (ax, pared) in enumerate(zip(axes, paredes)):
             ancho = int(pared.get("ancho") or 400)
             alto = int(pared.get("alto") or 240)
             ax.set_facecolor(C_BG); ax.set_aspect("equal"); ax.axis("off")
-            ax.set_xlim(-70, ancho + 55); ax.set_ylim(-45, alto + 30)
+            ax.set_xlim(-70, ancho + 78); ax.set_ylim(-45, alto + 40)
             # contorno de pared y líneas guía
             wire(ax, 0, 0, ancho, alto, lw=2)
             for gy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
@@ -1715,9 +1756,12 @@ async def generar_alzado(payload: ProyectoBase):
             cotas = []
             hob_zones = []   # (x, w) de las placas → la campana va justo encima
             bajos_xy = []    # (x, w) de los bajos REALES → los altos se alinean con ellos
+            altos_xy = []    # (x, w) de los altos que vienen DADOS (no derivados)
+            cotas_altos = [] # cotas de la fila colgada, que van sobre los altos
             for e in elems:
                 w = int(e.get("ancho") or 60)
                 tipo = str(e.get("id") or e.get("tipo") or "").lower()
+                fila = str(e.get("fila") or "bajo").lower()
                 if tipo == "campana":
                     continue  # se dibuja al final, centrada sobre la placa
                 label = str(e.get("label") or tipo or "módulo")[:18]
@@ -1729,9 +1773,16 @@ async def generar_alzado(payload: ProyectoBase):
                     tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.30, length=18)
                     tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.72, length=18)
                     herr["puertas"] += 2
-                elif tipo in ALTOS:
+                elif fila == "alto" or tipo in ALTOS:
+                    # Fila COLGADA. Antes un "Mueble alto" caía en el `else` y se
+                    # dibujaba a ras de suelo, rotulado "30×80": un alto no mide
+                    # 80 de alto (son 70 o 90) ni se apoya en el zócalo.
                     wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
-                    ax.text(x + w / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, label, ha="center", va="center", fontsize=7)
+                    _ta = f"{label}\n{w}×{ALTOS_Y1 - ALTOS_Y0}" if _con_cotas else label
+                    _texto_modulo(ax, x, w, (ALTOS_Y0 + ALTOS_Y1) / 2, _ta)
+                    tirador_v(ax, x + w - 5, ALTOS_Y0 + 12, length=16)
+                    herr["puertas"] += 1
+                    altos_xy.append((x, w))
                 elif tipo in DRAWERS:
                     body_h_cm = ENC_Y - ZOC_Y  # altura útil del cuerpo (cm de dibujo)
                     wire(ax, x, ZOC_Y, w, body_h_cm)
@@ -1750,7 +1801,7 @@ async def generar_alzado(payload: ProyectoBase):
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
                     _txt = f"{label}\n{w}×{ENC_Y - ZOC_Y}" if _con_cotas else label
-                    ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, _txt, ha="center", va="center", fontsize=6.5)
+                    _texto_modulo(ax, x, w, (ZOC_Y + ENC_Y) / 2, _txt)
                     # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción).
                     if tipo not in HOB:
                         tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)
@@ -1759,10 +1810,13 @@ async def generar_alzado(payload: ProyectoBase):
                         hob_zones.append((x, w))
                         # marca de zona de cocción sobre la encimera
                         ax.plot([x + 6, x + w - 6], [ENC_Y - 2, ENC_Y - 2], color=C_LINE, lw=1.0)
-                cotas.append((x, x + w, f"{w}"))
-                if tipo not in COLS and tipo not in ALTOS:
-                    bajos_xy.append((x, w))   # para alinear los altos con los bajos reales
-                pos = max(pos, x + w)
+                if fila == "alto" or tipo in ALTOS:
+                    cotas_altos.append((x, x + w, f"{w}"))
+                else:
+                    cotas.append((x, x + w, f"{w}"))
+                    if tipo not in COLS:
+                        bajos_xy.append((x, w))  # para alinear los altos con los bajos
+                    pos = max(pos, x + w)
 
             # CAMPANA: siempre centrada JUSTO ENCIMA de cada placa, con su mismo ancho.
             for (hx, hw) in hob_zones:
@@ -1777,13 +1831,20 @@ async def generar_alzado(payload: ProyectoBase):
             # se les ponía cota como si fueran reales.
             # ALTOS: se alinean con los BAJOS reales (misma anchura y posición),
             # saltando columnas y la zona de campana sobre la placa.
-            for (bx, bw) in bajos_xy:
+            # ...pero SOLO si la distribución no traía altos propios. Si el
+            # análisis ya dijo qué altos hay y dónde, añadir otros "supuestos"
+            # es inventarse muebles que nadie ha pedido (CLAUDE.md: no se
+            # inventa nada). Los derivados son la ayuda para cuando no hay
+            # ningún alto declarado, no un extra permanente.
+            for (bx, bw) in (bajos_xy if not altos_xy else []):
                 ocupado_col = any(str(t.get("id") or "").lower() in COLS
                                   and (t.get("posicion_cm") or 0) < bx + bw
                                   and (t.get("posicion_cm") or 0) + (t.get("ancho") or 0) > bx
                                   for t in elems)
                 ocupado_camp = any(hx < bx + bw and hx + hw > bx for (hx, hw) in hob_zones)
-                if not (ocupado_col or ocupado_camp):
+                # Si en ese tramo ya hay un alto REAL, no se dibuja otro encima.
+                ocupado_alto = any(ax0 < bx + bw and ax0 + aw > bx for (ax0, aw) in altos_xy)
+                if not (ocupado_col or ocupado_camp or ocupado_alto):
                     wire(ax, bx, ALTOS_Y0, bw, ALTOS_Y1 - ALTOS_Y0, dash=True)
                     tirador_v(ax, bx + bw - 5, ALTOS_Y0 + 12, length=16)
                     herr["puertas"] += 1
@@ -1795,6 +1856,10 @@ async def generar_alzado(payload: ProyectoBase):
                 for (a, b, t) in cotas:
                     cota_h(ax, a, b, -12, t)
                 cota_h(ax, 0, ancho, -32, f"{ancho} cm")
+                # Las cotas de la fila colgada van SOBRE los altos: mezclarlas con
+                # las de suelo daba una tira que no sumaba el ancho de la pared.
+                for (a, b, t) in cotas_altos:
+                    cota_h(ax, a, b, ALTOS_Y1 + 5, t)
                 for gy, t in ((ZOC_Y, str(ZOC_Y)), (ENC_TOP, str(ENC_TOP)), (ALTOS_Y0, str(ALTOS_Y0)),
                               (ALTOS_Y1, str(ALTOS_Y1)), (alto, str(alto))):
                     ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
@@ -1802,18 +1867,26 @@ async def generar_alzado(payload: ProyectoBase):
                 # cota VERTICAL de alturas (lado derecho): zócalo / bajo / alto
                 xc = ancho + 14
 
-                def cota_v(y0, y1, txt):
-                    ax.annotate("", xy=(xc, y0), xytext=(xc, y1),
+                def cota_v(y0, y1, txt, carril=0):
+                    """Cota vertical. `carril` la separa de las demás.
+
+                    Las cuatro compartían la misma vertical y sus textos se
+                    escribían unos encima de otros: en el alzado del 05/08 se leía
+                    "246", que era el 240 de la pared pisando el 56 de la
+                    separación. Ahora van escalonadas, como una cadena de cotas.
+                    """
+                    xx = xc + carril * 15
+                    ax.annotate("", xy=(xx, y0), xytext=(xx, y1),
                                 arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
-                    ax.text(xc + 4, (y0 + y1) / 2, txt, ha="left", va="center", fontsize=7,
+                    ax.text(xx + 3.5, (y0 + y1) / 2, txt, ha="left", va="center", fontsize=7,
                             color=C_COTA, rotation=90)
                 for yy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
                     ax.plot([ancho, xc + 2], [yy, yy], color=C_COTA, lw=0.4, ls=":")
                 # El TEXTO se calcula del propio dibujo: nunca puede mentir.
-                cota_v(ZOC_Y, ENC_Y, f"{ENC_Y - ZOC_Y}")              # cuerpo del bajo (80)
-                cota_v(ENC_TOP, ALTOS_Y0, f"{_SEP_ALTOS}")            # encimera → altos (56)
-                cota_v(ALTOS_Y0, ALTOS_Y1, f"{ALTOS_Y1 - ALTOS_Y0}")  # alto (70)
-                cota_v(0, alto, f"{alto}")                            # altura total pared
+                cota_v(ZOC_Y, ENC_Y, f"{ENC_Y - ZOC_Y}", 0)              # cuerpo del bajo (80)
+                cota_v(ENC_TOP, ALTOS_Y0, f"{_SEP_ALTOS}", 0)            # encimera → altos (56)
+                cota_v(ALTOS_Y0, ALTOS_Y1, f"{ALTOS_Y1 - ALTOS_Y0}", 0)  # alto (70)
+                cota_v(0, alto, f"{alto}", 1)                            # altura total pared
             # ENCHUFES sobre la encimera (franja salpicadero), evitando zona de placa
             ench_y = (ENC_Y + ALTOS_Y0) / 2
             ex = 45

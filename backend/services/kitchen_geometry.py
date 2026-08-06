@@ -44,6 +44,35 @@ LIMITES = {
 COLUMNAS_IDS = {"frigorifico", "congelador", "columna_hornos", "despensa", "vinoteca"}
 ALTOS_IDS = {"microondas"}
 
+# Palabras que delatan un mueble ALTO (va colgado a la pared). Importa mucho más
+# de lo que parece: un alzado tiene DOS filas independientes —la de suelo y la
+# colgada— y cada una ocupa el ancho de la pared por su cuenta. Si un alto se
+# cuela en la fila de suelo, roba sitio a los bajos y la pared "se alarga": es
+# justo lo que pasaba el 05/08 (415 cm de módulos en una pared de 324).
+_PISTAS_ALTO = ("alto", "alacena", "colgado", "sobreencimera", "sobre_encimera",
+                "vitrina", "campana", "extractor", "microondas", "altillo",
+                "escurreplatos", "cubretermo")
+# ...salvo que la palabra "alto" venga de otra cosa (un "bajo alto" no existe,
+# pero "columna" y "bajo" sí mandan sobre la pista).
+_PISTAS_NO_ALTO = ("bajo", "columna", "semicolumna", "cajonera", "fregadero",
+                   "lavavajillas", "lavadora", "placa", "horno", "encimera",
+                   "zocalo", "zócalo", "relleno")
+
+
+def es_alto(elem_id: str, label: str = "") -> bool:
+    """¿Este módulo va COLGADO (fila de altos) o apoyado (fila de suelo)?
+
+    Se mira el id y también la etiqueta, porque la IA devuelve cosas como
+    id="mueble_alto" pero también id="mueble" con label="Mueble alto".
+    """
+    texto = f"{elem_id or ''} {label or ''}".lower()
+    if any(p in texto for p in _PISTAS_NO_ALTO):
+        # "Columna frigorífico" o "Bajo fregadero" nunca son altos, aunque el
+        # texto lleve alguna pista.
+        if not any(texto.strip().startswith(p) for p in ("alto", "alacena", "altillo")):
+            return False
+    return any(p in texto for p in _PISTAS_ALTO)
+
 # Módulos de ANCHO FIJO: son electrodomésticos de medida comercial. Jamás se
 # reescalan para "cuadrar" una pared (un lavavajillas es de 60, no de 120).
 ANCHO_FIJO = {
@@ -143,14 +172,19 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         if not en_rango(anc, "ancho_modulo"):
             avisos.append(f"Módulo «{eid}»: ancho {int(anc)} cm no es fabricable; "
                           f"se ajusta a {anc_snap} cm.")
+        etiqueta = str(e.get("label") or eid or "Módulo")[:24]
+        # La FILA (suelo o colgado) se decide aquí, una sola vez, y viaja con el
+        # módulo. El dibujo ya no tiene que adivinarlo por el id.
+        fila = "alto" if es_alto(eid, etiqueta) else "bajo"
         elementos.append({
             "id": eid,
-            "label": str(e.get("label") or eid or "Módulo")[:24],
+            "label": etiqueta,
+            "fila": fila,
             "pared_idx": max(0, min(pidx, len(paredes) - 1)),
             "posicion_cm": max(0, int(round(pos))),
             "ancho": anc_snap,
-            "alto": altura_modulo(eid),
-            "fondo": fondo_modulo(eid),
+            "alto": ALTOS_ALTURAS[0] if fila == "alto" else altura_modulo(eid),
+            "fondo": FONDO_ALTOS if fila == "alto" else fondo_modulo(eid),
         })
 
     # Cuadrar cada pared: la suma de anchos DEBE coincidir con el ancho de pared.
@@ -161,74 +195,30 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
     #    (es lo que se hace en obra), en vez de inflar los módulos existentes.
     finales = []
     no_cabe = False
+    descuadres = []
+    # Cada pared tiene DOS filas y cada una se cuadra por separado. Meterlas en
+    # el mismo reparto era el fallo: los altos comían ancho de suelo y la suma
+    # se disparaba por encima del ancho real de la pared.
     for pidx, pared in enumerate(paredes):
-        grupo = sorted([e for e in elementos if e["pared_idx"] == pidx],
-                       key=lambda e: e["posicion_cm"])
-        if not grupo:
-            continue
-        objetivo = pared["ancho"]
-        for e in grupo:
-            if e["id"] in ANCHO_FIJO:
-                e["ancho"] = ANCHO_FIJO[e["id"]]
-                e["anchoFijo"] = True
-        fijos = [e for e in grupo if e.get("anchoFijo")]
-        flex = [e for e in grupo if not e.get("anchoFijo")]
-        suma_fijos = sum(e["ancho"] for e in fijos)
-        libre = objetivo - suma_fijos
-
-        if libre < 0:
-            no_cabe = True
-            avisos.append(
-                f"Pared {pidx+1}: solo los electrodomésticos ocupan {suma_fijos} cm y la pared "
-                f"mide {objetivo} cm. La composición NO cabe: revisa medidas o módulos.")
-        elif flex:
-            suma_flex = sum(e["ancho"] for e in flex)
-            if suma_flex > 0 and libre > 0 and suma_flex != libre:
-                factor = libre / suma_flex
-                # Solo se reescala si el ajuste es razonable (±35%). Un desfase mayor
-                # significa que faltan o sobran módulos, no que midan otra cosa.
-                if 0.65 <= factor <= 1.35:
-                    for e in flex:
-                        e["ancho"] = snap_ancho(e["ancho"] * factor)
-                    avisos.append(f"Pared {pidx+1}: módulos ajustados para cuadrar con {objetivo} cm.")
-                else:
-                    avisos.append(
-                        f"Pared {pidx+1}: los módulos suman {suma_fijos + suma_flex} cm frente a "
-                        f"{objetivo} cm de pared. Parece que FALTAN o SOBRAN módulos; se completa "
-                        f"con un relleno en vez de deformar las medidas.")
-            resto = objetivo - sum(e["ancho"] for e in grupo)
-            if resto:
-                # Absorber en el módulo flexible más ancho si cabe; si no, relleno.
-                i = max(range(len(flex)), key=lambda i: flex[i]["ancho"])
-                nuevo = flex[i]["ancho"] + resto
-                if en_rango(nuevo, "ancho_modulo"):
-                    flex[i]["ancho"] = int(nuevo)
-                elif resto > 0:
-                    grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}", "pared_idx": pidx,
-                                  "posicion_cm": 0, "ancho": int(resto),
-                                  "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
-                    avisos.append(f"Pared {pidx+1}: añadido relleno de {int(resto)} cm para cuadrar.")
-        else:
-            resto = objetivo - suma_fijos
-            if resto > 0:
-                grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}", "pared_idx": pidx,
-                              "posicion_cm": 0, "ancho": int(resto),
-                              "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
-                avisos.append(f"Pared {pidx+1}: hueco de {int(resto)} cm sin módulo; añadido relleno.")
-
-        x = 0
-        for e in grupo:
-            e["posicion_cm"] = x
-            x += e["ancho"]
-        finales.extend(grupo)
+        for fila in ("bajo", "alto"):
+            grupo, no_cabe_f, aviso_f = _cuadrar_fila(
+                [e for e in elementos if e["pared_idx"] == pidx and e.get("fila") == fila],
+                pared, pidx, fila, avisos)
+            no_cabe = no_cabe or no_cabe_f
+            if aviso_f:
+                descuadres.append(aviso_f)
+            finales.extend(grupo)
 
     if not finales:
         return {"ok": False, "motivo": "No hay módulos válidos que dibujar.",
                 "avisos": avisos, "paredes": paredes, "elementos": []}
-    if no_cabe:
-        # No se dibuja una cocina que no cabe: es un error a resolver, no una medida
-        # que "aproximar". El usuario debe corregir pared o módulos.
-        return {"ok": False, "motivo": "La composición no cabe en la pared indicada.",
+    if no_cabe or descuadres:
+        # No se dibuja una pared cuyos módulos no suman su ancho: un alzado con
+        # muebles saliéndose de la pared es peor que no tener alzado, porque
+        # parece bueno. Regla de CLAUDE.md: la suma CUADRA, exactamente.
+        return {"ok": False,
+                "motivo": (descuadres[0] if descuadres
+                           else "La composición no cabe en la pared indicada."),
                 "avisos": avisos, "paredes": paredes, "elementos": finales}
 
     return {
@@ -240,3 +230,122 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         "medidasReales": bool(ancho_real),
         "avisos": avisos,
     }
+
+
+def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
+    """Cuadra UNA fila (suelo o colgada) de UNA pared con el ancho de la pared.
+
+    Devuelve (modulos, no_cabe, descuadre). `descuadre` no es None cuando, después
+    de intentarlo todo, la suma sigue sin coincidir: entonces no se dibuja.
+
+    La fila de altos NO se rellena: una cocina puede llevar altos solo en parte
+    de la pared, y meter un "relleno colgado" para cuadrar sería inventarse un
+    mueble. Lo que sí se exige es que no se pase del ancho.
+    """
+    grupo = sorted(grupo, key=lambda e: e["posicion_cm"])
+    if not grupo:
+        return [], False, None
+    no_cabe = False
+    objetivo = pared["ancho"]
+    etiqueta_fila = "de suelo" if fila == "bajo" else "colgados"
+
+    for e in grupo:
+        if e["id"] in ANCHO_FIJO:
+            e["ancho"] = ANCHO_FIJO[e["id"]]
+            e["anchoFijo"] = True
+    fijos = [e for e in grupo if e.get("anchoFijo")]
+    flex = [e for e in grupo if not e.get("anchoFijo")]
+    suma_fijos = sum(e["ancho"] for e in fijos)
+    libre = objetivo - suma_fijos
+
+    if libre < 0:
+        no_cabe = True
+        avisos.append(
+            f"Pared {pidx+1} ({etiqueta_fila}): solo los electrodomésticos ocupan "
+            f"{suma_fijos} cm y la pared mide {objetivo} cm. La composición NO cabe: "
+            f"revisa medidas o módulos.")
+    elif flex:
+        suma_flex = sum(e["ancho"] for e in flex)
+        if suma_flex > 0 and suma_flex != libre and (fila == "bajo" or suma_flex > libre):
+            factor = libre / suma_flex if suma_flex else 1
+            # Solo se reescala si el ajuste es razonable (±35%). Un desfase mayor
+            # significa que faltan o sobran módulos, no que midan otra cosa.
+            if 0.65 <= factor <= 1.35:
+                for e in flex:
+                    e["ancho"] = snap_ancho(e["ancho"] * factor)
+                avisos.append(f"Pared {pidx+1} ({etiqueta_fila}): módulos ajustados "
+                              f"para cuadrar con {objetivo} cm.")
+            elif fila == "bajo" or suma_fijos + suma_flex > objetivo:
+                # En la fila de suelo un descuadre es un problema. En la de altos
+                # NO: es normalísimo que los altos ocupen solo parte de la pared
+                # (encima de una columna o de una ventana no van). Solo se avisa
+                # si se PASAN del ancho.
+                avisos.append(
+                    f"Pared {pidx+1} ({etiqueta_fila}): los módulos suman "
+                    f"{suma_fijos + suma_flex} cm frente a {objetivo} cm de pared. "
+                    f"Faltan o sobran módulos.")
+        resto = (objetivo - sum(e["ancho"] for e in grupo)) if fila == "bajo" \
+            else min(0, objetivo - sum(e["ancho"] for e in grupo))
+        # Un mueble tiene un ancho de CATÁLOGO (15, 20, 30, 40, 45, 50, 60...).
+        # El sobrante no se mete estirando un mueble hasta 69 cm —eso no existe—
+        # sino en un RELLENO, que es exactamente lo que se hace en obra.
+        if resto < 0:
+            # Sobra composición: se bajan módulos flexibles al estándar inferior,
+            # empezando por el más ancho, hasta que quepa.
+            for e in sorted(flex, key=lambda e: -e["ancho"]):
+                if resto >= 0:
+                    break
+                menores = [w for w in ANCHOS_STD if w < e["ancho"]]
+                if not menores:
+                    continue
+                nuevo_ancho = max(menores)
+                resto += e["ancho"] - nuevo_ancho
+                e["ancho"] = nuevo_ancho
+                avisos.append(f"Pared {pidx+1} ({etiqueta_fila}): «{e['label']}» se reduce "
+                              f"a {nuevo_ancho} cm para que la composición quepa.")
+        if resto > 0 and fila == "bajo":
+            grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}",
+                          "fila": "bajo", "pared_idx": pidx,
+                          "posicion_cm": 0, "ancho": int(resto),
+                          "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
+            avisos.append(f"Pared {pidx+1}: añadido relleno de {int(resto)} cm para cuadrar.")
+    elif objetivo - suma_fijos > 0 and fila == "bajo":
+        resto = objetivo - suma_fijos
+        grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}",
+                      "fila": "bajo", "pared_idx": pidx,
+                      "posicion_cm": 0, "ancho": int(resto),
+                      "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
+        avisos.append(f"Pared {pidx+1}: hueco de {int(resto)} cm sin módulo; añadido relleno.")
+
+    if fila == "bajo":
+        # La fila de suelo va contigua de pared a pared: no hay huecos entre
+        # muebles apoyados.
+        x = 0
+        for e in grupo:
+            e["posicion_cm"] = x
+            x += e["ancho"]
+    else:
+        # Los altos NO se recolocan desde el origen: van DONDE ESTÁN, encima de
+        # su bajo. Empaquetarlos a la izquierda los movía de sitio y el alzado
+        # dejaba de parecerse a la cocina. Solo se corrigen solapes y lo que se
+        # salga de la pared.
+        x_min = 0
+        for e in grupo:
+            pos = max(int(e.get("posicion_cm") or 0), x_min)
+            pos = min(pos, max(0, objetivo - e["ancho"]))
+            e["posicion_cm"] = pos
+            x_min = pos + e["ancho"]
+
+    # COMPROBACIÓN FINAL, la que faltaba. Antes se avisaba del descuadre y se
+    # dibujaba igual: salían muebles fuera de la pared con cotas que no sumaban
+    # el total. Un alzado así engaña más que la ausencia de alzado.
+    suma = sum(e["ancho"] for e in grupo)
+    descuadre = None
+    if fila == "bajo" and suma != objetivo:
+        descuadre = (f"Los módulos de la pared {pidx+1} suman {suma} cm y la pared mide "
+                     f"{objetivo} cm. Sobran o faltan módulos: corrige la composición "
+                     f"o el ancho de la pared.")
+    elif fila == "alto" and suma > objetivo:
+        descuadre = (f"Los muebles altos de la pared {pidx+1} suman {suma} cm y la pared "
+                     f"mide {objetivo} cm. No caben: quita alguno o revisa sus anchos.")
+    return grupo, no_cabe, descuadre
