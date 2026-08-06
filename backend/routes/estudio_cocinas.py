@@ -670,7 +670,17 @@ async def generar_plano_2d(payload: ProyectoBase):
         dist = payload.distribucion_estructurada
         if dist and dist.tipo:
             tipo = dist.tipo
-            paredes_data = dist.paredes or [{'nombre': 'Pared principal', 'ancho': 400, 'alto': 240}]
+            # NUNCA una pared por defecto. Aquí caía a 400x240 en silencio, que es
+            # el mismo fallo que tenía el alzado: sale una planta con cotas que
+            # nadie ha medido y con pinta de buena. Si no hay paredes, se pide.
+            if not dist.paredes:
+                raise HTTPException(
+                    status_code=422,
+                    detail=("No puedo dibujar la planta sin las medidas de las "
+                            "paredes. Elige la distribución y escribe el ancho "
+                            "real de cada pared, o pulsa «Detectar distribución» "
+                            "sobre un render."))
+            paredes_data = dist.paredes
             isla_data = dist.isla or {'ancho': 0, 'largo': 0}
             elementos = dist.elementos or []
         else:
@@ -919,8 +929,13 @@ async def generar_plano_2d(payload: ProyectoBase):
         b64 = base64.b64encode(buf.read()).decode("utf-8")
         return {"planoBase64": f"data:image/png;base64,{b64}", "tipo_distribucion": tipo}
 
+    except HTTPException:
+        # Mismo fallo que tenía el alzado: HTTPException hereda de Exception, así
+        # que un 422 con instrucciones acababa saliendo como un 500 de "servidor
+        # caído" con el "422:" incrustado en el texto.
+        raise
     except Exception as e:
-        logger.error(f"plano-2d error: {e}")
+        logger.error(f"plano-2d error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"No se pudo generar el plano: {e}")
 
 

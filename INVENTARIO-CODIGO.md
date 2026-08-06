@@ -1,23 +1,23 @@
 # Inventario del código fuente — Luiggi Home
 
-**Huella global SHA-256:** `71de743cf1c6430c9cdc555191ddd3e2e82e137cbca9e1e32cbbebddefaaca26`
+**Huella global SHA-256:** `d438b9e23357f4c88c80c234e3215ebb7c7e8743190d4460003ebebd52e2f317`
 
 | Dato | Valor |
 |---|---|
-| Generado (UTC) | 2026-08-06 07:30:59 |
-| Commit | `baa98ad0bfed6c84628b82ef6b5132dae92e9428` |
-| Fecha del commit | 2026-08-06T07:08:10+00:00 |
+| Generado (UTC) | 2026-08-06 10:59:52 |
+| Commit | `1ebd827ccf7ae746d740e88aab245ad58429c744` |
+| Fecha del commit | 2026-08-06T07:31:23+00:00 |
 | Rama | claude/previous-session-debug-acegtg |
-| Ficheros inventariados | 1251 |
-| — de autoría Luiggi Home | 1204 |
+| Ficheros inventariados | 1253 |
+| — de autoría Luiggi Home | 1206 |
 | — de terceros (ver AUDITORIA-LICENCIAS.md) | 47 |
-| Tamaño total | 1049.48 MB |
+| Tamaño total | 1049.50 MB |
 
 ## Para qué sirve este documento
 
 Acredita **qué contenía** el código en la fecha de arriba. La huella SHA-256 de un fichero cambia si cambia un solo carácter, así que comparar la huella de un fichero de hoy con la de esta lista demuestra si es o no el mismo. La *huella global* resume todo el conjunto en una sola cadena: es la que conviene hacer constar en un acta notarial o en un sellado de tiempo, porque protege la lista entera con un solo dato.
 
-El detalle fichero a fichero está en [`INVENTARIO-CODIGO.csv`](INVENTARIO-CODIGO.csv) (1251 líneas), que es el que se adjunta al depósito.
+El detalle fichero a fichero está en [`INVENTARIO-CODIGO.csv`](INVENTARIO-CODIGO.csv) (1253 líneas), que es el que se adjunta al depósito.
 
 ## Cómo comprobar que un fichero no ha cambiado
 
@@ -41,7 +41,7 @@ python3 herramientas/inventario_codigo.py --verificar
 | `.mp4` | 2 | 7751 KB |
 | `.jsx` | 108 | 3681 KB |
 | `.wav` | 1 | 3641 KB |
-| `.py` | 192 | 3145 KB |
+| `.py` | 194 | 3169 KB |
 | `.xlsx` | 9 | 2492 KB |
 | `.xls` | 2 | 1897 KB |
 | `.js` | 25 | 659 KB |
