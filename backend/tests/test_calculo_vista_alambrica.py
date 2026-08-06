@@ -125,3 +125,36 @@ def test_el_aviso_dice_donde_se_escriben_las_medidas():
     bloque = _bloque_vista_alambrica()
     assert "Medidas de la estancia" in bloque, \
         "el aviso ya no dice dónde se escribe el ancho de la pared"
+
+
+# ── La PLANTA tenía el mismo fallo que el alzado ─────────────────────────────
+
+def _fuente_de(nombre):
+    with open(RUTA, encoding="utf-8") as f:
+        codigo = f.read()
+    for nodo in ast.walk(ast.parse(codigo)):
+        if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef)) and nodo.name == nombre:
+            return ast.get_source_segment(codigo, nodo) or ""
+    raise AssertionError(f"ya no existe {nombre} en routes/estudio_cocinas.py")
+
+
+def test_la_planta_no_se_inventa_una_pared_de_400():
+    """CANDADO: caía a 400x240 en silencio y salía una planta con cotas que
+    nadie había medido. Es el mismo fallo que tenía el alzado."""
+    cuerpo = _fuente_de("generar_plano_2d")
+    assert "'ancho': 400" not in cuerpo and '"ancho": 400' not in cuerpo, \
+        "la planta vuelve a inventarse una pared de 400 cm cuando no hay medidas"
+    assert "status_code=422" in cuerpo, \
+        "la planta ya no pide las medidas cuando faltan: las inventa"
+
+
+def test_la_planta_tampoco_disfraza_el_422_de_averia():
+    cuerpo = _fuente_de("generar_plano_2d")
+    manejadores = []
+    for nodo in ast.walk(ast.parse(cuerpo)):
+        if isinstance(nodo, ast.Try):
+            for h in nodo.handlers:
+                if isinstance(h.type, ast.Name):
+                    manejadores.append(h.type.id)
+    assert "HTTPException" in manejadores, \
+        "la planta se traga el 422 y lo devuelve como un 500 de servidor caído"
