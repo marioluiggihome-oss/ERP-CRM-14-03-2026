@@ -1027,6 +1027,17 @@ export default function EstudioCocinas({ state, setState }) {
     }
   }, [proy, distribucion]);
 
+  // Cota de replanteo de un punto de instalación: a cuántos cm del inicio de la
+  // pared y a qué altura del suelo. Es LO QUE USA el instalador para marcar la
+  // roza; sin esto el plan es una lista de buenas intenciones.
+  const cotaPunto = (p) => {
+    const partes = [];
+    if (p.x_cm != null) partes.push(`${p.x_cm} cm desde el inicio de la pared`);
+    if (p.altura_cm != null) partes.push(`h = ${p.altura_cm} cm`);
+    if (p.circuito) partes.push(`${p.circuito} · ${p.amperios}A · ${p.seccion_mm2} mm²`);
+    return partes.join('  ·  ');
+  };
+
   // ── Instalaciones ──
   const genInstalaciones = useCallback(async () => {
     setInst(s => ({ ...s, status: 'loading', msg: 'Generando plan de instalaciones…' }));
@@ -1772,7 +1783,11 @@ export default function EstudioCocinas({ state, setState }) {
                             {(inst.data.electrica.puntos || []).map((p, i) => (
                               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instElec}`}>
                                 <Zap size={11} className="flex-shrink-0 mt-0.5"/>
-                                <div><p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}</p><p className="text-[9px] opacity-70">{p.ubicacion || ''}</p></div>
+                                <div>
+                                  <p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}{p.modulo ? ` — ${p.modulo}` : ''}</p>
+                                  {cotaPunto(p) && <p className="text-[9px] font-bold opacity-90">{cotaPunto(p)}</p>}
+                                  <p className="text-[9px] opacity-70">{p.detalle || p.ubicacion || ''}</p>
+                                </div>
                               </div>
                             ))}
                             {inst.data.electrica.circuitos && (<div className={`col-span-2 p-2 rounded-lg ${t.instElec}`}><p className="text-[10px] font-bold mb-1">Circuitos</p><p className="text-[9px]">{inst.data.electrica.circuitos}</p></div>)}
@@ -1788,7 +1803,11 @@ export default function EstudioCocinas({ state, setState }) {
                             {(inst.data.fontaneria.puntos || []).map((p, i) => (
                               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instWater}`}>
                                 <Droplets size={11} className="flex-shrink-0 mt-0.5"/>
-                                <div><p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}</p><p className="text-[9px] opacity-70">{p.ubicacion || ''}</p></div>
+                                <div>
+                                  <p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}{p.modulo ? ` — ${p.modulo}` : ''}</p>
+                                  {cotaPunto(p) && <p className="text-[9px] font-bold opacity-90">{cotaPunto(p)}</p>}
+                                  <p className="text-[9px] opacity-70">{p.detalle || p.ubicacion || ''}</p>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1803,7 +1822,11 @@ export default function EstudioCocinas({ state, setState }) {
                             {(inst.data.gas.puntos || []).map((p, i) => (
                               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instGas}`}>
                                 <Flame size={11} className="flex-shrink-0 mt-0.5"/>
-                                <div><p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}</p><p className="text-[9px] opacity-70">{p.ubicacion || ''}</p></div>
+                                <div>
+                                  <p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}{p.modulo ? ` — ${p.modulo}` : ''}</p>
+                                  {cotaPunto(p) && <p className="text-[9px] font-bold opacity-90">{cotaPunto(p)}</p>}
+                                  <p className="text-[9px] opacity-70">{p.detalle || p.ubicacion || ''}</p>
+                                </div>
                               </div>
                             ))}
                           </div>

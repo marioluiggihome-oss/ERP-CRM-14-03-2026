@@ -1203,86 +1203,68 @@ class InstalacionesInput(BaseModel):
     descripcion: Optional[str] = Field(default="")
     estilo: Optional[str] = Field(default="Moderno")
     nombre_cliente: Optional[str] = Field(default="Cliente")
+    distribucion_estructurada: Optional[DistribucionEstructurada] = Field(
+        default=None, description="Distribución real: de ella salen los puntos")
 
 
 @router.post("/instalaciones")
 async def generar_instalaciones(payload: InstalacionesInput):
+    """Plan de instalaciones (eléctrica, fontanería, gas) DERIVADO de la cocina.
+
+    Este papel lo usa el instalador para hacer rozas antes de alicatar, así que
+    cada punto sale de un módulo que EXISTE y lleva su posición en cm desde el
+    inicio de la pared. Antes era una plantilla fija: listaba circuito de
+    lavavajillas y de frigorífico hubiera o no, y colocaba los enchufes "cada
+    120 cm en la pared norte" sin saber qué había delante.
     """
-    Genera el plan de instalaciones (eléctrica, fontanería, gas) para la cocina.
-    Generación local instantánea basada en las medidas y descripción.
-    """
+    from services.instalaciones_cocina import (
+        NORMATIVA, plan_electrico, plan_fontaneria, plan_gas)
+    from services.kitchen_geometry import validar_distribucion
+
     m = _medidas_para_dibujo(payload.medidas)
-    ancho = m["ancho"]
-    alto = m["alto"]
-    tiene_isla = m["isla_w"] > 0 and m["isla_h"] > 0
-    desc_lower = (payload.descripcion or "").lower()
-    tiene_gas = any(w in desc_lower for w in ["gas", "placa gas", "cocina gas"])
-    tiene_vapor = any(w in desc_lower for w in ["vapor", "horno vapor"])
-    tiene_cafe = any(w in desc_lower for w in ["café", "cafe", "cafetera"])
+    dist = payload.distribucion_estructurada
+    elementos, paredes, avisos = [], [], []
+    if dist and (dist.paredes or dist.elementos):
+        val = validar_distribucion({
+            "tipo": getattr(dist, "tipo", "lineal") or "lineal",
+            "paredes": dist.paredes or [],
+            "elementos": dist.elementos or [],
+        })
+        elementos = val.get("elementos") or []
+        paredes = val.get("paredes") or []
+        avisos = val.get("avisos") or []
 
-    # ── Puntos eléctricos ──
-    puntos_elec = [
-        {"tipo": "Enchufe encimera", "ubicacion": "Pared norte, cada 120 cm a 110 cm del suelo", "potencia": "16A"},
-        {"tipo": "Circuito horno", "ubicacion": "Columna de hornos, línea dedicada", "potencia": "20A"},
-        {"tipo": "Circuito lavavajillas", "ubicacion": "Bajo fregadero, línea dedicada", "potencia": "16A"},
-        {"tipo": "Circuito frigorífico", "ubicacion": "Columna frigorífico, línea dedicada", "potencia": "16A"},
-        {"tipo": "Circuito extractor/campana", "ubicacion": "Sobre placa, línea dedicada", "potencia": "10A"},
-        {"tipo": "Iluminación LED bajo muebles", "ubicacion": "Bajo muebles superiores, toda la longitud", "potencia": "5A"},
-        {"tipo": "Iluminación zona isla", "ubicacion": "Techo sobre isla central", "potencia": "5A"} if tiene_isla else None,
-        {"tipo": "Circuito placa inducción", "ubicacion": "Encimera, línea trifásica dedicada", "potencia": "32A"},
-    ]
-    if tiene_vapor:
-        puntos_elec.append({"tipo": "Circuito horno vapor", "ubicacion": "Columna hornos, línea dedicada", "potencia": "20A"})
-    if tiene_cafe:
-        puntos_elec.append({"tipo": "Circuito cafetera integrada", "ubicacion": "Columna hornos o mueble dedicado", "potencia": "16A"})
+    if not elementos:
+        # Sin distribución NO se inventa una cocina para colgar de ella los
+        # puntos: se dice qué falta. Un plano de instalaciones equivocado se
+        # paga picando pared.
+        raise HTTPException(
+            status_code=422,
+            detail=("No puedo hacer el plano de instalaciones sin saber qué muebles "
+                    "hay y dónde. Genera antes la distribución (elige el tipo de "
+                    "cocina y sus medidas, o pulsa «Detectar distribución» sobre un "
+                    "render) y vuelve a intentarlo."))
 
-    puntos_elec = [p for p in puntos_elec if p is not None]
+    ancho_pared = int(paredes[0]["ancho"]) if paredes else int(m["ancho"])
+    con_isla = bool(m["isla_w"] > 0 and m["isla_h"] > 0) or \
+        str(getattr(dist, "tipo", "") or "").lower() == "isla"
 
-    circuitos_str = (
-        f"Se recomienda cuadro de distribución con {len(puntos_elec)} circuitos independientes. "
-        f"Potencia total estimada: {sum(int(p['potencia'].replace('A','')) for p in puntos_elec)} A. "
-        "Todos los circuitos con protección diferencial 30 mA."
-    )
-
-    # ── Fontanería ──
-    puntos_agua = [
-        {"tipo": "Toma de agua fría", "ubicacion": "Bajo fregadero, válvula de corte individual"},
-        {"tipo": "Toma de agua caliente", "ubicacion": "Bajo fregadero, válvula de corte individual"},
-        {"tipo": "Desagüe fregadero", "ubicacion": "Bajo fregadero, sifón con tapa de registro, ∅40 mm"},
-        {"tipo": "Desagüe lavavajillas", "ubicacion": "Junto al fregadero, conexión al sifón"},
-    ]
-    if tiene_isla:
-        puntos_agua.append({"tipo": "Toma de agua isla (opcional)", "ubicacion": "Bajo isla central, requiere paso por suelo"})
-    if tiene_vapor:
-        puntos_agua.append({"tipo": "Toma de agua horno vapor", "ubicacion": "Columna hornos, toma directa con filtro"})
-
-    # ── Gas ──
-    puntos_gas = []
-    if tiene_gas:
-        puntos_gas = [
-            {"tipo": "Toma de gas placa", "ubicacion": "Encimera, llave de corte individual bajo mueble"},
-            {"tipo": "Llave de paso general", "ubicacion": "Accesible, exterior al mueble de placa"},
-        ]
+    electrica = plan_electrico(elementos, ancho_pared, con_isla)
+    fontaneria = plan_fontaneria(elementos, con_isla)
+    gas = plan_gas(elementos, payload.descripcion or "")
 
     notas = (
-        f"Cocina de {ancho}×{alto} cm, estilo {payload.estilo or 'Moderno'}. "
-        "Todas las instalaciones deben ser realizadas por instaladores certificados. "
-        "Se recomienda dejar rozas en paredes antes del alicatado. "
-        "Verificar normativa local vigente (REBT para eléctrica, RITE para fontanería)."
+        f"Pared de {ancho_pared} cm. Cotas horizontales medidas desde el inicio de "
+        f"la pared (izquierda); alturas desde el suelo acabado. "
+        f"Encimera a {int(94)} cm. Dejar rozas antes de alicatar. " + NORMATIVA
     )
-
     return {
-        "electrica": {
-            "puntos": puntos_elec,
-            "circuitos": circuitos_str,
-        },
-        "fontaneria": {
-            "puntos": puntos_agua,
-        },
-        "gas": {
-            "puntos": puntos_gas,
-        } if tiene_gas else None,
+        "electrica": electrica,
+        "fontaneria": fontaneria,
+        "gas": gas,
         "notas": notas,
+        "avisos": avisos,
+        "pared_cm": ancho_pared,
         "medidas_parseadas": m,
         "cliente": payload.nombre_cliente,
         "fecha": datetime.date.today().strftime("%d/%m/%Y"),
