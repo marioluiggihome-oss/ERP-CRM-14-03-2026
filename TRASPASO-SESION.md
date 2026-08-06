@@ -20,25 +20,64 @@ despensero. No lee el boceto, se inventa una cocina genérica.
 - **NO es el reparto de motores.** IA 1 → gemini sigue intacto y con su candado
   (`test_calculo_motores_render.py`).
 
-**Las tres pistas, por orden de solidez:**
+### RESUELTO el 06/08 — era el detector de croquis, no el modelo
 
-1. **`backend/services/luiggi_ai/render_3d.py:1253` fuerza
-   `model_override="gemini-2.5-flash-image"`.** Si esa es la ruta de IA 1,
-   entonces la lista de modelos de `llm_vision.py` que la otra IA reordenó
-   (commit `b79a21a2`) **nunca afectó al render**: el override manda sobre la
-   lista. Su arreglo sería correcto pero inocuo, y la causa estaría en otro
-   sitio. **Empieza por aquí:** averigua por qué ruta va IA 1 y si el override
-   anula la lista.
-2. **¿Llega el boceto al modelo?** Sigue la cadena completa
-   `generate_render_composed` → `_render_dispatch` → llamada final, y comprueba
-   que las imágenes del croquis viajan de verdad y no se pierden ni las recorta
-   el tope de 7 (`MAX_IMAGENES_COMPUESTAS`).
-3. **El prompt de render se reescribió el 04/08** en cinco commits
-   (`6bef32f0`, `f058dce9`, `f5c9a370`, `3bd410ca`, `b31fbbf2`). El de fondo
-   cambió el bloque de escala y lo movió a `services/criterios_cocina.py`.
-   Compara el prompt de antes del 4/8 con el de ahora, misma cocina y mismo
-   motor. Es reversible en un minuto y es la única forma de saber si mejoró o
-   empeoró la fidelidad al boceto.
+**La causa.** `_is_sketch_reference` (`render_3d.py`) **solo miraba si el fichero
+era un PDF**. El master fotografía el croquis con el móvil, así que llegaba un
+JPEG, el detector respondía «no es un croquis» y el render se iba por la rama de
+**EDITAR UNA FOTO DE UNA COCINA EXISTENTE**, cuyo prompt literal es *«You are
+given a reference image of an EXISTING kitchen… your job is to EDIT that exact
+image… do NOT redesign, reorganize, add, remove or move anything»*.
+
+Es decir: al modelo se le ordenaba fotorrealizar un dibujo a lápiz **como si ya
+fuera una cocina montada**. Con esa orden solo podía hacer una cosa —
+inventarse una cocina genérica. De ahí la línea recta y la isla redondeada.
+
+El comentario del código (línea ~556) llevaba meses diciendo que detectaba «PDF
+escaneado **o imagen con trazos a mano**». El comentario mentía; el código nunca
+hizo lo segundo.
+
+**Arreglado.** El detector mira ahora el CONTENIDO del mapa de bits, que es lo
+único que distingue un croquis fotografiado de una foto (el MIME es el mismo en
+los dos): un croquis es casi gris (sin color) y casi todo fondo claro de papel.
+Es **conservador a propósito** — ante la duda, foto — porque la equivocación
+contraria también estropea el render, tirando la referencia real del cliente.
+Probado contra el peor caso posible, la foto de una cocina **blanca**: saturación
+0,14 frente al 0,10 del umbral, no se cuela.
+
+Candado: `backend/tests/test_calculo_croquis_render.py` (7 pruebas, las dos
+direcciones).
+
+**Sobre las tres pistas de esta sección — la nº 1 estaba del revés:**
+
+1. **`render_3d.py:1253` NO es la ruta de IA 1.** Ese `model_override` está
+   dentro de la rama `provider == "gemini_flash"`, que es **IA 4**. IA 1 cae al
+   `return` final, sin override. Conclusión contraria a la que suponía este
+   documento: el arreglo de la otra IA (`b79a21a2`) **sí llegó a IA 1** — era
+   correcto y además útil, no inocuo. Pero no era la causa del síntoma.
+2. **El boceto SÍ llega al modelo.** Cadena comprobada de punta a punta: las
+   imágenes se decodifican y viajan como `Part.from_bytes` antes del prompt, y
+   el tope de 7 no recortaba nada en este caso. Hay candado nuevo para que siga
+   llegando (`test_el_croquis_viaja_de_verdad_hasta_el_modelo`).
+3. **El prompt del 04/08 queda sin tocar.** No hacía falta: el problema no era
+   qué decía el prompt, era **qué prompt se elegía**. Sigue disponible como
+   experimento si el master quiere comparar fidelidad.
+
+### Lo que queda abierto de este punto
+
+- **Un croquis en PDF de VARIAS páginas pierde todas menos la primera.**
+  `_prepare_reference` convierte con `max_pages=1`, en silencio. Si el master
+  escanea planta + alzados en un solo PDF, el modelo solo ve la hoja 1. No lo
+  he tocado porque subir el número de páginas gasta del tope de 7 imágenes, que
+  es habilidad bloqueada (regla 3): **decide el master cómo repartir ese cupo.**
+- **Decisión del master: el respaldo silencioso de modelo.** Si
+  `gemini-2.5-flash-image` falla o tarda más de 90 s, la cascada de
+  `llm_vision.py` baja sola a `gemini-3-pro-image-preview` — justo el modelo que
+  «se inventa la distribución». El render sale, parece bueno, y nadie se entera.
+  La regla 10 dice que el modelo de IA 1 es fijo, así que **no he cambiado el
+  comportamiento sin permiso**: de momento queda un `logger.error` bien visible.
+  Si el master quiere que IA 1 **falle** en vez de renderizar con el modelo
+  creativo, es un cambio de una línea.
 
 ---
 

@@ -642,6 +642,18 @@ async def generate_image_with_gemini(
             if data_url:
                 it, ot = usage_from_response(resp)
                 await record_ai_tokens("render", model_name, it, ot, 1, count=False)
+                # La cascada existe para que un modelo retirado no deje al ERP
+                # sin renders. Pero bajar de escalón NO es gratis: el render
+                # sale de un modelo distinto al de producción y hasta ahora eso
+                # no se veía en ningún sitio salvo en Consumo de IA a toro
+                # pasado. Si el principal falla o tarda, queda dicho AQUÍ y en
+                # voz alta, porque el render sí sale y parece bueno.
+                if model_name != _model_cascade[0]:
+                    logger.error(
+                        "RENDER CON MODELO DE RESPALDO: '%s' en vez de '%s'. La "
+                        "imagen sale, pero puede NO seguir el boceto igual de "
+                        "bien. Revisa por qué falló el principal.",
+                        model_name, _model_cascade[0])
                 return data_url
             last_err = RuntimeError(f"'{model_name}' no devolvió imagen")
             logger.warning(f"Modelo de imagen '{model_name}' no devolvió imagen, probando siguiente")

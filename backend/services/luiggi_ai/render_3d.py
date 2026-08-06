@@ -904,10 +904,53 @@ class Render3DService:
             provider=provider, reference_images=images,
         )
 
+    # Umbrales del detector de croquis en MAPA DE BITS (JPEG/PNG). Un croquis a
+    # lápiz o bolígrafo sobre papel es casi gris (apenas tiene color) y casi todo
+    # fondo claro; una foto de una cocina real tiene color y muchos menos píxeles
+    # blancos, incluso si la cocina es blanca (sombras, vetas, reflejos).
+    CROQUIS_SATURACION_MAX = 0.10    # saturación media, 0-1
+    CROQUIS_FONDO_CLARO_MIN = 0.55   # fracción de píxeles casi blancos
+
+    def _parece_dibujo_a_mano(self, raw_b64):
+        """¿Este mapa de bits es un croquis/plano a mano y no la FOTO de una
+        cocina real? Papel + trazo = casi sin color y con mucho fondo claro.
+
+        CONSERVADOR a propósito: ante la duda devuelve False y la imagen se
+        sigue tratando como foto, que es el comportamiento de siempre.
+        Confundir una foto con un croquis también estropea el render."""
+        try:
+            import base64
+            import io
+            from PIL import Image, ImageChops, ImageStat
+            img = Image.open(io.BytesIO(base64.b64decode(raw_b64))).convert("RGB")
+            img.thumbnail((160, 160))
+            # Saturación media: en HSV de PIL es (max-min)/max, justo lo que
+            # separa un trazo de lápiz (gris) de una cocina real (con color).
+            saturacion = ImageStat.Stat(img.convert("HSV").split()[1]).mean[0] / 255.0
+            # Fracción de píxeles casi blancos = el papel. Se mira el canal MÁS
+            # OSCURO de cada píxel: blanco de verdad es alto en R, G y B a la vez.
+            r, g, b = img.split()
+            minimo = ImageChops.darker(ImageChops.darker(r, g), b)
+            fondo_claro = ImageStat.Stat(
+                minimo.point(lambda v: 255 if v >= 200 else 0)).mean[0] / 255.0
+            return (saturacion <= self.CROQUIS_SATURACION_MAX
+                    and fondo_claro >= self.CROQUIS_FONDO_CLARO_MIN)
+        except Exception as e:
+            logger.debug(f"No se pudo analizar la referencia como croquis: {e}")
+            return False
+
     def _is_sketch_reference(self, reference_image, reference_mime):
-        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado)
-        en vez de una foto de cocina existente. En ese caso el render debe
-        INTERPRETAR el plano, no EDITAR la imagen."""
+        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado
+        O FOTO/ESCANEO de un dibujo a mano) en vez de una foto de cocina
+        existente. En ese caso el render debe INTERPRETAR el plano, no EDITAR
+        la imagen.
+
+        OJO: hasta el 06/08 esto SOLO miraba si era un PDF. El master fotografía
+        el croquis con el móvil, así que llegaba un JPEG y se colaba por la rama
+        de «foto de una cocina existente que hay que EDITAR»: al modelo se le
+        pedía fotorrealizar un dibujo a lápiz como si fuera una cocina montada,
+        y devolvía una cocina genérica inventada. Ese era el síntoma de «el
+        render no lee el boceto»."""
         if not reference_image:
             return False
         # Si el MIME indica PDF, es casi seguro un croquis escaneado
@@ -916,16 +959,18 @@ class Render3DService:
         # Si el data URL indica PDF
         if reference_image[:60].lower().startswith("data:application/pdf"):
             return True
+        raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
         # Detectar por magic bytes del PDF (%PDF)
         try:
-            raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
             import base64
             header_bytes = base64.b64decode(raw[:20])
             if header_bytes[:4] == b"%PDF":
                 return True
         except Exception:
             pass
-        return False
+        # Mapa de bits: mirar el CONTENIDO, que es lo único que distingue un
+        # croquis fotografiado de una foto de cocina (el MIME es el mismo).
+        return self._parece_dibujo_a_mano(raw)
 
     def _prepare_reference(self, reference_image, reference_mime):
         """Normaliza la referencia: quita el prefijo data:, y si es PDF convierte
