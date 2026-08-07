@@ -174,6 +174,7 @@ class ProyectoBase(BaseModel):
     distribucion_estructurada: Optional[DistribucionEstructurada] = Field(default=None, description="Distribución estructurada")
     con_cotas: Optional[bool] = Field(default=True, description="Dibujar las cotas en el alzado")
     monocromo: Optional[bool] = Field(default=False, description="Vista alámbrica en blanco y negro (estilo CAD)")
+    boceto: Optional[bool] = Field(default=False, description="Trazo a mano alzada (mismo dibujo, mismas cotas)")
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
@@ -1595,6 +1596,27 @@ async def generar_alzado(payload: ProyectoBase):
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
+        # ── BOCETO A MANO ALZADA ────────────────────────────────────────────
+        # El dibujo es EXACTAMENTE EL MISMO: los mismos módulos, los mismos
+        # anchos y las mismas cotas. Lo único que cambia es el trazo, que pasa
+        # a temblar como el de un lápiz.
+        #
+        # Por qué así y no pidiéndole a una IA que "dibuje a mano" el render:
+        # una IA redibuja, y al redibujar mueve cosas. Un boceto se lee como
+        # "esto lo ha dibujado el diseñador", así que un módulo desplazado ahí
+        # tiene MÁS autoridad que en un render, no menos. Aquí no hay nada que
+        # inventar: sale de la misma distribución validada que el alzado
+        # técnico, así que cuadra por construcción.
+        #
+        # Se usa `path.sketch` (ondulado del trazo) y NO `plt.xkcd()`, que
+        # además cambia la tipografía y depende de una fuente que puede no
+        # estar instalada en el servidor: las cotas tienen que leerse siempre.
+        _boceto = bool(getattr(payload, "boceto", False))
+        # Se limpia SIEMPRE, aunque no se pida: `path.sketch` es un ajuste
+        # global de matplotlib y una peticion anterior que fallara a medias
+        # podria habérselo dejado puesto.
+        matplotlib.rcParams["path.sketch"] = (2.0, 120.0, 16.0) if _boceto else None
+
         # Vista alámbrica: paleta CAD en blanco y negro puro (estilo TeoWin) cuando
         # se pide `monocromo`; si no, la paleta de color habitual.
         _mono = bool(getattr(payload, "monocromo", False))
@@ -1979,6 +2001,14 @@ async def generar_alzado(payload: ProyectoBase):
     except Exception as e:
         logger.error(f"alzado error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"No se pudo generar la vista alámbrica: {e}")
+    finally:
+        # `path.sketch` es global: si se queda puesto, el SIGUIENTE alzado sale
+        # temblando sin que nadie lo haya pedido.
+        try:
+            import matplotlib as _mpl
+            _mpl.rcParams["path.sketch"] = None
+        except Exception:
+            pass
 
 
 @router.post("/detect-distribucion")
