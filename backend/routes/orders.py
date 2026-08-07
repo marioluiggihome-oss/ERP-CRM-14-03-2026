@@ -15,6 +15,7 @@ import os
 import json
 import base64
 
+from services.cambios_proyecto import puede_fabricar
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
 import resend
@@ -76,6 +77,26 @@ async def confirm_order(
     try:
         # La propiedad del pedido la fija el usuario autenticado, no el Form.
         userId = (current_user or {}).get("id") or userId
+
+        # ── BLOQUEO DE FABRICACIÓN ──────────────────────────────────────────
+        # Se comprueba ANTES de tocar nada: si el proyecto arrastra cambios
+        # críticos sin aprobar, no se manda el email, no se guarda el pedido y
+        # no nace la orden de fabricación. Confirmar y avisar después no sirve
+        # de nada: para entonces fábrica ya está cortando.
+        #
+        # Solo bloquean los cambios hechos DESPUÉS de que el cliente aceptara.
+        # Los proyectos que no pasan por aquí (o los que no tienen historial)
+        # no se bloquean nunca: `puede_fabricar` responde que sí.
+        proyecto_pedido = await _get_db().projects.find_one(
+            {"budgetNumber": budgetNumber}, {"_id": 0, "cambios": 1})
+        _ok_fabricar, _motivo_bloqueo = puede_fabricar(proyecto_pedido)
+        if not _ok_fabricar:
+            raise HTTPException(
+                status_code=409,
+                detail=f"No se puede confirmar: {_motivo_bloqueo} "
+                       "Apruébalos en el proyecto (o pide a gerencia que lo haga) "
+                       "antes de mandarlo a fabricar.",
+            )
         # Clave de SendGrid: primero de los ajustes (MASTER > Settings), luego del entorno.
         _email_settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
         sendgrid_key = _email_settings.get('sendgridApiKey') or os.environ.get('SENDGRID_API_KEY')

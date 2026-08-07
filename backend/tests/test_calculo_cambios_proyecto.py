@@ -164,3 +164,29 @@ def test_el_motivo_no_miente_cuando_falta_el_impacto(cp):
 def test_proyecto_sin_campo_cambios_no_revienta(cp):
     assert cp.puede_fabricar({})[0] is True
     assert cp.puede_fabricar(None)[0] is True
+
+
+# ─── El bloqueo tiene que estar ENCHUFADO, no solo disponible ───────────────
+
+def test_la_confirmacion_de_pedido_consulta_el_bloqueo():
+    """CANDADO: `puede_fabricar` calculando bien no sirve de nada si nadie lo
+    llama. Aqui se comprueba que la confirmacion de pedido --- que es donde
+    nace la orden de fabricacion --- lo consulta de verdad.
+
+    Si alguien quita el guardian, esta prueba se pone roja y hay que quitarla
+    a proposito, dejando constancia.
+    """
+    ruta = os.path.join(BACKEND, "routes", "orders.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+
+    assert "from services.cambios_proyecto import puede_fabricar" in codigo, (
+        "orders.py ya no importa el bloqueo de fabricacion"
+    )
+    assert "puede_fabricar(" in codigo, (
+        "orders.py importa el bloqueo pero no lo llama: el guardian es de adorno"
+    )
+    # Y que corta de verdad, en vez de limitarse a avisar.
+    assert "status_code=409" in codigo, (
+        "el bloqueo tiene que RECHAZAR la confirmacion, no solo registrarla"
+    )
