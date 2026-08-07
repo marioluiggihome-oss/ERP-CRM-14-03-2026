@@ -101,6 +101,20 @@ class AIConfig:
         "claude": "LuiggiAI",
     })
 
+    def provider_auth_headers(self) -> Dict[str, str]:
+        """Cabeceras de autenticación de la API del proveedor.
+
+        ÚNICO sitio donde se escribe el nombre de la cabecera. La API del
+        proveedor NO usa `Authorization: Bearer`, sino una cabecera propia; con
+        el esquema equivocado responde 401 aunque la clave sea correcta.
+
+        Estaba copiado en cuatro sitios y dos lo tenían mal: el diagnóstico
+        (daba 401 falsos y hacía creer que la clave estaba caducada) y el proxy
+        de assets (las imágenes servidas desde el host de la API salían rotas).
+        Se centraliza para que no vuelva a divergir.
+        """
+        return {"x-manus-api-key": self.provider_api_key}
+
     def validate(self) -> bool:
         """Valida que la configuración mínima esté presente."""
         if not self.provider_api_key:

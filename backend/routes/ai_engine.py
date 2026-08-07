@@ -440,7 +440,7 @@ async def engine_diagnostics(user=Depends(require_auth)):
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
                 r = await c.get(config.provider_base_url,
-                                headers={"Authorization": f"Bearer {manus_key}"})
+                                headers=config.provider_auth_headers())
                 manus_reachable, manus_http_status = True, r.status_code
         except Exception as e:
             manus_reachable, manus_error = False, type(e).__name__
@@ -452,6 +452,13 @@ async def engine_diagnostics(user=Depends(require_auth)):
     else:
         effective = "ninguno"
 
+    # Con la cabecera correcta, un 401/403 ya significa de verdad que la clave no
+    # vale. Antes se enviaba `Authorization: Bearer`, que el proveedor rechaza
+    # siempre, y el 401 no distinguía una clave caducada de una clave buena.
+    manus_auth_ok = None
+    if manus_http_status is not None:
+        manus_auth_ok = manus_http_status not in (401, 403)
+
     return {
         "render_provider_config": provider,
         "effective_engine": effective,
@@ -460,11 +467,16 @@ async def engine_diagnostics(user=Depends(require_auth)):
             "key_length": len(manus_key) if manus_present else 0,
             "reachable": manus_reachable,
             "http_status": manus_http_status,
+            "auth_ok": manus_auth_ok,
             "error": manus_error,
         },
         "gemini": {"key_present": gemini_present, "sdk_available": gemini_sdk},
         "hint": (
-            "El render usará MANUS." if effective == "manus"
+            "Falta configurar MANUS_API_KEY en el servidor: IA 2 caerá a Gemini."
+            if not manus_present
+            else "MANUS_API_KEY presente pero el proveedor la rechaza (401/403): "
+                 "IA 2 caerá a Gemini." if manus_auth_ok is False
+            else "El render usará MANUS." if effective == "manus"
             else "El render usará GEMINI (respaldo)." if effective == "gemini"
             else "Falta configurar la clave del motor de IA en el servidor."
         ),
@@ -907,7 +919,7 @@ async def proxy_asset(
     headers = {}
     api_host = urlparse(config.provider_base_url).netloc.split(":")[0].lower()
     if host == api_host:
-        headers["Authorization"] = f"Bearer {config.provider_api_key}"
+        headers.update(config.provider_auth_headers())
 
     try:
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
