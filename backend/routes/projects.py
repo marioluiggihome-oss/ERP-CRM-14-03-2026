@@ -27,6 +27,7 @@ from services.cambios_proyecto import (
     resumen_cambio, cambios_sin_aprobar, puede_fabricar, ORIGENES,
 )
 from services.comparador_fabricacion import comparar
+from services.validacion_fabricacion import validar
 
 from services.activity_tracker import get_tracker, ActivityType
 
@@ -308,6 +309,23 @@ async def aprobar_cambio(project_id: str, indice: int,
     ok, motivo = puede_fabricar(nuevo)
     return {"success": True, "cambio": nuevo["cambios"][indice],
             "puedeFabricar": ok, "motivo": motivo}
+
+
+@router.get("/projects/{project_id}/validacion")
+async def expediente_validacion(project_id: str, current_user: dict = Depends(require_auth)):
+    """¿Está este proyecto en condiciones de bajar al taller?
+
+    Contesta con las comprobaciones una a una, agrupadas para la pantalla, y
+    con los motivos de bloqueo señalando DÓNDE está el problema — un aviso que
+    no lleva a ninguna parte obliga a repasar el proyecto entero, y eso no se
+    hace: se ignora.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    pendientes = len(cambios_sin_aprobar(proyecto.get("cambios")))
+    return {"success": True, **validar(proyecto, pendientes_cambios=pendientes)}
 
 
 @router.get("/projects/{project_id}/comparar-fabricacion")
