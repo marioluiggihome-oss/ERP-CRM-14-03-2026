@@ -892,7 +892,18 @@ export default function AIRenderStudio({ state, setState }) {
     if (!path) return null;
     if (typeof path === 'string' && path.startsWith('data:')) return path;
     const resp = await fetch(assetSrc(path));
+    // Sin esta comprobación, un 401 o un 500 del proxy se convertía IGUALMENTE
+    // en un data-URL — pero con el JSON del error dentro. Eso viajaba como si
+    // fuera la imagen y reventaba mucho más tarde, en la llamada de visión, con
+    // un "Unable to process input image" de Google que no dice nada de lo que
+    // pasó de verdad. El error hay que darlo aquí, que es donde ocurre.
+    if (!resp.ok) {
+      throw new Error(`No se pudo descargar la imagen del render (${resp.status}).`);
+    }
     const blob = await resp.blob();
+    if (!blob.type.startsWith('image/')) {
+      throw new Error('Lo descargado no es una imagen; vuelve a generar el render.');
+    }
     return await new Promise((res, rej) => {
       const fr = new FileReader();
       fr.onload = () => res(fr.result);
@@ -1656,7 +1667,13 @@ export default function AIRenderStudio({ state, setState }) {
   // rechaza el JSON → "Error al guardar". Para archivo basta 1600px JPEG.
   const shrinkForSave = async (src) => {
     const dataUrl = await imageToDataUrl(src);
-    if (!dataUrl || !String(dataUrl).startsWith('data:image')) return dataUrl;
+    // Antes, cualquier cosa que no fuese `data:image` se devolvía TAL CUAL y
+    // seguía su camino haciéndose pasar por una imagen. Si no lo es, se corta
+    // aquí: más vale un error claro que un render fantasma.
+    if (dataUrl && !String(dataUrl).startsWith('data:image')) {
+      throw new Error('La imagen del render no se pudo leer.');
+    }
+    if (!dataUrl) return dataUrl;
     return await new Promise((resolve) => {
       const im = new window.Image();
       im.onload = () => {
