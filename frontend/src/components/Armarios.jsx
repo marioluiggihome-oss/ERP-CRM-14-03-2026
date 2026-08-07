@@ -7,6 +7,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText, List, Package, Scissors, X, Edit3, Hash, Printer, FolderOpen, RefreshCw, AlertCircle, Check, Sparkles, Image, MessageSquare, ArrowUp, ArrowDown, Loader, Mic, MicOff } from 'lucide-react';
 import { armariosAPI } from '../services/api';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { ALVIC_WARDROBE_COLORS, ACB_WARDROBE_DOORS, ACB_GM_COLORS } from '../data/finishes';
 import { generateArmariosDespiecePDF, generateArmarioPresupuestoPDF } from '../services/pdfGenerator';
 
@@ -544,51 +545,6 @@ const DEFAULT_ARMARIOS_PRICING = {
   ),
 };
 
-// ========== DICTADO POR VOZ (Web Speech API, es-ES) ==========
-function useSpeechRecognition() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef(null);
-  const finalRef = useRef('');
-
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'es-ES';
-      recognition.onresult = (event) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const r = event.results[i];
-          if (r.isFinal) finalRef.current += r[0].transcript;
-          else interim += r[0].transcript;
-        }
-        setTranscript(finalRef.current + interim);
-      };
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
-      recognitionRef.current = recognition;
-    }
-  }, []);
-
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      finalRef.current = '';
-      setTranscript('');
-      try { recognitionRef.current.start(); } catch (_) {}
-      setIsListening(true);
-    }
-  }, []);
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) { recognitionRef.current.stop(); setIsListening(false); }
-  }, []);
-
-  return { isListening, transcript, isSupported, startListening, stopListening };
-}
 
 // ========== COMPONENTE PRINCIPAL ==========
 

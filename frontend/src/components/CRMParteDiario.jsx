@@ -13,6 +13,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Mic, MicOff, Sparkles, FileDown, Mail, Send, Trash2, RefreshCw, Loader, ClipboardList } from 'lucide-react';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -38,12 +39,14 @@ const periodoLabel = (key) => {
 const CRMParteDiario = ({ currentUser }) => {
   const [periodo, setPeriodo] = useState('hoy');
   const [transcript, setTranscript] = useState('');
-  const [listening, setListening] = useState(false);
+  // El dictado sale del hook compartido: antes cada pantalla tenía su copia y
+  // todas arrastraban el mismo fallo (una palabra repetida en cada reentrega).
+  const voz = useSpeechRecognition();
+  const listening = voz.isListening;
   const [generating, setGenerating] = useState(false);
   const [report, setReport] = useState(null);
   const [reports, setReports] = useState([]);
-  const recognitionRef = useRef(null);
-  const baseTextRef = useRef('');
+  const baseTextRef = useRef('');   // lo escrito antes de empezar a dictar
 
   const loadReports = useCallback(async () => {
     try {
@@ -56,31 +59,25 @@ const CRMParteDiario = ({ currentUser }) => {
   useEffect(() => { loadReports(); }, [loadReports]);
 
   // ── Dictado por voz ──
+  // Lo dictado se añade a lo que ya hubiera escrito, sin pisarlo.
+  useEffect(() => {
+    if (voz.transcript) {
+      const base = baseTextRef.current;
+      setTranscript(base ? `${base.trim()} ${voz.transcript}` : voz.transcript);
+    }
+  }, [voz.transcript]);
+
   const toggleMic = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert('Tu navegador no soporta dictado por voz. Escribe el parte a mano.'); return; }
-    if (listening) { try { recognitionRef.current?.stop(); } catch (_) {} return; }
-    const rec = new SR();
-    rec.continuous = true; rec.interimResults = true; rec.lang = 'es-ES';
-    baseTextRef.current = transcript ? transcript + ' ' : '';
-    rec.onresult = (e) => {
-      let interim = '', final = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const txt = e.results[i][0].transcript;
-        if (e.results[i].isFinal) final += txt + ' '; else interim += txt;
-      }
-      if (final) baseTextRef.current += final;
-      setTranscript((baseTextRef.current + interim).trimStart());
-    };
-    rec.onerror = () => setListening(false);
-    rec.onend = () => setListening(false);
-    recognitionRef.current = rec;
-    try { rec.start(); setListening(true); } catch (_) {}
+    if (!voz.isSupported) { alert('Tu navegador no soporta dictado por voz. Escribe el parte a mano.'); return; }
+    if (voz.isListening) { voz.stopListening(); return; }
+    baseTextRef.current = transcript || '';
+    voz.resetTranscript();
+    voz.startListening();
   };
 
   const generar = async () => {
     if (!transcript.trim()) { alert('Dicta o escribe lo que hiciste en las visitas'); return; }
-    try { recognitionRef.current?.stop(); } catch (_) {}
+    voz.stopListening();
     setGenerating(true);
     try {
       const r = await fetch(`${API_URL}/api/crm/voice-report`, {
