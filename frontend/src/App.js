@@ -55,6 +55,7 @@ import Login from './components/Login';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
 import WelcomeScreen from './components/WelcomeScreen';
+import BotonPantallaCompleta from './components/BotonPantallaCompleta';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
@@ -1535,7 +1536,12 @@ const App = () => {
                     <span className="text-[7px] font-black uppercase tracking-widest">Master</span>
                 </button>
               )}
-              <button 
+              {/* Pantalla completa: el F11 del portátil, para tablet y móvil.
+                  Se esconde solo si el ERP ya está instalado en la pantalla de
+                  inicio, porque entonces no hay barras que ocultar. */}
+              <BotonPantallaCompleta />
+
+              <button
                   onClick={async () => {
                     // Verificar si hay líneas de presupuesto sin guardar
                     const hasUnsavedItems = (state.budgetItemsMontada?.length > 0) || (state.budgetItemsDespiece?.length > 0);

@@ -16,8 +16,10 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial, onClos
   const [sistema, setSistema] = useState(sistemaInicial === 'alvic' || sistemaInicial === 'mv' ? sistemaInicial : 'mv');
   if (!esMaster) return null;
   return (
-    <div className="mb-4">
-      <div className="flex items-center gap-2 flex-wrap bg-slate-800 rounded-t-2xl px-4 py-2.5">
+    // Ocupa todo el alto que le dé el modal: la cabecera se queda fija arriba y
+    // es la tabla la que se desplaza, no la ventana entera.
+    <div className="flex flex-col h-full min-h-0">
+      <div className="shrink-0 flex items-center gap-2 flex-wrap bg-slate-800 rounded-t-2xl px-4 py-2.5">
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 bg-slate-700 px-2 py-0.5 rounded">Solo master</span>
         <span className="text-sm font-black text-white mr-2">Rentabilidad</span>
         <div className="inline-flex rounded-lg bg-slate-700 p-0.5">
@@ -39,9 +41,10 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial, onClos
           </button>
         )}
       </div>
-      {/* La tabla es larga: se le pone su propio alto y su propio scroll, para que
-          la cabecera con el selector MV/Alvic no se pierda al bajar. */}
-      <div className="border-2 border-t-0 border-slate-700 rounded-b-2xl bg-white overflow-auto max-h-[85vh]">
+      {/* La tabla es larga: tiene su propio scroll, para que la cabecera con el
+          selector MV/Alvic no se pierda al bajar. Antes se limitaba con
+          `max-h-[85vh]`; ahora ocupa todo el hueco que quede bajo la cabecera. */}
+      <div className="flex-1 min-h-0 border-2 border-t-0 border-slate-700 rounded-b-2xl bg-white overflow-auto">
         {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} />}
       </div>
     </div>

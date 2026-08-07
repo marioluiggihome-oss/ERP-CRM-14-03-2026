@@ -2602,8 +2602,15 @@ export default function AIRenderStudio({ state, setState }) {
           shadow-2xl lg:shadow-none
         `}
           style={isWide() ? { width: panelHidden ? 0 : panelW } : undefined}>
-          {/* Cabecera del drawer en móvil: título + botón cerrar */}
-          <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white sticky top-0 z-10">
+          {/* Cabecera del drawer en móvil: título + botón cerrar.
+              `pl-16` le deja su hueco al botón flotante del logo, que la app
+              pinta SIEMPRE en `fixed top-3 left-3` con z-[60] mientras la barra
+              lateral está cerrada. Este panel va con z-50, así que el botón
+              queda por encima y se comía el principio del título: se leía
+              «NES DE DISEÑO» en vez de «OPCIONES DE DISEÑO». Subirle el z-index
+              al panel taparía el botón y dejaría al usuario sin menú; el hueco
+              es más honesto, y visualmente lo ocupa el propio logo. */}
+          <div className="lg:hidden flex items-center justify-between pl-16 pr-4 py-3 border-b border-slate-100 bg-white sticky top-0 z-10">
             <span className="text-sm font-black text-slate-700 uppercase tracking-wide">Opciones de diseño</span>
             <button onClick={() => setPanelHidden(true)}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">

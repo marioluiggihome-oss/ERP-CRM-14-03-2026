@@ -1142,8 +1142,13 @@ export default function EstudioCocinas({ state, setState }) {
           shadow-2xl lg:shadow-none
           ${t.sidebar}
         `} style={{overflowY:'auto', overflowX:'hidden', ...(isWide() && !panelHidden ? { width: panelW } : {})}}>
-          {/* Cabecera del sidebar con botón de cierre en mobile */}
-          <div className="flex items-center justify-between mb-1">
+          {/* Cabecera del sidebar con botón de cierre en mobile.
+              `pl-12` en móvil por lo mismo que en el Estudio 3D: el botón
+              flotante del logo va en `fixed top-3 left-3` con z-[60] siempre que
+              la barra lateral está cerrada, y este panel va con z-40, así que le
+              caía encima al rótulo. En pantalla grande la barra suele estar
+              abierta —el botón no se pinta— y el hueco sobra: `lg:pl-0`. */}
+          <div className="flex items-center justify-between mb-1 pl-12 lg:pl-0">
             <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
             <button onClick={() => setMobileMenuOpen(false)}
               className={`lg:hidden flex items-center justify-center w-7 h-7 rounded-lg transition-all ${t.dlBtn}`}

@@ -1,0 +1,12 @@
+{
+  "name": "Gestión Profesional",
+  "short_name": "Gestión",
+  "description": "Sistema profesional de presupuestos para distribuidores de cocinas",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a"
+}

@@ -293,7 +293,12 @@ const Login = ({ onLogin, customLogo }) => {
       />
       
       {/* Left Side - Text Content */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative">
+      {/* El panel de marca se decidía SOLO por el ancho (`lg:`). Una tablet de
+          8" apaisada es ancha pero MUY baja: pasaba de 1024 px, así que salía el
+          panel y el formulario se quedaba con la mitad de la pantalla justo en
+          el aparato que menos sitio tiene. Por debajo de 600 px de alto manda el
+          formulario, que es a lo que se viene, y la decoración se aparta. */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative [@media(max-height:600px)]:!hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-900/50 to-transparent" />
         
         {/* Overlay Content */}
@@ -340,11 +345,18 @@ const Login = ({ onLogin, customLogo }) => {
       </div>
 
       {/* Right Side - Forms with Glass Effect */}
-      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-8 lg:p-12 relative">
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-md lg:bg-white/70 lg:backdrop-blur-xl" />
+      {/* En una tablet de 8" apaisada, con la barra de estado, las pestañas y la
+          de direcciones, la altura útil se queda en torno a 450 px. Aquí antes
+          no se podía desplazar (el padre lleva `overflow-hidden`), así que lo
+          que no cabía se CORTABA y no había forma de llegar a ello: en
+          «Solicitud de alta», que tiene muchos más campos, el botón de enviar
+          quedaba fuera de alcance. Ahora esta columna se desplaza sola, y
+          `min-h-full` conserva el centrado de siempre cuando sí cabe. */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 [@media(max-height:600px)]:!w-full relative overflow-y-auto overscroll-contain bg-white/80 backdrop-blur-md lg:bg-white/70 lg:backdrop-blur-xl">
+        <div className="min-h-full flex items-center justify-center p-5 sm:p-8 lg:p-12 [@media(max-height:600px)]:!py-6">
         <div className="w-full max-w-md relative z-10">
           {/* Logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-5 sm:mb-8 [@media(max-height:600px)]:!mb-3">
             {brand === 'floor' ? (
               <div className="flex flex-col items-center">
                 <FloorBrand src={floorLogo} big />
@@ -361,7 +373,7 @@ const Login = ({ onLogin, customLogo }) => {
               </div>
             ) : (
               <>
-                <Logo variant="dark" customLogo={customLogo || publicLogo} marcaBlanca={marcaBlanca} companyName={companyName} className="h-24 mb-3" />
+                <Logo variant="dark" customLogo={customLogo || publicLogo} marcaBlanca={marcaBlanca} companyName={companyName} className="h-16 sm:h-20 lg:h-24 [@media(max-height:600px)]:!h-12 mb-2 sm:mb-3" />
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
                   {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
                 </p>
@@ -371,7 +383,7 @@ const Login = ({ onLogin, customLogo }) => {
 
           {mode === 'login' ? (
             /* LOGIN FORM */
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-5 [@media(max-height:600px)]:!space-y-3">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-2 ml-1">
                   <UserIcon size={12} className="text-orange-500" /> Usuario
@@ -381,7 +393,7 @@ const Login = ({ onLogin, customLogo }) => {
                   autoFocus
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full bg-white/90 border-2 border-slate-200 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm"
+                  className="w-full bg-white/90 border-2 border-slate-200 rounded-xl p-4 [@media(max-height:600px)]:!p-2.5 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm"
                   placeholder="Tu usuario"
                   required
                   data-testid="login-username"
@@ -396,7 +408,7 @@ const Login = ({ onLogin, customLogo }) => {
                   type="password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-white/90 border-2 border-slate-200 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm"
+                  className="w-full bg-white/90 border-2 border-slate-200 rounded-xl p-4 [@media(max-height:600px)]:!p-2.5 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm"
                   placeholder="••••••••"
                   required
                   data-testid="login-password"
@@ -413,7 +425,7 @@ const Login = ({ onLogin, customLogo }) => {
                     type="text" 
                     value={totpCode}
                     onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full bg-emerald-50/90 border-2 border-emerald-200 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm text-center text-xl tracking-widest"
+                    className="w-full bg-emerald-50/90 border-2 border-emerald-200 rounded-xl p-4 [@media(max-height:600px)]:!p-2.5 text-slate-900 font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm text-center text-xl tracking-widest"
                     placeholder="000000"
                     maxLength={6}
                     autoFocus
@@ -469,7 +481,7 @@ const Login = ({ onLogin, customLogo }) => {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider py-4 [@media(max-height:600px)]:!py-3 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                 data-testid="login-submit"
               >
                 {isLoading ? (
@@ -622,7 +634,7 @@ const Login = ({ onLogin, customLogo }) => {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold uppercase tracking-wider py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm disabled:opacity-50 mt-2"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold uppercase tracking-wider py-4 [@media(max-height:600px)]:!py-3 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm disabled:opacity-50 mt-2"
                 data-testid="register-submit"
               >
                 {isLoading ? (
@@ -649,6 +661,7 @@ const Login = ({ onLogin, customLogo }) => {
                 : '© 2026 · Sistema Profesional de Presupuestos'}
             </p>
           </div>
+        </div>
         </div>
       </div>
 

@@ -62,7 +62,7 @@ class LuiggiAICore:
             self._client = httpx.AsyncClient(
                 base_url="https://api.manus.ai",
                 headers={
-                    "x-manus-api-key": self.config.provider_api_key,
+                    **self.config.provider_auth_headers(),
                     "Content-Type": "application/json",
                 },
                 timeout=120.0,
@@ -449,7 +449,7 @@ class LuiggiAICore:
             if self._client is None or self._client.is_closed:
                 self._client = httpx.AsyncClient(
                     base_url="https://api.manus.ai",
-                    headers={"x-manus-api-key": self.config.provider_api_key},
+                    headers=self.config.provider_auth_headers(),
                     timeout=120.0,
                 )
             client = self._client

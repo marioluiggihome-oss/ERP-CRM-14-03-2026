@@ -22,6 +22,37 @@ import { despiece, MV_COSTES_DEFAULT } from './RentabilidadMV';
 
 const eur = (n) => (n == null ? '—' : `${Number(n).toFixed(2)} €`);
 
+// Texto comparable: sin tildes y en minúsculas, para que "sobreencimera" case
+// escribiéndolo con tilde o sin ella.
+const norm = (s) => (s || '').toString()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+// El número del código MV es el ancho en cm (B60D/I -> 60). Pero NO en todas las
+// familias: los elementos lineales (COR, ZOC, MOSE…) y los techos (TEC100…TEC360)
+// no lo llevan, y en EMC1M/E ese "1" significa Medio/Entero, no un ancho. Sacar
+// "el primer número" pintaría «1 cm» en una encimera.
+// Regla: ancho solo cuando el código lo lleva de verdad; si no, vacío.
+const TIPOS_SIN_ANCHO = new Set(['ent_med', 'h355060']);
+const PAT_ANCHO = /^[A-Z]+(\d{2,3})(?:D\/I|D|I)?$/;
+const anchoDeCod = (cod, type) => {
+  if (TIPOS_SIN_ANCHO.has(type)) return null;
+  const m = PAT_ANCHO.exec(cod || '');
+  return m ? Number(m[1]) : null;
+};
+
+// Precio orientativo de la lista. Solo si NO es ambiguo: con varias alturas se
+// marca «desde», y los lineales (entero/medio) no llevan precio aquí — ese lo
+// fija el servidor al añadirlos, que es quien sabe cuál toca.
+const pvpDeItem = (val, pv) => {
+  if (typeof val === 'number') return { eur: Math.round(val * pv * 100) / 100, desde: false };
+  if (Array.isArray(val)) {
+    const ns = val.filter(n => typeof n === 'number');
+    if (!ns.length) return null;
+    return { eur: Math.round(Math.min(...ns) * pv * 100) / 100, desde: true };
+  }
+  return null;
+};
+
 // Coste total de un mueble = suma de componentes del despiece × cantidad unitaria.
 const costeDe = (m, p) => {
   const d = despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p);
@@ -57,6 +88,52 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     const it = familias[selFam]?.items;
     return it && typeof it === 'object' ? Object.keys(it) : [];
   }, [familias, selFam]);
+
+  // ─── Buscador local sobre el catálogo YA cargado ────────────────────────
+  // Las 358 referencias de la tarifa llegan con la primera petición y estaban
+  // ahí sin usar: solo alimentaban dos desplegables encadenados (53 familias y
+  // luego hasta 12 códigos). Para añadir un mueble había que saberse el código
+  // de memoria o navegar los dos desplegables. Ahora se filtran en el sitio,
+  // sin pedirle nada al servidor, y se puede buscar por PALABRA ("fregadero")
+  // igual que en el buscador de cascos de detrás.
+  const catalogo = useMemo(() => {
+    if (!familias) return [];
+    const out = [];
+    for (const [fam, info] of Object.entries(familias)) {
+      const items = info?.items;
+      if (!items || typeof items !== 'object') continue;
+      for (const [cod, val] of Object.entries(items)) {
+        const desc = (val && typeof val === 'object' && !Array.isArray(val)) ? val.desc : null;
+        const etiqueta = fam.replace(/_/g, ' ');
+        out.push({
+          cod, familia: fam, etiqueta, desc,
+          ancho: anchoDeCod(cod, info.type),
+          precio: pvpDeItem(val, pv),
+          busca: norm(`${cod} ${etiqueta} ${desc || ''}`),
+        });
+      }
+    }
+    return out;
+  }, [familias, pv]);
+
+  const [sel, setSel] = useState(0);
+  const [foco, setFoco] = useState(false);
+  const sugerencias = useMemo(() => {
+    const q = norm(busca).trim();
+    if (!q || !catalogo.length) return [];
+    // Si ya viene escrito como expresión ("2 b60i (altura 80)") no se sugiere:
+    // eso lo interpreta el servidor, que entiende cantidades, manos y alturas.
+    if (/^\s*\d+\s*\S/.test(busca) || busca.includes('(')) return [];
+    const term = q.split(/\s+/).filter(Boolean);
+    const hits = catalogo.filter(c => term.every(t => c.busca.includes(t)));
+    hits.sort((a, b) => {
+      const ap = a.cod.toLowerCase().startsWith(q) ? 0 : 1;
+      const bp = b.cod.toLowerCase().startsWith(q) ? 0 : 1;
+      return ap - bp || a.cod.localeCompare(b.cod);
+    });
+    return hits.slice(0, 40);
+  }, [busca, catalogo]);
+  useEffect(() => { setSel(0); }, [busca]);
 
   // Alturas seleccionables según el TIPO de familia (deja las otras medidas posibles).
   const OPCIONES_ALTURA = { h7090: [70, 90], h127147: [127, 147], h200220: [200, 220] };
@@ -101,6 +178,19 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const totalMargen = totalPvp - totalCoste;
   const totalMargenPct = totalPvp > 0 ? (totalMargen / totalPvp) * 100 : 0;
 
+  // Une los nuevos con los que ya hay: mismo código y misma altura = suma de
+  // unidades. Distinta altura son muebles distintos y van en filas separadas.
+  const fundir = (prev, nuevos) => {
+    const out = [...prev];
+    for (const n of nuevos) {
+      const i = out.findIndex(m => m.cod && n.cod && m.cod === n.cod
+        && (m.alto ?? null) === (n.alto ?? null));
+      if (i >= 0) out[i] = { ...out[i], qty: (Number(out[i].qty) || 1) + (Number(n.qty) || 1) };
+      else out.push(n);
+    }
+    return out;
+  };
+
   // Añadir por TEXTO (buscador libre) o desde el desplegable.
   const añadirTexto = async (texto) => {
     const t = (texto || '').trim();
@@ -114,7 +204,11 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
       let d = {}; try { d = await r.json(); } catch { d = {}; }
       if (!r.ok || !d.success) { setAviso(d.detail || 'No se reconoció el mueble. Escríbelo como "1 b60i (altura 80)".'); return; }
       const nuevos = (d.muebles || []).map((m, i) => ({ ...m, _k: `add-${Date.now()}-${i}` }));
-      setMuebles(prev => [...prev, ...nuevos]);
+      // Si el mueble ya está (mismo código Y misma altura), se suman unidades en
+      // vez de abrir otra fila. Las unidades multiplican coste, herraje y pedido
+      // al proveedor: dos filas de B60D con 1 ud cada una se leen mal de un
+      // vistazo y es fácil corregir solo una.
+      setMuebles(prev => fundir(prev, nuevos));
       setBusca('');
     } catch (e) {
       setAviso(`Error al buscar (${e?.message || 'red'}).`);
@@ -123,6 +217,17 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const añadirDelSelector = () => {
     if (!selCod) return;
     añadirTexto(`${Math.max(1, Number(selQty) || 1)} ${selCod}`);
+  };
+  // Elegir una sugerencia añade UNA unidad. Volver a elegir la misma suma otra,
+  // porque los duplicados se funden: pulsar dos veces es la forma rápida de
+  // poner 2, sin soltar el teclado.
+  const añadirSugerencia = (c) => { if (c) añadirTexto(`1 ${c.cod}`); };
+  const teclaBuscador = (e) => {
+    if (!sugerencias.length) { if (e.key === 'Enter') añadirTexto(busca); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => (s + 1) % sugerencias.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => (s - 1 + sugerencias.length) % sugerencias.length); }
+    else if (e.key === 'Enter') { e.preventDefault(); añadirSugerencia(sugerencias[sel]); }
+    else if (e.key === 'Escape') { e.preventDefault(); setBusca(''); }
   };
 
   const confirmar = () => {
@@ -151,9 +256,40 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
               <div className="relative flex-1">
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input value={busca} onChange={e => setBusca(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') añadirTexto(busca); }}
-                  placeholder='Ej. "1 b45d (altura 80)"  ·  "2 a60i"  ·  "1 asc60x90 d"'
+                  onKeyDown={teclaBuscador}
+                  onFocus={() => setFoco(true)}
+                  onBlur={() => setTimeout(() => setFoco(false), 120)}
+                  placeholder='Código o palabra: "b60", "fregadero", "1 b45d (altura 80)"'
                   className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 outline-none" />
+                {/* Sugerencias del catálogo, filtradas aquí mismo. El ancho solo
+                    se pinta cuando el código lo lleva de verdad: en cornisas,
+                    zócalos, encimeras y techos se deja vacío antes que poner
+                    una cota que no es. */}
+                {foco && sugerencias.length > 0 && (
+                  <ul className="absolute z-10 left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl">
+                    {sugerencias.map((c, i) => (
+                      <li key={c.familia + c.cod}>
+                        <button type="button"
+                          onMouseEnter={() => setSel(i)}
+                          onClick={() => añadirSugerencia(c)}
+                          className={`w-full text-left px-3 py-1.5 flex items-baseline gap-2 ${i === sel ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                          <span className="font-black text-indigo-900 text-xs w-24 shrink-0">{c.cod}</span>
+                          <span className="text-[11px] text-slate-500 truncate flex-1">
+                            {c.desc || c.etiqueta.toLowerCase()}
+                          </span>
+                          {c.ancho != null && (
+                            <span className="text-[11px] text-slate-400 shrink-0">{c.ancho} cm</span>
+                          )}
+                          {c.precio && (
+                            <span className="text-[11px] font-bold text-slate-600 shrink-0 w-20 text-right">
+                              {c.precio.desde ? 'desde ' : ''}{c.precio.eur.toFixed(2)} €
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <button onClick={() => añadirTexto(busca)} disabled={buscando || !busca.trim()}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm disabled:opacity-50">
