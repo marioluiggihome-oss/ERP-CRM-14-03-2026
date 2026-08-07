@@ -26,6 +26,7 @@ from services.jwt_service import (
 from services.cambios_proyecto import (
     resumen_cambio, cambios_sin_aprobar, puede_fabricar, ORIGENES,
 )
+from services.comparador_fabricacion import comparar
 
 from services.activity_tracker import get_tracker, ActivityType
 
@@ -307,6 +308,48 @@ async def aprobar_cambio(project_id: str, indice: int,
     ok, motivo = puede_fabricar(nuevo)
     return {"success": True, "cambio": nuevo["cambios"][indice],
             "puedeFabricar": ok, "motivo": motivo}
+
+
+@router.get("/projects/{project_id}/comparar-fabricacion")
+async def comparar_con_fabricacion(project_id: str, current_user: dict = Depends(require_auth)):
+    """Compara lo PRESUPUESTADO con lo que hay en la orden de FABRICACIÓN.
+
+    Se presupuestan unas cosas y a veces acaban fabricándose otras: por un
+    cambio pactado, por un error al trascribir, o porque alguien tocó la orden
+    después. El dinero se pierde igual en los tres casos, y hoy no se ve hasta
+    que el montador llega a la obra.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    # Proyecto -> pedido (por nº de presupuesto) -> orden de fabricación.
+    pedido = None
+    if proyecto.get("budgetNumber"):
+        pedido = await db.orders.find_one(
+            {"budgetNumber": proyecto["budgetNumber"]}, {"_id": 0, "id": 1})
+    orden = None
+    if pedido:
+        orden = await db.manufacturing_orders.find_one(
+            {"sourceOrderId": pedido["id"]}, {"_id": 0})
+
+    if not orden:
+        # Sin orden de fabricación no hay nada que comparar, y decirlo es mejor
+        # que devolver "todo cuadra": no es lo mismo que coincida que que aún
+        # no exista el otro lado.
+        return {"success": True, "hayOrden": False,
+                "mensaje": "Este proyecto todavía no tiene orden de fabricación.",
+                "comparacion": None}
+
+    presupuestado = (proyecto.get("itemsMontada") or []) + (proyecto.get("itemsDespiece") or [])
+    comparacion = comparar(presupuestado, orden.get("items") or [])
+    return {
+        "success": True,
+        "hayOrden": True,
+        "ordenNumero": orden.get("orderNumber"),
+        "numeroFabricacion": orden.get("manufacturingNumber"),
+        "comparacion": comparacion,
+    }
 
 
 @router.post("/projects/{project_id}/clone")
