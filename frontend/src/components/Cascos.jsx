@@ -769,9 +769,22 @@ const Cascos = ({ state, setState }) => {
                    una tabla de 16 columnas metida en esa ventanita era imposible
                    de usar, y encima la recortaba el contenedor. */}
               {showRenta && esMasterRenta && (
-                <div className="fixed inset-0 z-[9998] bg-slate-900/60 p-2 sm:p-4 overflow-y-auto"
+                /* `text-slate-900` NO es decoración: este panel cuelga, en el
+                   DOM, de la barra de cabecera de arriba, que lleva `text-white`.
+                   `position: fixed` cambia dónde se PINTA, pero no corta la
+                   HERENCIA de CSS, así que el color blanco seguía bajando hasta
+                   aquí. Todo lo que no declara su propio color lo heredaba —y
+                   los `<input>` no lo declaran—, de modo que el master escribía
+                   el descuento, la mano de obra o el margen y veía la casilla
+                   vacía: letra blanca sobre fondo blanco. El menú desplegable de
+                   al lado ya se defendía así con `text-slate-700`.
+
+                   A pantalla completa (sin `max-w`) porque la tabla tiene 17
+                   columnas: recortada a 1400 px obligaba a hacer scroll lateral
+                   para leer una sola línea. */
+                <div className="fixed inset-0 z-[9998] bg-slate-900/60 p-1.5 sm:p-3 flex text-slate-900"
                   onMouseDown={(e) => { if (e.target === e.currentTarget) setShowRenta(false); }}>
-                  <div className="mx-auto w-full max-w-[1400px]">
+                  <div className="w-full h-full flex flex-col min-h-0">
                     <RentabilidadUnificada esMaster={esMasterRenta} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
                   </div>
                 </div>
