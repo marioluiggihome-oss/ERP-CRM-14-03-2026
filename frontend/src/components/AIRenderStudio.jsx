@@ -49,6 +49,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap } from 'lucide-react';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
@@ -104,75 +105,6 @@ const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((res
   fr.readAsDataURL(file);
 });
 
-function useSpeechRecognition() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef(null);
-  // Acumulado SOLO de los resultados finales. El texto interino (en progreso)
-  // NO se acumula: se muestra final + interino actual. Asi no se repite.
-  const finalRef = useRef('');
-
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'es-ES';
-
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        // Recorrer SOLO los resultados nuevos desde resultIndex.
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalRef.current += result[0].transcript;  // los finales se acumulan UNA vez
-          } else {
-            interimTranscript += result[0].transcript;  // el interino es solo el actual
-          }
-        }
-        // Mostrar lo confirmado + lo que se esta diciendo ahora (sin repetir).
-        setTranscript(finalRef.current + interimTranscript);
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    }
-  }, []);
-
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      finalRef.current = '';
-      setTranscript('');
-      try { recognitionRef.current.start(); } catch (_) {}
-      setIsListening(true);
-    }
-  }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  }, []);
-
-  const resetTranscript = useCallback(() => {
-    finalRef.current = '';
-    setTranscript('');
-  }, []);
-
-  return { isListening, transcript, isSupported, startListening, stopListening, resetTranscript, setTranscript };
-}
 
 // ─── Catálogo de materiales (sincronizado con backend) ───────────────────────
 const MATERIALS = {
