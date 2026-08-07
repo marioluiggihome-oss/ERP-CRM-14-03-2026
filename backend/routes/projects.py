@@ -28,6 +28,7 @@ from services.cambios_proyecto import (
 )
 from services.comparador_fabricacion import comparar
 from services.validacion_fabricacion import validar
+from services.expediente import montar as montar_expediente
 
 from services.activity_tracker import get_tracker, ActivityType
 
@@ -309,6 +310,25 @@ async def aprobar_cambio(project_id: str, indice: int,
     ok, motivo = puede_fabricar(nuevo)
     return {"success": True, "cambio": nuevo["cambios"][indice],
             "puedeFabricar": ok, "motivo": motivo}
+
+
+@router.get("/projects/{project_id}/expediente")
+async def expediente_proyecto(project_id: str, current_user: dict = Depends(require_auth)):
+    """El EXPEDIENTE UNICO: todo lo de la obra en una respuesta.
+
+    Filtrado por permiso EN EL SERVIDOR. Los importes no se enmascaran para que
+    la pantalla los tape: sencillamente no se envian a quien no puede verlos.
+    Ocultar en el navegador no protege nada — el dato se ve abriendo el
+    inspector.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    pendientes = cambios_sin_aprobar(proyecto.get("cambios"))
+    val = validar(proyecto, pendientes_cambios=len(pendientes))
+    return {"success": True,
+            **montar_expediente(proyecto, val, pendientes, current_user)}
 
 
 @router.get("/projects/{project_id}/validacion")
