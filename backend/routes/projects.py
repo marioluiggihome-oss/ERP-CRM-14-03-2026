@@ -23,6 +23,9 @@ from services.jwt_service import (
     get_current_user, require_auth, require_admin, ADMIN_ROLE_FLAGS,
     create_access_token, create_refresh_token, verify_refresh_token,
 )
+from services.cambios_proyecto import (
+    resumen_cambio, cambios_sin_aprobar, puede_fabricar, ORIGENES,
+)
 
 from services.activity_tracker import get_tracker, ActivityType
 
@@ -200,6 +203,18 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
     if update_data:
         await db.projects.update_one({"id": project_id}, {"$set": update_data})
 
+    # ── CONTROL DE CAMBIOS ──────────────────────────────────────────────────
+    # `versions` (arriba) guarda el estado anterior para no perder trabajo.
+    # Esto es otra cosa: deja anotado QUÉ se movió, QUIÉN lo hizo y CUÁNTO
+    # costó, que es lo que hay que poder contestar cuando el cliente pregunta
+    # por qué la factura no cuadra con lo que firmó. Si el proyecto ya estaba
+    # aceptado, el cambio nace marcado como crítico y bloquea la fabricación
+    # hasta que alguien lo apruebe.
+    tras_guardar = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    cambio = resumen_cambio(existing, tras_guardar, autor=current_user.get("username"))
+    if cambio:
+        await db.projects.update_one({"id": project_id}, {"$push": {"cambios": cambio}})
+
     # Tracking de actividad
     tracker = get_tracker()
     if tracker and existing.get("userId"):
@@ -213,6 +228,85 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
 
     updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
     return updated
+
+
+@router.get("/projects/{project_id}/cambios")
+async def listar_cambios(project_id: str, current_user: dict = Depends(require_auth)):
+    """Historial de cambios del proyecto y si puede pasar a fabricación."""
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    ok, motivo = puede_fabricar(proyecto)
+    return {
+        "success": True,
+        "cambios": proyecto.get("cambios", []),
+        "pendientes": cambios_sin_aprobar(proyecto.get("cambios")),
+        "puedeFabricar": ok,
+        "motivo": motivo,
+        "origenes": ORIGENES,
+    }
+
+
+@router.patch("/projects/{project_id}/cambios/{indice}")
+async def anotar_cambio(project_id: str, indice: int, payload: dict,
+                        current_user: dict = Depends(require_auth)):
+    """Completa un cambio: quién lo pidió y por qué.
+
+    Esto lo rellena una PERSONA. No se deduce de quién tecleó: el comercial
+    teclea lo que pide el cliente, así que dar por hecho que el autor es el
+    solicitante convertiría el historial en una coartada falsa.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    cambios = proyecto.get("cambios") or []
+    if not 0 <= indice < len(cambios):
+        raise HTTPException(status_code=404, detail="Ese cambio no existe.")
+
+    upd = {}
+    if "pedidoPor" in payload:
+        v = payload["pedidoPor"]
+        if v not in ORIGENES and v not in (None, ""):
+            raise HTTPException(status_code=400, detail=f"Origen no válido: {v}")
+        upd[f"cambios.{indice}.pedidoPor"] = v or None
+    if "motivo" in payload:
+        upd[f"cambios.{indice}.motivo"] = str(payload["motivo"] or "")[:500]
+
+    if not upd:
+        raise HTTPException(status_code=400, detail="No hay nada que anotar.")
+    await db.projects.update_one({"id": project_id}, {"$set": upd})
+    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return {"success": True, "cambio": nuevo["cambios"][indice]}
+
+
+@router.post("/projects/{project_id}/cambios/{indice}/aprobar")
+async def aprobar_cambio(project_id: str, indice: int,
+                         current_user: dict = Depends(require_admin)):
+    """Aprueba un cambio crítico y desbloquea la fabricación.
+
+    Solo mando (`require_admin`): aprobar un cambio con impacto económico sobre
+    un presupuesto ya aceptado es una decisión de gerencia, no de quien lo
+    teclea. Si lo pudiera aprobar el mismo que lo hizo, el control sobraría.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    cambios = proyecto.get("cambios") or []
+    if not 0 <= indice < len(cambios):
+        raise HTTPException(status_code=404, detail="Ese cambio no existe.")
+    if cambios[indice].get("aprobadoAt"):
+        raise HTTPException(status_code=400, detail="Ese cambio ya estaba aprobado.")
+
+    ahora = datetime.now(timezone.utc).isoformat()
+    await db.projects.update_one({"id": project_id}, {"$set": {
+        f"cambios.{indice}.aprobadoPor": current_user.get("username"),
+        f"cambios.{indice}.aprobadoAt": ahora,
+    }})
+    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    ok, motivo = puede_fabricar(nuevo)
+    return {"success": True, "cambio": nuevo["cambios"][indice],
+            "puedeFabricar": ok, "motivo": motivo}
 
 
 @router.post("/projects/{project_id}/clone")
