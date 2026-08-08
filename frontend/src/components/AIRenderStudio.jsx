@@ -471,6 +471,10 @@ export default function AIRenderStudio({ state, setState }) {
   const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
   const [detecting, setDetecting] = useState(false);
   const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
+  // Trazo de lápiz en los planos vectoriales. Es SOLO el trazo: mismo dibujo,
+  // mismos módulos y mismas cotas. El backend ya aceptaba el flag `boceto`;
+  // esto es el interruptor que faltaba en pantalla.
+  const [bocetoAlzado, setBocetoAlzado] = useState(false);
   const [editMark, setEditMark] = useState(null);    // índice de la marca en edición
   const [showInstall, setShowInstall] = useState(false); // panel de instalaciones/planos plegado
   const [showOtras, setShowOtras] = useState(false); // barra master "otras herramientas" plegada
@@ -1155,6 +1159,7 @@ export default function AIRenderStudio({ state, setState }) {
         distribucion_estructurada: distribucion,
         con_cotas: !!conCotas,
         monocromo: true,
+        boceto: bocetoAlzado,
       });
       if (!ar?.alzadoBase64) { setError('No se pudo generar la vista alámbrica.'); return; }
       const lamina = {
@@ -1172,14 +1177,23 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   const generarPlanosExactos = async (distribucion) => {
-    const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: distribucion });
+    // El interruptor de boceto vale para TODAS las vías que dibujan el alzado,
+    // no solo para la alámbrica: si valiera para una sola, el master lo
+    // encendería y por tres de los cuatro botones seguiría saliendo a línea
+    // limpia sin que nada dijera por qué.
+    const body = JSON.stringify({
+      nombre_cliente: cliente || 'Cliente',
+      distribucion_estructurada: distribucion,
+      boceto: bocetoAlzado,
+    });
     const [pr, ar] = await Promise.all([
       postJson('/api/estudio-cocinas/plano-2d', body),
       postJson('/api/estudio-cocinas/alzado', body),
     ]);
+    const suf = bocetoAlzado ? ' · boceto a lápiz' : '';
     const extra = [];
-    if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
-    if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
+    if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: `Planta acotada (exacta)${suf}`, timestamp: new Date() });
+    if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: `Alzado alámbrico acotado (exacto)${suf}`, timestamp: new Date() });
     return extra;
   };
 
@@ -3379,6 +3393,20 @@ export default function AIRenderStudio({ state, setState }) {
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} {etiquetaFicha(tipo3d)}
                   </button>
+                  {/* Interruptor del BOCETO. No es un botón que dibuje: cambia
+                      cómo salen los planos de los botones de al lado. Mismo
+                      dibujo, mismos módulos y mismas cotas — solo el trazo. */}
+                  {tipo3d === 'cocina' && (
+                  <button onClick={() => setBocetoAlzado(b => !b)}
+                    title="Trazo de lápiz en la planta y el alzado. El dibujo y las cotas son EXACTAMENTE los mismos: solo cambia la línea."
+                    aria-pressed={bocetoAlzado}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-black flex items-center gap-1.5 transition-colors ${
+                      bocetoAlzado
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                        : 'bg-white text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50'}`}>
+                    ✎ Boceto {bocetoAlzado ? 'ON' : 'OFF'}
+                  </button>
+                  )}
                   {tipo3d === 'cocina' && (
                   <button onClick={generarPlanosTecnicos} disabled={editing}
                     title="Planta acotada + alzado alámbrico EXACTOS (vectoriales, con cotas). Modelado para cocina."

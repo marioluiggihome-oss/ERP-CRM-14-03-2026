@@ -656,6 +656,15 @@ async def generar_plano_2d(payload: ProyectoBase):
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
+        # BOCETO A MANO ALZADA, igual que en el alzado. La planta y el alzado
+        # salen JUNTOS en la misma lámina: si el trazo de lápiz valiera solo
+        # para el alzado, al encender el boceto saldría una hoja con el alzado
+        # dibujado a mano y la planta a línea de CAD.
+        # Se limpia SIEMPRE al final (ver `finally`): `path.sketch` es global,
+        # y una petición que falle a medias se lo dejaría puesto a la siguiente.
+        matplotlib.rcParams["path.sketch"] = (
+            (2.0, 120.0, 16.0) if bool(getattr(payload, "boceto", False)) else None)
+
         # Colores profesionales
         C_BG = "#F8F6F2"; C_SUELO = "#EDE8E0"; C_PARED = "#2C2C2C"
         C_MUEBLE = "#D4C5A9"; C_BORDE = "#8B7355"; C_ENCIM = "#C8B89A"
@@ -938,6 +947,14 @@ async def generar_plano_2d(payload: ProyectoBase):
     except Exception as e:
         logger.error(f"plano-2d error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"No se pudo generar el plano: {e}")
+    finally:
+        # Si se queda puesto, la SIGUIENTE planta sale temblada sin que nadie
+        # lo haya pedido, y eso no da error en ninguna parte: solo sale mal.
+        try:
+            import matplotlib as _mpl
+            _mpl.rcParams["path.sketch"] = None
+        except Exception:
+            pass
 
 
 @router.post("/ficha-tecnica")
