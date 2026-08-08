@@ -314,6 +314,35 @@ def test_el_color_se_ensenia_con_su_grosor():
         "pedir «Grafito 19», no «Grafito»")
 
 
+# ─── 3-ter. Un costado no es un casco ───────────────────────────────────────
+
+def test_las_piezas_sueltas_no_piden_casco():
+    """El lector marca `esMueble: true` en TODAS las filas, asi que un
+    COSTADO VISTO, un zocalo o una regleta salian en rojo con «sin
+    equivalencia» y un boton pidiendo un casco que no van a tener nunca: son
+    tablero."""
+    src = _leer(IMPORTER)
+    assert "_es_pieza_suelta" in src, "ha vuelto a tratarse todo como mueble"
+    i = src.index("const _es_pieza_suelta")
+    cuerpo = src[i:src.index("\n};", i)]
+    for pieza in ("COSTADO", "REGLETA", "COPETE", "ZOCALO", "TRASERA"):
+        assert pieza in cuerpo, f"«{pieza}» vuelve a contarse como mueble"
+
+
+def test_un_mueble_que_no_se_reconoce_SIGUE_pidiendo_casco():
+    """CANDADO de matiz. «No es un mueble» y «no lo he sabido leer» son cosas
+    distintas: si se confunden, el mueble raro pierde el boton «Elegir casco»
+    justo donde hace falta. Por eso la lista es EXPLICITA y no «lo que
+    `_tipo_acb_auto` no ha sabido clasificar»."""
+    src = _leer(IMPORTER)
+    i = src.index("esMueble: it.esMueble !== false")
+    linea = src[i:src.index("\n", i)]
+    assert "_es_pieza_suelta" in linea
+    assert "_tipo_acb_auto" not in linea, (
+        "`esMueble` vuelve a depender de si se ha sabido deducir el tipo: un "
+        "mueble no reconocido dejaria de poder elegir casco a mano")
+
+
 # ─── 4. El descuento no viene puesto ────────────────────────────────────────
 
 def test_los_descuentos_nacen_vacios():

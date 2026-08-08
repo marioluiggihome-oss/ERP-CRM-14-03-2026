@@ -108,6 +108,25 @@ const _medidas_mm = (it) => {
   return { ancho, alto, fondo };
 };
 
+/** PIEZAS SUELTAS: lo que NO es un mueble y por tanto nunca tendrá casco.
+ *
+ * Costados, puertas, zócalos, regletas, copetes, tableros, traseras y bandas
+ * son TABLERO, no cascos. El lector de la proforma marca `esMueble: true` en
+ * todas las filas sin excepción, así que estas salían en rojo con «sin
+ * equivalencia» y un botón pidiendo que se les eligiera un casco que no van a
+ * tener nunca.
+ *
+ * Es una lista explícita a propósito, y NO «lo que no se ha sabido
+ * identificar»: un mueble raro que el detector no reconozca tiene que seguir
+ * saliendo como mueble sin equivalencia, porque ese SÍ necesita que el master
+ * le elija el casco a mano. Confundir «no es un mueble» con «no lo he sabido
+ * leer» le quitaría el botón justo donde hace falta.
+ */
+const _es_pieza_suelta = (desc) => {
+  const t = (desc || '').toUpperCase();
+  return /^PTA |PUERTA DE INTEGRACION|COSTADO|^REG |REGLETA|COPETE|ZOCALO|ZÓCALO|^TABLERO|TRASERA|^BANDA |SIN TIRADOR/.test(t);
+};
+
 const _tipo_acb_auto = (desc, tipo, grosor) => {
   const t = (desc || '').toUpperCase();
   if (/PUERTA DE INTEGRACION|^PTA |ZOCALO|ZÓCALO|^REG |REGLETA|COPETE|COSTADO/.test(t)) return null;
@@ -475,6 +494,15 @@ export default function ProformaImporter({ esMaster }) {
           _coste: casco + herraje + moDeLinea + puertaDeLinea,
           _destino: destinoLinea[origIdx] || _destino_auto(it, acb),
           _pedir: !excluidas[origIdx],
+          // QUÉ ES UN MUEBLE Y QUÉ NO. El lector marca `esMueble: true` en
+          // TODAS las filas, sin excepción, así que un COSTADO VISTO, un
+          // zócalo o una regleta salían en rojo con «sin equivalencia» y un
+          // botón pidiendo que se les eligiera un casco. No lo van a tener
+          // nunca: no son cascos, son tablero.
+          //
+          // El criterio ya existía: `_tipo_acb_auto` devuelve null justo para
+          // esas cosas. Se usa ese, en vez de una marca que dice que sí a todo.
+          esMueble: it.esMueble !== false && !_es_pieza_suelta(it.descripcion),
         };
       });
 
