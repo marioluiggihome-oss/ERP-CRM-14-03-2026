@@ -248,6 +248,72 @@ def test_el_catalogo_y_la_pantalla_llaman_igual_al_grafito():
     assert "grafito: 'Grafito'" in src
 
 
+# ─── 3-bis. El color LLEVA su grosor, y no se eligen por separado ───────────
+#
+# Cada color existe en UN solo grosor: grafito en 19, aluminio y blanco en 16,
+# olmo en 18. Eran dos desplegables sueltos, asi que se podia pedir
+# «Grafito 16» —que no esta en tarifa—, el emparejador se caia al respaldo y
+# traia OTRO color sin decirlo. Eso es lo que producia proformas con unas
+# lineas en Grafito 19 y otras en Roble 16.
+
+def _grosor_por_color():
+    """En que grosor existe cada color, sacado del catalogo."""
+    m = {}
+    for c in _cascos():
+        for col, precio in (c.get("precios") or {}).items():
+            if precio is not None and col not in m:
+                m[col] = c.get("grosor")
+    return m
+
+
+def test_cada_color_existe_en_un_solo_grosor():
+    """Es la premisa de atar el grosor al color. Si algun dia un color sale en
+    dos grosores, esto se pone rojo y hay que volver a separar los desplegables
+    —no descubrirlo por un precio raro."""
+    grosores = {}
+    for c in _cascos():
+        for col, precio in (c.get("precios") or {}).items():
+            if precio is not None:
+                grosores.setdefault(col, set()).add(c.get("grosor"))
+    multiples = {col: sorted(g) for col, g in grosores.items() if len(g) > 1}
+    assert multiples == {}, (
+        f"estos colores existen en varios grosores: {multiples}. El grosor ya no "
+        f"se puede derivar del color solo")
+
+
+def test_el_grafito_es_de_19_y_el_aluminio_de_16():
+    m = _grosor_por_color()
+    assert m["grafito"] == 19
+    assert m["aluminio"] == 16
+    assert m["blanco"] == 16
+    assert m["olmo"] == 18
+
+
+def test_el_grosor_se_deriva_del_catalogo_y_no_a_mano():
+    src = _leer(IMPORTER)
+    assert "GROSOR_DE_COLOR" in src, "no se deriva el grosor del color"
+    i = src.index("const GROSOR_DE_COLOR")
+    cuerpo = src[i:src.index("})();", i)]
+    assert "CASCOS" in cuerpo, (
+        "el grosor de cada color se ha escrito a mano: si ACB cambia la tarifa, "
+        "la pantalla dira una cosa y el catalogo otra")
+
+
+def test_ya_no_hay_un_desplegable_de_grosor_suelto_en_la_linea():
+    """Con dos desplegables se podia pedir una combinacion que no existe."""
+    src = _leer(IMPORTER)
+    assert "<option value={16}>16mm</option>" not in src, (
+        "ha vuelto el selector de grosor suelto: se puede volver a pedir "
+        "«Grafito 16», que no esta en tarifa")
+
+
+def test_el_color_se_ensenia_con_su_grosor():
+    src = _leer(IMPORTER)
+    assert "colorConGrosor" in src, (
+        "el color ya no se ensenia con el grosor pegado: en la tarifa hay que "
+        "pedir «Grafito 19», no «Grafito»")
+
+
 # ─── 4. El descuento no viene puesto ────────────────────────────────────────
 
 def test_los_descuentos_nacen_vacios():

@@ -27,6 +27,31 @@ const COLOR_LBL = {
   spike: 'Spike', stone: 'Stone',
 };
 const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike', 'robleAurora', 'blancoHidrofugo'];
+
+// EN QUÉ GROSOR EXISTE CADA COLOR. Se DERIVA del catálogo, no se escribe a
+// mano: si mañana ACB saca el grafito en 16, esto se entera solo.
+//
+// Y resulta que cada color existe en UN solo grosor (grafito 19, aluminio y
+// blanco 16, olmo 18…). Por eso elegir «Grafito» y «16 mm» a la vez es pedir
+// un casco que no existe — y lo que pasaba entonces es que el emparejador se
+// caía al respaldo y traía otro color sin decirlo. Ahora el color manda y el
+// grosor va detrás.
+const GROSOR_DE_COLOR = (() => {
+  const m = {};
+  for (const c of CASCOS) {
+    for (const [col, precio] of Object.entries(c.precios || {})) {
+      if (precio != null && m[col] == null) m[col] = c.grosor;
+    }
+  }
+  return m;
+})();
+
+/** «Grafito 19» — el color con su grosor pegado, que es como se pide a ACB. */
+const colorConGrosor = (k) => {
+  const lbl = COLOR_LBL[k] || k;
+  const g = GROSOR_DE_COLOR[k];
+  return g ? `${lbl} ${g}` : lbl;
+};
 const PUNTO = 2.0;
 
 // Tipos de cascos disponibles para el selector inline
@@ -282,6 +307,12 @@ export default function ProformaImporter({ esMaster }) {
   const [showEditorPuertas, setShowEditorPuertas] = useState(false);
   const [precioM2Puerta, setPrecioM2Puerta] = useState('');
   const [puertasEditadas, setPuertasEditadas] = useState({}); // { idx: { alto, ancho } }
+  // Costados y regletas TAMBIEN se corrigen a mano. El lector del PDF saca sus
+  // medidas del texto de la linea y ahi no siempre estan: se enseniaban en
+  // solo lectura, asi que si venian mal no habia forma de arreglarlas y el m2
+  // de tablero salia mal sin remedio.
+  const [costadosEditados, setCostadosEditados] = useState({});
+  const [regletasEditadas, setRegletasEditadas] = useState({});
   // Mano de obra y coste de puerta POR LINEA. Sin valor propio, cada mueble
   // toma la mano de obra general y cada puerta su precio por m2; con valor,
   // manda el de la linea. Asi se puede subir o bajar un mueble suelto sin
@@ -861,8 +892,10 @@ export default function ProformaImporter({ esMaster }) {
                     onChange={e => setP(prev => ({ ...prev, colorCasco: e.target.value }))}
                     className="px-2 py-1.5 border-2 border-indigo-200 rounded-lg text-sm font-bold"
                   >
-                    {Object.entries(COLOR_LBL).map(([k, v]) => (
-                      <option key={k} value={k}>{v}{k === COLOR_CASCO_DEFECTO ? ' (por defecto)' : ''}</option>
+                    {Object.keys(COLOR_LBL).map(k => (
+                      <option key={k} value={k}>
+                        {colorConGrosor(k)}{k === COLOR_CASCO_DEFECTO ? ' · por defecto' : ''}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -1120,6 +1153,10 @@ export default function ProformaImporter({ esMaster }) {
                 costePuertas={calc.costePuertas}
                 puertasEditadas={puertasEditadas}
                 setPuertasEditadas={setPuertasEditadas}
+                costadosEditados={costadosEditados}
+                setCostadosEditados={setCostadosEditados}
+                regletasEditadas={regletasEditadas}
+                setRegletasEditadas={setRegletasEditadas}
                 ocultarImportes={ocultarImportes}
                 onExportar={exportarPedidoPuertas}
               />
@@ -1137,7 +1174,10 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
   const [busqueda, setBusqueda] = useState('');
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
   const colorActual = override.color || (r._acb ? r._acb._color : (colorProyecto || COLOR_CASCO_DEFECTO));
-  const grosorActual = override.grosor || (r._acb ? r._acb.grosor : 19);
+  // El grosor ya no se elige a mano: lo fija el color, porque cada color
+  // existe en UN solo grosor. Se sigue calculando para poder enseñarlo.
+  const grosorActual = override.grosor || GROSOR_DE_COLOR[colorActual]
+    || (r._acb ? r._acb.grosor : 19);
   // Resultados de la barra de búsqueda de la línea. Se calcula aquí y no en el
   // padre para no recorrer el catálogo por cada fila de la tabla.
   const encontrados = useMemo(
@@ -1234,21 +1274,20 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
               {TIPOS_ACB.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <div className="flex gap-1">
+              {/* EL COLOR LLEVA SU GROSOR. Eran dos desplegables sueltos y se
+                  podia pedir «Grafito 16», que no existe en tarifa: el
+                  emparejador se caia al respaldo y traia otro color sin
+                  decirlo. Cada color existe en UN grosor, asi que al elegir
+                  color se fija el grosor y no hay combinacion imposible. */}
               <select
                 value={colorActual}
-                onChange={e => onOverride({ color: e.target.value })}
+                onChange={e => onOverride({ color: e.target.value,
+                                            grosor: GROSOR_DE_COLOR[e.target.value] || null })}
                 className="border border-slate-200 rounded px-1 py-0.5 text-[10px] flex-1"
               >
-                {Object.entries(COLOR_LBL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-              <select
-                value={grosorActual}
-                onChange={e => onOverride({ grosor: Number(e.target.value) })}
-                className="border border-slate-200 rounded px-1 py-0.5 text-[10px] w-14"
-              >
-                <option value={16}>16mm</option>
-                <option value={18}>18mm</option>
-                <option value={19}>19mm</option>
+                {Object.keys(COLOR_LBL).map(k => (
+                  <option key={k} value={k}>{colorConGrosor(k)}</option>
+                ))}
               </select>
             </div>
             <div className="flex items-center gap-2">
@@ -1348,18 +1387,64 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
 }
 
 // ── Editor de pedido de puertas/costados/regletas ────────────────────────────
-function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertasEditadas, setPuertasEditadas, ocultarImportes, onExportar }) {
+function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertasEditadas, setPuertasEditadas,
+                        costadosEditados, setCostadosEditados, regletasEditadas, setRegletasEditadas,
+                        ocultarImportes, onExportar }) {
   // Con el candado echado el precio/m2 y el total en euros no se ensenan; las
   // medidas si, que es lo que se corrige aqui.
   const verEuros = pm2 > 0 && !ocultarImportes;
   const setMedida = (i, campo, val) => {
     setPuertasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
+  const setMedidaCostado = (i, campo, val) => {
+    setCostadosEditados(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
+  };
+  const setMedidaRegleta = (i, campo, val) => {
+    setRegletasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
+  };
+
+  // Un numero editable de medida, en mm. Vacio NO es 0: es «no se sabe», y por
+  // eso no suma metros cuadrados.
+  const _mm = (ov, base) => {
+    const v = ov ?? base;
+    const n = Number(v);
+    return n > 0 ? n : 0;
+  };
+
+  // METROS CUADRADOS DE TABLERO. Suma puertas + costados, cada pieza por sus
+  // unidades. Solo cuenta lo que tiene las DOS medidas: una pieza a la que le
+  // falta el ancho no se estima, se queda fuera y se dice cuantas faltan.
+  const m2 = (() => {
+    let total = 0, sinMedida = 0;
+    const acumula = (lista, editados) => lista.forEach((it, i) => {
+      const ov = editados[i] || {};
+      const alto = _mm(ov.alto, it.largo);
+      const ancho = _mm(ov.ancho, it.ancho);
+      const uds = Number(it.cantidad) || 1;
+      if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * uds;
+      else sinMedida += 1;
+    });
+    acumula(puertas, puertasEditadas);
+    acumula(costados, costadosEditados);
+    return { total, sinMedida };
+  })();
 
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/30 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-black text-amber-800 uppercase tracking-wide">Editor pedido puertas / costados / regletas</span>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <span className="text-xs font-black text-amber-800 uppercase tracking-wide">Editor pedido puertas / costados / regletas</span>
+          {/* METROS CUADRADOS DE TABLERO: puertas + costados, cada pieza por sus
+              unidades. Lo que no tiene las DOS medidas NO se estima — se queda
+              fuera y se dice cuántas piezas son. Un total que se traga las
+              piezas sin medir es un total con pinta de total. */}
+          <span className="text-[11px] font-black text-slate-700 bg-white border border-amber-200 rounded px-2 py-0.5">
+            Tablero: {m2.total.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²
+            {m2.sinMedida > 0 && (
+              <span className="text-amber-700"> · {m2.sinMedida} pieza(s) sin medir, fuera del total</span>
+            )}
+          </span>
+        </div>
         <button
           onClick={onExportar}
           className="flex items-center gap-1 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 px-3 py-1.5 rounded-lg"
@@ -1432,19 +1517,36 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                   <th className="px-2 py-1 text-center">Cant.</th>
                   <th className="px-2 py-1 text-center">Alto mm</th>
                   <th className="px-2 py-1 text-center">Ancho mm</th>
+                  <th className="px-2 py-1 text-right">Área m²</th>
                 </tr>
               </thead>
               <tbody>
-                {costados.map((it, i) => (
-                  <tr key={i} className="border-t border-slate-100">
-                    <td className="px-2 py-1">{i + 1}</td>
-                    <td className="px-2 py-1 font-mono">{it.cod}</td>
-                    <td className="px-2 py-1 max-w-[200px] truncate">{it.descripcion}</td>
-                    <td className="px-2 py-1 text-center">{it.cantidad || 1}</td>
-                    <td className="px-2 py-1 text-center">{it.largo || '—'}</td>
-                    <td className="px-2 py-1 text-center">{it.ancho || '—'}</td>
-                  </tr>
-                ))}
+                {costados.map((it, i) => {
+                  const ov = costadosEditados[i] || {};
+                  const alto = _mm(ov.alto, it.largo);
+                  const ancho = _mm(ov.ancho, it.ancho);
+                  const uds = Number(it.cantidad) || 1;
+                  const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : null;
+                  return (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="px-2 py-1">{i + 1}</td>
+                      <td className="px-2 py-1 font-mono">{it.cod}</td>
+                      <td className="px-2 py-1 max-w-[200px] truncate" title={it.descripcion}>{it.descripcion}</td>
+                      <td className="px-2 py-1 text-center">{uds}</td>
+                      <td className="px-2 py-1 text-center">
+                        <input type="number" value={ov.alto ?? (it.largo || '')}
+                          onChange={e => setMedidaCostado(i, 'alto', e.target.value)}
+                          className="w-16 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <input type="number" value={ov.ancho ?? (it.ancho || '')}
+                          onChange={e => setMedidaCostado(i, 'ancho', e.target.value)}
+                          className="w-16 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono">{area ? area.toFixed(4) : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1467,15 +1569,22 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                 </tr>
               </thead>
               <tbody>
-                {regletas.map((it, i) => (
-                  <tr key={i} className="border-t border-slate-100">
-                    <td className="px-2 py-1">{i + 1}</td>
-                    <td className="px-2 py-1 font-mono">{it.cod}</td>
-                    <td className="px-2 py-1 max-w-[200px] truncate">{it.descripcion}</td>
-                    <td className="px-2 py-1 text-center">{it.cantidad || 1}</td>
-                    <td className="px-2 py-1 text-center">{it.largo || '—'}</td>
-                  </tr>
-                ))}
+                {regletas.map((it, i) => {
+                  const ov = regletasEditadas[i] || {};
+                  return (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="px-2 py-1">{i + 1}</td>
+                      <td className="px-2 py-1 font-mono">{it.cod}</td>
+                      <td className="px-2 py-1 max-w-[200px] truncate" title={it.descripcion}>{it.descripcion}</td>
+                      <td className="px-2 py-1 text-center">{it.cantidad || 1}</td>
+                      <td className="px-2 py-1 text-center">
+                        <input type="number" value={ov.largo ?? (it.largo || '')}
+                          onChange={e => setMedidaRegleta(i, 'largo', e.target.value)}
+                          className="w-20 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
