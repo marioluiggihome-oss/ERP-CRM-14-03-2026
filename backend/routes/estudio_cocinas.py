@@ -2028,6 +2028,192 @@ async def generar_alzado(payload: ProyectoBase):
             pass
 
 
+@router.post("/perspectiva")
+async def generar_perspectiva(payload: ProyectoBase):
+    """BOCETO EN PERSPECTIVA a lápiz, dibujado desde los datos.
+
+    Lo que el master pidió enseñando sus referencias: un dibujo de interior con
+    profundidad y punto de fuga, no el alzado plano.
+
+    Cada arista sale de un ancho o una altura REALES (`services/perspectiva.py`,
+    que es cálculo puro y está probado). NO se le pide a una IA que lo dibuje:
+    una IA redibuja, y al redibujar mueve cosas — y en un boceto eso es peor
+    que en un render, porque un dibujo a lápiz se lee como «esto lo ha hecho el
+    diseñador» y un módulo desplazado ahí tiene MÁS autoridad, no menos.
+
+    Sin cotas, y a propósito: es un boceto de presentación. Las medidas van en
+    el alzado acotado, que es el que baja al taller.
+    """
+    try:
+        import io, base64
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        from services import perspectiva as pe
+        from services.kitchen_geometry import (
+            validar_distribucion, altura_modulo, fondo_modulo, es_alto,
+        )
+
+        _boceto = bool(getattr(payload, "boceto", True))
+        # El trazo tiembla más que en el alzado: aquí no hay cotas que leer, y
+        # las referencias del master son dibujos a mano, no planos temblados.
+        matplotlib.rcParams["path.sketch"] = (2.6, 100.0, 18.0) if _boceto else None
+
+        dist = payload.distribucion_estructurada
+        _val = validar_distribucion({
+            "tipo": getattr(dist, "tipo", "lineal") if dist else "lineal",
+            "paredes": (dist.paredes if dist and dist.paredes else []) or [],
+            "elementos": (dist.elementos if dist else []) or [],
+        })
+        if not _val.get("ok"):
+            # Mismo criterio que el alzado: sin paredes NO se dibuja, y el
+            # aviso dice QUÉ HACER, no solo que no salió.
+            detalle = ("No se puede dibujar la perspectiva sin las medidas de "
+                       "las paredes. Elige la distribución (lineal, L, U…) y "
+                       "escribe el ancho real de cada pared; o pulsa «Detectar "
+                       "distribución» sobre un render para deducirlas.")
+            causa = " ".join(x for x in [(_val.get("motivo") or "").strip(),
+                                         *(_val.get("avisos") or [])] if x).strip()
+            if causa:
+                detalle += f" ({causa})"
+            raise HTTPException(status_code=422, detail=detalle)
+
+        escena = {"tipo": _val.get("tipo") or "lineal",
+                  "paredes": _val["paredes"], "elementos": _val["elementos"]}
+
+        cajas, omitidos = pe.montar_escena(
+            escena, altura_modulo=altura_modulo, fondo_modulo=fondo_modulo,
+            es_alto=es_alto)
+        if not cajas:
+            raise HTTPException(
+                status_code=422,
+                detail="Ningún módulo tiene ancho, así que no hay nada que "
+                       "dibujar. Revisa la distribución: un boceto con muebles "
+                       "de ancho inventado sería peor que no tenerlo.")
+
+        cam = pe.camara_para(escena)
+        cascaron = pe.suelo_y_paredes(escena)
+
+        C_LAPIZ = "#2B2B2B"; C_SUAVE = "#9A9A9A"; C_BG = "#FCFBF7"
+        fig, ax = plt.subplots(figsize=(13, 8.4))
+        fig.patch.set_facecolor(C_BG)
+        ax.set_facecolor(C_BG)
+        ax.set_aspect("equal"); ax.axis("off")
+
+        def proy(p):
+            return pe.proyectar(p, cam)
+
+        def linea(a, b, color, lw, alpha=1.0, z=3):
+            pa, pb = proy(a), proy(b)
+            # Un punto detrás de la cámara NO se acerca: la arista no se dibuja.
+            # Proyectarlo daría una figura del revés, que es como se cuelan los
+            # dibujos imposibles.
+            if pa is None or pb is None:
+                return
+            ax.plot([pa[0], pb[0]], [pa[1], pb[1]], color=color, lw=lw,
+                    alpha=alpha, zorder=z, solid_capstyle="round")
+
+        # 1. El suelo: las líneas que van al punto de fuga. Van primero y flojas.
+        for a, b in cascaron["suelo"]:
+            linea(a, b, C_SUAVE, 0.5, alpha=0.45, z=1)
+
+        # 2. Las paredes REALES (las que tienen ancho y alto de verdad).
+        for muro in cascaron["paredes"]:
+            e = muro["esquinas"]
+            for i in range(4):
+                linea(e[i], e[(i + 1) % 4], C_SUAVE, 0.9, alpha=0.75, z=2)
+
+        # 3. Los muebles, de lejos a cerca: lo cercano tapa a lo lejano. Sin
+        #    este orden el fondo se pinta encima y el dibujo se lee al revés.
+        ARISTAS = ((0, 1), (1, 2), (2, 3), (3, 0),        # cara contra la pared
+                   (4, 5), (5, 6), (6, 7), (7, 4),        # cara vista
+                   (0, 4), (1, 5), (2, 6), (3, 7))        # fondo
+        for c in pe.ordenar_por_profundidad(cajas, cam):
+            e = c["esquinas"]
+            # La cara vista, rellena en color papel, es lo que tapa lo de
+            # detrás: sin relleno se transparentaría todo y se vería el fondo
+            # a través de los muebles.
+            frente = [proy(e[i]) for i in (4, 5, 6, 7)]
+            if all(p is not None for p in frente):
+                ax.fill([p[0] for p in frente], [p[1] for p in frente],
+                        facecolor=C_BG, edgecolor="none", zorder=3)
+            for i, j in ARISTAS:
+                linea(e[i], e[j], C_LAPIZ, 1.25, z=4)
+            # Tirador: una raya. Es lo que hace que se lea como un mueble y no
+            # como una caja.
+            p0, p1 = proy(e[4]), proy(e[5])
+            p3 = proy(e[7])
+            if p0 and p1 and p3:
+                t = 0.72 if c["base"] < 100 else 0.28   # bajos abajo, altos arriba
+                ax.plot([p0[0] + (p1[0] - p0[0]) * 0.12, p0[0] + (p1[0] - p0[0]) * 0.88],
+                        [p0[1] + (p3[1] - p0[1]) * t, p1[1] + (p3[1] - p1[1]) * t],
+                        color=C_LAPIZ, lw=1.6, zorder=5, solid_capstyle="round")
+
+        # ENCUADRE. Lo manda la COCINA, nunca el suelo: las líneas de suelo
+        # llegan casi hasta el ojo y ahí la proyección se dispara, así que si
+        # se las deja opinar sobre los límites del eje la cocina acaba del
+        # tamaño de un sello en una esquina. Se enmarca por muebles y paredes,
+        # y el suelo se recorta solo (matplotlib recorta al eje).
+        interes = []
+        for c in cajas:
+            interes += [proy(p) for p in c["esquinas"]]
+        for muro in cascaron["paredes"]:
+            interes += [proy(p) for p in muro["esquinas"]]
+        interes = [p for p in interes if p is not None]
+        if interes:
+            xs = [p[0] for p in interes]; ys = [p[1] for p in interes]
+            mx, my = (max(xs) - min(xs)) or 1.0, (max(ys) - min(ys)) or 1.0
+            # Margen generoso por abajo: es donde entra el suelo, que es lo que
+            # da la profundidad. Por arriba basta con no rozar el techo.
+            ax.set_xlim(min(xs) - mx * 0.10, max(xs) + mx * 0.10)
+            ax.set_ylim(min(ys) - my * 0.55, max(ys) + my * 0.14)
+
+        cab = (payload.nombre_cliente or "").strip()
+        titulo = f"{cab} · boceto" if cab else "Boceto en perspectiva"
+        fig.text(0.5, 0.955, titulo, ha="center", va="top", fontsize=11,
+                 color=C_LAPIZ, fontweight="bold")
+        fig.text(0.5, 0.035, "Boceto de presentación · sin cotas · "
+                 "las medidas van en el alzado acotado",
+                 ha="center", va="bottom", fontsize=7.5, color=C_SUAVE)
+
+        # Lo que NO se ha podido dibujar va IMPRESO en el boceto. Si se quedara
+        # en un log, el master vería una cocina a la que le faltan muebles y no
+        # tendría forma de saber por qué.
+        if omitidos:
+            faltan = ", ".join(str(o.get("label") or o.get("id") or "?")
+                               for o in omitidos[:4])
+            fig.text(0.5, 0.005,
+                     f"⚠ Sin dibujar por falta de datos: {faltan}"
+                     + ("…" if len(omitidos) > 4 else ""),
+                     ha="center", va="bottom", fontsize=7.5, color="#B03A2E")
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=C_BG)
+        plt.close(fig)
+        buf.seek(0)
+        b64 = base64.b64encode(buf.read()).decode("utf-8")
+        return {"success": True,
+                "perspectivaBase64": f"data:image/png;base64,{b64}",
+                "modulos": len(cajas),
+                "omitidos": omitidos,
+                "avisos": _val.get("avisos") or []}
+
+    except HTTPException:
+        # Un 422 con instrucciones no puede salir como un 500 genérico.
+        raise
+    except Exception as e:
+        logger.error(f"perspectiva error: {e}", exc_info=True)
+        raise HTTPException(status_code=500,
+                            detail=f"No se pudo generar el boceto en perspectiva: {e}")
+    finally:
+        try:
+            import matplotlib as _mpl
+            _mpl.rcParams["path.sketch"] = None
+        except Exception:
+            pass
+
+
 @router.post("/detect-distribucion")
 async def detect_distribucion(payload: dict):
     """Analiza un render de cocina con IA y deduce la DISTRIBUCIÓN ESTRUCTURADA

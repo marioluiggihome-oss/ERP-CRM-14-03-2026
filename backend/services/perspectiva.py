@@ -38,6 +38,26 @@ CAMARA_POR_DEFECTO = {
     "distancia_focal": 420.0,
 }
 
+# Altura del ojo de una persona de pie. Es un punto de vista, NO una medida de
+# la cocina: cambiarlo no cambia lo que se fabrica.
+ALTURA_OJO = 150.0
+# A qué altura se mira. Un poco por debajo del ojo, que es como se mira una
+# cocina de verdad: si se apunta al horizonte, el suelo desaparece y el dibujo
+# pierde la profundidad que es justo lo que se busca aquí.
+ALTURA_OBJETIVO = 110.0
+# Distancia del ojo a la pared, en proporción al ancho que hay que enseñar.
+# Más cerca exagera la fuga (parece un gran angular); más lejos la aplana hasta
+# parecer un alzado. 1,15 da el escorzo de un boceto de interiorismo.
+DISTANCIA_RELATIVA = 1.15
+# Cuánto se desplaza el ojo hacia un lado. Centrado da UN punto de fuga (una
+# vista frontal, plana); descentrado da dos, que es como están dibujadas las
+# referencias del master.
+DESPLAZAMIENTO_LATERAL = 0.18
+DISTANCIA_FOCAL = 420.0
+# Fondo máximo de un mueble (cm): el ojo nunca puede quedar dentro de los
+# muebles. Ver `camara_para`.
+FONDO_MAXIMO = 65.0
+
 
 def _num(v):
     if v in (None, ""):
@@ -57,14 +77,20 @@ def _base_camara(camara):
     fx, fy, fz = tx - ox, ty - oy, tz - oz
     n = math.sqrt(fx * fx + fy * fy + fz * fz) or 1.0
     f = (fx / n, fy / n, fz / n)
-    # Derecha = adelante x arriba-del-mundo, normalizado.
-    rx, ry, rz = f[2] * 1.0 - f[1] * 0.0, f[0] * 0.0 - f[2] * 0.0, f[1] * 0.0 - f[0] * 1.0
+    # DERECHA = adelante x arriba-del-mundo, con arriba = (0,1,0). Sale
+    # (-f_z, 0, f_x).
+    #
+    # Esto estaba al reves —se calculaba (f_z, 0, -f_x), que es arriba x
+    # adelante— y el boceto entero salia EN ESPEJO. Y no chirriaba: la cocina
+    # se veia perfecta, solo que con el fregadero en el lado contrario. La
+    # vertical si estaba bien, asi que no habia nada raro que mirar.
+    rx, ry, rz = -f[2], 0.0, f[0]
     n = math.sqrt(rx * rx + ry * ry + rz * rz) or 1.0
     r = (rx / n, ry / n, rz / n)
-    # ARRIBA = adelante x derecha (en este orden). Al reves sale ABAJO, y el
+    # ARRIBA = derecha x adelante (en este orden). Al reves sale ABAJO, y el
     # dibujo entero queda del reves sin que nada falle: los numeros salen, las
     # cajas salen, y la cocina aparece colgada del techo.
-    u = (f[1] * r[2] - f[2] * r[1], f[2] * r[0] - f[0] * r[2], f[0] * r[1] - f[1] * r[0])
+    u = (r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0])
     return f, r, u
 
 
@@ -114,11 +140,20 @@ def _origen_de_pared(indice, tipo, paredes):
     return (0.0, 0.0), (1.0, 0.0)
 
 
-def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None):
+def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None, es_alto=None):
     """Convierte la distribución en cajas 3D con medidas reales.
 
-    `altura_modulo(id)` y `fondo_modulo(id)` se inyectan (vienen de
-    kitchen_geometry) para no duplicar aquí el criterio de fabricación.
+    `altura_modulo(id)`, `fondo_modulo(id)` y `es_alto(id, label)` se inyectan
+    (vienen de kitchen_geometry) para no duplicar aquí el criterio de
+    fabricación.
+
+    `es_alto` DECIDE SI EL MUEBLE CUELGA O SE APOYA, y por eso se inyecta como
+    los otros dos. Antes se resolvía aquí mirando si la etiqueta empezaba por
+    «A», y ese atajo no coincide con el criterio de fábrica: el `microondas`
+    es un mueble alto y no empieza por A —se habría dibujado en el suelo—, y
+    cualquier cosa rotulada «Armario…» habría salido colgada del techo. Dos
+    criterios para lo mismo acaban separándose, y en perspectiva un mueble a
+    la altura equivocada no llama la atención.
 
     Devuelve (cajas, omitidos). En `omitidos` van los elementos que NO se han
     podido dibujar por falta de datos: se informan, no se rellenan.
@@ -128,8 +163,19 @@ def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None):
     elementos = d.get("elementos") or []
     alto_de = altura_modulo or (lambda _id: 80)
     fondo_de = fondo_modulo or (lambda _id: 58)
+    # Respaldo mínimo por si se usa el módulo suelto (pruebas): la «A» del
+    # código MV. Es peor que el criterio de fábrica, y por eso se inyecta.
+    cuelga = es_alto or (lambda eid, label="":
+                         str(label or "").upper().startswith("A")
+                         or str(eid or "").upper().startswith("A"))
 
     cajas, omitidos = [], []
+    # UN CONTADOR POR FILA, no uno por pared. Los altos y los bajos son DOS
+    # filas que corren cada una por su cuenta a lo largo del muro: el alto va
+    # ENCIMA del bajo, no a continuación. Con un contador único, una pared con
+    # 330 cm de bajos colocaba el primer alto en el centímetro 330 — o sea
+    # fuera del muro de 360 y sin nada debajo. En perspectiva eso no chirría:
+    # se ve una cocina larga y ya.
     avance = {}
 
     for el in elementos:
@@ -147,14 +193,19 @@ def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None):
             continue
 
         (ox, oz), (dx, dz) = _origen_de_pared(pidx, d.get("tipo"), paredes)
-        recorrido = avance.get(pidx, 0.0)
-        avance[pidx] = recorrido + ancho
-
         eid = str(el.get("id") or "")
         alto = float(alto_de(eid))
         fondo = float(fondo_de(eid))
-        # Los altos cuelgan; los bajos se apoyan en el zócalo.
-        base = 145.0 if str(el.get("label", "")).upper().startswith("A") or eid.upper().startswith("A") else 10.0
+        # Los altos cuelgan; los bajos se apoyan en el zócalo. Quién es alto lo
+        # decide el criterio de fábrica que se inyecta, no un atajo local.
+        es_colgado = bool(cuelga(eid, el.get("label") or ""))
+        base = 145.0 if es_colgado else 10.0
+
+        # Cada fila avanza por su cuenta: los altos empiezan otra vez desde el
+        # principio de la pared, encima de los bajos.
+        fila = (pidx, es_colgado)
+        recorrido = avance.get(fila, 0.0)
+        avance[fila] = recorrido + ancho
 
         x0, z0 = ox + dx * recorrido, oz + dz * recorrido
         x1, z1 = ox + dx * (recorrido + ancho), oz + dz * (recorrido + ancho)
@@ -176,6 +227,125 @@ def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None):
         })
 
     return cajas, omitidos
+
+
+def camara_para(distribucion):
+    """EL PUNTO DE VISTA, derivado de la cocina que hay que enseñar.
+
+    Esto es lo que faltaba para que el boceto en perspectiva pareciera un
+    boceto de interiorismo y no una caja vista de lejos.
+
+    Tres decisiones, y las tres son de ENCUADRE, no de medida:
+
+    1. **El ojo va DENTRO de la estancia.** Los muebles salen de la pared hacia
+       el interior, así que mirando desde el otro lado se verían por detrás.
+       Parece obvio y no lo es: la cámara por defecto miraba desde `z` negativa
+       —o sea desde detrás de la pared— y el dibujo salía igualmente, porque una
+       caja vista por detrás sigue siendo una caja.
+
+    2. **Descentrado.** Centrado sale UN punto de fuga y el dibujo se lee casi
+       como un alzado. Descentrado salen dos, que es como están dibujadas las
+       referencias que enseñó el master.
+
+    3. **La distancia se saca del ancho REAL de la pared.** Una cocina de 6 m y
+       una de 2,4 m no se dibujan desde la misma distancia: con una fija, la
+       grande no cabe y la pequeña sale minúscula.
+
+    NO se inventa ninguna medida de la cocina: sin paredes con ancho se
+    devuelve la cámara por defecto, y quien dibuja ya decide si sigue.
+    """
+    d = distribucion or {}
+    paredes = d.get("paredes") or []
+    anchos = [(_num(p.get("ancho")) or 0.0) for p in paredes]
+    if not anchos or anchos[0] <= 0:
+        return dict(CAMARA_POR_DEFECTO)
+
+    tipo = str(d.get("tipo") or "lineal").lower()
+    a0 = anchos[0]
+    a1 = anchos[1] if len(anchos) > 1 and anchos[1] > 0 else 0.0
+
+    # Distancia de retroceso: proporcional al ancho que hay que encuadrar, y
+    # nunca menor que el fondo de un mueble — si no, el ojo quedaría DENTRO de
+    # los armarios y la mitad de la cocina se proyectaría detrás de la cámara.
+    retroceso = max(a0 * DISTANCIA_RELATIVA, FONDO_MAXIMO * 2.5)
+
+    if tipo in ("l", "u", "g"):
+        # En L la segunda pared corre hacia +z desde el final de la primera, y
+        # sus muebles salen hacia -x. Así que la esquina de trabajo está en
+        # (a0, 0) y el hueco libre queda en x pequeña, z grande: ahí va el ojo,
+        # mirando a la esquina. Es el punto desde el que se fotografía una
+        # cocina en L.
+        ojo = (-a0 * DESPLAZAMIENTO_LATERAL, ALTURA_OJO, retroceso + (a1 * 0.25))
+        objetivo = (a0 * 0.55, ALTURA_OBJETIVO, a1 * 0.20)
+    else:
+        # Lineal y paralela: de frente a la pared, desplazado a un lado.
+        ojo = (a0 * (0.5 - DESPLAZAMIENTO_LATERAL), ALTURA_OJO, retroceso)
+        objetivo = (a0 * 0.5, ALTURA_OBJETIVO, 0.0)
+
+    return {"ojo": ojo, "objetivo": objetivo, "distancia_focal": DISTANCIA_FOCAL}
+
+
+def suelo_y_paredes(distribucion):
+    """El cascarón de la estancia: las aristas que dan la profundidad.
+
+    Sin esto los muebles flotan en el vacío y el dibujo no se lee como una
+    habitación. Con esto aparecen las líneas que van al punto de fuga, que es
+    lo que hace que un boceto parezca un boceto.
+
+    LO QUE SE DIBUJA Y LO QUE NO: se dibujan las paredes cuyo ancho y alto son
+    DATOS REALES, y una retícula de suelo que se desvanece hacia el
+    espectador. NO se cierra la habitación por detrás: el fondo de la estancia
+    no lo sabe nadie, y ponerle una pared a una distancia "que quede bien" es
+    inventarse una medida —además la más creíble de todas, porque en
+    perspectiva nadie la comprueba—.
+    """
+    d = distribucion or {}
+    paredes = d.get("paredes") or []
+    if not paredes:
+        return {"paredes": [], "suelo": [], "alto": 0.0}
+
+    tipo = str(d.get("tipo") or "lineal").lower()
+    alto = _num(paredes[0].get("alto")) or 0.0
+    if alto <= 0:
+        # Sin altura de techo no se dibuja la pared: se dibujarían muebles
+        # colgando de una línea que no mide nada.
+        alto = 0.0
+
+    muros, anchos = [], [(_num(p.get("ancho")) or 0.0) for p in paredes]
+    for i, ancho in enumerate(anchos):
+        if ancho <= 0 or alto <= 0:
+            continue
+        (ox, oz), (dx, dz) = _origen_de_pared(i, tipo, paredes)
+        x0, z0 = ox, oz
+        x1, z1 = ox + dx * ancho, oz + dz * ancho
+        muros.append({
+            "indice": i,
+            "esquinas": [(x0, 0.0, z0), (x1, 0.0, z1),
+                         (x1, alto, z1), (x0, alto, z0)],
+        })
+
+    # Retícula de suelo: líneas paralelas a la pared 0, cada 50 cm, hasta la
+    # posición del ojo. Son las que van al punto de fuga.
+    a0 = anchos[0] if anchos else 0.0
+    suelo = []
+    if a0 > 0:
+        cam = camara_para(distribucion)
+        # Hasta CERCA del ojo, no hasta el ojo. Un punto a un palmo de la
+        # cámara se proyecta prácticamente al infinito: esas líneas no aportan
+        # profundidad, solo estiran el dibujo.
+        hasta = max(cam["ojo"][2] * 0.72, 100.0)
+        paso = 50.0
+        z = 0.0
+        while z <= hasta + 1e-6:
+            suelo.append([(0.0, 0.0, z), (a0, 0.0, z)])
+            z += paso
+        # Y las perpendiculares, cada 50 cm a lo ancho.
+        x = 0.0
+        while x <= a0 + 1e-6:
+            suelo.append([(x, 0.0, 0.0), (x, 0.0, hasta)])
+            x += paso
+
+    return {"paredes": muros, "suelo": suelo, "alto": alto}
 
 
 def ordenar_por_profundidad(cajas, camara=None):

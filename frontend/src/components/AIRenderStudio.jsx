@@ -1113,6 +1113,70 @@ export default function AIRenderStudio({ state, setState }) {
   // Genera los planos EXACTOS (planta acotada + alzado alámbrico) a partir de una
   // distribución detectada. Devuelve las láminas listas para el historial. Si un
   // endpoint falla, propaga el error (con motivo) en lugar de tragárselo.
+  // Saca la distribución del render o, si no puede, de la descripción escrita.
+  // Devuelve null y deja el motivo puesto: quien llama decide qué hacer.
+  const deducirDistribucion = async (motivos) => {
+    const img = currentImage();
+    if (img) {
+      try {
+        const dataUrl = await imageToDataUrl(img);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) return dj.distribucion;
+      } catch (e) { motivos.push(`del render: ${e?.message || 'no se pudo leer'}`); }
+    }
+    if ((description || '').trim()) {
+      try {
+        const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
+        if (dt?.success) return dt.distribucion;
+      } catch (e) { motivos.push(`de la descripción: ${e?.message || 'no se pudo leer'}`); }
+    }
+    return null;
+  };
+
+  // BOCETO EN PERSPECTIVA a lápiz: lo que el master pidió enseñando sus
+  // referencias. Cada arista sale de un ancho o una altura REALES; no lo
+  // dibuja una IA, porque una IA redibuja y al redibujar mueve cosas — y en un
+  // boceto eso pesa MÁS que en un render, porque un dibujo a mano se lee como
+  // «esto lo ha hecho el diseñador».
+  const generarPerspectiva = async () => {
+    if (editing) return;
+    setEditing(true); setError(null); setAvisoGeom(null);
+    try {
+      const motivos = [];
+      const distribucion = await deducirDistribucion(motivos);
+      if (!distribucion) {
+        const falta = !medidas.ancho
+          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
+          : '';
+        setError(`No he podido deducir la distribución${motivos.length ? ` (${motivos.join(' · ')})` : ''}.${falta}`);
+        return;
+      }
+      const pr = await postJson('/api/estudio-cocinas/perspectiva', {
+        nombre_cliente: cliente || 'Cliente',
+        distribucion_estructurada: distribucion,
+        boceto: true,
+      });
+      if (!pr?.perspectivaBase64) { setError('No se pudo generar el boceto en perspectiva.'); return; }
+      const lamina = {
+        success: true,
+        result: { images: [pr.perspectivaBase64] },
+        description: 'Boceto en perspectiva (a lápiz, sin cotas)',
+        timestamp: new Date(),
+      };
+      setRenderResult(lamina);
+      setRenderHistory(prev => [lamina, ...prev].slice(0, 14));
+      // Lo que no se ha podido dibujar se DICE. Si se quedara en el servidor,
+      // el master vería una cocina a la que le faltan muebles y sin saber por qué.
+      const sinDibujar = (pr.omitidos || []).map(o => o.label || o.id).filter(Boolean);
+      if (sinDibujar.length) {
+        setError(`Boceto generado, pero sin estos módulos por falta de datos: ${sinDibujar.join(', ')}.`);
+      }
+      setAvisoGeom(pr.avisos?.length ? pr.avisos : null);
+    } catch (e) {
+      setError(`Error al generar el boceto en perspectiva: ${e?.message || 'error desconocido'}.`);
+    } finally { setEditing(false); }
+  };
+
   // Vista ALÁMBRICA en blanco y negro (estilo CAD tipo TeoWin), con o sin cotas.
   // Es el mismo motor vectorial determinista: nunca hay medidas inventadas.
   const generarVistaAlambrica = async (conCotas) => {
@@ -3432,6 +3496,11 @@ export default function AIRenderStudio({ state, setState }) {
                       title="Vista alámbrica en blanco y negro (estilo CAD) SIN medidas, dibujo limpio."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-zinc-900 ring-1 ring-zinc-900 hover:bg-zinc-100 disabled:opacity-50 flex items-center gap-1.5">
                       {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Alámbrica s/ medidas
+                    </button>
+                    <button onClick={generarPerspectiva} disabled={editing}
+                      title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, no por una IA. Sin cotas: es de presentación."
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-stone-700 text-white hover:bg-stone-800 disabled:opacity-50 flex items-center gap-1.5">
+                      {editing ? <Loader size={12} className="animate-spin" /> : <>✎</>} Boceto en perspectiva
                     </button>
                   </>
                   )}
