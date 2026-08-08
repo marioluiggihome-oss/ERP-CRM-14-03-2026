@@ -43,6 +43,27 @@ número y se cuela en el despiece; un `None` para la fabricación hasta que
 alguien vaya con el metro.
 """
 
+# ─── DE DONDE SALE CADA NUMERO ──────────────────────────────────────────────
+#
+# «¿De donde salen esos 2.845?» tiene que poder contestarse. Un numero sin
+# origen no se puede discutir con nadie: ni con el cliente, ni con el
+# arquitecto, ni con el montador que dice que ahi no cabe.
+#
+# `heredada` es la que viene de otro proyecto o de una version anterior, y es la
+# mas peligrosa de todas justamente porque parece tan buena como las demas.
+ORIGENES = {
+    "obra": "Medida en obra",
+    "plano_arquitecto": "Plano del arquitecto",
+    "plano_cliente": "Plano del cliente",
+    "manual": "Introducida a mano",
+    "heredada": "Heredada de otro proyecto",
+}
+
+# Cuales se consideran comprobadas sobre el terreno. Las demas llevan aviso de
+# NO VERIFICADA, que no es lo mismo que estar mal: es que nadie ha ido a
+# mirarlo.
+ORIGENES_VERIFICADOS = ("obra",)
+
 SIN_MEDIR = "sin_medir"
 INTRODUCIDA = "introducida"
 TOMADA = "tomada"
@@ -129,6 +150,59 @@ def hay_discrepancia(medida, tolerancia=0):
     return abs(d) > (_num(tolerancia) or 0)
 
 
+def puntos_de(medida):
+    """Las tomas sueltas de una misma cota, cuando la pared no es recta.
+
+    Una pared no mide «3.150». Mide 3.150 arriba, 3.143 en medio y 3.138 abajo,
+    y para un mueble a medida esa diferencia de 12 mm es la que decide si el
+    frente cierra o no. Guardar solo un numero es tirar el dato que importa.
+
+    `medida["puntos"]`: [{etiqueta, valor}] — se admite tambien una lista de
+    numeros sueltos, que es como se teclea deprisa en obra.
+    """
+    fuera = []
+    for i, p in enumerate(((medida or {}).get("puntos") or [])):
+        if isinstance(p, dict):
+            v = _num(p.get("valor"))
+            etq = _txt(p.get("etiqueta")) or f"Punto {i + 1}"
+        else:
+            v = _num(p)
+            etq = f"Punto {i + 1}"
+        if v is None:
+            continue
+        fuera.append({"etiqueta": etq, "valor": v})
+    return fuera
+
+
+def irregularidad(medida):
+    """Cuanto baila esa cota entre sus puntos, y por donde.
+
+    Devuelve None si no hay al menos dos puntos: con uno solo no hay nada que
+    comparar, y sacar un 0 diria que la pared esta recta cuando lo que pasa es
+    que se ha medido una vez.
+
+    NO se elige un valor «bueno» entre los puntos. La mas pequenia se ofrece
+    aparte porque es la que manda para que el mueble ENTRE, pero quien decide
+    es quien firma: puede haber un rodapie, un alicatado o una decision de
+    recortar en obra que aqui no se sabe.
+    """
+    ptos = puntos_de(medida)
+    if len(ptos) < 2:
+        return None
+    valores = [p["valor"] for p in ptos]
+    menor = min(ptos, key=lambda p: p["valor"])
+    mayor = max(ptos, key=lambda p: p["valor"])
+    return {
+        "puntos": ptos,
+        "minimo": menor["valor"], "dondeMinimo": menor["etiqueta"],
+        "maximo": mayor["valor"], "dondeMaximo": mayor["etiqueta"],
+        "recorrido": round(mayor["valor"] - menor["valor"], 3),
+        # El que manda para que el mueble entre. Se ofrece, no se aplica.
+        "elMasEstrecho": menor["valor"],
+        "media": round(sum(valores) / len(valores), 3),
+    }
+
+
 def revisar_una(medida, tolerancia=0):
     """Una medida, con su nivel, su diferencia y qué le falta.
 
@@ -140,6 +214,8 @@ def revisar_una(medida, tolerancia=0):
     d = diferencia(m)
     discrepa = hay_discrepancia(m, tolerancia)
     critica = bool(m.get("critica"))
+    org = _txt(m.get("origen"))
+    irreg = irregularidad(m)
 
     # Qué hay que hacer con ella, en una frase y en imperativo: un aviso que no
     # dice qué hacer se lee, se asiente y no se hace nada.
@@ -177,6 +253,17 @@ def revisar_una(medida, tolerancia=0):
         # un zócalo haría que el aviso se ignorase también cuando importa.
         "bloquea": critica and n != CONFIRMADA,
         "valorParaFabricar": valor_para_fabricar(m),
+        # DE DONDE SALE. Un origen que no esta en la lista se deja tal cual en
+        # vez de caer a «manual»: inventarle procedencia a un dato es
+        # exactamente lo contrario de lo que sirve esto.
+        "origen": org,
+        "origenEtiqueta": ORIGENES.get(org, org),
+        # NO VERIFICADA no quiere decir mal: quiere decir que nadie ha ido a
+        # mirarlo. Sin origen tampoco se da por verificada — no consta que
+        # alguien lo comprobara.
+        "verificada": org in ORIGENES_VERIFICADOS,
+        # La pared que no es recta, cuando se han tomado varios puntos.
+        "irregularidad": irreg,
         "pendiente": pendiente,
         "notas": _txt(m.get("notas")),
         # QUIÉN Y CUÁNDO viajan siempre, aunque la pantalla no los pinte.

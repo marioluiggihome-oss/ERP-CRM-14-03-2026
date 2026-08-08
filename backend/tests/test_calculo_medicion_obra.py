@@ -243,3 +243,81 @@ def test_valor_visible_no_es_valor_para_fabricar(mo):
     Juntarlas es como se acaba cortando con una medida sin confirmar."""
     assert mo.valor_visible(HUECO) == 3238
     assert mo.valor_para_fabricar(HUECO) is None
+
+
+# ─── 6. De donde sale cada numero ───────────────────────────────────────────
+#
+# «¿De donde salen esos 2.845?» tiene que poder contestarse. Un numero sin
+# origen no se puede discutir con nadie: ni con el cliente, ni con el
+# arquitecto, ni con el montador que dice que ahi no cabe.
+
+def test_la_medida_dice_de_donde_sale(mo):
+    f = mo.revisar_una({**HUECO, "origen": "plano_arquitecto"})
+    assert f["origen"] == "plano_arquitecto"
+    assert f["origenEtiqueta"] == "Plano del arquitecto"
+
+
+def test_solo_la_medida_en_obra_cuenta_como_verificada(mo):
+    """NO VERIFICADA no quiere decir mal: quiere decir que nadie ha ido a
+    mirarlo. Un plano puede estar perfecto y la pared no."""
+    assert mo.revisar_una({**HUECO, "origen": "obra"})["verificada"] is True
+    for org in ("plano_arquitecto", "plano_cliente", "manual", "heredada"):
+        assert mo.revisar_una({**HUECO, "origen": org})["verificada"] is False, org
+
+
+def test_sin_origen_no_se_da_por_verificada(mo):
+    """CANDADO. Si el hueco vacio contara como verificada, todas las medidas
+    viejas —que no tienen origen— pasarian por comprobadas."""
+    assert mo.revisar_una(HUECO)["verificada"] is False
+
+
+def test_un_origen_raro_no_se_convierte_en_manual(mo):
+    """Inventarle procedencia a un dato es justo lo contrario de lo que sirve
+    esto."""
+    f = mo.revisar_una({**HUECO, "origen": "me_lo_dijo_el_pintor"})
+    assert f["origen"] == "me_lo_dijo_el_pintor"
+    assert f["origenEtiqueta"] == "me_lo_dijo_el_pintor"
+
+
+# ─── 7. La pared no es recta ────────────────────────────────────────────────
+
+PARED = {"clave": "pared_b", "etiqueta": "Pared B", "critica": True,
+         "puntos": [{"etiqueta": "Arriba", "valor": 3150},
+                    {"etiqueta": "Medio", "valor": 3143},
+                    {"etiqueta": "Abajo", "valor": 3138}]}
+
+
+def test_una_pared_torcida_se_guarda_entera(mo):
+    """Guardar solo «3.150» tira el dato que importa: los 12 mm que decidiran
+    si el frente cierra."""
+    irr = mo.irregularidad(PARED)
+    assert irr["minimo"] == 3138 and irr["dondeMinimo"] == "Abajo"
+    assert irr["maximo"] == 3150 and irr["dondeMaximo"] == "Arriba"
+    assert irr["recorrido"] == 12
+
+
+def test_el_mas_estrecho_se_ofrece_pero_no_se_aplica(mo):
+    """Es el que manda para que el mueble ENTRE, pero decide quien firma:
+    puede haber un rodapie o una decision de recortar en obra."""
+    irr = mo.irregularidad(PARED)
+    assert irr["elMasEstrecho"] == 3138
+    # Y no se ha colado como medida para fabricar por su cuenta.
+    assert mo.valor_para_fabricar(PARED) is None
+
+
+def test_con_un_solo_punto_no_se_inventa_una_irregularidad_de_cero(mo):
+    """Un 0 diria que la pared esta recta, cuando lo que pasa es que se ha
+    medido una vez."""
+    assert mo.irregularidad({"puntos": [3150]}) is None
+    assert mo.irregularidad({}) is None
+
+
+def test_se_admiten_numeros_sueltos_que_es_como_se_teclea_en_obra(mo):
+    irr = mo.irregularidad({"puntos": [3150, 3143]})
+    assert irr["recorrido"] == 7
+    assert irr["puntos"][0]["etiqueta"] == "Punto 1"
+
+
+def test_un_punto_sin_valor_no_cuenta_como_cero(mo):
+    irr = mo.irregularidad({"puntos": [{"valor": 3150}, {"valor": ""}, {"valor": 3143}]})
+    assert len(irr["puntos"]) == 2 and irr["minimo"] == 3143

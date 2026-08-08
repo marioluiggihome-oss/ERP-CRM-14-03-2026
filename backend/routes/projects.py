@@ -461,6 +461,61 @@ async def comparar_mediciones_proyecto(project_id: str, payload: dict,
         str(payload.get("etiquetaB") or "nueva"))}
 
 
+@router.post("/projects/{project_id}/excepcion")
+async def liberar_con_excepcion(project_id: str, payload: dict,
+                                current_user: dict = Depends(require_admin)):
+    """Autoriza fabricar con algo pendiente. Con nombre y apellidos.
+
+    Solo mando (`require_admin`): asumir el riesgo de fabricar sin un dato es
+    una decisión de gerencia. Si la pudiera firmar quien tiene la prisa, no
+    sería una autorización.
+
+    Hacen falta el motivo, quién autoriza y qué riesgo se asume. Sin los tres,
+    el motor NO libera y dice cuál falta — una excepción anónima es exactamente
+    cómo las excepciones se vuelven invisibles y acaban siendo la norma.
+
+    Y liberar así NO borra los bloqueos: siguen contados y a la vista. Se
+    fabrica sabiendo qué falta, que es lo contrario de fabricar como si no
+    faltara nada.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    exc = {
+        "motivo": str(payload.get("motivo") or "").strip(),
+        # Quién autoriza NO se teclea: es quien firma. Dejarlo escribir a mano
+        # permitiría poner el nombre de otro.
+        "autorizadaPor": (current_user or {}).get("username") or (current_user or {}).get("email") or "",
+        "riesgo": str(payload.get("riesgo") or "").strip(),
+        "datosPendientes": str(payload.get("datosPendientes") or "").strip(),
+        "fecha": datetime.now(timezone.utc).isoformat(),
+    }
+    faltan = [c for c in ("motivo", "riesgo") if not exc[c]]
+    if faltan:
+        raise HTTPException(
+            status_code=422,
+            detail=("Una excepción sin motivo o sin riesgo asumido no es una excepción: "
+                    f"falta {', '.join(faltan)}."))
+
+    await db.projects.update_one({"id": project_id}, {"$set": {"excepcionFabricacion": exc}})
+    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    pendientes = len(cambios_sin_aprobar(nuevo.get("cambios")))
+    return {"success": True, "excepcion": exc,
+            **validar(nuevo, pendientes_cambios=pendientes)}
+
+
+@router.delete("/projects/{project_id}/excepcion")
+async def retirar_excepcion(project_id: str, current_user: dict = Depends(require_admin)):
+    """Quita la autorización. Vuelven a mandar los bloqueos."""
+    await db.projects.update_one({"id": project_id}, {"$unset": {"excepcionFabricacion": ""}})
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    pendientes = len(cambios_sin_aprobar(proyecto.get("cambios")))
+    return {"success": True, **validar(proyecto, pendientes_cambios=pendientes)}
+
+
 @router.get("/projects/{project_id}/comparar-fabricacion")
 async def comparar_con_fabricacion(project_id: str, current_user: dict = Depends(require_auth)):
     """Compara lo PRESUPUESTADO con lo que hay en la orden de FABRICACIÓN.

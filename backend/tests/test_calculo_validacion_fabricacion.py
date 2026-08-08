@@ -215,3 +215,61 @@ def test_lo_que_NO_APLICA_no_cuenta_como_pendiente(vf):
     assert r["pendientes"] == 0
     assert r["noAplican"] == 1
     assert "Listo para fabricar" in r["resumen"]
+
+
+# ─── La excepcion autorizada ────────────────────────────────────────────────
+#
+# Siempre puede haber una urgencia real. Si el sistema no deja esa puerta, la
+# puerta se abre igual —por fuera, borrando el aviso o cambiando el dato— y
+# entonces no queda ni rastro. Lo que no se admite es una excepcion anonima.
+
+def _bloqueado():
+    return {**P(), "medidas": [_HUECO]}
+
+
+def test_sin_excepcion_un_bloqueo_para_la_fabrica(vf):
+    assert vf.validar(_bloqueado())["puedeLiberar"] is False
+
+
+def test_una_excepcion_completa_libera_pero_no_borra_el_bloqueo(vf):
+    """CANDADO. Se fabrica SABIENDO que falta, que es lo contrario de fabricar
+    como si no faltara nada."""
+    r = vf.validar({**_bloqueado(), "excepcionFabricacion": {
+        "motivo": "Hueco de maquina esta semana", "autorizadaPor": "Mario",
+        "riesgo": "Si el hueco no da, hay que recortar en obra"}})
+    assert r["puedeLiberar"] is True
+    assert r["conExcepcion"] is True
+    assert r["bloqueos"] == 1, "el bloqueo ha desaparecido al firmar la excepcion"
+    assert "EXCEPCIÓN" in r["resumen"] and "Mario" in r["resumen"]
+
+
+def test_una_excepcion_sin_quien_autoriza_NO_libera(vf):
+    """Una excepcion sin duenio es exactamente como se vuelven invisibles y
+    acaban siendo la norma."""
+    r = vf.validar({**_bloqueado(), "excepcionFabricacion": {
+        "motivo": "Corre prisa", "riesgo": "poco"}})
+    assert r["puedeLiberar"] is False
+    assert "falta" in r["resumen"] and "autoriza" in r["resumen"]
+
+
+def test_una_excepcion_sin_motivo_ni_riesgo_tampoco(vf):
+    r = vf.validar({**_bloqueado(), "excepcionFabricacion": {"autorizadaPor": "Mario"}})
+    assert r["puedeLiberar"] is False
+    assert r["excepcion"]["completa"] is False
+
+
+def test_una_excepcion_no_convierte_en_correcto_lo_que_falta(vf):
+    r = vf.validar({**_bloqueado(), "excepcionFabricacion": {
+        "motivo": "x", "autorizadaPor": "y", "riesgo": "z"}})
+    check = next(c for c in r["checks"] if c["clave"] == "medidas_obra")
+    assert check["estado"] == vf.FALTA
+    assert len(r["motivos"]) == 1
+
+
+def test_sin_bloqueos_la_excepcion_no_pinta_nada(vf):
+    """Firmar una excepcion cuando no hace falta no puede ensuciar el resumen:
+    se leeria como que algo va mal."""
+    r = vf.validar({**P(), "excepcionFabricacion": {
+        "motivo": "x", "autorizadaPor": "y", "riesgo": "z"}})
+    assert r["conExcepcion"] is False
+    assert "EXCEPCIÓN" not in r["resumen"]

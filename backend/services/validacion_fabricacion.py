@@ -233,6 +233,51 @@ def _cambios_aprobados(proyecto, pendientes_cambios=0):
 
 # ─── Expediente completo ────────────────────────────────────────────────────
 
+# ─── La valvula de escape, con nombre y apellidos ───────────────────────────
+
+# Lo que hay que rellenar para saltarse un bloqueo. Sin esto no hay excepcion:
+# hay un bloqueo que alguien ha quitado.
+CAMPOS_EXCEPCION = ("motivo", "autorizadaPor", "riesgo")
+
+ETIQUETA_EXCEPCION = {
+    "motivo": "por qué se libera igualmente",
+    "autorizadaPor": "quién lo autoriza",
+    "riesgo": "qué puede pasar",
+}
+
+
+def excepcion(proyecto):
+    """La autorización para fabricar con algo pendiente, si la hay.
+
+    SIEMPRE puede haber una urgencia real: fabricar sin una medida secundaria
+    para no perder el hueco de la máquina. Si el sistema no deja esa puerta, la
+    puerta se abre igual —por fuera, borrando el aviso o cambiando el dato— y
+    entonces no queda ni rastro.
+
+    Lo que NO se admite es una excepción anónima. Hacen falta el motivo, quién
+    la autoriza y qué riesgo se asume; con uno solo que falte, no libera y se
+    dice cuál falta. Una excepción sin dueño es exactamente cómo las
+    excepciones se vuelven invisibles y acaban siendo la norma.
+
+    Y liberar con excepción NO borra los bloqueos: siguen contados y a la
+    vista. Se fabrica sabiendo qué falta, que es lo contrario de fabricar como
+    si no faltara nada.
+    """
+    e = (proyecto or {}).get("excepcionFabricacion") or {}
+    faltan = [c for c in CAMPOS_EXCEPCION if not str(e.get(c) or "").strip()]
+    if len(faltan) == len(CAMPOS_EXCEPCION):
+        return None  # no hay excepcion, ni a medias
+    return {
+        "motivo": str(e.get("motivo") or "").strip(),
+        "autorizadaPor": str(e.get("autorizadaPor") or "").strip(),
+        "riesgo": str(e.get("riesgo") or "").strip(),
+        "datosPendientes": str(e.get("datosPendientes") or "").strip(),
+        "fecha": str(e.get("fecha") or "").strip(),
+        "faltan": faltan,
+        "completa": not faltan,
+    }
+
+
 def validar(proyecto, pendientes_cambios=0):
     """Pasa todas las comprobaciones y dice si se puede liberar a fabricación."""
     checks = [
@@ -262,23 +307,32 @@ def validar(proyecto, pendientes_cambios=0):
     for c in checks:
         grupos.setdefault(c["grupo"], []).append(c)
 
+    # La excepcion autorizada: deja pasar SIN borrar lo que falta.
+    exc = excepcion(proyecto)
+    con_excepcion = bool(exc and exc["completa"] and bloqueos)
+
     return {
         "checks": checks,
         "grupos": grupos,
+        "excepcion": exc,
+        "conExcepcion": con_excepcion,
         "correctas": correctas,
         "noAplican": len(no_aplican),
         "pendientes": len(pendientes),
         "bloqueos": len(bloqueos),
-        "puedeLiberar": not bloqueos,
+        # Se libera si no hay bloqueos, o si hay una excepcion COMPLETA que los
+        # asume. Los bloqueos siguen contados: no desaparecen porque alguien
+        # firme, solo dejan de parar la fabrica.
+        "puedeLiberar": (not bloqueos) or con_excepcion,
         # Los motivos van con su `donde` para que la pantalla pueda llevar al
         # sitio: un aviso que no lleva a ninguna parte se acaba ignorando.
         "motivos": [{"etiqueta": c["etiqueta"], "detalle": c["detalle"], "donde": c["donde"]}
                     for c in bloqueos],
-        "resumen": _resumen(correctas, len(pendientes), len(bloqueos)),
+        "resumen": _resumen(correctas, len(pendientes), len(bloqueos), exc),
     }
 
 
-def _resumen(correctas, pendientes, bloqueos):
+def _resumen(correctas, pendientes, bloqueos, exc=None):
     if not bloqueos and not pendientes:
         return f"Listo para fabricar: {correctas} comprobación(es) correctas."
     partes = [f"{correctas} correctas"]
@@ -286,4 +340,12 @@ def _resumen(correctas, pendientes, bloqueos):
         partes.append(f"{pendientes} pendiente(s)")
     if bloqueos:
         partes.append(f"{bloqueos} bloqueo(s)")
-    return " · ".join(partes)
+    texto = " · ".join(partes)
+    if bloqueos and exc and exc["completa"]:
+        # Se dice EN EL RESUMEN y con quién detrás. Una excepción que solo se
+        # ve entrando en un detalle es una excepción invisible.
+        return f"{texto} — LIBERADO CON EXCEPCIÓN, autoriza {exc['autorizadaPor']}"
+    if bloqueos and exc:
+        que_falta = ", ".join(ETIQUETA_EXCEPCION[c] for c in exc["faltan"])
+        return f"{texto} — hay una excepción a medias: falta {que_falta}"
+    return texto
