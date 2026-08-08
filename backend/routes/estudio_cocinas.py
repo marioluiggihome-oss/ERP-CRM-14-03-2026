@@ -1701,6 +1701,14 @@ async def generar_alzado(payload: ProyectoBase):
                              for e in elems
                              if str(e.get("id") or "").lower() in HOB]
             pos = 0
+            # UN CONTADOR POR FILA. `pos` solo avanzaba con los BAJOS (está
+            # dentro de su rama), así que un ALTO sin `posicion_cm` cogía ese
+            # `pos` y NO lo movía: dos altos seguidos se dibujaban EXACTAMENTE
+            # uno encima del otro, con sus rótulos y sus cotas pisándose
+            # («Muebl€Mueble a…» y «60 60» amontonados). Es el mismo fallo que
+            # tenían la perspectiva y la planta: altos y bajos son dos filas y
+            # cada una corre por su cuenta.
+            pos_alto = 0
             cotas = []
             hob_zones = []   # (x, w) de las placas → la campana va justo encima
             bajos_xy = []    # (x, w) de los bajos REALES → los altos se alinean con ellos
@@ -1713,7 +1721,10 @@ async def generar_alzado(payload: ProyectoBase):
                 if tipo == "campana":
                     continue  # se dibuja al final, centrada sobre la placa
                 label = str(e.get("label") or tipo or "módulo")[:18]
-                x = int(e.get("posicion_cm") or pos)
+                # Cada fila arranca donde acabó el anterior DE SU FILA. Si la
+                # detección trae una posición concreta, manda esa.
+                _es_fila_alta = (fila == "alto" or tipo in ALTOS)
+                x = int(e.get("posicion_cm") or (pos_alto if _es_fila_alta else pos))
                 if tipo in COLS:
                     wire(ax, x, ZOC_Y, w, COL_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, COL_Y - ZOC_Y)
                     _texto_vertical(ax, x + w / 2, (ZOC_Y + COL_Y) / 2, label, COL_Y - ZOC_Y)
@@ -1768,8 +1779,9 @@ async def generar_alzado(payload: ProyectoBase):
                         hob_zones.append((x, w))
                         # marca de zona de cocción sobre la encimera
                         ax.plot([x + 6, x + w - 6], [ENC_Y - 2, ENC_Y - 2], color=C_LINE, lw=1.0)
-                if fila == "alto" or tipo in ALTOS:
+                if _es_fila_alta:
                     cotas_altos.append((x, x + w, f"{w}"))
+                    pos_alto = max(pos_alto, x + w)
                 else:
                     cotas.append((x, x + w, f"{w}"))
                     if tipo not in COLS:
