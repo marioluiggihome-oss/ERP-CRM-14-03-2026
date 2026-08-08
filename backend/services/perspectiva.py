@@ -118,7 +118,7 @@ def proyectar(punto, camara=None):
 
 # ─── La escena, armada desde los datos ──────────────────────────────────────
 
-def _origen_de_pared(indice, tipo, paredes):
+def origen_de_pared(indice, tipo, paredes):
     """Dónde empieza cada pared y hacia dónde corre, según el tipo de cocina.
 
     Lineal: una pared. En L: la segunda gira 90°. En U: la tercera vuelve.
@@ -192,7 +192,7 @@ def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None, es_alto=N
                              "motivo": f"pared {pidx} inexistente"})
             continue
 
-        (ox, oz), (dx, dz) = _origen_de_pared(pidx, d.get("tipo"), paredes)
+        (ox, oz), (dx, dz) = origen_de_pared(pidx, d.get("tipo"), paredes)
         eid = str(el.get("id") or "")
         alto = float(alto_de(eid))
         fondo = float(fondo_de(eid))
@@ -315,7 +315,7 @@ def suelo_y_paredes(distribucion):
     for i, ancho in enumerate(anchos):
         if ancho <= 0 or alto <= 0:
             continue
-        (ox, oz), (dx, dz) = _origen_de_pared(i, tipo, paredes)
+        (ox, oz), (dx, dz) = origen_de_pared(i, tipo, paredes)
         x0, z0 = ox, oz
         x1, z1 = ox + dx * ancho, oz + dz * ancho
         muros.append({

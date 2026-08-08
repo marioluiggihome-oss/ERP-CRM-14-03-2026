@@ -16,8 +16,12 @@ const getAuthHeaders = () => authHeaders({ 'Content-Type': 'application/json' })
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
+// Cómo se llama cada color EN LA TARIFA ACB. El grafito se rotulaba aquí como
+// «Antracita», que es el nombre de un acabado de Alvic, no el del casco: en
+// pantalla salía «Antracita 19» y en la tarifa pone «Grafito». Dos nombres para
+// lo mismo, y el que se veía no era el de la tarifa que hay que consultar.
 const COLOR_LBL = {
-  grafito: 'Antracita', aluminio: 'Aluminio', blancoEsp: 'Blanco Esp.',
+  grafito: 'Grafito', aluminio: 'Aluminio', blancoEsp: 'Blanco Esp.',
   blanco: 'Blanco', roble: 'Roble', olmo: 'Olmo',
   blancoHidrofugo: 'Blanco Hidr.', robleAurora: 'Roble Aurora',
   spike: 'Spike', stone: 'Stone',
@@ -57,9 +61,23 @@ const _precio_color = (c) => {
   return null;
 };
 
+/** Las medidas del mueble, en MILÍMETROS (la tarifa ACB va en mm).
+ *
+ * EL ANCHO SALE DE LA PROFORMA, NO DEL CÓDIGO. Antes se sacaba del número de
+ * delante del código (`/^(\d{2,3})/`), y ese número NO es el ancho: en la
+ * nomenclatura Alvic es el ALTO. `90AP/1P-60` es un alto de 90 cm y 60 de
+ * ancho; `80BP/1P`, un bajo de 80 de alto; `22A2/2P`, una columna de 220.
+ *
+ * Leerlo como ancho emparejaba el casco equivocado y el error costaba dinero:
+ * un «Alto Con Balda» de 900 de ancho vale 55,37 € y el de 600 vale 43,83 €.
+ * En una proforma entera de altos, esa diferencia se multiplica.
+ *
+ * SI NO HAY ANCHO, NO SE INVENTA. Antes caía a 600 por defecto. Ahora se
+ * devuelve null y la línea sale «sin equivalencia», que es la verdad — y desde
+ * la propia línea se le elige el casco a mano.
+ */
 const _medidas_mm = (it) => {
-  const m = /^(\d{2,3})/.exec(it.cod || '');
-  const ancho = m ? parseInt(m[1], 10) * 10 : (Number(it.ancho) || 600);
+  const ancho = Number(it.ancho) > 0 ? Number(it.ancho) : null;
   const alto = Number(it.largo) || 0;
   const fondo = Number(it.grueso) || 0;
   return { ancho, alto, fondo };
@@ -78,12 +96,56 @@ const _tipo_acb_auto = (desc, tipo) => {
   return tipo === 'bajo' ? 'Bajo Con Balda' : (tipo === 'alto' ? 'Alto Con Balda' : (tipo === 'columna' ? 'Columna Despensa' : null));
 };
 
-const _match_acb = (it, tipoOverride, colorOverride, grosorOverride) => {
-  const tipoAcb = tipoOverride || _tipo_acb_auto(it.descripcion, it.tipo);
+// Color por defecto de los cascos. Es el 19 mm en kit, que es la gama normal
+// de esta casa. Vive aquí para que se pueda ENSEÑAR en pantalla: antes estaba
+// escrito a pelo dentro del emparejador y no había forma de saber cuál era.
+const COLOR_CASCO_DEFECTO = 'grafito';
+
+const _casco_por_id = (id) => CASCOS.find(c => String(c.id) === String(id)) || null;
+
+/** Pone precio a un casco concreto en el color pedido.
+ *
+ * SI ESE COLOR NO EXISTE PARA ESE CASCO, NO SE CAMBIA EN SILENCIO. Se valora
+ * con el que haya —para no dejar la línea sin precio— pero se marca
+ * `_colorSustituido`, y la pantalla lo enseña. Esto es lo que hacía que en una
+ * misma proforma salieran unas líneas en «Antracita 19» y otras en «Roble 16»:
+ * cada línea se buscaba la vida por su cuenta y nadie decía nada. Una cocina
+ * tiene UN color de casco, y el precio cambia con el color.
+ */
+const _valorar = (c, colorPedido, elegido = false) => {
+  if (!c || !c.precios) return null;
+  const exacto = c.precios[colorPedido] != null;
+  const alt = exacto ? null : _precio_color(c);
+  if (!exacto && !alt) return null;
+  const color = exacto ? colorPedido : alt.color;
+  const base = exacto ? c.precios[colorPedido] : alt.precio;
+  return {
+    ...c, _base: base, _precio: base * PUNTO,
+    _color: color, _colorLbl: COLOR_LBL[color] || color,
+    _colorPedido: colorPedido,
+    _colorSustituido: !exacto,
+    _elegido: elegido,
+  };
+};
+
+const _match_acb = (it, ov, colorProyecto) => {
+  const o = ov || {};
+  const colorKey = o.color || colorProyecto || COLOR_CASCO_DEFECTO;
+
+  // 1) Si el master ha elegido un casco CONCRETO en esta línea, manda ese. No
+  //    se vuelve a adivinar nada: lo eligió una persona mirando la línea.
+  if (o.cascoId) {
+    const elegido = _casco_por_id(o.cascoId);
+    if (elegido) return _valorar(elegido, colorKey, true);
+  }
+
+  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo);
   if (!tipoAcb) return null;
   const { ancho, alto, fondo } = _medidas_mm(it);
-  const grosor = grosorOverride || 19;
-  const colorKey = colorOverride || 'grafito';
+  // Sin ancho no se empareja: el ancho es LO QUE MANDA en el precio del casco.
+  // Elegir "el más parecido" sin conocerlo es poner un precio a dedo.
+  if (ancho == null) return null;
+  const grosor = o.grosor || 19;
   let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosor && c.precios && c.precios[colorKey] != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosor && _precio_color(c) != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
@@ -95,9 +157,30 @@ const _match_acb = (it, tipoOverride, colorOverride, grosorOverride) => {
       + (fondo ? Math.abs((c.fondo || 0) - fondo) : 0);
     if (d < bd) { bd = d; best = c; }
   }
-  const precio = best.precios[colorKey] ?? _precio_color(best)?.precio ?? 0;
-  const colorFinal = best.precios[colorKey] != null ? colorKey : (_precio_color(best)?.color || colorKey);
-  return { ...best, _base: precio, _precio: precio * PUNTO, _color: colorFinal, _colorLbl: COLOR_LBL[colorFinal] || colorFinal };
+  return _valorar(best, colorKey, false);
+};
+
+/** Busca cascos por texto libre, para elegirlos a mano desde la línea.
+ *
+ * Existe porque los desplegables de tipo/color/grosor obligan a saberse el
+ * nombre exacto del tipo ACB. Cuando una línea sale «sin equivalencia», lo que
+ * hace falta es poder escribir «alto balda 900» y elegir.
+ */
+const buscarCascos = (texto, colorProyecto, limite = 40) => {
+  const q = (texto || '').trim().toLowerCase();
+  if (q.length < 2) return [];
+  const palabras = q.split(/\s+/);
+  const puntua = (c) => {
+    const heno = `${c.tipo} ${c.ancho} ${c.alto} ${c.grosor} ${c.gama || ''}`.toLowerCase();
+    return palabras.every(p => heno.includes(p)) ? heno.length : -1;
+  };
+  return CASCOS
+    .map(c => ({ c, s: puntua(c) }))
+    .filter(x => x.s >= 0 && _precio_color(x.c) != null)
+    .sort((a, b) => a.s - b.s)
+    .slice(0, limite)
+    .map(x => _valorar(x.c, colorProyecto || COLOR_CASCO_DEFECTO, true))
+    .filter(Boolean);
 };
 
 // ── Destinos de pedido ───────────────────────────────────────────────────────
@@ -192,9 +275,27 @@ export default function ProformaImporter({ esMaster }) {
   const BISAGRA = { blum: 3.07, emuca: 1.01 };
   const [marcaCaj, setMarcaCaj] = useState('blum');
   const [marcaBis, setMarcaBis] = useState('blum');
-  const P_DEFAULT = { desc1: 50, desc2: 28, bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, manoObra: 0, margen: 0 };
+  // LOS DESCUENTOS NACEN VACÍOS. Los mete el master a mano (CLAUDE.md, regla 5):
+  // son la tarifa que ha negociado él con el proveedor, no una constante del
+  // programa. Venían con 50 y 28 puestos, y un descuento que aparece solo se
+  // lee como un dato del sistema — cuando nadie lo ha confirmado para ESTA
+  // proforma. Vacíos, el coste sale a tarifa completa y el aviso ámbar de más
+  // abajo lo dice a gritos; ese aviso es lo que sostiene esta decisión.
+  const P_DEFAULT = { desc1: '', desc2: '', bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, manoObra: 0, margen: 0, colorCasco: COLOR_CASCO_DEFECTO };
   const [p, setP] = useState(() => {
-    try { const s = JSON.parse(localStorage.getItem('alvic_costes') || 'null'); return s ? { ...P_DEFAULT, ...s } : P_DEFAULT; } catch { return P_DEFAULT; }
+    try {
+      const s = JSON.parse(localStorage.getItem('alvic_costes') || 'null');
+      if (!s) return P_DEFAULT;
+      // El 50 y el 28 de antes SE GUARDARON en el navegador el primer día —el
+      // efecto que persiste `p` escribe en cuanto se monta—, así que volverían
+      // como si los hubiera tecleado alguien. Se limpian UNA vez, y solo ellos:
+      // la mano de obra y el margen sí los escribió el master y se quedan.
+      if (!localStorage.getItem('alvic_costes_dto_limpiado')) {
+        delete s.desc1; delete s.desc2;
+        localStorage.setItem('alvic_costes_dto_limpiado', '1');
+      }
+      return { ...P_DEFAULT, ...s };
+    } catch { return P_DEFAULT; }
   });
   const setNum = useCallback((k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) })), []);
   const cambiarMarcaCaj = (m) => { setMarcaCaj(m); setP(prev => ({ ...prev, cajon: HERRAJE[m].cajon, gaveta: HERRAJE[m].gaveta })); };
@@ -265,7 +366,7 @@ export default function ProformaImporter({ esMaster }) {
       .map((it, idx) => {
         const origIdx = items.indexOf(it);
         const ov = overrides[origIdx] || {};
-        const acb = _match_acb(it, ov.tipo || null, ov.color || null, ov.grosor || null);
+        const acb = _match_acb(it, ov, p.colorCasco);
         const precioAcb = acb ? (Number(acb._precio) || 0) : 0;
         // UNIDADES: una linea de 2 muebles cuesta el doble. Antes no se
         // multiplicaba en ningun sitio (ni casco, ni herraje, ni mano de obra),
@@ -327,6 +428,11 @@ export default function ProformaImporter({ esMaster }) {
     const regletas = items.filter((it, i) => !deletedRows.has(i) && /^REG |REGLETA|COPETE|ZOCALO|ZÓCALO/i.test(it.descripcion || ''));
     const totPuertas = rows.reduce((a, r) => a + (r.puertas || 0) * (r._uds || 1), 0);
     const sinMatch = rows.filter(r => r.esMueble && !r._acb).length;
+    // Líneas valoradas en un color distinto al del proyecto porque ese casco no
+    // existe en ese color. Antes pasaba EN SILENCIO y por eso salían proformas
+    // con unas líneas en Antracita y otras en Roble. El precio cambia con el
+    // color, así que esto no puede quedarse callado.
+    const colorSustituido = rows.filter(r => r._acb && r._acb._colorSustituido);
     const herrajesEsp = rows.filter(r => r._herrajeEsp);
     const mo = Number(p.manoObra) || 0;
     const margen = Number(p.margen) || 0;
@@ -348,7 +454,7 @@ export default function ProformaImporter({ esMaster }) {
       ? `−${[d1, d2].filter(Boolean).map(x => `${x}%`).join(' −')} · queda el ${(facCasco * 100).toFixed(1)}%`
       : '';
 
-    return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, herrajesEsp, dtoTexto,
+    return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, colorSustituido, herrajesEsp, dtoTexto,
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
              puertas, costados, regletas, costePuertas, pm2 };
   }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas]);
@@ -707,6 +813,29 @@ export default function ProformaImporter({ esMaster }) {
                 }
               </div>
 
+              {/* COLOR DEL CASCO, para toda la proforma. Estaba escrito a pelo
+                  dentro del emparejador («grafito») y no había forma de saber
+                  cuál era ni de cambiarlo: cada línea que no existía en ese
+                  color se buscaba otro por su cuenta y en silencio. */}
+              <div className="flex items-center gap-3 mb-3 flex-wrap">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Color del casco (toda la proforma)</span>
+                  <select
+                    value={p.colorCasco || COLOR_CASCO_DEFECTO}
+                    onChange={e => setP(prev => ({ ...prev, colorCasco: e.target.value }))}
+                    className="px-2 py-1.5 border-2 border-indigo-200 rounded-lg text-sm font-bold"
+                  >
+                    {Object.entries(COLOR_LBL).map(([k, v]) => (
+                      <option key={k} value={k}>{v}{k === COLOR_CASCO_DEFECTO ? ' (por defecto)' : ''}</option>
+                    ))}
+                  </select>
+                </label>
+                <span className="text-[10px] text-slate-400 max-w-[280px] leading-tight">
+                  Es el color de TODOS los cascos. En una línea suelta se puede cambiar
+                  desde «Elegir casco».
+                </span>
+              </div>
+
               {/* Herraje */}
               <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <span className="text-[11px] font-black uppercase tracking-wide text-slate-600">Herraje (set + fondo)</span>
@@ -851,6 +980,7 @@ export default function ProformaImporter({ esMaster }) {
                       onDestino={(v) => setDestinoLinea(prev => ({ ...prev, [r._origIdx]: v }))}
                       onDescripcion={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, descripcion: v } : x))}
                       onCod={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, cod: v } : x))}
+                      colorProyecto={p.colorCasco}
                     />
                   ))}
                 </tbody>
@@ -918,7 +1048,17 @@ export default function ProformaImporter({ esMaster }) {
                   </button>
                 )}
               </div>
-              {calc.sinMatch > 0 && <div className="text-red-600"><b>{calc.sinMatch}</b> mueble(s) sin equivalencia ACB — revísalos.</div>}
+              {calc.sinMatch > 0 && <div className="text-red-600"><b>{calc.sinMatch}</b> mueble(s) sin equivalencia ACB — elígeles el casco en su línea (botón «Elegir casco»).</div>}
+              {/* El cambio de color NO puede pasar callado: el precio del casco
+                  depende del color, y una proforma con líneas en dos colores
+                  distintos es una proforma con dos precios distintos. */}
+              {calc.colorSustituido?.length > 0 && (
+                <div className="text-amber-700">
+                  <b>{calc.colorSustituido.length}</b> mueble(s) NO existen en{' '}
+                  <b>{COLOR_LBL[p.colorCasco] || p.colorCasco}</b> y se han valorado en otro color:{' '}
+                  {[...new Set(calc.colorSustituido.map(r => r._acb._colorLbl))].join(', ')}. Revísalos.
+                </div>
+              )}
             </div>
 
             {/* Editor de pedido de puertas */}
@@ -943,11 +1083,17 @@ export default function ProformaImporter({ esMaster }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod }) {
+function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto }) {
   const [editando, setEditando] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
-  const colorActual = override.color || (r._acb ? r._acb._color : 'grafito');
+  const colorActual = override.color || (r._acb ? r._acb._color : (colorProyecto || COLOR_CASCO_DEFECTO));
   const grosorActual = override.grosor || (r._acb ? r._acb.grosor : 19);
+  // Resultados de la barra de búsqueda de la línea. Se calcula aquí y no en el
+  // padre para no recorrer el catálogo por cada fila de la tabla.
+  const encontrados = useMemo(
+    () => (editando ? buscarCascos(busqueda, colorProyecto) : []),
+    [editando, busqueda, colorProyecto]);
 
   return (
     <tr className={`border-t border-slate-100 ${r._herrajeEsp ? 'bg-orange-50' : ''}`}>
@@ -987,10 +1133,44 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
       </td>
       <td className="px-2 py-1.5 text-slate-600 min-w-[160px]">
         {editando ? (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-[230px]">
+            {/* BARRA DE BÚSQUEDA. Los desplegables de abajo obligan a saberse el
+                nombre exacto del tipo ACB; aquí basta con escribir «alto balda
+                900». Es la vía para las líneas que salen «sin equivalencia». */}
+            <input
+              autoFocus
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar casco: «alto balda 900», «columna horno»…"
+              className="border-2 border-indigo-300 rounded px-1.5 py-1 text-[10px] w-full"
+            />
+            {busqueda.trim().length >= 2 && (
+              <div className="max-h-40 overflow-y-auto border border-slate-200 rounded bg-white">
+                {encontrados.length === 0 && (
+                  <div className="px-1.5 py-1 text-[10px] text-slate-400">Ningún casco con esas palabras.</div>
+                )}
+                {encontrados.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      // Se fija el casco CONCRETO. A partir de aquí esta línea
+                      // no se vuelve a adivinar: la eligió una persona.
+                      onOverride({ cascoId: c.id, tipo: c.tipo, grosor: c.grosor });
+                      setBusqueda(''); setEditando(false);
+                    }}
+                    className="block w-full text-left px-1.5 py-1 text-[10px] hover:bg-indigo-50 border-b border-slate-100 last:border-0"
+                  >
+                    <b>{c.tipo} {c.ancho}</b> · {c._colorLbl} {c.grosor}
+                    {c._colorSustituido && (
+                      <span className="text-amber-600"> (no hay en {COLOR_LBL[c._colorPedido] || c._colorPedido})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
             <select
               value={tipoActual}
-              onChange={e => onOverride({ tipo: e.target.value })}
+              onChange={e => onOverride({ tipo: e.target.value, cascoId: null })}
               className="border border-slate-200 rounded px-1 py-0.5 text-[10px] w-full"
             >
               <option value="">— tipo —</option>
@@ -1014,20 +1194,47 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
                 <option value={19}>19mm</option>
               </select>
             </div>
-            <button onClick={() => setEditando(false)} className="text-[10px] font-bold text-indigo-600 flex items-center gap-0.5">
-              <Check size={10} /> Aplicar
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setEditando(false)} className="text-[10px] font-bold text-indigo-600 flex items-center gap-0.5">
+                <Check size={10} /> Aplicar
+              </button>
+              {override.cascoId && (
+                <button onClick={() => { onOverride({ cascoId: null, tipo: null, color: null, grosor: null }); setEditando(false); }}
+                  className="text-[10px] font-bold text-slate-400 hover:text-slate-600">
+                  Volver al automático
+                </button>
+              )}
+            </div>
           </div>
         ) : (
-          <div className="flex items-center gap-1 group">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs">
               {r._acb
-                ? `${r._acb.tipo} ${r._acb.ancho} · ${r._acb._colorLbl} ${r._acb.grosor}`
+                ? <>
+                    {r._acb.tipo} {r._acb.ancho} ·{' '}
+                    {/* Si el color NO es el del proyecto, se ve. Antes se
+                        cambiaba solo y la línea lo enseñaba como si fuera lo
+                        pedido — de ahí la mezcla de Antracita y Roble. */}
+                    <span className={r._acb._colorSustituido ? 'text-amber-700 font-bold' : ''}
+                      title={r._acb._colorSustituido
+                        ? `Este casco no existe en ${COLOR_LBL[r._acb._colorPedido] || r._acb._colorPedido}: valorado en ${r._acb._colorLbl}.`
+                        : undefined}>
+                      {r._acb._colorSustituido && '⚠ '}{r._acb._colorLbl} {r._acb.grosor}
+                    </span>
+                    {r._acb._elegido && <span className="text-[9px] text-indigo-500 font-bold ml-1">(elegido)</span>}
+                  </>
                 : (r.esMueble ? <span className="text-red-500 font-bold">sin equivalencia</span> : '—')}
             </span>
+            {/* SIEMPRE visible. Antes solo aparecía al pasar el ratón por
+                encima, así que en una tablet no existía y en el ordenador no
+                lo encontraba nadie. */}
             {r.esMueble && (
-              <button onClick={() => setEditando(true)} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-indigo-600">
-                <Edit2 size={10} />
+              <button onClick={() => setEditando(true)}
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                  r._acb
+                    ? 'text-slate-500 border-slate-200 hover:bg-slate-50'
+                    : 'text-white bg-red-500 border-red-500 hover:bg-red-600'}`}>
+                <Edit2 size={9} /> {r._acb ? 'Cambiar' : 'Elegir casco'}
               </button>
             )}
           </div>
