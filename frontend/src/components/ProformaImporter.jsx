@@ -541,15 +541,26 @@ export default function ProformaImporter({ esMaster }) {
           ? (Number(moPropia) || 0)
           : (acb ? moGeneral * uds : 0);
 
-        // Puertas: por defecto m2 x precio/m2 (con las medidas del editor si se
-        // han corregido); si la linea tiene precio propio, manda ese.
+        // PUERTAS: area x €/m2 x unidades. Tres escalones, de menos a mas
+        // manda, y cada uno anula al anterior:
+        //
+        //   1. el €/m2 general, el de arriba;
+        //   2. el €/m2 DE ESA PUERTA, si se le ha puesto uno en el editor —
+        //      «el precio por metro cuadrado de cada una de ellas»: no todas
+        //      las puertas de una cocina son del mismo material;
+        //   3. el importe en euros tecleado en la propia linea, que es el
+        //      precio final de esa linea y se respeta tal cual.
         const esPuerta = idxPuertaPorOrig[origIdx] !== undefined;
         let puertaDeLinea = 0;
+        let pm2DeLinea = 0;
         if (esPuerta) {
           const ovp = puertasEditadas[idxPuertaPorOrig[origIdx]] || {};
           const altoP = Number(ovp.alto ?? it.largo) || 0;
           const anchoP = Number(ovp.ancho ?? it.ancho) || 0;
-          if (altoP > 0 && anchoP > 0 && pm2 > 0) puertaDeLinea = (altoP / 1000) * (anchoP / 1000) * pm2 * uds;
+          pm2DeLinea = Number(ovp.pm2) > 0 ? Number(ovp.pm2) : pm2;
+          if (altoP > 0 && anchoP > 0 && pm2DeLinea > 0) {
+            puertaDeLinea = (altoP / 1000) * (anchoP / 1000) * pm2DeLinea * uds;
+          }
         }
         const puertaPropia = puertaLinea[origIdx];
         if (puertaPropia !== undefined && puertaPropia !== '') puertaDeLinea = Number(puertaPropia) || 0;
@@ -561,7 +572,7 @@ export default function ProformaImporter({ esMaster }) {
           _herrajeEsp: herrajeEsp,
           _pvpAlvic: Number(it.pvp) || 0,
           _totalAlvic: Number(it.total) || 0,
-          _mo: moDeLinea, _puerta: puertaDeLinea, _esPuerta: esPuerta,
+          _mo: moDeLinea, _puerta: puertaDeLinea, _esPuerta: esPuerta, _pm2: pm2DeLinea,
           _coste: casco + herraje + moDeLinea + puertaDeLinea,
           _destino: destinoLinea[origIdx] || _destino_auto(it, acb),
           _pedir: !excluidas[origIdx],
@@ -616,9 +627,14 @@ export default function ProformaImporter({ esMaster }) {
       ? `−${[d1, d2].filter(Boolean).map(x => `${x}%`).join(' −')} · queda el ${(facCasco * 100).toFixed(1)}%`
       : '';
 
+    // ¿Hay alguna puerta con precio por m² propio? El resumen tiene que
+    // decirlo: poner «12€/m²» cuando la mitad van a otro precio es enseñar un
+    // dato que no es el que se ha cobrado.
+    const pm2Propios = Object.values(puertasEditadas || {}).some(o => Number(o?.pm2) > 0);
+
     return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, colorSustituido, herrajesEsp, dtoTexto,
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
-             puertas, costados, regletas, costePuertas, pm2 };
+             puertas, costados, regletas, costePuertas, pm2, pm2Propios };
   }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas]);
 
   // ── Anchos de columna: se arrastran y se recuerdan ────────────────────────
@@ -828,9 +844,14 @@ export default function ProformaImporter({ esMaster }) {
         const ov = puertasEditadas[i] || {};
         const alto = Number(ov.alto ?? it.largo) || 0;
         const ancho = Number(ov.ancho ?? it.ancho) || 0;
-        const area = alto > 0 && ancho > 0 ? ((alto / 1000) * (ancho / 1000)).toFixed(4) : '—';
-        const total = calc.pm2 > 0 && area !== '—' ? (parseFloat(area) * calc.pm2).toFixed(2) : '—';
-        return [i + 1, it.cod, it.descripcion, it.cantidad || 1, alto || '—', ancho || '—', area, calc.pm2 || '—', total];
+        const uds = Number(it.cantidad) || 1;
+        // Área POR UNIDADES y €/m² de cada puerta: lo mismo que se cobra en la
+        // proforma. Un pedido que no cuadra con lo cobrado es un pedido mal
+        // hecho, y el proveedor sirve lo que pone en el pedido.
+        const area = alto > 0 && ancho > 0 ? ((alto / 1000) * (ancho / 1000) * uds).toFixed(4) : '—';
+        const pm2Propio = Number(ov.pm2) > 0 ? Number(ov.pm2) : calc.pm2;
+        const total = pm2Propio > 0 && area !== '—' ? (parseFloat(area) * pm2Propio).toFixed(2) : '—';
+        return [i + 1, it.cod, it.descripcion, uds, alto || '—', ancho || '—', area, pm2Propio || '—', total];
       }),
       [],
       ['', '', '', '', '', '', '', 'TOTAL PUERTAS:', calc.costePuertas.toFixed(2) + ' €'],
@@ -1263,7 +1284,16 @@ export default function ProformaImporter({ esMaster }) {
                   <b>{eur(calc.totCasco)}</b>
                 </div>
                 <div className="flex justify-between"><span className="text-slate-500">Herraje (bisagras, patas, colgadores, guías)</span><b>{eur(calc.totHerr)}</b></div>
-                {calc.costePuertas > 0 && <div className="flex justify-between"><span className="text-slate-500">Puertas ({calc.pm2}€/m²)</span><b>{eur(calc.costePuertas)}</b></div>}
+                {calc.costePuertas > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">
+                      Puertas ({calc.pm2Propios
+                        ? (calc.pm2 > 0 ? `${calc.pm2}€/m² y precios propios` : 'precios propios')
+                        : `${calc.pm2}€/m²`})
+                    </span>
+                    <b>{eur(calc.costePuertas)}</b>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-slate-100 pt-1"><span className="text-slate-600 font-bold">Materiales</span><b>{eur(calc.totMat + calc.costePuertas)}</b></div>
                 <div className="flex justify-between"><span className="text-emerald-600 font-bold">+ Mano de obra{calc.nMuebles > 0 ? ` (${calc.nMuebles} muebles)` : ''}</span><b className="text-emerald-700">{eur(calc.totMo)}</b></div>
               </div>
@@ -1539,7 +1569,9 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
               value={puertaLinea ?? ''}
               placeholder={r._puerta ? r._puerta.toFixed(2) : '0'}
               onChange={e => onPuerta(e.target.value)}
-              title="Vacío = área × precio/m². Escribe un precio para esta puerta."
+              title={r._pm2 > 0
+                ? `Vacío = área × ${r._pm2} €/m². Escribe aquí el importe final de esta puerta.`
+                : 'Sin €/m² todavía: ponlo arriba, o uno propio para esta puerta en el editor.'}
               className={`w-full min-w-0 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
             />
           )}
@@ -1564,7 +1596,12 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                         ocultarImportes, onExportar }) {
   // Con el candado echado el precio/m2 y el total en euros no se ensenan; las
   // medidas si, que es lo que se corrige aqui.
-  const verEuros = pm2 > 0 && !ocultarImportes;
+  //
+  // Basta con que UNA puerta tenga su propio €/m2 para que haya euros que
+  // ensenar, aunque el general este vacio: si no, se podia poner precio a una
+  // puerta y no verlo por ninguna parte.
+  const hayPm2Propio = Object.values(puertasEditadas || {}).some(o => Number(o?.pm2) > 0);
+  const verEuros = (pm2 > 0 || hayPm2Propio) && !ocultarImportes;
   const setMedida = (i, campo, val) => {
     setPuertasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
@@ -1629,7 +1666,12 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
       {puertas.length > 0 && (
         <div>
           <div className="text-[10px] font-black text-slate-600 uppercase mb-1.5">
-            Puertas ({puertas.length}) {verEuros && <span className="text-amber-700">— {pm2}€/m² → Total: {costePuertas.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>}
+            Puertas ({puertas.length}) {verEuros && (
+              <span className="text-amber-700">
+                — {hayPm2Propio ? (pm2 > 0 ? `${pm2}€/m² y precios propios` : 'precios propios') : `${pm2}€/m²`}
+                {' '}→ Total: {costePuertas.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+              </span>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -1642,6 +1684,11 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                   <th className="px-2 py-1 text-center">Alto mm</th>
                   <th className="px-2 py-1 text-center">Ancho mm</th>
                   <th className="px-2 py-1 text-right">Área m²</th>
+                  {/* €/m² DE ESTA PUERTA. Vacío = el general de arriba. No
+                      todas las puertas de una cocina son del mismo material, y
+                      con un precio único la de cristal y la lacada valían
+                      igual. */}
+                  {!ocultarImportes && <th className="px-2 py-1 text-center">€/m² propio</th>}
                   {verEuros && <th className="px-2 py-1 text-right">Total €</th>}
                 </tr>
               </thead>
@@ -1650,14 +1697,20 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                   const ov = puertasEditadas[i] || {};
                   const alto = Number(ov.alto ?? it.largo) || 0;
                   const ancho = Number(ov.ancho ?? it.ancho) || 0;
-                  const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) : null;
-                  const total = area && pm2 > 0 ? area * pm2 : null;
+                  const uds = Number(it.cantidad) || 1;
+                  // POR UNIDADES, igual que en los costados y que en la tabla
+                  // de arriba. Sin esto, una línea de dos puertas enseñaba aquí
+                  // la mitad de lo que cobraba, y el total de la cabecera —que
+                  // sí las contaba— no cuadraba con la suma de esta columna.
+                  const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : null;
+                  const pm2Propio = Number(ov.pm2) > 0 ? Number(ov.pm2) : pm2;
+                  const total = area && pm2Propio > 0 ? area * pm2Propio : null;
                   return (
                     <tr key={i} className="border-t border-amber-100">
                       <td className="px-2 py-1">{i + 1}</td>
                       <td className="px-2 py-1 font-mono">{it.cod}</td>
                       <td className="px-2 py-1 max-w-[160px] truncate" title={it.descripcion}>{it.descripcion}</td>
-                      <td className="px-2 py-1 text-center">{it.cantidad || 1}</td>
+                      <td className="px-2 py-1 text-center">{uds}</td>
                       <td className="px-2 py-1 text-center">
                         <input type="number" value={ov.alto ?? (it.largo || '')} onChange={e => setMedida(i, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
                       </td>
@@ -1665,6 +1718,19 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                         <input type="number" value={ov.ancho ?? (it.ancho || '')} onChange={e => setMedida(i, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
                       </td>
                       <td className="px-2 py-1 text-right font-mono">{area ? area.toFixed(4) : '—'}</td>
+                      {!ocultarImportes && (
+                        <td className="px-2 py-1 text-center">
+                          <input
+                            type="number" step="any"
+                            value={ov.pm2 ?? ''}
+                            placeholder={pm2 > 0 ? String(pm2) : '—'}
+                            onChange={e => setMedida(i, 'pm2', e.target.value)}
+                            title="Precio por m² de ESTA puerta. Vacío = el general de arriba."
+                            className={`w-16 px-1 py-0.5 border rounded text-center text-xs ${
+                              Number(ov.pm2) > 0 ? 'border-amber-400 font-bold text-amber-700' : 'border-amber-200 text-slate-500'}`}
+                          />
+                        </td>
+                      )}
                       {verEuros && <td className="px-2 py-1 text-right font-bold">{total ? eur(total) : '—'}</td>}
                     </tr>
                   );
