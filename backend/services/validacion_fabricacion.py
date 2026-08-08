@@ -32,6 +32,26 @@ de apertura sin decidir). Avisa lo que conviene mirar pero no impide cortar.
 Si todo bloqueara, se saltaría el circuito entero a la primera urgencia.
 """
 
+# La medición de obra se carga a mano, no con un `from services import`.
+#
+# Este módulo es CÁLCULO PURO y se prueba cargándolo por ruta, suelto, sin
+# levantar el paquete `services` —que arrastra la autenticación y exige un
+# JWT_SECRET—. Un import normal lo ataría a todo eso y dejaría de poder
+# probarse. `medicion_obra` tampoco importa nada, así que se carga igual de
+# suelto y las dos formas funcionan.
+#
+# No es un respaldo silencioso: si el fichero no estuviera, las dos vías
+# fallarían y se enteraría todo el mundo.
+try:
+    from services import medicion_obra           # dentro del ERP
+except Exception:                                # cargado suelto, por ruta
+    import importlib.util as _ilu
+    import os as _os
+    _ruta = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "medicion_obra.py")
+    _spec = _ilu.spec_from_file_location("_medicion_obra_de_validacion", _ruta)
+    medicion_obra = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(medicion_obra)
+
 # Estados de una comprobación.
 OK = "ok"
 FALTA = "falta"           # el dato deberia estar y no esta
@@ -168,6 +188,41 @@ def _codigos_tarifa(proyecto):
                   {"tipo": "linea", "ids": sin[:5]})
 
 
+def _medidas_de_obra(proyecto):
+    """Las medidas CRÍTICAS de la obra, confirmadas.
+
+    Es el enganche con `medicion_obra`. Sin esto, el expediente podía decir
+    «listo para fabricar» mientras el hueco de la columna seguía siendo el que
+    se tecleó el día de la venta, sin que nadie hubiera ido con el metro.
+
+    Una obra SIN medidas apuntadas no se bloquea: hay proyectos que no las
+    llevan y bloquearlos por no tener una lista que nadie ha empezado sería
+    parar la casa entera. Se dice que no hay, y ya.
+    """
+    medidas = (proyecto or {}).get("medidas") or []
+    if not medidas:
+        return _check("medidas_obra", "MEDIDAS", "Medidas de obra confirmadas",
+                      NO_APLICA, False, "Esta obra no lleva medidas apuntadas.")
+
+    rev = medicion_obra.revisar(medidas)
+    sin_confirmar = rev["bloqueos"]
+    if not sin_confirmar:
+        # Las diferencias entre lo de la venta y lo de obra se cuentan aunque
+        # estén confirmadas: no bloquean —la obra no siempre mide lo que decía
+        # el presupuesto— pero explican por qué el mueble no es el que se
+        # presupuestó, y eso hay que poder verlo antes de cortar.
+        difs = len(rev["discrepancias"])
+        detalle = f"{difs} medida(s) no coinciden con las de la venta." if difs else ""
+        return _check("medidas_obra", "MEDIDAS", "Medidas de obra confirmadas",
+                      OK, False, detalle)
+
+    nombres = ", ".join(m["etiqueta"] for m in sin_confirmar[:5])
+    return _check("medidas_obra", "MEDIDAS", "Medidas de obra confirmadas",
+                  FALTA, True,
+                  f"{len(sin_confirmar)} medida(s) crítica(s) sin confirmar: {nombres}",
+                  {"tipo": "medidas", "claves": [m["clave"] for m in sin_confirmar[:5]]})
+
+
 def _cambios_aprobados(proyecto, pendientes_cambios=0):
     if not pendientes_cambios:
         return _check("cambios", "FABRICACIÓN", "Cambios aprobados", OK)
@@ -186,6 +241,7 @@ def validar(proyecto, pendientes_cambios=0):
         _sentido_apertura(proyecto),
         _acabados(proyecto),
         _codigos_tarifa(proyecto),
+        _medidas_de_obra(proyecto),
         _cambios_aprobados(proyecto, pendientes_cambios),
     ]
 
@@ -193,7 +249,14 @@ def validar(proyecto, pendientes_cambios=0):
     bloqueos = [c for c in checks if c["bloquea"]]
     # Pendiente = no está bien pero tampoco corta. Se cuenta aparte para que el
     # resumen no dé por bueno lo que solo está "avisado".
-    pendientes = [c for c in checks if c["estado"] != OK and not c["bloquea"]]
+    #
+    # NO_APLICA no es pendiente NI correcto: no hay nada que mirar. Contarlo
+    # como pendiente dejaba un proyecto entero sin poder decir nunca «listo
+    # para fabricar» por una comprobación que no venía al caso — y quien lee
+    # «1 pendiente» sin encontrar qué falta, deja de leer el resumen.
+    pendientes = [c for c in checks
+                  if c["estado"] not in (OK, NO_APLICA) and not c["bloquea"]]
+    no_aplican = [c for c in checks if c["estado"] == NO_APLICA]
 
     grupos = {}
     for c in checks:
@@ -203,6 +266,7 @@ def validar(proyecto, pendientes_cambios=0):
         "checks": checks,
         "grupos": grupos,
         "correctas": correctas,
+        "noAplican": len(no_aplican),
         "pendientes": len(pendientes),
         "bloqueos": len(bloqueos),
         "puedeLiberar": not bloqueos,

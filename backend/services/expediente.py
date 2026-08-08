@@ -49,6 +49,10 @@ RESPONSABLE = {
     "apertura": "Diseñador",
     "acabados": "Comercial",
     "codigos": "Comercial",
+    # Las medidas de obra las toma y las confirma quien va con el metro. No es
+    # el diseñador desde la oficina: por eso tiene responsable propio y no cae
+    # en «Sin asignar», que es como se queda una tarea sin dueño.
+    "medidas_obra": "Montador",
     "cambios": "Gerencia",
 }
 
@@ -95,7 +99,10 @@ def acciones_pendientes(validacion, cambios_sin_aprobar=None):
     """
     acciones = []
     for c in (validacion or {}).get("checks", []):
-        if c.get("estado") == "ok":
+        # «Correcto» no da tarea, y «no aplica» tampoco: no hay nada que
+        # resolver. Una tarea que dice «esta obra no lleva medidas apuntadas»
+        # es ruido, y el ruido es lo que hace que se deje de leer la lista.
+        if c.get("estado") in ("ok", "no_aplica"):
             continue
         acciones.append({
             "clave": c.get("clave"),

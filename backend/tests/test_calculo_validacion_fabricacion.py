@@ -164,3 +164,54 @@ def test_un_cambio_sin_aprobar_bloquea_la_liberacion(vf):
 def test_los_checks_van_agrupados_para_la_pantalla(vf):
     r = vf.validar(P())
     assert set(r["grupos"]) == {"MEDIDAS", "DISEÑO", "FABRICACIÓN"}
+
+
+# ─── Las medidas de obra mandan sobre el «listo para fabricar» ──────────────
+#
+# Es el enganche con `medicion_obra`. Sin el, el expediente podia decir «listo
+# para fabricar» mientras el hueco de la columna seguia siendo el que se tecleo
+# el dia de la venta, sin que nadie hubiera ido con el metro. Y eso no da
+# ningun error: da un mueble que no entra.
+
+_HUECO = {"clave": "hueco_columna", "etiqueta": "Hueco de la columna",
+          "introducida": 3245, "tomada": 3238, "critica": True, "unidad": "mm"}
+
+
+def test_una_medida_critica_sin_confirmar_no_deja_bajar_al_taller(vf):
+    r = vf.validar({**P(), "medidas": [_HUECO]})
+    assert r["puedeLiberar"] is False
+    assert any("Hueco de la columna" in m["detalle"] for m in r["motivos"])
+
+
+def test_confirmada_ya_deja_bajar_al_taller(vf):
+    r = vf.validar({**P(), "medidas": [{**_HUECO, "confirmada": 3238}]})
+    assert r["puedeLiberar"] is True
+
+
+def test_una_diferencia_confirmada_se_sigue_contando(vf):
+    """No bloquea —la obra no siempre mide lo que decia el presupuesto— pero
+    explica por que el mueble no es el que se presupuesto, y eso hay que poder
+    verlo ANTES de cortar."""
+    r = vf.validar({**P(), "medidas": [{**_HUECO, "confirmada": 3238}]})
+    check = next(c for c in r["checks"] if c["clave"] == "medidas_obra")
+    assert "no coinciden" in check["detalle"]
+
+
+def test_una_obra_sin_medidas_apuntadas_no_se_bloquea(vf):
+    """Hay proyectos que no las llevan. Bloquearlos por no tener una lista que
+    nadie ha empezado seria parar la casa entera."""
+    r = vf.validar(P())
+    check = next(c for c in r["checks"] if c["clave"] == "medidas_obra")
+    assert check["estado"] == vf.NO_APLICA
+    assert r["puedeLiberar"] is True
+
+
+def test_lo_que_NO_APLICA_no_cuenta_como_pendiente(vf):
+    """CANDADO. Contarlo como pendiente dejaba un proyecto entero sin poder
+    decir nunca «listo para fabricar» por una comprobacion que no venia al
+    caso — y quien lee «1 pendiente» y no encuentra que falta, deja de leer el
+    resumen."""
+    r = vf.validar(P())
+    assert r["pendientes"] == 0
+    assert r["noAplican"] == 1
+    assert "Listo para fabricar" in r["resumen"]
