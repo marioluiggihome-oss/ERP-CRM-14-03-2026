@@ -49,6 +49,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap } from 'lucide-react';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
+import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -1197,14 +1198,18 @@ export default function AIRenderStudio({ state, setState }) {
   //
   // Ahora se lee PRIMERO el croquis. El detector ya sabía hacerlo —su prompt
   // dice «las medidas escritas mandan»—, sólo que nadie le pasaba el croquis.
-  const deducirDistribucion = async (motivos) => {
+  const deducirDistribucion = async (motivos, fallos) => {
+    const anota = (via, e) => {
+      motivos.push(`${via}: ${e?.message || 'no se pudo leer'}`);
+      if (fallos) fallos.push(e);
+    };
     const croquis = originalRef || refImage;
     if (croquis) {
       try {
         const dataUrl = await imageToDataUrl(croquis);
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success) return dj.distribucion;
-      } catch (e) { motivos.push(`del croquis: ${e?.message || 'no se pudo leer'}`); }
+      } catch (e) { anota('del croquis', e); }
     }
     const img = currentImage();
     if (img) {
@@ -1212,15 +1217,29 @@ export default function AIRenderStudio({ state, setState }) {
         const dataUrl = await imageToDataUrl(img);
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success) return dj.distribucion;
-      } catch (e) { motivos.push(`del render: ${e?.message || 'no se pudo leer'}`); }
+      } catch (e) { anota('del render', e); }
     }
     if ((description || '').trim()) {
       try {
         const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
         if (dt?.success) return dt.distribucion;
-      } catch (e) { motivos.push(`de la descripción: ${e?.message || 'no se pudo leer'}`); }
+      } catch (e) { anota('de la descripción', e); }
     }
     return null;
+  };
+
+  // SI LAS TRES VÍAS FALLAN IGUAL, EL PROBLEMA NO ES NINGUNA DE LAS TRES.
+  //
+  // Se vio en pantalla: «del croquis: Failed to fetch · del render: Failed to
+  // fetch · de la descripción: Failed to fetch». Tres veces la misma nada,
+  // cuando lo que decía en realidad es que el servidor no estaba contestando
+  // —normalmente porque se estaba reiniciando tras una actualización—. El dato
+  // estaba ahí y lo tapaba la propia lista.
+  const explicarFallo = async (motivos, fallos) => {
+    if (!motivos.length) return '';
+    const todosDeRed = fallos.length > 0 && fallos.every(esFalloDeRed);
+    if (todosDeRed) return ` ${await diagnosticarRed(fallos[0])}`;
+    return ` (${motivos.join(' · ')})`;
   };
 
   // BOCETO EN PERSPECTIVA a lápiz: lo que el master pidió enseñando sus
@@ -1232,13 +1251,13 @@ export default function AIRenderStudio({ state, setState }) {
     if (editing) return;
     setEditing(true); setError(null); setAvisoGeom(null);
     try {
-      const motivos = [];
-      const distribucion = await deducirDistribucion(motivos);
+      const motivos = [], fallos = [];
+      const distribucion = await deducirDistribucion(motivos, fallos);
       if (!distribucion) {
         const falta = !medidas.ancho
           ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
           : '';
-        setError(`No he podido deducir la distribución${motivos.length ? ` (${motivos.join(' · ')})` : ''}.${falta}`);
+        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
         return;
       }
       const pr = await postJson('/api/estudio-cocinas/perspectiva', {
@@ -1282,15 +1301,15 @@ export default function AIRenderStudio({ state, setState }) {
       // Aquí había una COPIA de esa lógica, y con el orden viejo: medía el
       // render aunque hubiera un croquis acotado encima de la mesa. Ahora todas
       // las vías pasan por `deducirDistribucion`.
-      const motivos = [];
-      const distribucion = await deducirDistribucion(motivos);
+      const motivos = [], fallos = [];
+      const distribucion = await deducirDistribucion(motivos, fallos);
       if (!distribucion) {
         // El alzado se dibuja con medidas REALES: si no se han podido deducir, lo
         // que hay que decir es DÓNDE se escriben, no solo que no salió.
         const falta = !medidas.ancho
           ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
           : ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").';
-        setError(`No he podido deducir la distribución${motivos.length ? ` (${motivos.join(' · ')})` : ''}.${falta}`);
+        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
         return;
       }
       const ar = await postJson('/api/estudio-cocinas/alzado', {
@@ -1417,10 +1436,10 @@ export default function AIRenderStudio({ state, setState }) {
     const img = currentImage(); if (!img || editing) return;
     setEditing(true); setError(null);
     try {
-      const motivos = [];
-      const distribucion = await deducirDistribucion(motivos);
+      const motivos = [], fallos = [];
+      const distribucion = await deducirDistribucion(motivos, fallos);
       if (!distribucion) {
-        setError(`No se pudo deducir la distribución para dibujar los planos${motivos.length ? ` (${motivos.join(' · ')})` : ''}.`);
+        setError(`No se pudo deducir la distribución para dibujar los planos.${await explicarFallo(motivos, fallos)}`);
         return;
       }
       const extra = await generarPlanosExactos(distribucion);

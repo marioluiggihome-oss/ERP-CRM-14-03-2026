@@ -7,6 +7,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check } from 'lucide-react';
 import { authHeaders } from '../services/api';
+import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
 
 const CASCOS = Array.isArray(_CASCOS_RAW) ? _CASCOS_RAW : [];
@@ -342,21 +343,20 @@ const ANCHO_COD_PLEGADA = 48;
 const ANCHO_MINIMO_COLUMNA = 30;
 const CLAVE_ANCHOS = 'alvic_costes_anchos_columna';
 
-// Diagnóstico de red
+// Diagnóstico de red. La cuenta la lleva `services/diagnostico.js`, que es el
+// mismo fallo en todas las pantallas y estaba escrito aquí y en el Estudio 3D.
+// Lo único propio de esta pantalla es la sonda —una ruta que solo existe en la
+// versión nueva— y el consejo de subir menos páginas cuando el envío se corta
+// con el servidor vivo.
 const _diagnostico = async (e) => {
-  const motivo = e?.message || 'error de red';
-  if (!API_URL) return 'La aplicación no tiene configurada la dirección del servidor (REACT_APP_BACKEND_URL).';
-  if (window.location.protocol === 'https:' && String(API_URL).startsWith('http:'))
-    return `El navegador bloquea la llamada: la web va por HTTPS y el servidor está en HTTP (${API_URL}).`;
-  const probar = async (url, opts) => {
-    try { const r = await fetch(url, opts); let d = {}; try { d = await r.json(); } catch { d = {}; } return { estado: r.status, detail: d.detail || '' }; }
-    catch (err) { return { estado: 0, detail: err?.message || 'error de red' }; }
-  };
-  const ping = await probar(`${API_URL}/api/`, { method: 'GET' });
-  if (ping.estado === 0) return `El servidor no responde (${motivo}). Está caído o terminando de desplegarse.`;
-  const sondeo = await probar(`${API_URL}/api/cascos/proforma/ping`, { headers: { ...authHeaders() } });
-  if (sondeo.estado === 404) return 'El backend sirve la versión anterior. Espera a que termine de desplegarse (1-2 min).';
-  return `El envío del PDF corta la conexión (${motivo}). El servidor responde bien. Prueba a subir solo las páginas con la tabla de artículos.`;
+  const texto = await diagnosticarRed(e, {
+    sonda: '/api/cascos/proforma/ping',
+    headers: { ...authHeaders() },
+  });
+  if (esFalloDeRed(e) && /no llega hasta él/.test(texto)) {
+    return `${texto} Con un PDF grande, prueba a subir solo las páginas con la tabla de artículos.`;
+  }
+  return texto;
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
