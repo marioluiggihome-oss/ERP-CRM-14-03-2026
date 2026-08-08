@@ -890,6 +890,28 @@ export default function AIRenderStudio({ state, setState }) {
     return path;
   };
 
+  // ¿Estos bytes son una imagen? Se mira la FIRMA del fichero, que es lo único
+  // que no miente: el `Content-Type` lo pone quien sirve el fichero y puede
+  // llegar mal, pero un PNG siempre empieza por «\x89PNG».
+  const pareceUnaImagen = async (blob) => {
+    if (!blob || blob.size < 12) return false;
+    // El tipo declarado, si es de imagen, ya vale: no hace falta leer nada.
+    if ((blob.type || '').startsWith('image/')) return true;
+    try {
+      const b = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+      const es = (pos, ...bytes) => bytes.every((v, i) => b[pos + i] === v);
+      return (
+        es(0, 0x89, 0x50, 0x4E, 0x47) ||                    // PNG
+        es(0, 0xFF, 0xD8, 0xFF) ||                          // JPEG
+        es(0, 0x47, 0x49, 0x46, 0x38) ||                    // GIF
+        es(0, 0x42, 0x4D) ||                                // BMP
+        (es(0, 0x52, 0x49, 0x46, 0x46) && es(8, 0x57, 0x45, 0x42, 0x50))  // WEBP
+      );
+    } catch {
+      return false;
+    }
+  };
+
   // Descarga la imagen del render (o de una miniatura) como dataURL, para
   // guardar/PDF. Sirve tanto para dataURL directas como para el proxy con token.
   const imageToDataUrl = async (path) => {
@@ -905,7 +927,19 @@ export default function AIRenderStudio({ state, setState }) {
       throw new Error(`No se pudo descargar la imagen del render (${resp.status}).`);
     }
     const blob = await resp.blob();
-    if (!blob.type.startsWith('image/')) {
+    // SE MIRAN LOS BYTES, NO EL `Content-Type`.
+    //
+    // Antes bastaba con que el tipo declarado empezara por `image/`, y eso
+    // rechazaba renders PERFECTAMENTE BUENOS: la foto se sirve desde Drive con
+    // el mime que Drive diga, y cuando llega flojo (`application/octet-stream`,
+    // o vacío) el navegador la pinta igual en el <img> —por eso se veía en
+    // pantalla— pero esta comprobación la tiraba con un «vuelve a generar el
+    // render» que no arreglaba nada, porque el render ya estaba bien.
+    //
+    // La comprobación sigue haciendo su trabajo: un JSON de error, que es lo
+    // que originalmente se colaba como si fuera la imagen, tampoco tiene firma
+    // de imagen y sigue cayendo aquí.
+    if (!(await pareceUnaImagen(blob))) {
       throw new Error('Lo descargado no es una imagen; vuelve a generar el render.');
     }
     return await new Promise((res, rej) => {
@@ -1113,9 +1147,30 @@ export default function AIRenderStudio({ state, setState }) {
   // Genera los planos EXACTOS (planta acotada + alzado alámbrico) a partir de una
   // distribución detectada. Devuelve las láminas listas para el historial. Si un
   // endpoint falla, propaga el error (con motivo) en lugar de tragárselo.
-  // Saca la distribución del render o, si no puede, de la descripción escrita.
-  // Devuelve null y deja el motivo puesto: quien llama decide qué hacer.
+  // Saca la distribución de dónde estén las medidas de verdad.
+  //
+  // EL ORDEN IMPORTA, Y ESTABA AL REVÉS. Antes se leía SIEMPRE el render, y el
+  // render es una interpretación: el croquis del cliente lleva escritas las
+  // cotas (60, 100, 70+60+70, alto 70, 15 de pata) y un modelo de imagen no
+  // sabe leer números — los dibuja «parecidos». Así que la cadena era
+  //
+  //     croquis acotado → render (IA) → medir el render (IA) → alzado
+  //
+  // y las únicas medidas reales se perdían en el primer paso. Por eso el
+  // alzado no cuadraba con el croquis que había pasado el master: el alzado
+  // nunca había visto el croquis.
+  //
+  // Ahora se lee PRIMERO el croquis. El detector ya sabía hacerlo —su prompt
+  // dice «las medidas escritas mandan»—, sólo que nadie le pasaba el croquis.
   const deducirDistribucion = async (motivos) => {
+    const croquis = originalRef || refImage;
+    if (croquis) {
+      try {
+        const dataUrl = await imageToDataUrl(croquis);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) return dj.distribucion;
+      } catch (e) { motivos.push(`del croquis: ${e?.message || 'no se pudo leer'}`); }
+    }
     const img = currentImage();
     if (img) {
       try {
@@ -1189,26 +1244,11 @@ export default function AIRenderStudio({ state, setState }) {
       // distribución") saltaba directo al catch y la descripción no se probaba
       // nunca. Ahora cada vía se intenta por separado y solo se falla si fallan
       // las dos.
-      let distribucion = null;
+      // Aquí había una COPIA de esa lógica, y con el orden viejo: medía el
+      // render aunque hubiera un croquis acotado encima de la mesa. Ahora todas
+      // las vías pasan por `deducirDistribucion`.
       const motivos = [];
-      const img = currentImage();
-      if (img) {
-        try {
-          const dataUrl = await imageToDataUrl(img);
-          const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-          if (dj?.success) distribucion = dj.distribucion;
-        } catch (e) {
-          motivos.push(`del render: ${e?.message || 'no se pudo leer'}`);
-        }
-      }
-      if (!distribucion && (description || '').trim()) {
-        try {
-          const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
-          if (dt?.success) distribucion = dt.distribucion;
-        } catch (e) {
-          motivos.push(`de la descripción: ${e?.message || 'no se pudo leer'}`);
-        }
-      }
+      const distribucion = await deducirDistribucion(motivos);
       if (!distribucion) {
         // El alzado se dibuja con medidas REALES: si no se han podido deducir, lo
         // que hay que decir es DÓNDE se escriben, no solo que no salió.
@@ -1300,7 +1340,10 @@ export default function AIRenderStudio({ state, setState }) {
       let exactosOk = false;
       if (tipo3d === 'cocina') {
         try {
-          const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+          // Del CROQUIS primero: es el papel que lleva las cotas escritas.
+          const _mot = [];
+          const _dist = await deducirDistribucion(_mot);
+          const dj = _dist ? { success: true, distribucion: _dist } : null;
           if (dj?.success && dj.distribucion) {
             const extra = await generarPlanosExactos(dj.distribucion);
             if (extra.length) {
@@ -1339,10 +1382,13 @@ export default function AIRenderStudio({ state, setState }) {
     const img = currentImage(); if (!img || editing) return;
     setEditing(true); setError(null);
     try {
-      const dataUrl = await imageToDataUrl(img);
-      const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-      if (!dj?.success || !dj.distribucion) { setError(dj?.detail || 'No se pudo deducir la distribución del render para dibujar los planos.'); return; }
-      const extra = await generarPlanosExactos(dj.distribucion);
+      const motivos = [];
+      const distribucion = await deducirDistribucion(motivos);
+      if (!distribucion) {
+        setError(`No se pudo deducir la distribución para dibujar los planos${motivos.length ? ` (${motivos.join(' · ')})` : ''}.`);
+        return;
+      }
+      const extra = await generarPlanosExactos(distribucion);
       if (!extra.length) { setError('No se pudieron generar los planos técnicos (respuesta vacía del servicio).'); return; }
       // Los planos técnicos NO sustituyen a la propuesta de diseño 3D en la vista
       // principal: se añaden como láminas en el historial para poder abrirlos.

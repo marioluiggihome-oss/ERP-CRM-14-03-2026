@@ -107,12 +107,28 @@ def _bloque_vista_alambrica():
     return fuente[ini:fin]
 
 
+def _bloque_deducir_distribucion():
+    """El codigo que deduce la distribucion.
+
+    El 08/08 se saco de `generarVistaAlambrica` a una funcion propia, porque
+    estaba COPIADO en cuatro sitios y arreglar uno dejaba los otros tres
+    midiendo el render en vez del croquis. La promesa que protege la prueba de
+    abajo no ha cambiado: solo se ha mudado de sitio.
+    """
+    with open(ESTUDIO_3D, encoding="utf-8") as f:
+        fuente = f.read()
+    ini = fuente.index("const deducirDistribucion")
+    return fuente[ini:fuente.index("\n  };", ini)]
+
+
 def test_si_falla_el_render_todavia_se_prueba_la_descripcion():
     """CANDADO: `postJson` lanza al recibir un error del servidor. Sin un try
     propio, un 422 del render se llevaba por delante la vía de la descripción,
     que podría haber funcionado."""
-    bloque = _bloque_vista_alambrica()
-    detectar = bloque.index("detect-distribucion")
+    bloque = _bloque_deducir_distribucion()
+    # `rindex`: ahora hay DOS llamadas a detect-distribucion (croquis y render).
+    # La que importa aqui es la ultima antes de la via del texto.
+    detectar = bloque.rindex("detect-distribucion")
     desde_texto = bloque.index("distribucion-desde-texto")
     # Entre una llamada y otra tiene que haber un catch: si no, la segunda es
     # inalcanzable cuando la primera devuelve error.
