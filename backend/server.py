@@ -97,6 +97,7 @@ from routes.render_packs import router as render_packs_router
 from routes.propdata import router as propdata_router
 from routes.armarios2 import router as armarios2_router
 from routes.armarios_alzado import router as armarios_alzado_router  # alzado vectorial acotado de armario
+from routes.almacen import router as almacen_router  # existencias, reservas y plan de compra
 from routes.cocinasai import router as cocinasai_router
 from routes.estudio_cocinas import router as estudio_cocinas_router  # Estudio Cocinas — diseño asistido completo
 from routes.reports import router as reports_router
@@ -278,6 +279,7 @@ api_router.include_router(render_packs_router)
 api_router.include_router(propdata_router)
 api_router.include_router(armarios2_router)
 api_router.include_router(armarios_alzado_router)
+api_router.include_router(almacen_router)
 api_router.include_router(cocinasai_router)
 api_router.include_router(estudio_cocinas_router)
 api_router.include_router(reports_router)
