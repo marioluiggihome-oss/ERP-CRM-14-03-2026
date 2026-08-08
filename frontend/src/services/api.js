@@ -791,6 +791,53 @@ export const projectsAPI = {
 
 
 // ============================================
+// EXPEDIENTE ÚNICO DE LA OBRA
+// ============================================
+//
+// El backend YA decide qué se manda: a quien no puede ver importes no se le
+// envía la clave `importes` (no va a cero: no va). Aquí no se enmascara nada
+// ni se rellenan huecos — si un dato no viene, es que no tiene que venir.
+
+const _errorDe = async (r, porDefecto) => {
+  const e = await r.json().catch(() => ({}));
+  return new Error(e.detail || porDefecto);
+};
+
+export const expedienteAPI = {
+  _h: () => {
+    const token = getToken();
+    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  },
+
+  get: async (projectId) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/expediente`, { headers: expedienteAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo abrir el expediente');
+    return r.json();
+  },
+
+  validacion: async (projectId) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/validacion`, { headers: expedienteAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo comprobar el proyecto');
+    return r.json();
+  },
+
+  compararFabricacion: async (projectId) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/comparar-fabricacion`, { headers: expedienteAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo comparar con fabricación');
+    return r.json();
+  },
+
+  aprobarCambio: async (projectId, indice) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/cambios/${indice}/aprobar`, {
+      method: 'POST', headers: expedienteAPI._h()
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo aprobar el cambio');
+    return r.json();
+  },
+};
+
+
+// ============================================
 // INVOICES (FACTURACIÓN)
 // ============================================
 

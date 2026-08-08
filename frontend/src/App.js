@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import GlobalEventReminder from './components/GlobalEventReminder';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList } from 'lucide-react';
 import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
 import "./App.css";
 
@@ -49,6 +49,7 @@ const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
 const LuiggiFloor = lazy(() => import('./components/LuiggiFloor'));
 const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
+const Expediente = lazy(() => import('./components/Expediente')); // Expediente único de la obra (tablet de 8")
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
@@ -1331,6 +1332,22 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Expediente de obra — pensado para la tablet de 8" en obra.
+                        Sin casilla propia: va para todos salvo que se apague a
+                        mano, porque el filtro está en el servidor — a quien no
+                        puede ver importes NO se le mandan, no es que se tapen
+                        en pantalla. */}
+                    {state.currentUser?.canAccessExpediente !== false && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'expediente'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'expediente' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="expediente-nav-btn"
+                      >
+                        <ClipboardList size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Expediente</span>
+                      </button>
+                    )}
+
                     {/* G. Comercial / Facturación - requiere permiso explícito (la casilla manda) */}
                     {state.currentUser?.canAccessInvoices === true && (
                       <button
@@ -1663,6 +1680,9 @@ const App = () => {
             {state.currentTab === 'gastos' && <ErrorBoundary><GestionGastos currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'luiggifloor' && <ErrorBoundary><LuiggiFloor currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'command' && <ErrorBoundary><CommandCenter currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'expediente' && state.currentUser?.canAccessExpediente !== false && (
+              <ErrorBoundary><Expediente state={state} /></ErrorBoundary>
+            )}
             {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
               <Digitalizador state={state} setState={setState} />
             )}

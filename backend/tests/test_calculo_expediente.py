@@ -86,6 +86,37 @@ def test_al_mando_las_lineas_van_enteras(ex):
     assert ex.limpiar_lineas(lineas, MASTER)[0]["totalPvp"] == 500
 
 
+def test_una_linea_de_verdad_pierde_su_precio(ex):
+    """CANDADO. Una linea NO se llama `totalPvp`: se llama `unitPrice` y
+    `totalPrice` (`models/schemas.py`). Mirando solo los nombres de los totales
+    del proyecto, a una linea real no se le quitaba NADA y el precio viajaba
+    entero a quien no puede verlo."""
+    linea = {"productCode": "B60", "productName": "Bajo 60", "quantity": 2,
+             "unitPrice": 120.5, "totalPrice": 241.0, "customWidth": 600}
+    limpia = ex.limpiar_lineas([linea], MONTADOR)[0]
+    assert "unitPrice" not in limpia and "totalPrice" not in limpia, (
+        "el precio de la linea viaja a quien no puede verlo")
+    # Lo que NO es dinero se queda: el montador necesita la medida.
+    assert limpia["customWidth"] == 600 and limpia["quantity"] == 2
+
+
+def test_los_puntos_tambien_se_van(ex):
+    """Punto x coeficiente = precio. Dejar los puntos es dejar el precio puesto
+    en otra unidad."""
+    limpia = ex.limpiar_lineas([{"code": "B60", "unitPoints": 40, "totalPoints": 80}],
+                               MONTADOR)[0]
+    assert "unitPoints" not in limpia and "totalPoints" not in limpia
+
+
+def test_el_descuento_se_quita_se_llame_como_se_llame(ex):
+    """En el proyecto el campo es `descuentoAplicado`; en documentos viejos,
+    `descuento`. Los descuentos no salen en nada que vea un cliente (regla 5),
+    asi que se van los dos."""
+    limpia = ex.limpiar_lineas([{"code": "B60", "descuento": 12,
+                                 "descuentoAplicado": 12}], MONTADOR)[0]
+    assert "descuento" not in limpia and "descuentoAplicado" not in limpia
+
+
 def test_el_permiso_usa_los_mismos_flags_que_el_resto_del_ERP(ex):
     """Dos definiciones de "mando" acabarian separandose con el tiempo."""
     for flag in ("isAdmin", "isResponsableDelegacion", "isGerente",
@@ -148,3 +179,19 @@ def test_la_cabecera_trae_lo_que_se_lee_de_pie_en_obra(ex):
     assert exp["cabecera"]["cliente"] == "María García"
     assert exp["cabecera"]["proyecto"] == "P-001"
     assert exp["etapas"][0] == "VENTA" and exp["etapas"][-1] == "CIERRE"
+
+
+def test_la_referencia_de_la_obra_sale_en_la_cabecera(ex):
+    """El campo del proyecto se llama `internalReference`. Mirando solo
+    `reference`, la referencia salia SIEMPRE vacia y nadie sabia por que."""
+    exp = ex.montar({**PROYECTO, "internalReference": "COC-2026-14"}, usuario=MONTADOR)
+    assert exp["cabecera"]["referencia"] == "COC-2026-14"
+
+
+def test_el_descuento_del_proyecto_llega_al_que_puede_verlo(ex):
+    """Al master si se le manda: es suyo. Lo que no puede es salir hacia
+    fuera."""
+    exp = ex.montar({**PROYECTO, "descuentoAplicado": 8.0}, usuario=MASTER)
+    assert exp["importes"]["descuentoAplicado"] == 8.0
+    assert "importes" not in ex.montar({**PROYECTO, "descuentoAplicado": 8.0},
+                                       usuario=TIENDA)

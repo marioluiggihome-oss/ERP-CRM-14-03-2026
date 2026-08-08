@@ -52,7 +52,25 @@ RESPONSABLE = {
     "cambios": "Gerencia",
 }
 
-CAMPOS_DE_DINERO = ("totalPvp", "totalCoste", "margen", "totalConIVA", "descuento")
+# Los totales del proyecto. `descuentoAplicado` es el nombre real del campo en
+# el proyecto (`models/schemas.py`); `descuento` se mantiene porque hay líneas
+# y documentos antiguos que lo traen así, y quitar de más aquí no rompe nada.
+CAMPOS_DE_DINERO = ("totalPvp", "totalCoste", "margen", "totalConIVA",
+                    "descuento", "descuentoAplicado")
+
+# Lo que lleva de dinero UNA LÍNEA de presupuesto, que no son los mismos
+# nombres que los totales del proyecto: una línea trae `unitPrice`/`totalPrice`.
+# Con solo los nombres de los totales, `limpiar_lineas` no quitaba nada de una
+# línea y el precio viajaba entero.
+#
+# Los PUNTOS también se van: punto × coeficiente = precio. Dejarlos es dejar el
+# precio puesto en otra unidad, y quien no puede ver importes tampoco tiene que
+# poder deducirlos.
+CAMPOS_DE_DINERO_LINEA = CAMPOS_DE_DINERO + (
+    "unitPrice", "totalPrice", "price", "precio", "pvp",
+    "cost", "coste", "importe", "subtotal", "total",
+    "unitPoints", "totalPoints", "puntos",
+)
 
 
 def puede_ver_importes(usuario):
@@ -64,9 +82,9 @@ def puede_ver_importes(usuario):
     return bool(usuario and any(usuario.get(f) for f in FLAGS_CON_IMPORTES))
 
 
-def _sin_dinero(d):
+def _sin_dinero(d, campos=CAMPOS_DE_DINERO_LINEA):
     """Copia sin los campos de importe. No los pone a 0: los QUITA."""
-    return {k: v for k, v in (d or {}).items() if k not in CAMPOS_DE_DINERO}
+    return {k: v for k, v in (d or {}).items() if k not in campos}
 
 
 def acciones_pendientes(validacion, cambios_sin_aprobar=None):
@@ -132,7 +150,11 @@ def montar(proyecto, validacion=None, cambios_pendientes=None, usuario=None):
     cabecera = {
         "cliente": p.get("customerName") or p.get("clientCode") or "Sin cliente",
         "proyecto": p.get("budgetNumber") or p.get("id") or "",
-        "referencia": p.get("reference") or "",
+        # El campo del proyecto se llama `internalReference`; `reference` se
+        # mira primero por si viene de otro sitio. Sin el segundo, la
+        # referencia de la obra salía SIEMPRE vacía en la cabecera y nadie
+        # sabía por qué.
+        "referencia": p.get("reference") or p.get("internalReference") or "",
         "estado": p.get("status") or "borrador",
     }
 
