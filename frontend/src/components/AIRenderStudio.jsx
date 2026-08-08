@@ -1031,6 +1031,16 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Construye el prompt de la LÁMINA TÉCNICA según el tipo de proyecto. Cada tipo
   // tiene su propia composición y sus reglas (la campana solo aplica a cocina).
+  // Lo que este botón entrega DE VERDAD según el tipo de proyecto. El motor
+  // vectorial acotado sólo existe para cocina; para lo demás sale una lámina
+  // de presentación sin cotas. Rotularlo siempre «Alzado + planta + medidas»
+  // era prometer medidas que no llegaban.
+  const etiquetaFicha = (tid) => (
+    tid === 'cocina' ? 'Alzado + planta + medidas'
+      : tid === 'armario' ? 'Alzado acotado → Armarios'
+        : 'Lámina de presentación (sin medidas)'
+  );
+
   const fichaPromptPorTipo = (tid) => {
     // REGLA DE ORO (ver CLAUDE.md): un modelo de IMAGEN nunca escribe cotas — las
     // inventa. Esta lámina es solo la PARTE GRÁFICA (vistas limpias sin números);
@@ -1186,6 +1196,23 @@ export default function AIRenderStudio({ state, setState }) {
       setError('Indica arriba el ANCHO REAL de la estancia (cm) antes de generar la ficha: sin esa escala las cotas no serían medidas reales.');
       return;
     }
+    // EL BOTÓN NO PUEDE PROMETER LO QUE NO VA A DAR. El motor vectorial
+    // acotado de más abajo sólo está modelado para cocina; en un armario o un
+    // baño esta ruta se lo saltaba y devolvía únicamente una lámina de IA —una
+    // imagen bonita, sin una sola cota— con el mismo rótulo «Alzado + planta +
+    // medidas». El master pulsaba y no entendía por qué «no hacía el alzado».
+    //
+    // El armario SÍ tiene alzado acotado, pero necesita sus medidas reales
+    // (ancho/alto/fondo/módulos), que viven en el configurador de Armarios y
+    // no aquí. Así que se dice dónde está, en vez de entregar un sustituto.
+    if (tipo3d === 'armario') {
+      setError('El alzado acotado del armario se genera en el Presupuestador de Armarios (botón PLANOS): necesita el ancho, alto, fondo y número de módulos reales, y aquí no están. Desde este botón sólo saldría una lámina sin cotas.');
+      return;
+    }
+    // Para baño y «otro mueble» la lámina de presentación SÍ sirve y se sigue
+    // generando: lo que no puede es venderse como un alzado acotado. El rótulo
+    // del botón cambia (ver `etiquetaFicha`) y el resultado se nombra por lo
+    // que es. Quitar la lámina habría sido cargarse algo que funcionaba.
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -3344,8 +3371,13 @@ export default function AIRenderStudio({ state, setState }) {
                     ▦ Esquema
                   </button>
                   <button onClick={generarFichaTecnica} disabled={editing}
+                    title={tipo3d === 'cocina'
+                      ? 'Planta y alzado acotados (vectoriales) + lámina de presentación'
+                      : tipo3d === 'armario'
+                        ? 'El alzado acotado del armario se genera en el Presupuestador de Armarios (botón PLANOS), que es donde están sus medidas'
+                        : 'Lámina de presentación. El alzado y la planta acotados sólo están modelados para cocina'}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
-                    {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} Alzado + planta + medidas
+                    {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} {etiquetaFicha(tipo3d)}
                   </button>
                   {tipo3d === 'cocina' && (
                   <button onClick={generarPlanosTecnicos} disabled={editing}

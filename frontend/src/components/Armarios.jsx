@@ -625,6 +625,12 @@ const Armarios = ({ state, setState }) => {
   const [showPlanosModal, setShowPlanosModal] = useState(false);
   const [elevationDrawing, setElevationDrawing] = useState(null);
   const [floorPlanDrawing, setFloorPlanDrawing] = useState(null);
+  // Alzado TÉCNICO: el vectorial acotado que dibuja el backend con las medidas
+  // reales (frente + interior con puertas abiertas + planta + piezas de corte).
+  const [technicalElevation, setTechnicalElevation] = useState(null);
+  const [technicalLoading, setTechnicalLoading] = useState(false);
+  const [technicalError, setTechnicalError] = useState(null);
+  const [technicalBoceto, setTechnicalBoceto] = useState(false);
   const [showRenderModal, setShowRenderModal] = useState(false);
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderImage, setRenderImage] = useState(null);
@@ -2207,9 +2213,19 @@ const Armarios = ({ state, setState }) => {
     }
   };
 
-  // ALZADO acotado: vista frontal a escala con anchura/altura totales,
-  // anchura de cada puerta y, módulo a módulo, la altura desde el suelo de
-  // cada balda/cajón/barra/maletero (en cm).
+  // ESQUEMA del frente: anchura/altura totales y anchura de cada puerta, que
+  // son cotas REALES, más una representación del reparto interior.
+  //
+  // OJO CON LO QUE ESTE DIBUJO **NO** ES: el reparto interior se pinta en
+  // filas iguales, una por elemento, porque aquí no se calculan alturas. Hasta
+  // el 08/08 cada fila llevaba además un rótulo «NNcm» sacado de esa división
+  // en partes iguales, y eso era una cota inventada: en el armario por defecto
+  // ponía la barra de colgar a 192 cm del suelo cuando está a 122, y una balda
+  // a 0 cm, o sea en el suelo. Se ha quitado el rótulo, no el dibujo: como
+  // esquema del orden de los elementos sirve; como cota, mentía.
+  //
+  // Las alturas reales las da el ALZADO TÉCNICO (`generateTechnicalElevation`),
+  // que las calcula en el backend desde las medidas de fabricación.
   const generateElevationDrawing = () => {
     const { width, height, modules, doorType, depth } = wardrobeConfig;
     const numDoors = wardrobeConfig.numDoors || modules;
@@ -2270,11 +2286,9 @@ const Armarios = ({ state, setState }) => {
           ctx.lineTo(mx + modW - 3, yBot - 3);
           ctx.stroke();
         }
-        // Altura desde el suelo hasta el borde inferior del elemento (cm)
-        const heightFromFloorCm = Math.round((height - (yBot - oy) / px) / 10);
-        ctx.fillStyle = '#0369a1';
-        ctx.font = '8px sans-serif';
-        ctx.fillText(`${heightFromFloorCm}cm`, mx + modW - 26, yBot - 2);
+        // Aquí iba un rótulo «NNcm» con la altura desde el suelo. Salía de
+        // dividir el módulo en filas iguales, no de ninguna medida: se ha
+        // quitado. Las alturas reales van en el alzado técnico.
       });
     }
 
@@ -2305,12 +2319,48 @@ const Armarios = ({ state, setState }) => {
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 13px sans-serif';
     ctx.fillText(
-      `ALZADO ACOTADO — ${width}×${height}×${depth}mm — ${numDoors} puertas ${doorType} — ${modules} módulos`,
+      `ESQUEMA DE FRENTE — ${width}×${height}×${depth}mm — ${numDoors} puertas ${doorType} — ${modules} módulos`,
       ox, canvas.height - 12
+    );
+    // Que el propio dibujo diga lo que no es: si alguien lo imprime y lo baja
+    // al taller, tiene que ver ahí mismo que el reparto interior es orientativo.
+    ctx.fillStyle = '#b45309';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(
+      'Reparto interior orientativo (sin escala). Alturas reales: ver ALZADO TÉCNICO.',
+      ox, canvas.height - 28
     );
 
     return canvas.toDataURL('image/png');
   };
+
+  // ALZADO TÉCNICO acotado (backend). Frente + interior con las puertas
+  // abiertas + planta, con las cotas calculadas desde las medidas reales de
+  // fabricación y la lista de piezas de corte al pie.
+  //
+  // Si algo no cabe, el backend NO lo aprieta para que quepa: devuelve el
+  // módulo marcado y el motivo. Eso llega hasta aquí y se enseña — un aviso
+  // que se queda en el servidor es un módulo que baja al taller igual.
+  const generateTechnicalElevation = useCallback(async (boceto = false) => {
+    setTechnicalLoading(true);
+    setTechnicalError(null);
+    try {
+      const data = await armariosAPI.alzado(wardrobeConfig, moduleConfigs, {
+        nombre_cliente: customerName || '',
+        referencia: projectRef || '',
+        boceto: !!boceto,
+      });
+      setTechnicalElevation(data);
+    } catch (e) {
+      // Sin dibujo previo colgando: si falla, se limpia. Dejar el alzado
+      // anterior en pantalla tras cambiar las medidas haría creer que el plano
+      // corresponde a la configuración actual, y no.
+      setTechnicalElevation(null);
+      setTechnicalError(e?.message || 'No se pudo generar el alzado técnico.');
+    } finally {
+      setTechnicalLoading(false);
+    }
+  }, [wardrobeConfig, moduleConfigs, customerName, projectRef]);
 
   // PLANTA acotada: vista en planta (vista superior) a escala, con ancho y
   // profundidad totales.
@@ -2856,6 +2906,8 @@ const Armarios = ({ state, setState }) => {
             onClick={() => {
               setElevationDrawing(generateElevationDrawing());
               setFloorPlanDrawing(generateFloorPlanDrawing());
+              setTechnicalBoceto(false);
+              generateTechnicalElevation(false);
               setShowPlanosModal(true);
             }}
             className="flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
@@ -4433,8 +4485,8 @@ const Armarios = ({ state, setState }) => {
                   <Hash size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black uppercase tracking-wider">PLANTA Y ALZADO ACOTADOS</h2>
-                  <p className="text-slate-200 text-xs font-medium mt-0.5">Medidas reales: dimensiones, puertas y altura de cada elemento</p>
+                  <h2 className="text-xl font-black uppercase tracking-wider">PLANOS DEL ARMARIO</h2>
+                  <p className="text-slate-200 text-xs font-medium mt-0.5">El alzado técnico lleva las cotas reales; el esquema de frente, solo el orden de los elementos</p>
                 </div>
               </div>
               <button
@@ -4445,9 +4497,89 @@ const Armarios = ({ state, setState }) => {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* ALZADO TÉCNICO — el que lleva cotas de verdad. Va primero
+                  porque es el que se baja al taller. */}
+              <div>
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <h3 className="font-bold text-slate-700">
+                    Alzado técnico acotado
+                    <span className="ml-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
+                      medidas reales
+                    </span>
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { const b = !technicalBoceto; setTechnicalBoceto(b); generateTechnicalElevation(b); }}
+                      disabled={technicalLoading}
+                      className={`text-sm font-bold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50 ${
+                        technicalBoceto
+                          ? 'bg-slate-800 text-white border-slate-800'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                      title="Mismo dibujo y mismas cotas, con trazo de lápiz"
+                    >
+                      ✎ Boceto
+                    </button>
+                    {technicalElevation?.alzadoBase64 && (
+                      <a
+                        href={technicalElevation.alzadoBase64}
+                        download="armario-alzado-tecnico.png"
+                        className="flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700"
+                      >
+                        <Download size={14} /> Descargar
+                      </a>
+                    )}
+                  </div>
+                </div>
+                {technicalLoading && (
+                  <p className="text-sm text-slate-400">Calculando cotas y dibujando…</p>
+                )}
+                {/* El fallo se enseña, no se traga: el 422 del backend viene con
+                    instrucciones («falta el ancho»), y eso es lo que hay que leer. */}
+                {!technicalLoading && technicalError && (
+                  <div className="border border-amber-300 bg-amber-50 rounded-lg p-4 text-sm text-amber-900">
+                    <p className="font-bold mb-1">No se ha dibujado el alzado técnico</p>
+                    <p>{technicalError}</p>
+                  </div>
+                )}
+                {!technicalLoading && !technicalError && technicalElevation?.alzadoBase64 && (
+                  <>
+                    <img
+                      src={technicalElevation.alzadoBase64}
+                      alt="Alzado técnico acotado del armario"
+                      className="w-full border border-slate-200 rounded-lg"
+                    />
+                    {!!technicalElevation.problemas?.length && (
+                      <div className="mt-2 border border-red-300 bg-red-50 rounded-lg p-3 text-sm text-red-900">
+                        {technicalElevation.problemas.map((p, i) => (
+                          <p key={i}><strong>Módulo {p.modulo}:</strong> {p.motivo}</p>
+                        ))}
+                      </div>
+                    )}
+                    {!!technicalElevation.avisos?.length && (
+                      <div className="mt-2 border border-amber-300 bg-amber-50 rounded-lg p-3 text-sm text-amber-900">
+                        {technicalElevation.avisos.map((a, i) => <p key={i}>{a}</p>)}
+                      </div>
+                    )}
+                    {/* Una medida derivada del estándar NO es una medida que
+                        haya dado nadie: se dice, para que no se lea como dato. */}
+                    {!!technicalElevation.derivados?.length && (
+                      <div className="mt-2 border border-slate-200 bg-slate-50 rounded-lg p-3 text-xs text-slate-600">
+                        <p className="font-bold mb-1">Medidas derivadas del estándar (nadie las ha dado):</p>
+                        {technicalElevation.derivados.map((d, i) => <p key={i}>{d}</p>)}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-slate-700">Alzado (vista frontal)</h3>
+                  <h3 className="font-bold text-slate-700">
+                    Esquema de frente
+                    <span className="ml-2 text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5">
+                      reparto interior orientativo
+                    </span>
+                  </h3>
                   {elevationDrawing && (
                     <a
                       href={elevationDrawing}

@@ -1313,6 +1313,26 @@ export const digitalizadorAPI = {
 // ============================================
 
 export const armariosAPI = {
+  // ALZADO VECTORIAL ACOTADO (frente + interior + planta). Lo dibuja el
+  // backend desde las medidas reales: el alzado que se dibujaba en el
+  // navegador repartía el alto en filas iguales y rotulaba esas filas como si
+  // fueran alturas medidas, así que la barra de colgar salía a 192 cm cuando
+  // está a 122. Aquí las cotas salen de `services/armario_geometry.py`.
+  alzado: async (config, moduleConfigs, opciones = {}) => {
+    const response = await fetch(`${API_URL}/api/armarios/alzado`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ config, moduleConfigs, ...opciones })
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      // El 422 trae instrucciones («falta el ancho»): se propaga tal cual en
+      // vez de un «error al generar» que no dice qué hay que tocar.
+      throw new Error((data && (data.detail || data.error)) || 'No se pudo generar el alzado.');
+    }
+    return data;
+  },
+
   // Crear proyecto (la propiedad la fija el backend con el token)
   create: async (project) => {
     const response = await fetch(`${API_URL}/api/armarios/projects`, {
