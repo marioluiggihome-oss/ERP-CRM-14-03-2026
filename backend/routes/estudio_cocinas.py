@@ -175,7 +175,10 @@ class ProyectoBase(BaseModel):
     distribucion_estructurada: Optional[DistribucionEstructurada] = Field(default=None, description="Distribución estructurada")
     con_cotas: Optional[bool] = Field(default=True, description="Dibujar las cotas en el alzado")
     monocromo: Optional[bool] = Field(default=False, description="Vista alámbrica en blanco y negro (estilo CAD)")
-    boceto: Optional[bool] = Field(default=False, description="Trazo a mano alzada (mismo dibujo, mismas cotas)")
+    # Solo lo usa el BOCETO EN PERSPECTIVA. El alzado y la planta se dibujan
+    # siempre a línea recta: son planos de taller, y el temblor los afea y hace
+    # dudar de dónde está cada cosa.
+    boceto: Optional[bool] = Field(default=False, description="Trazo a mano alzada. Solo en el boceto en perspectiva")
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
@@ -671,10 +674,18 @@ async def generar_plano_2d(payload: ProyectoBase):
         from services import planta_cocina as pc
         from services.kitchen_geometry import validar_distribucion, fondo_modulo, es_alto
 
-        # Trazo de lápiz, a juego con el alzado: salen en la MISMA lámina.
-        # Se limpia SIEMPRE en el `finally`: `path.sketch` es global.
-        _boceto = bool(getattr(payload, "boceto", False))
-        matplotlib.rcParams["path.sketch"] = (2.0, 120.0, 16.0) if _boceto else None
+        # LÍNEA RECTA, SIEMPRE. La planta es un plano de taller: se mide con
+        # ella. El trazo temblado la deja «muy distorsionada y muy fea» —
+        # palabras del master— y encima hace dudar de si esa pared está donde
+        # parece. El lápiz se queda para el boceto en perspectiva, que es un
+        # dibujo para enseñar, no para cortar.
+        #
+        # Se pone a None de ENTRADA y no solo en el `finally`: `path.sketch` es
+        # un ajuste global del proceso, así que una petición anterior que lo
+        # dejara puesto haría salir esta temblada sin que nadie lo pidiera y
+        # sin dar ningún error. Se vio: un alzado con el boceto apagado salió
+        # a lápiz.
+        matplotlib.rcParams["path.sketch"] = None
 
         dist = payload.distribucion_estructurada
         if not dist or not dist.paredes:
@@ -1518,11 +1529,11 @@ async def generar_alzado(payload: ProyectoBase):
         # Se usa `path.sketch` (ondulado del trazo) y NO `plt.xkcd()`, que
         # además cambia la tipografía y depende de una fuente que puede no
         # estar instalada en el servidor: las cotas tienen que leerse siempre.
-        _boceto = bool(getattr(payload, "boceto", False))
-        # Se limpia SIEMPRE, aunque no se pida: `path.sketch` es un ajuste
-        # global de matplotlib y una peticion anterior que fallara a medias
-        # podria habérselo dejado puesto.
-        matplotlib.rcParams["path.sketch"] = (2.0, 120.0, 16.0) if _boceto else None
+        # LÍNEA RECTA, SIEMPRE. Ver la nota de la planta: el alzado es un
+        # plano de taller y el temblor lo afea y lo hace dudoso. Se pone a None
+        # de ENTRADA, no solo en el `finally`, porque el ajuste es global del
+        # proceso y una petición anterior podría haberlo dejado puesto.
+        matplotlib.rcParams["path.sketch"] = None
 
         # Vista alámbrica: paleta CAD en blanco y negro puro (estilo TeoWin) cuando
         # se pide `monocromo`; si no, la paleta de color habitual.

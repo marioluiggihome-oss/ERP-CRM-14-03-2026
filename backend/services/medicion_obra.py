@@ -179,6 +179,15 @@ def revisar_una(medida, tolerancia=0):
         "valorParaFabricar": valor_para_fabricar(m),
         "pendiente": pendiente,
         "notas": _txt(m.get("notas")),
+        # QUIÉN Y CUÁNDO viajan siempre, aunque la pantalla no los pinte.
+        # La pantalla devuelve esta misma lista al guardar, así que lo que no
+        # salga de aquí se pierde en el viaje de vuelta: añadir una medida
+        # borraría quién tomó las demás, y sin eso una medida no se puede
+        # preguntar a nadie.
+        "tomadaPor": _txt(m.get("tomadaPor")),
+        "tomadaAt": _txt(m.get("tomadaAt")),
+        "confirmadaPor": _txt(m.get("confirmadaPor")),
+        "confirmadaAt": _txt(m.get("confirmadaAt")),
     }
 
 

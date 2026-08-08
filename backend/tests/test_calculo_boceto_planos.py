@@ -2,36 +2,47 @@
 # Software propietario y confidencial. Ver LICENSE.
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
-"""CANDADO del BOCETO A LAPIZ de los planos vectoriales.
+"""CANDADO del TRAZO de los planos vectoriales.
 
-El master ensenio sus referencias —bocetos a lapiz, con profundidad— y pidio
-que los planos del ERP pudieran salir asi. El trazo es lo UNICO que cambia: los
-mismos modulos, los mismos anchos y las mismas cotas. Si el boceto redibujara
-algo, dejaria de ser el mismo plano y pasaria a ser un dibujo con autoridad de
-diseniador y medidas de nadie.
+LA REGLA CAMBIO, Y LA DIJO EL MASTER MIRANDO SU ALZADO
+------------------------------------------------------
+    «no me gusta lo de los trazos cuando haces el alzado y la planta,
+     prefiero que lo hagas con lineas rectas; queda muy distorsionado y
+     queda muy feo»
+
+Antes esta prueba protegia lo contrario: que el alzado y la planta pudieran
+salir a lapiz. Se construyo asi porque el master habia ensenriado sus
+referencias a mano; visto en su plano de verdad, decidio que no. La prueba no
+se borra —eso dejaria el trazo sin nadie que lo vigile— sino que pasa a
+proteger la regla nueva.
+
+Y la regla nueva tiene una razon, no es un gusto: la planta y el alzado son
+planos de TALLER. Con ellos se corta. Una linea que tiembla no solo afea: hace
+dudar de si esa pared, esa balda o ese hueco estan donde parece. El lapiz se
+queda en el boceto en PERSPECTIVA, que es un dibujo para ensenriar y no lleva
+cotas.
 
 Lo que se protege:
 
-1. LA PLANTA Y EL ALZADO VAN A JUEGO. Salen en la MISMA lamina. Si el lapiz
-   valiera solo para uno, al encender el boceto saldria una hoja con el alzado
-   dibujado a mano y la planta a linea de CAD. `plano-2d` acepto el flag desde
-   el primer dia SIN implementarlo: aceptar y no hacer es peor que no aceptar,
-   porque nadie se entera.
+1. LINEA RECTA EN PLANTA, ALZADO Y ALZADO DE ARMARIO. Los tres son planos con
+   los que se fabrica.
 
-2. EL TRAZO SE LIMPIA SIEMPRE. `path.sketch` es un ajuste GLOBAL de
-   matplotlib, de proceso, no de peticion. Si una peticion lo deja puesto, el
-   SIGUIENTE plano —de otro proyecto, de otro usuario— sale temblado sin que
-   nadie lo haya pedido. Y eso no da error en ningun sitio: solo sale mal. Por
-   eso la limpieza va en `finally` y no al final del `try`.
+2. SE APAGA DE ENTRADA, NO SOLO AL SALIR. `path.sketch` es un ajuste GLOBAL de
+   matplotlib, del proceso, no de la peticion. Limpiarlo solo en el `finally`
+   protege al SIGUIENTE, no a este: si una peticion anterior lo dejo puesto
+   —porque el proceso se corto por medio— este plano sale temblado sin que
+   nadie lo haya pedido y sin dar ningun error. Paso: un alzado con el boceto
+   apagado salio a lapiz.
 
-3. NO SE USA `plt.xkcd()`. Cambia tambien la tipografia y depende de una fuente
-   que puede no estar instalada en el servidor. Las cotas tienen que leerse
-   siempre, incluso cuando el dibujo parece hecho a mano.
+3. NADIE PIDE UN FLAG QUE YA NO SE OBEDECE. Aceptar `boceto` en el alzado y no
+   hacerle caso es peor que no aceptarlo, porque el que lo enciende cree que
+   ha cambiado algo. Ni la pantalla lo manda ni el armario lo declara.
 
-4. EL INTERRUPTOR LLEGA A TODAS LAS VIAS. En la pantalla hay cuatro botones que
-   acaban dibujando el alzado. Si el flag se pasara solo en una, el master lo
-   encenderia y por las otras tres seguiria saliendo a linea limpia sin que
-   nada explicara por que.
+4. EL LAPIZ SIGUE VIVO DONDE TIENE SENTIDO: el boceto en perspectiva.
+
+5. NO SE USA `plt.xkcd()`. Cambia tambien la tipografia y depende de una fuente
+   que puede no estar instalada en el servidor. Una cota que no se lee no es
+   una cota.
 """
 import os
 import re
@@ -40,11 +51,6 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 COCINAS = os.path.join(RAIZ, "backend", "routes", "estudio_cocinas.py")
 ARMARIO = os.path.join(RAIZ, "backend", "routes", "armarios_alzado.py")
 ESTUDIO = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
-
-# Los tres numeros del temblor: amplitud, longitud de onda y aleatoriedad.
-# Se fijan para que "ajustar el boceto" sea un cambio consciente y no un
-# retoque que nadie recuerde haber hecho.
-TRAZO = "(2.0, 120.0, 16.0)"
 
 
 def _leer(ruta):
@@ -59,82 +65,116 @@ def _cuerpo_de(fuente, decorador):
     return fuente[i:j if j != -1 else len(fuente)]
 
 
-# ─── 1. La planta y el alzado van a juego ───────────────────────────────────
-
-def test_el_alzado_de_cocina_dibuja_a_lapiz_cuando_se_pide():
-    cuerpo = _cuerpo_de(_leer(COCINAS), '@router.post("/alzado")')
-    assert "path.sketch" in cuerpo, "el alzado de cocina ya no hace el boceto"
-    assert TRAZO in cuerpo, f"el trazo del alzado ha cambiado de {TRAZO}"
+# El temblor, escrito como lo escribe matplotlib: tres numeros entre
+# parentesis. Que aparezca en un plano de taller es el fallo.
+_TEMBLOR = re.compile(r'path\.sketch"\]\s*=\s*\(')
 
 
-def test_la_planta_de_cocina_dibuja_a_lapiz_cuando_se_pide():
-    """Aceptaba el flag `boceto` y no hacia nada con el: el alzado salia a mano
-    y la planta de la misma lamina a linea de CAD."""
+# ─── 1. Linea recta en los planos con los que se fabrica ────────────────────
+
+def test_la_planta_de_cocina_sale_a_linea_recta():
     cuerpo = _cuerpo_de(_leer(COCINAS), '@router.post("/plano-2d")')
-    assert "path.sketch" in cuerpo, (
-        "la planta acepta el flag `boceto` pero no lo aplica: saldria a linea "
-        "limpia junto a un alzado dibujado a mano")
-    assert TRAZO in cuerpo, "el trazo de la planta no es el mismo que el del alzado"
+    assert not _TEMBLOR.search(cuerpo), (
+        "la planta vuelve a dibujarse a lapiz: es un plano de taller y el "
+        "temblor hace dudar de donde esta cada pared")
 
 
-def test_el_alzado_de_armario_dibuja_a_lapiz_cuando_se_pide():
-    cuerpo = _leer(ARMARIO)
-    assert "path.sketch" in cuerpo and TRAZO in cuerpo, (
-        "el alzado de armario no hace el boceto, o usa otro trazo")
+def test_el_alzado_de_cocina_sale_a_linea_recta():
+    cuerpo = _cuerpo_de(_leer(COCINAS), '@router.post("/alzado")')
+    assert not _TEMBLOR.search(cuerpo), "el alzado de cocina vuelve a dibujarse a lapiz"
 
 
-# ─── 2. El trazo se limpia SIEMPRE ──────────────────────────────────────────
+def test_el_alzado_de_armario_sale_a_linea_recta():
+    assert not _TEMBLOR.search(_leer(ARMARIO)), (
+        "el alzado de armario vuelve a dibujarse a lapiz")
+
+
+# ─── 2. Se apaga de ENTRADA, no solo al salir ───────────────────────────────
+
+def _apaga_de_entrada(cuerpo):
+    """¿Pone `path.sketch` a None ANTES de dibujar, no solo en el `finally`?"""
+    antes = cuerpo.split("finally:")[0]
+    return bool(re.search(r'path\.sketch"\]\s*=\s*None', antes))
+
 
 def _limpia_en_finally(cuerpo):
-    """¿Hay un `finally` que devuelve `path.sketch` a None?"""
     tras_finally = cuerpo.split("finally:")
     return any(re.search(r'path\.sketch"\]\s*=\s*None', trozo) for trozo in tras_finally[1:])
 
 
-def test_la_planta_de_cocina_no_deja_el_lapiz_puesto():
+def test_la_planta_apaga_el_lapiz_antes_de_dibujar():
+    """CANDADO PRINCIPAL. Limpiar solo en el `finally` protege al SIGUIENTE
+    plano, no a este."""
     cuerpo = _cuerpo_de(_leer(COCINAS), '@router.post("/plano-2d")')
-    assert _limpia_en_finally(cuerpo), (
-        "`path.sketch` es GLOBAL: sin limpiarlo en `finally`, la siguiente "
-        "planta sale temblada sin que nadie lo haya pedido y sin dar error")
+    assert _apaga_de_entrada(cuerpo), (
+        "`path.sketch` es global del proceso: si no se apaga al entrar, una "
+        "peticion anterior que lo dejara puesto hace salir esta planta "
+        "temblada sin que nadie lo pida y sin dar error")
 
 
-def test_el_alzado_de_cocina_no_deja_el_lapiz_puesto():
+def test_el_alzado_apaga_el_lapiz_antes_de_dibujar():
     cuerpo = _cuerpo_de(_leer(COCINAS), '@router.post("/alzado")')
-    assert _limpia_en_finally(cuerpo), "el alzado de cocina no limpia `path.sketch`"
+    assert _apaga_de_entrada(cuerpo), "el alzado no apaga `path.sketch` al entrar"
 
 
-def test_el_alzado_de_armario_no_deja_el_lapiz_puesto():
-    assert _limpia_en_finally(_leer(ARMARIO)), (
-        "el alzado de armario no limpia `path.sketch`")
+def test_el_alzado_de_armario_apaga_el_lapiz_antes_de_dibujar():
+    assert _apaga_de_entrada(_leer(ARMARIO)), (
+        "el alzado de armario no apaga `path.sketch` al entrar")
 
 
-# ─── 3. Nunca `plt.xkcd()` ──────────────────────────────────────────────────
+def test_los_tres_siguen_limpiando_al_salir():
+    """Cinturon y tirantes: apagarlo al entrar protege a este plano; limpiarlo
+    al salir protege al siguiente, que puede dibujarlo otro modulo."""
+    for cuerpo, quien in (
+        (_cuerpo_de(_leer(COCINAS), '@router.post("/plano-2d")'), "la planta"),
+        (_cuerpo_de(_leer(COCINAS), '@router.post("/alzado")'), "el alzado"),
+        (_leer(ARMARIO), "el alzado de armario"),
+    ):
+        assert _limpia_en_finally(cuerpo), f"{quien} no limpia `path.sketch` en `finally`"
+
+
+# ─── 3. Nadie pide un flag que ya no se obedece ─────────────────────────────
+
+def test_la_pantalla_ya_no_pide_boceto_en_los_planos():
+    """Aceptar el flag y no hacerle caso es peor que no aceptarlo: quien lo
+    enciende cree que ha cambiado algo."""
+    fuente = _leer(ESTUDIO)
+    assert "bocetoAlzado" not in fuente, (
+        "sigue habiendo interruptor de boceto para los planos, y ya no hace "
+        "nada: un boton que no cambia nada es peor que no tener boton")
+
+
+def test_el_alzado_de_armario_ya_no_declara_el_flag():
+    assert not re.search(r"^\s*boceto\s*:", _leer(ARMARIO), re.M), (
+        "el alzado de armario sigue aceptando `boceto` y ya no lo obedece")
+
+
+# ─── 4. El lapiz sigue vivo donde tiene sentido ─────────────────────────────
+
+def test_el_boceto_en_perspectiva_si_dibuja_a_lapiz():
+    """Es un dibujo para ensenriar, sin cotas. Ahi el trazo a mano es lo que se
+    pidio, y quitarlo de todas partes se habria llevado tambien esto."""
+    cuerpo = _cuerpo_de(_leer(COCINAS), '@router.post("/perspectiva")')
+    assert _TEMBLOR.search(cuerpo), (
+        "el boceto en perspectiva ha dejado de dibujarse a lapiz")
+    assert _limpia_en_finally(cuerpo), (
+        "la perspectiva deja el lapiz puesto y el siguiente plano sale "
+        "temblado: es justo como aparecio el fallo")
+
+
+# ─── 5. Nunca `plt.xkcd()` ──────────────────────────────────────────────────
+
+def _sin_comentarios(fuente):
+    """El codigo, sin las lineas de comentario.
+
+    Hace falta porque el propio codigo EXPLICA por que no se usa `xkcd`, y
+    buscar la palabra a secas encontraria esa explicacion y daria por roto lo
+    que precisamente esta bien.
+    """
+    return "\n".join(l for l in fuente.split("\n") if not l.strip().startswith("#"))
+
 
 def test_no_se_usa_xkcd_en_ningun_plano():
-    """Cambia la tipografia y depende de una fuente que puede faltar en el
-    servidor. Una cota que no se lee no es una cota."""
     for ruta in (COCINAS, ARMARIO):
-        assert "xkcd" not in _leer(ruta).replace("NO `plt.xkcd()`", ""), (
+        assert "xkcd" not in _sin_comentarios(_leer(ruta)), (
             f"{os.path.basename(ruta)} usa xkcd(): las cotas pueden dejar de leerse")
-
-
-# ─── 4. El interruptor llega a todas las vias ───────────────────────────────
-
-def test_las_dos_vias_del_alzado_pasan_el_flag():
-    """En la pantalla hay cuatro botones que acaban aqui: la alambrica llama
-    directa y los otros tres pasan por `generarPlanosExactos`. Las dos vias
-    tienen que mandar el flag o el interruptor solo funcionaria a medias."""
-    fuente = _leer(ESTUDIO)
-    llamadas = fuente.count("estudio-cocinas/alzado")
-    assert llamadas == 2, (
-        f"hay {llamadas} sitios que piden el alzado y la prueba conoce 2: "
-        f"revisa si el nuevo pasa `boceto` (barre el fichero ENTERO antes de "
-        f"decir cuantos son)")
-    assert fuente.count("boceto: bocetoAlzado") == 2, (
-        "alguna via dibuja el alzado sin pasar el interruptor de boceto")
-
-
-def test_el_interruptor_existe_en_pantalla():
-    fuente = _leer(ESTUDIO)
-    assert "setBocetoAlzado" in fuente, "no hay interruptor de boceto en pantalla"
-    assert "bocetoAlzado" in fuente

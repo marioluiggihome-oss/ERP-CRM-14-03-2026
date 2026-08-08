@@ -47,7 +47,6 @@ class AlzadoArmarioRequest(BaseModel):
     nombre_cliente: Optional[str] = ""
     referencia: Optional[str] = ""
     con_cotas: bool = True
-    boceto: bool = False
     monocromo: bool = True
 
 
@@ -63,10 +62,15 @@ async def generar_alzado_armario(payload: AlzadoArmarioRequest):
 
     fig = None
     try:
-        # Trazo de lápiz. Se limpia SIEMPRE al terminar (ver `finally`):
-        # `path.sketch` es un ajuste GLOBAL de matplotlib, así que una petición
-        # que fallara a medias se lo dejaría puesto al siguiente plano.
-        matplotlib.rcParams["path.sketch"] = (2.0, 120.0, 16.0) if payload.boceto else None
+        # LÍNEA RECTA, SIEMPRE. Un alzado de armario es un plano de taller:
+        # con él se corta. El trazo temblado lo afea y encima hace dudar de si
+        # esa balda está donde parece. El lápiz se queda para el boceto en
+        # perspectiva, que es un dibujo para enseñar.
+        #
+        # Se pone a None de ENTRADA y no solo en el `finally`: `path.sketch` es
+        # global del proceso, y una petición anterior que lo dejara puesto haría
+        # salir este temblado sin que nadie lo pidiera y sin dar ningún error.
+        matplotlib.rcParams["path.sketch"] = None
 
         g = geo.montar(payload.config, payload.moduleConfigs)
         if not g.get("ok"):

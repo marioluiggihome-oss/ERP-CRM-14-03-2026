@@ -31,9 +31,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ClipboardList, Search, RefreshCw, Loader, AlertTriangle, CheckCircle2,
-  ChevronLeft, Factory, Euro, User, ArrowRight, ShieldCheck, XCircle,
+  ChevronLeft, Factory, Euro, User, ArrowRight, ShieldCheck, XCircle, Ruler,
 } from 'lucide-react';
-import { projectsAPI, expedienteAPI } from '../services/api';
+import { projectsAPI, expedienteAPI, medidasAPI } from '../services/api';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 // Cómo se lee cada importe. `margen` y `descuento` son porcentajes; el resto,
@@ -240,6 +240,151 @@ const Accion = ({ accion, onAprobar, aprobando }) => {
 };
 
 
+// ─── Las medidas de la obra, con sus tres niveles ───────────────────────────
+//
+// Aquí es donde se usa: de pie en la cocina, con el metro en una mano y la
+// tablet en la otra. Por eso cada medida es una tarjeta y cada acción un botón
+// del tamaño de un dedo.
+//
+// CONFIRMAR NO VIENE RELLENO. El campo enseña la de obra como pista pero NO la
+// escribe: confirmar es el acto de dar por buena una medida, y traerla puesta
+// convertiría el botón en un «aceptar» que no comprueba nada. Para no obligar
+// a teclear cuatro cifras con guantes, hay un botón que la copia — copiarla es
+// entonces una decisión visible, que es justo lo que tiene que ser.
+
+const COLOR_NIVEL = {
+  sin_medir: 'bg-slate-200 text-slate-600',
+  introducida: 'bg-blue-100 text-blue-700',
+  tomada: 'bg-amber-100 text-amber-800',
+  confirmada: 'bg-emerald-100 text-emerald-700',
+};
+
+const Medida = ({ m, onTomar, onConfirmar, ocupada }) => {
+  const [tomada, setTomada] = useState('');
+  const [confirmada, setConfirmada] = useState('');
+
+  return (
+    <div className={`p-3 rounded-2xl border min-w-0 ${
+      m.bloquea ? 'bg-red-50 border-red-200'
+        : m.discrepa ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'
+    }`}>
+      <div className="flex items-start gap-2 min-w-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-black text-slate-900 break-words">
+            {m.etiqueta}
+            {m.critica && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded bg-slate-900 text-white text-[9px] font-black uppercase align-middle">
+                Crítica
+              </span>
+            )}
+          </p>
+          <span className={`inline-block mt-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${COLOR_NIVEL[m.nivel]}`}>
+            {m.nivelEtiqueta}
+          </span>
+        </div>
+        {m.diferencia !== null && m.diferencia !== undefined && m.discrepa && (
+          <span className="shrink-0 px-2 py-1 rounded-lg bg-amber-500 text-white text-[12px] font-black">
+            {m.diferencia > 0 ? '+' : ''}{m.diferencia} {m.unidad}
+          </span>
+        )}
+      </div>
+
+      {/* Los tres números, siempre los tres a la vista: la diferencia entre
+          ellos es el dato, y esconder el de la venta la borraría. */}
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        {[['Venta', m.introducida], ['Obra', m.tomada], ['Confirmada', m.confirmada]].map(([lbl, v]) => (
+          <div key={lbl} className="min-w-0">
+            <p className="text-[10px] uppercase font-bold text-slate-400 truncate">{lbl}</p>
+            <p className={`text-[15px] font-black truncate ${v === null || v === undefined ? 'text-slate-300' : 'text-slate-900'}`}>
+              {v === null || v === undefined ? '—' : v}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {m.pendiente && (
+        <p className="text-[12px] text-slate-600 mt-2 break-words">{m.pendiente}</p>
+      )}
+
+      <div className="grid sm:grid-cols-2 gap-2 mt-2">
+        <div className="flex gap-1.5 min-w-0">
+          <input type="number" step="any" value={tomada} onChange={e => setTomada(e.target.value)}
+            placeholder={`Medir (${m.unidad})`}
+            className="flex-1 min-w-0 min-h-[44px] px-2 rounded-xl border border-slate-300 text-[14px]" />
+          <button onClick={() => { onTomar(m.clave, tomada); setTomada(''); }}
+            disabled={tomada === '' || ocupada}
+            className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white text-[12px] font-black uppercase disabled:opacity-40">
+            Apuntar
+          </button>
+        </div>
+        <div className="flex gap-1.5 min-w-0">
+          <input type="number" step="any" value={confirmada} onChange={e => setConfirmada(e.target.value)}
+            placeholder={m.tomada != null ? `Confirmar (obra: ${m.tomada})` : 'Confirmar'}
+            title="Escribe la medida buena. Puede no ser ninguna de las dos anteriores."
+            className="flex-1 min-w-0 min-h-[44px] px-2 rounded-xl border border-slate-300 text-[14px]" />
+          {m.tomada != null && confirmada === '' && (
+            <button onClick={() => setConfirmada(String(m.tomada))}
+              title="Copiar la medida de obra al campo de confirmar"
+              className="shrink-0 min-h-[44px] px-2 rounded-xl border border-slate-300 bg-white text-[11px] font-bold text-slate-600">
+              ← obra
+            </button>
+          )}
+          <button onClick={() => { onConfirmar(m.clave, confirmada); setConfirmada(''); }}
+            disabled={confirmada === '' || ocupada}
+            className="shrink-0 min-h-[44px] px-3 rounded-xl bg-emerald-600 text-white text-[12px] font-black uppercase disabled:opacity-40">
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NuevaMedida = ({ onCrear, ocupada }) => {
+  const [m, setM] = useState({ etiqueta: '', introducida: '', unidad: 'mm', critica: true });
+  const listo = m.etiqueta.trim().length > 0;
+
+  // La clave sale de la etiqueta: sin clave la medida no se puede volver a
+  // encontrar ni comparar con nada, así que no se deja crear sin ella.
+  const claveDe = (t) => t.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+  return (
+    <div className="p-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white min-w-0 space-y-2">
+      <input value={m.etiqueta} onChange={e => setM(p => ({ ...p, etiqueta: e.target.value }))}
+        placeholder="Qué se mide (p. ej. «Hueco de la columna»)"
+        className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 text-[14px]" />
+      <div className="flex gap-2 flex-wrap">
+        <input type="number" step="any" value={m.introducida}
+          onChange={e => setM(p => ({ ...p, introducida: e.target.value }))}
+          placeholder="De la venta (opcional)"
+          className="flex-1 min-w-[140px] min-h-[44px] px-3 rounded-xl border border-slate-300 text-[14px]" />
+        <label className="flex items-center gap-2 min-h-[44px] px-3 rounded-xl border border-slate-300 text-[13px] font-bold text-slate-700">
+          <input type="checkbox" checked={m.critica}
+            onChange={e => setM(p => ({ ...p, critica: e.target.checked }))} />
+          Crítica
+        </label>
+        <button onClick={() => {
+          onCrear({
+            clave: claveDe(m.etiqueta), etiqueta: m.etiqueta.trim(),
+            introducida: m.introducida === '' ? null : Number(m.introducida),
+            unidad: m.unidad, critica: m.critica,
+          });
+          setM({ etiqueta: '', introducida: '', unidad: 'mm', critica: true });
+        }} disabled={!listo || ocupada}
+          className="min-h-[44px] px-4 rounded-xl bg-slate-900 text-white text-[13px] font-black uppercase disabled:opacity-40">
+          Añadir
+        </button>
+      </div>
+      <p className="text-[11px] text-slate-500">
+        Crítica = sin confirmar, no baja al taller. Las demás solo avisan.
+      </p>
+    </div>
+  );
+};
+
+
 // ─── Lo presupuestado contra lo que hay en la orden de fabricación ──────────
 
 const _valor = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
@@ -326,6 +471,13 @@ export default function Expediente({ state }) {
   const [comparando, setComparando] = useState(false);
   const [errorComparacion, setErrorComparacion] = useState('');
 
+  // Medidas de la obra. Van aparte del expediente porque se tocan aquí mismo,
+  // con el metro en la mano, y hay que poder recargarlas solas sin volver a
+  // pedir el expediente entero.
+  const [medidas, setMedidas] = useState(null);
+  const [errorMedidas, setErrorMedidas] = useState('');
+  const [ocupadaMedida, setOcupadaMedida] = useState(false);
+
   const cargarLista = useCallback(async () => {
     setCargandoLista(true);
     setErrorLista('');
@@ -356,13 +508,64 @@ export default function Expediente({ state }) {
     }
   }, []);
 
+  const cargarMedidas = useCallback(async (projectId) => {
+    setErrorMedidas('');
+    try {
+      setMedidas(await medidasAPI.listar(projectId));
+    } catch (e) {
+      setErrorMedidas(e.message || 'No se pudieron leer las medidas.');
+    }
+  }, []);
+
   const abrir = useCallback((p) => {
     setObra(p);
     setExp(null);
     setComparacion(null);
     setErrorComparacion('');
+    setMedidas(null);
+    setErrorMedidas('');
     cargarExpediente(p.id);
-  }, [cargarExpediente]);
+    cargarMedidas(p.id);
+  }, [cargarExpediente, cargarMedidas]);
+
+  // Tomar y confirmar son la MISMA operación con distinto nombre, y el motor
+  // ya las distingue: aquí solo cambia a qué ruta se llama.
+  const cambiarNivel = useCallback(async (accion, clave, valor) => {
+    if (!obra) return;
+    setOcupadaMedida(true);
+    setErrorMedidas('');
+    try {
+      const fn = accion === 'tomar' ? medidasAPI.tomar : medidasAPI.confirmar;
+      setMedidas(await fn(obra.id, clave, valor === '' ? null : Number(valor)));
+      // Una medida crítica confirmada puede desbloquear la fabricación, y eso
+      // lo dice el expediente: si no se recarga, el cartel de arriba sigue
+      // diciendo que hay bloqueos que ya no hay.
+      cargarExpediente(obra.id);
+    } catch (e) {
+      setErrorMedidas(e.message || 'No se pudo guardar la medida.');
+    } finally { setOcupadaMedida(false); }
+  }, [obra, cargarExpediente]);
+
+  const crearMedida = useCallback(async (nueva) => {
+    if (!obra) return;
+    const yaEsta = (medidas?.medidas || []).some(m => m.clave === nueva.clave);
+    if (yaEsta) { setErrorMedidas(`Ya hay una medida llamada «${nueva.etiqueta}».`); return; }
+    setOcupadaMedida(true);
+    setErrorMedidas('');
+    try {
+      // Se manda la lista entera: guardar NO sube de nivel (eso son `tomar` y
+      // `confirmar`, cada una con su autor y su fecha), así que las que ya
+      // estaban vuelven tal cual.
+      const lista = [...(medidas?.medidas || []).map(m => ({
+        clave: m.clave, etiqueta: m.etiqueta, unidad: m.unidad, critica: m.critica,
+        introducida: m.introducida, tomada: m.tomada, confirmada: m.confirmada,
+        notas: m.notas,
+      })), nueva];
+      setMedidas(await medidasAPI.guardar(obra.id, lista));
+    } catch (e) {
+      setErrorMedidas(e.message || 'No se pudo añadir la medida.');
+    } finally { setOcupadaMedida(false); }
+  }, [obra, medidas]);
 
   const aprobarCambio = useCallback(async (indice) => {
     if (!obra) return;
@@ -542,6 +745,45 @@ export default function Expediente({ state }) {
                     />
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* LAS MEDIDAS DE LA OBRA. Aquí es donde se usa: de pie en la
+                cocina, con el metro en una mano. */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Ruler size={13} className="text-slate-500" />
+                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                  Medidas de la obra
+                </p>
+                {medidas && (
+                  <span className={`ml-auto px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${
+                    medidas.puedeFabricar ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    {medidas.puedeFabricar ? 'Se puede cortar' : `${medidas.bloqueos.length} sin confirmar`}
+                  </span>
+                )}
+              </div>
+
+              {errorMedidas && (
+                <p className="mb-2 p-2 rounded-xl bg-red-50 border border-red-200 text-[12px] text-red-700 break-words">
+                  {errorMedidas}
+                </p>
+              )}
+
+              {medidas && (
+                <>
+                  <p className="text-[12px] text-slate-600 mb-2 break-words">{medidas.resumen}</p>
+                  <div className="space-y-2">
+                    {medidas.medidas.map(m => (
+                      <Medida key={m.clave} m={m} ocupada={ocupadaMedida}
+                        onTomar={(clave, valor) => cambiarNivel('tomar', clave, valor)}
+                        onConfirmar={(clave, valor) => cambiarNivel('confirmar', clave, valor)} />
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <NuevaMedida onCrear={crearMedida} ocupada={ocupadaMedida} />
+                  </div>
+                </>
               )}
             </div>
 

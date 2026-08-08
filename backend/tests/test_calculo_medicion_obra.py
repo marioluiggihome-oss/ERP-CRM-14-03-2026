@@ -221,6 +221,23 @@ def test_sin_medidas_no_revienta(mo):
     assert mo.comparar_mediciones([], [])["hayQueRevisar"] is False
 
 
+def test_quien_tomo_la_medida_sobrevive_al_viaje_de_ida_y_vuelta(mo):
+    """CANDADO. La pantalla pinta lo que devuelve `revisar` y luego DEVUELVE esa
+    misma lista al guardar. Lo que no salga de aqui se pierde por el camino: al
+    aniadir una medida se borraria quien tomo las demas, y una medida que no se
+    le puede preguntar a nadie vale la mitad."""
+    m = mo.confirmar(mo.tomar(dict(HUECO), 3238, quien="Montador", cuando="2026-08-08"),
+                     3238, quien="Master", cuando="2026-08-09")
+    f = mo.revisar_una(m)
+    assert f["tomadaPor"] == "Montador" and f["tomadaAt"] == "2026-08-08"
+    assert f["confirmadaPor"] == "Master" and f["confirmadaAt"] == "2026-08-09"
+
+    # Y el viaje completo: lo que devuelve `revisar` se vuelve a guardar tal
+    # cual y no se ha perdido nada por el camino.
+    assert mo.revisar_una(f)["tomadaPor"] == "Montador"
+    assert mo.valor_para_fabricar(f) == 3238
+
+
 def test_valor_visible_no_es_valor_para_fabricar(mo):
     """Son dos preguntas distintas: «que numero ensenio» y «con que corto».
     Juntarlas es como se acaba cortando con una medida sin confirmar."""

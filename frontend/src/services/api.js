@@ -838,6 +838,53 @@ export const expedienteAPI = {
 
 
 // ============================================
+// MEDICIÓN EN OBRA: LOS TRES NIVELES DE UNA MEDIDA
+// ============================================
+//
+// Introducida (la de la venta), tomada (la del metro en la obra) y confirmada
+// (la que se da por buena para fabricar). Subir de nivel es un ACTO y tiene su
+// propia llamada, con su autor y su fecha: guardar la lista NO confirma nada.
+// Si guardar pudiera confirmar de paso, confirmar dejaría de significar algo.
+
+export const medidasAPI = {
+  _h: () => {
+    const token = getToken();
+    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  },
+
+  listar: async (projectId) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas`, { headers: medidasAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudieron leer las medidas');
+    return r.json();
+  },
+
+  guardar: async (projectId, medidas) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas`, {
+      method: 'PUT', headers: medidasAPI._h(), body: JSON.stringify({ medidas })
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudieron guardar las medidas');
+    return r.json();
+  },
+
+  tomar: async (projectId, clave, valor) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas/${encodeURIComponent(clave)}/tomar`, {
+      method: 'POST', headers: medidasAPI._h(), body: JSON.stringify({ valor })
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo apuntar la medida');
+    return r.json();
+  },
+
+  confirmar: async (projectId, clave, valor) => {
+    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas/${encodeURIComponent(clave)}/confirmar`, {
+      method: 'POST', headers: medidasAPI._h(), body: JSON.stringify({ valor })
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo confirmar la medida');
+    return r.json();
+  },
+};
+
+
+// ============================================
 // ALMACÉN: EXISTENCIAS, RESERVAS Y PLAN DE COMPRA
 // ============================================
 //
