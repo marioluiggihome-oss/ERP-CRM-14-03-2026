@@ -28,6 +28,7 @@ import base64
 import datetime
 import io
 import logging
+import math
 import os
 import re
 import sys
@@ -645,304 +646,194 @@ async def obtener_resultado(task_id: str):
 
 @router.post("/plano-2d")
 async def generar_plano_2d(payload: ProyectoBase):
-    """
-    Genera un plano 2D técnico acotado con matplotlib.
-    Usa la distribución estructurada si está disponible.
-    No requiere motor de IA — generación local instantánea.
+    """LA PLANTA: la cocina vista DESDE ARRIBA, acotada.
+
+    Lo dijo el master: «donde pone planta, no está bien, lo que dibuja es un
+    alzado; el alzado es visto de frente y la planta vista desde arriba, con
+    cotas y medidas». Tenía razón, y la de antes fallaba por dos sitios:
+
+    1. NO USABA LOS ANCHOS REALES. Pintaba módulos genéricos de 55 cm en un
+       bucle y luego colocaba los elementos aparte, con un espaciado propio.
+       Los rectángulos eran decoración y las etiquetas se amontonaban.
+    2. SE INVENTABA EL FONDO DE LA ESTANCIA (`max(250, ancho*0,6)`), y lo
+       rotulaba en un plano que pone «ESCALA 1:20».
+
+    Los números los pone `services/planta_cocina.py`, que es cálculo puro y
+    está probado. Aquí sólo se dibuja.
     """
     try:
+        import io, base64
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
-        # BOCETO A MANO ALZADA, igual que en el alzado. La planta y el alzado
-        # salen JUNTOS en la misma lámina: si el trazo de lápiz valiera solo
-        # para el alzado, al encender el boceto saldría una hoja con el alzado
-        # dibujado a mano y la planta a línea de CAD.
-        # Se limpia SIEMPRE al final (ver `finally`): `path.sketch` es global,
-        # y una petición que falle a medias se lo dejaría puesto a la siguiente.
-        matplotlib.rcParams["path.sketch"] = (
-            (2.0, 120.0, 16.0) if bool(getattr(payload, "boceto", False)) else None)
+        from services import planta_cocina as pc
+        from services.kitchen_geometry import validar_distribucion, fondo_modulo, es_alto
 
-        # Colores profesionales
-        C_BG = "#F8F6F2"; C_SUELO = "#EDE8E0"; C_PARED = "#2C2C2C"
-        C_MUEBLE = "#D4C5A9"; C_BORDE = "#8B7355"; C_ENCIM = "#C8B89A"
-        C_ISLA = "#E8DDD0"; C_COTA = "#555555"; C_ACENTO = "#8B7355"
-        C_GRID = "#D8D0C4"
-        C_ELEM = {"fregadero": "#B8D4E0", "placa": "#E8B4B4", "horno": "#D4A574",
-                  "frigorifico": "#A8C8D8", "lavavajillas": "#B8D0B8", "campana": "#D0D0D0",
-                  "microondas": "#D4A574", "columna_hornos": "#C8A882"}
-        ELEM_SYMBOLS = {"fregadero": "≈", "placa": "○○", "horno": "□", "frigorifico": "❄",
-                        "lavavajillas": "≡", "campana": "▽", "microondas": "□", "columna_hornos": "┃"}
+        # Trazo de lápiz, a juego con el alzado: salen en la MISMA lámina.
+        # Se limpia SIEMPRE en el `finally`: `path.sketch` es global.
+        _boceto = bool(getattr(payload, "boceto", False))
+        matplotlib.rcParams["path.sketch"] = (2.0, 120.0, 16.0) if _boceto else None
 
-        # Obtener distribución
         dist = payload.distribucion_estructurada
-        if dist and dist.tipo:
-            tipo = dist.tipo
-            # NUNCA una pared por defecto. Aquí caía a 400x240 en silencio, que es
-            # el mismo fallo que tenía el alzado: sale una planta con cotas que
-            # nadie ha medido y con pinta de buena. Si no hay paredes, se pide.
-            if not dist.paredes:
-                raise HTTPException(
-                    status_code=422,
-                    detail=("No puedo dibujar la planta sin las medidas de las "
-                            "paredes. Elige la distribución y escribe el ancho "
-                            "real de cada pared, o pulsa «Detectar distribución» "
-                            "sobre un render."))
-            paredes_data = dist.paredes
-            isla_data = dist.isla or {'ancho': 0, 'largo': 0}
-            elementos = dist.elementos or []
-        else:
-            # Fallback al parser de texto
-            m = _medidas_para_dibujo(payload.medidas)
-            tipo = 'l'  # default legacy
-            paredes_data = [{'nombre': 'Pared norte', 'ancho': m['ancho'], 'alto': 240},
-                           {'nombre': 'Pared oeste', 'ancho': m['alto'], 'alto': 240}]
-            isla_data = {'ancho': m['isla_w'], 'largo': m['isla_h']}
-            elementos = []
+        if not dist or not dist.paredes:
+            raise HTTPException(
+                status_code=422,
+                detail=("No puedo dibujar la planta sin las medidas de las "
+                        "paredes. Elige la distribución (lineal, L, U…) y "
+                        "escribe el ancho real de cada pared, o pulsa "
+                        "«Detectar distribución» sobre un render."))
 
-        # Calcular dimensiones del espacio
-        if tipo == 'lineal':
-            room_w = paredes_data[0].get('ancho', 400)
-            room_h = max(250, int(room_w * 0.6))
-        elif tipo in ('l', 'g'):
-            room_w = max(p.get('ancho', 300) for p in paredes_data)
-            room_h = max(250, paredes_data[1].get('ancho', 250) if len(paredes_data) > 1 else 300)
-        elif tipo == 'u':
-            room_w = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
-            room_h = max(paredes_data[0].get('ancho', 250), paredes_data[2].get('ancho', 250) if len(paredes_data) > 2 else 250)
-        elif tipo == 'paralela':
-            room_w = max(p.get('ancho', 400) for p in paredes_data)
-            room_h = max(300, int(room_w * 0.7))
-        elif tipo == 'isla':
-            room_w = paredes_data[0].get('ancho', 400)
-            room_h = max(350, int(room_w * 0.8))
-        else:
-            room_w = 400; room_h = 350
+        _val = validar_distribucion({
+            "tipo": getattr(dist, "tipo", "lineal") or "lineal",
+            "paredes": dist.paredes or [],
+            "elementos": dist.elementos or [],
+        })
+        if not _val.get("ok"):
+            detalle = ("No puedo dibujar la planta con esas medidas de pared.")
+            causa = " ".join(x for x in [(_val.get("motivo") or "").strip(),
+                                         *(_val.get("avisos") or [])] if x).strip()
+            raise HTTPException(status_code=422,
+                                detail=f"{detalle} ({causa})" if causa else detalle)
 
-        # Evitar dimensiones 0 o negativas (una pared con ancho 0 provocaría
-        # una división por cero al calcular la escala).
-        room_w = room_w if room_w and room_w > 0 else 400
-        room_h = room_h if room_h and room_h > 0 else 350
+        tipo = _val.get("tipo") or "lineal"
+        g = pc.montar({"tipo": tipo, "paredes": _val["paredes"],
+                       "elementos": _val["elementos"]},
+                      fondo_modulo=fondo_modulo, es_alto=es_alto)
+        if not g["muros"]:
+            raise HTTPException(status_code=422,
+                                detail="Ninguna pared trae ancho: no hay planta que dibujar.")
 
-        # Setup figure
-        fig, ax = plt.subplots(figsize=(16, 11))
-        fig.patch.set_facecolor(C_BG)
-        ax.set_facecolor(C_BG)
+        C_LINE = "#2C2C2C"; C_BAJO = "#D4C5A9"; C_BORDE = "#8B7355"
+        C_ALTO = "#8B7355"; C_COTA = "#B03A2E"; C_BG = "#F8F6F2"
+        C_MURO = "#2C2C2C"; C_GRID = "#E6E2DA"
+        _con_cotas = bool(getattr(payload, "con_cotas", True))
 
-        scale = min(560 / room_w, 420 / room_h)
-        W, H = room_w * scale, room_h * scale
-        ox, oy = 80, 70
-
-        ax.set_xlim(0, W + 180); ax.set_ylim(-20, H + 130)
+        fig, ax = plt.subplots(figsize=(15, 10))
+        fig.patch.set_facecolor(C_BG); ax.set_facecolor(C_BG)
         ax.set_aspect("equal"); ax.axis("off")
 
-        # Suelo + grid
-        ax.add_patch(patches.Rectangle((ox, oy), W, H,
-            linewidth=2, edgecolor=C_PARED, facecolor=C_SUELO, zorder=1))
-        paso = max(30, int(min(room_w, room_h) / 10)) * scale / 100 * 100
-        for gx in range(int(ox), int(ox + W + 1), max(1, int(paso))):
-            ax.plot([gx, gx], [oy, oy + H], color=C_GRID, linewidth=0.3, zorder=1)
-        for gy in range(int(oy), int(oy + H + 1), max(1, int(paso))):
-            ax.plot([ox, ox + W], [gy, gy], color=C_GRID, linewidth=0.3, zorder=1)
+        GRUESO_MURO = 8.0   # cm de pared dibujada (representación, no medida)
 
-        # Paredes (contorno)
-        pw = max(6, int(0.015 * min(W, H)))
-        for rect in [(ox, oy + H - pw, W, pw), (ox, oy, W, pw),
-                     (ox, oy, pw, H), (ox + W - pw, oy, pw, H)]:
-            ax.add_patch(patches.Rectangle(
-                (rect[0], rect[1]), rect[2], rect[3],
-                linewidth=0, facecolor=C_PARED, zorder=2))
+        def cota(p0, p1, sep, txt, lado=1):
+            """Cota entre dos puntos, desplazada `sep` cm perpendicularmente."""
+            if not _con_cotas:
+                return
+            (x0, y0), (x1, y1) = p0, p1
+            dx, dy = x1 - x0, y1 - y0
+            n = math.hypot(dx, dy) or 1.0
+            nx, ny = -dy / n * sep * lado, dx / n * sep * lado
+            ax.annotate("", xy=(x0 + nx, y0 + ny), xytext=(x1 + nx, y1 + ny),
+                        arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
+            ax.text((x0 + x1) / 2 + nx * 1.28, (y0 + y1) / 2 + ny * 1.28, txt,
+                    ha="center", va="center", fontsize=7.5, color=C_COTA,
+                    rotation=(0 if abs(dx) >= abs(dy) else 90))
 
-        # Dibujar módulos según distribución
-        mod_depth = 60 * scale / 100  # 60cm profundidad estándar
+        # ── Muros ───────────────────────────────────────────────────────────
+        for muro in g["muros"]:
+            (x0, y0), (x1, y1) = muro["desde"], muro["hasta"]
+            nx, ny = muro["normal"]
+            # El muro se dibuja HACIA FUERA de la estancia (al revés que los
+            # muebles), que es como se representa en una planta.
+            ax.add_patch(patches.Polygon(
+                [(x0, y0), (x1, y1),
+                 (x1 - nx * GRUESO_MURO, y1 - ny * GRUESO_MURO),
+                 (x0 - nx * GRUESO_MURO, y0 - ny * GRUESO_MURO)],
+                closed=True, facecolor=C_MURO, edgecolor=C_MURO, zorder=2))
 
-        def draw_modules_on_wall(start_x, start_y, length_cm, direction, pared_idx):
-            """Dibuja módulos a lo largo de una pared."""
-            length_px = length_cm * scale
-            mod_w = 55 * scale / 100  # 55cm ancho módulo
-            # Obtener elementos asignados a esta pared
-            pared_elems = [e for e in elementos if e.get('pared_idx', 0) == pared_idx]
-            
-            if direction == 'north':  # Módulos en pared norte (arriba)
-                x = start_x
-                while x + mod_w <= start_x + length_px:
-                    ax.add_patch(patches.Rectangle((x, start_y - mod_depth), mod_w, mod_depth,
-                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
-                    x += mod_w
-                # Encimera
-                ax.add_patch(patches.Rectangle(
-                    (start_x, start_y - mod_depth - 3), length_px, 3,
-                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
-                # Elementos
-                elem_x = start_x + mod_w * 0.5
-                for el in pared_elems:
-                    ew = el.get('ancho', 60) * scale / 100
-                    color = C_ELEM.get(el.get('id', ''), '#B8D4E0')
-                    symbol = ELEM_SYMBOLS.get(el.get('id', ''), '?')
-                    ax.add_patch(patches.FancyBboxPatch(
-                        (elem_x - ew/2, start_y - mod_depth/2 - ew*0.3),
-                        ew, ew*0.6, boxstyle="round,pad=2", linewidth=1,
-                        edgecolor="#555", facecolor=color, zorder=5))
-                    ax.text(elem_x, start_y - mod_depth/2, symbol,
-                        ha="center", va="center", fontsize=7, color="#333", zorder=6)
-                    ax.text(elem_x, start_y - mod_depth - 10, el.get('label', ''),
-                        ha="center", va="top", fontsize=5, color="#666", zorder=6)
-                    elem_x += ew + 10
+        # ── Módulos, cada uno con SU ancho y SU fondo ────────────────────────
+        for m in g["modulos"]:
+            esq = m["esquinas"]
+            if m["alto"]:
+                # Los altos, a trazos y por encima: es como se marcan en planta.
+                ax.add_patch(patches.Polygon(
+                    esq, closed=True, fill=False, edgecolor=C_ALTO,
+                    linewidth=1.0, linestyle="--", zorder=5))
+            else:
+                ax.add_patch(patches.Polygon(
+                    esq, closed=True, facecolor=C_BAJO, edgecolor=C_BORDE,
+                    linewidth=1.0, zorder=3))
+                cx = sum(p[0] for p in esq) / 4
+                cy = sum(p[1] for p in esq) / 4
+                # El rótulo sólo si cabe: por debajo de 40 cm de ancho se lee
+                # la cota, no la etiqueta. Antes se pintaban todos y salía un
+                # borrón de texto encima de texto.
+                if m["ancho"] >= 55:
+                    dx, dy = m["direccion"]
+                    ax.text(cx, cy, str(m["label"])[:14],
+                            ha="center", va="center", fontsize=6,
+                            color="#4A3F2F", zorder=6,
+                            rotation=(0 if abs(dx) >= abs(dy) else 90))
 
-            elif direction == 'south':  # Módulos en pared sur (abajo)
-                x = start_x
-                while x + mod_w <= start_x + length_px:
-                    ax.add_patch(patches.Rectangle((x, start_y), mod_w, mod_depth,
-                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
-                    x += mod_w
-                ax.add_patch(patches.Rectangle(
-                    (start_x, start_y + mod_depth), length_px, 3,
-                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
+        # ── Cotas: cada módulo y el total de la pared ────────────────────────
+        for cad in g["cotas"]:
+            muro = next(m for m in g["muros"] if m["indice"] == cad["pared"])
+            (ox, oy) = muro["desde"]
+            dx, dy = muro["direccion"]
+            fondo_ref = max((m["fondo"] for m in g["modulos"]
+                             if m["pared"] == cad["pared"] and not m["alto"]), default=60.0)
+            # La PRIMERA pared se acota hacia dentro (por encima de sus
+            # muebles); las demás, hacia FUERA. Si todas fueran hacia dentro,
+            # en una L las dos cadenas se cruzan por el medio del dibujo y no
+            # hay quien lea ninguna de las dos.
+            lado = 1 if cad["pared"] == 0 else -1
+            sep = (fondo_ref + 22) if lado == 1 else 22
+            for t in cad["tramos"]:
+                cota((ox + dx * t["desde"], oy + dy * t["desde"]),
+                     (ox + dx * t["hasta"], oy + dy * t["hasta"]),
+                     sep, f"{int(round(t['medida']))}", lado)
+            cota((ox, oy), (ox + dx * cad["total"], oy + dy * cad["total"]),
+                 sep + 30, f"{cad['nombre']}  {int(round(cad['total']))} cm", lado)
 
-            elif direction == 'west':  # Módulos en pared oeste (izquierda)
-                y = start_y
-                while y + mod_w <= start_y + length_px:
-                    ax.add_patch(patches.Rectangle((start_x, y), mod_depth, mod_w,
-                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
-                    y += mod_w
-                ax.add_patch(patches.Rectangle(
-                    (start_x + mod_depth, start_y), 3, length_px,
-                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
+        # ── Encuadre ────────────────────────────────────────────────────────
+        pts = [p for m in g["modulos"] for p in m["esquinas"]]
+        pts += [muro["desde"] for muro in g["muros"]] + [muro["hasta"] for muro in g["muros"]]
+        xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+        mx = max(max(xs) - min(xs), 1.0); my = max(max(ys) - min(ys), 1.0)
+        # Margen ajustado: con 0,30 el dibujo quedaba perdido en medio de
+        # una hoja casi vacia. Lo justo para que quepan las cadenas de cota.
+        margen = max(mx, my) * 0.13
+        ax.set_xlim(min(xs) - margen, max(xs) + margen)
+        ax.set_ylim(min(ys) - margen, max(ys) + margen)
 
-            elif direction == 'east':  # Módulos en pared este (derecha)
-                y = start_y
-                while y + mod_w <= start_y + length_px:
-                    ax.add_patch(patches.Rectangle((start_x - mod_depth, y), mod_depth, mod_w,
-                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
-                    y += mod_w
-                ax.add_patch(patches.Rectangle(
-                    (start_x - mod_depth - 3, start_y), 3, length_px,
-                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
+        # ── Rótulos y avisos ────────────────────────────────────────────────
+        cab = (payload.nombre_cliente or "").strip()
+        ax.set_title(f"PLANTA{' · ' + cab if cab else ''} — vista desde arriba · cotas en cm",
+                     fontsize=11, fontweight="bold", color=C_LINE, pad=14)
 
-        # Dibujar según tipo de distribución
-        if tipo == 'lineal':
-            pared_w = paredes_data[0].get('ancho', 400)
-            draw_modules_on_wall(ox + pw, oy + H - pw, pared_w, 'north', 0)
-        elif tipo == 'l':
-            pared_w = paredes_data[0].get('ancho', 400)
-            pared_h = paredes_data[1].get('ancho', 250) if len(paredes_data) > 1 else 250
-            draw_modules_on_wall(ox + pw, oy + H - pw, pared_w, 'north', 0)
-            draw_modules_on_wall(ox + pw, oy + pw, pared_h, 'west', 1)
-        elif tipo == 'u':
-            pared_izq = paredes_data[0].get('ancho', 250)
-            pared_fondo = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
-            pared_der = paredes_data[2].get('ancho', 250) if len(paredes_data) > 2 else 250
-            draw_modules_on_wall(ox + pw, oy + H - pw, pared_fondo, 'north', 1)
-            draw_modules_on_wall(ox + pw, oy + pw, pared_izq, 'west', 0)
-            draw_modules_on_wall(ox + W - pw, oy + pw, pared_der, 'east', 2)
-        elif tipo == 'paralela':
-            pared_n = paredes_data[0].get('ancho', 400)
-            pared_s = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
-            draw_modules_on_wall(ox + pw, oy + H - pw, pared_n, 'north', 0)
-            draw_modules_on_wall(ox + pw, oy + pw, pared_s, 'south', 1)
-        elif tipo == 'isla':
-            pared_w_val = paredes_data[0].get('ancho', 400)
-            draw_modules_on_wall(ox + pw, oy + H - pw, pared_w_val, 'north', 0)
-            # Isla central
-            iw = isla_data.get('ancho', 120) * scale / 100
-            ih = isla_data.get('largo', 200) * scale / 100
-            ix = ox + (W - iw) / 2; iy = oy + (H - ih) / 2 - 15
-            ax.add_patch(patches.Rectangle((ix, iy), iw, ih,
-                linewidth=2, edgecolor=C_BORDE, facecolor=C_ISLA, zorder=3))
-            ax.text(ix + iw / 2, iy + ih / 2,
-                f"ISLA\n{isla_data.get('ancho', 120)}×{isla_data.get('largo', 200)} cm",
-                ha="center", va="center", fontsize=7.5, fontweight="bold",
-                color="#1A1A1A", zorder=5)
-        elif tipo == 'g':
-            pared_izq = paredes_data[0].get('ancho', 250)
-            pared_fondo = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
-            pared_der = paredes_data[2].get('ancho', 200) if len(paredes_data) > 2 else 200
-            draw_modules_on_wall(ox + pw, oy + H - pw, pared_fondo, 'north', 1)
-            draw_modules_on_wall(ox + pw, oy + pw, pared_izq, 'west', 0)
-            draw_modules_on_wall(ox + W - pw, oy + pw, pared_der, 'east', 2)
-            # Península
-            pen_w = 120 * scale / 100; pen_h = mod_depth
-            px = ox + W - pw - pen_w; py = oy + pw + pared_der * scale / 100
-            ax.add_patch(patches.Rectangle((px, py), pen_w, pen_h,
-                linewidth=1.5, edgecolor=C_BORDE, facecolor=C_ISLA, zorder=3))
-            ax.text(px + pen_w / 2, py + pen_h / 2, "PENÍNSULA",
-                ha="center", va="center", fontsize=6, fontweight="bold", color="#1A1A1A", zorder=5)
-
-        # Cotas
-        arrow_kw = dict(arrowstyle="<->", color=C_COTA, lw=0.9)
-        def cota_h(x1, x2, y, label):
-            ax.annotate("", xy=(x2, y), xytext=(x1, y), arrowprops=arrow_kw)
-            ax.text((x1 + x2) / 2, y + 6, label, ha="center", va="bottom",
-                fontsize=6.5, color=C_COTA)
-        def cota_v(x, y1, y2, label):
-            ax.annotate("", xy=(x, y2), xytext=(x, y1), arrowprops=arrow_kw)
-            ax.text(x - 6, (y1 + y2) / 2, label, ha="right", va="center",
-                fontsize=6.5, color=C_COTA, rotation=90)
-        cota_h(ox, ox + W, oy - 22, f"{room_w} cm")
-        cota_v(ox - 22, oy, oy + H, f"{room_h} cm")
-        # Cotas por pared
-        for i, p in enumerate(paredes_data):
-            ancho_p = p.get('ancho', 0)
-            if ancho_p > 0:
-                ax.text(ox + W + 20, oy + H - 20 - i * 16,
-                    f"{p.get('nombre', f'Pared {i+1}')}: {ancho_p}cm",
-                    fontsize=6, color=C_COTA, va="center", zorder=6)
-
-        # Leyenda
-        lx = ox + W + 20; ly = oy + H - 20 - len(paredes_data) * 16 - 20
-        items = [(C_MUEBLE, C_BORDE, "Módulo bajo"), (C_ENCIM, C_BORDE, "Encimera")]
-        if tipo == 'isla' or (isla_data.get('ancho', 0) > 0):
-            items.append((C_ISLA, C_BORDE, "Isla central"))
-        if tipo == 'g':
-            items.append((C_ISLA, C_BORDE, "Península"))
-        if elementos:
-            for el in elementos[:4]:
-                color = C_ELEM.get(el.get('id', ''), '#B8D4E0')
-                items.append((color, "#555", el.get('label', '')))
-        ax.text(lx, ly + 15, "LEYENDA", fontsize=7, fontweight="bold", color=C_ACENTO)
-        for i, (fc, ec, lbl) in enumerate(items):
-            yy = ly - i * 16
-            ax.add_patch(patches.Rectangle((lx, yy - 5), 10, 8,
-                linewidth=0.8, edgecolor=ec, facecolor=fc))
-            ax.text(lx + 14, yy, lbl, fontsize=5.5, va="center", color=C_COTA)
-
-        # Título distribución
-        dist_labels = {'lineal': 'LINEAL', 'l': 'EN L', 'u': 'EN U',
-                       'paralela': 'PARALELA', 'isla': 'CON ISLA', 'g': 'EN G'}
-        tipo_label = dist_labels.get(tipo, tipo.upper())
-
-        # Cajetín
-        ax.add_patch(patches.Rectangle((ox, -10), W, 52,
-            linewidth=1.2, edgecolor=C_ACENTO, facecolor="#F0EBE3", zorder=10))
-        ax.plot([ox, ox + W], [20, 20], color=C_ACENTO, linewidth=0.7, zorder=11)
-        ax.text(ox + W / 2, 32,
-            f"PLANO DE DISTRIBUCIÓN {tipo_label} — {(payload.nombre_cliente or 'CLIENTE').upper()} · {(payload.estilo or 'MODERNO').upper()}",
-            ha="center", va="center", fontsize=9, fontweight="bold",
-            color="#1A1A1A", zorder=12)
-        medidas_txt = ' | '.join([f"{p.get('nombre','')}: {p.get('ancho',0)}cm" for p in paredes_data])
-        ax.text(ox + 10, 8, f"MEDIDAS: {medidas_txt}",
-            ha="left", va="center", fontsize=5.5, color=C_COTA, zorder=12)
-        ax.text(ox + W / 2, 8, "ESCALA 1:20",
-            ha="center", va="center", fontsize=6.5, color=C_COTA, zorder=12)
-        ax.text(ox + W - 10, 8, "3D ESTUDIO",
-            ha="right", va="center", fontsize=6.5, color=C_ACENTO,
-            fontweight="bold", zorder=12)
+        pie = []
+        r = g.get("rincon")
+        if r:
+            pie.append(f"Rincón {int(round(r['ancho']))} × {int(round(r['fondo']))} cm")
+        else:
+            # NO se cierra la habitación por detrás: de una lineal sólo se
+            # conoce el ancho de SU pared. Y se dice, para que nadie lea el
+            # dibujo como si la estancia acabara ahí.
+            pie.append("Fondo de la estancia no medido: la planta se dibuja alrededor de los muebles.")
+        for d in pc.descuadres(g["cotas"]):
+            pie.append(f"⚠ {d['nombre']}: {d['motivo']}")
+        if g["omitidos"]:
+            faltan = ", ".join(str(o.get("label") or o.get("id") or "?") for o in g["omitidos"][:4])
+            pie.append(f"⚠ Sin dibujar por falta de datos: {faltan}")
+        if pie:
+            fig.text(0.5, 0.02, "\n".join(pie[:4]), ha="center", va="bottom",
+                     fontsize=7.5, color=C_COTA, linespacing=1.6)
 
         buf = io.BytesIO()
-        plt.tight_layout(pad=0)
-        plt.savefig(buf, format="png", dpi=150, bbox_inches="tight",
-            facecolor=fig.get_facecolor())
+        plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=C_BG)
         plt.close(fig)
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
-        return {"planoBase64": f"data:image/png;base64,{b64}", "tipo_distribucion": tipo}
+        return {"planoBase64": f"data:image/png;base64,{b64}",
+                "tipo_distribucion": tipo,
+                "modulos": len(g["modulos"]),
+                "omitidos": g["omitidos"],
+                "descuadres": pc.descuadres(g["cotas"]),
+                "avisos": _val.get("avisos") or []}
 
     except HTTPException:
-        # Mismo fallo que tenía el alzado: HTTPException hereda de Exception, así
-        # que un 422 con instrucciones acababa saliendo como un 500 de "servidor
-        # caído" con el "422:" incrustado en el texto.
+        # Un 422 con instrucciones NO puede acabar saliendo como un 500.
         raise
     except Exception as e:
         logger.error(f"plano-2d error: {e}", exc_info=True)
@@ -955,7 +846,6 @@ async def generar_plano_2d(payload: ProyectoBase):
             _mpl.rcParams["path.sketch"] = None
         except Exception:
             pass
-
 
 @router.post("/ficha-tecnica")
 async def generar_ficha_tecnica(payload: ProyectoBase):
