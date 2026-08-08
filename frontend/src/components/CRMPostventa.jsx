@@ -27,6 +27,8 @@ export default function CRMPostventa() {
   const [stats, setStats] = useState(null);
   const [estados, setEstados] = useState(['abierto', 'en_proceso', 'espera_cliente', 'resuelto', 'cerrado']);
   const [prioridades, setPrioridades] = useState(['baja', 'media', 'alta', 'urgente']);
+  const [causas, setCausas] = useState({});   // clave -> etiqueta, del backend
+  const [error, setError] = useState('');
   const [filtro, setFiltro] = useState('');
   const [cargando, setCargando] = useState(false);
   const [nuevo, setNuevo] = useState(null); // formulario alta
@@ -41,7 +43,7 @@ export default function CRMPostventa() {
         fetch(url, { headers: authHeaders() }).then(r => r.json()),
         fetch(`${API}/api/crm/tickets/stats`, { headers: authHeaders() }).then(r => r.json()),
       ]);
-      if (tr.success) { setTickets(tr.tickets || []); setEstados(tr.estados || estados); setPrioridades(tr.prioridades || prioridades); }
+      if (tr.success) { setTickets(tr.tickets || []); setEstados(tr.estados || estados); setPrioridades(tr.prioridades || prioridades); setCausas(tr.causas || {}); }
       if (sr.success) setStats(sr);
     } catch { /* noop */ } finally { setCargando(false); }
   }, [filtro]);
@@ -55,9 +57,19 @@ export default function CRMPostventa() {
     if (d.success) { setNuevo(null); cargar(); }
   };
   const cambiar = async (t, campos) => {
+    setError('');
     const r = await fetch(`${API}/api/crm/tickets/${t.id}`, { method: 'PATCH', headers: H(), body: JSON.stringify(campos) });
-    const d = await r.json();
-    if (d.success) { setTickets(prev => prev.map(x => x.id === t.id ? { ...x, ...d.ticket } : x)); if (detalle?.id === t.id) setDetalle(d.ticket); cargar(); }
+    const d = await r.json().catch(() => ({}));
+    // El backend rechaza cerrar sin causa (400). Antes esto se perdía: el
+    // desplegable volvía solo a su sitio y no se decía por qué. Un cambio que
+    // no se aplica y no avisa es peor que un error.
+    if (!r.ok || !d.success) {
+      setError(d.detail || 'No se pudo guardar el cambio.');
+      return;
+    }
+    setTickets(prev => prev.map(x => x.id === t.id ? { ...x, ...d.ticket } : x));
+    if (detalle?.id === t.id) setDetalle(d.ticket);
+    cargar();
   };
   const borrar = async (t) => { if (!window.confirm(`¿Borrar ${t.numero}?`)) return; await fetch(`${API}/api/crm/tickets/${t.id}`, { method: 'DELETE', headers: authHeaders() }); setDetalle(null); cargar(); };
   const comentar = async () => {
@@ -81,6 +93,41 @@ export default function CRMPostventa() {
           <div className="bg-white rounded-xl border border-slate-200 p-3"><div className="text-2xl font-black text-slate-800">{stats.abiertos}</div><div className="text-xs text-slate-400 font-bold uppercase">Abiertos</div></div>
           <div className="bg-white rounded-xl border border-slate-200 p-3"><div className="text-2xl font-black text-red-600">{stats.vencidos}</div><div className="text-xs text-slate-400 font-bold uppercase">Vencidos SLA</div></div>
           <div className="bg-white rounded-xl border border-slate-200 p-3"><div className="text-2xl font-black text-slate-800">{stats.total}</div><div className="text-xs text-slate-400 font-bold uppercase">Total</div></div>
+        </div>
+      )}
+
+      {/* DE DÓNDE VIENEN LOS FALLOS.
+          El porcentaje va SIEMPRE con su denominador a la vista: si de 40
+          incidencias solo 6 están clasificadas, un "50 % son de medición"
+          suelto se lee como 20 casos cuando son 3. El dato honesto obliga a
+          enseñar sobre cuántas se calcula y cuántas faltan por clasificar. */}
+      {stats && stats.clasificados > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-3">
+          <div className="flex items-baseline justify-between mb-2 flex-wrap gap-1">
+            <span className="text-xs font-black text-slate-600 uppercase">De dónde vienen</span>
+            <span className="text-[11px] text-slate-400">
+              sobre {stats.clasificados} clasificada{stats.clasificados === 1 ? '' : 's'}
+              {stats.sinCausa > 0 && <> · <span className="text-amber-600 font-bold">{stats.sinCausa} sin clasificar</span></>}
+            </span>
+          </div>
+          <div className="space-y-1">
+            {Object.entries(stats.porCausa)
+              .sort((a, b) => b[1] - a[1])
+              .map(([clave, n]) => (
+                <div key={clave} className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600 w-44 shrink-0 truncate">
+                    {(stats.etiquetas || {})[clave] || clave}
+                  </span>
+                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full"
+                      style={{ width: `${stats.porCausaPct[clave] || 0}%` }} />
+                  </div>
+                  <span className="text-xs font-black text-slate-700 w-16 text-right shrink-0">
+                    {stats.porCausaPct[clave]}% <span className="font-normal text-slate-400">({n})</span>
+                  </span>
+                </div>
+              ))}
+          </div>
         </div>
       )}
 
@@ -152,6 +199,35 @@ export default function CRMPostventa() {
                   </select>
                 </label>
               </div>
+
+              {/* CAUSA: de dónde vino el fallo. No se pide al abrir (entonces
+                  casi nunca se sabe) pero SIN ella no se puede cerrar. Es lo
+                  único que permite contestar de dónde salen los errores en vez
+                  de suponerlo. */}
+              <label className="block text-xs font-bold text-slate-500">
+                Causa <span className="font-normal text-slate-400">— de dónde vino el fallo</span>
+                <select
+                  value={detalle.causa || ''}
+                  onChange={e => cambiar(detalle, { causa: e.target.value || null })}
+                  className={`w-full mt-0.5 border rounded-lg px-2 py-1.5 text-sm bg-white ${detalle.causa ? 'border-slate-300' : 'border-amber-300 bg-amber-50'}`}>
+                  <option value="">Sin determinar…</option>
+                  {Object.entries(causas).map(([k, etiqueta]) => (
+                    <option key={k} value={k}>{etiqueta}</option>
+                  ))}
+                </select>
+              </label>
+              {!detalle.causa && detalle.estado !== 'cerrado' && (
+                <p className="text-[11px] text-amber-700 flex items-center gap-1 -mt-1">
+                  <AlertTriangle size={12} /> Hará falta para poder cerrarla.
+                </p>
+              )}
+
+              {error && (
+                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {error}
+                </p>
+              )}
+
               <div className="text-xs text-slate-400">{detalle.contactNombre || 'Sin cliente'}{detalle.pedidoRef ? ` · ${detalle.pedidoRef}` : ''} · creado {fmt(detalle.createdAt)} · SLA {fmt(detalle.slaVence)}</div>
 
               {/* Comentarios */}

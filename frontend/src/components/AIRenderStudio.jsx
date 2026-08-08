@@ -49,6 +49,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap } from 'lucide-react';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
@@ -104,75 +105,6 @@ const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((res
   fr.readAsDataURL(file);
 });
 
-function useSpeechRecognition() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef(null);
-  // Acumulado SOLO de los resultados finales. El texto interino (en progreso)
-  // NO se acumula: se muestra final + interino actual. Asi no se repite.
-  const finalRef = useRef('');
-
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'es-ES';
-
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        // Recorrer SOLO los resultados nuevos desde resultIndex.
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalRef.current += result[0].transcript;  // los finales se acumulan UNA vez
-          } else {
-            interimTranscript += result[0].transcript;  // el interino es solo el actual
-          }
-        }
-        // Mostrar lo confirmado + lo que se esta diciendo ahora (sin repetir).
-        setTranscript(finalRef.current + interimTranscript);
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    }
-  }, []);
-
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      finalRef.current = '';
-      setTranscript('');
-      try { recognitionRef.current.start(); } catch (_) {}
-      setIsListening(true);
-    }
-  }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  }, []);
-
-  const resetTranscript = useCallback(() => {
-    finalRef.current = '';
-    setTranscript('');
-  }, []);
-
-  return { isListening, transcript, isSupported, startListening, stopListening, resetTranscript, setTranscript };
-}
 
 // ─── Catálogo de materiales (sincronizado con backend) ───────────────────────
 const MATERIALS = {
@@ -539,6 +471,10 @@ export default function AIRenderStudio({ state, setState }) {
   const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
   const [detecting, setDetecting] = useState(false);
   const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
+  // Trazo de lápiz en los planos vectoriales. Es SOLO el trazo: mismo dibujo,
+  // mismos módulos y mismas cotas. El backend ya aceptaba el flag `boceto`;
+  // esto es el interruptor que faltaba en pantalla.
+  const [bocetoAlzado, setBocetoAlzado] = useState(false);
   const [editMark, setEditMark] = useState(null);    // índice de la marca en edición
   const [showInstall, setShowInstall] = useState(false); // panel de instalaciones/planos plegado
   const [showOtras, setShowOtras] = useState(false); // barra master "otras herramientas" plegada
@@ -960,7 +896,18 @@ export default function AIRenderStudio({ state, setState }) {
     if (!path) return null;
     if (typeof path === 'string' && path.startsWith('data:')) return path;
     const resp = await fetch(assetSrc(path));
+    // Sin esta comprobación, un 401 o un 500 del proxy se convertía IGUALMENTE
+    // en un data-URL — pero con el JSON del error dentro. Eso viajaba como si
+    // fuera la imagen y reventaba mucho más tarde, en la llamada de visión, con
+    // un "Unable to process input image" de Google que no dice nada de lo que
+    // pasó de verdad. El error hay que darlo aquí, que es donde ocurre.
+    if (!resp.ok) {
+      throw new Error(`No se pudo descargar la imagen del render (${resp.status}).`);
+    }
     const blob = await resp.blob();
+    if (!blob.type.startsWith('image/')) {
+      throw new Error('Lo descargado no es una imagen; vuelve a generar el render.');
+    }
     return await new Promise((res, rej) => {
       const fr = new FileReader();
       fr.onload = () => res(fr.result);
@@ -1088,6 +1035,16 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Construye el prompt de la LÁMINA TÉCNICA según el tipo de proyecto. Cada tipo
   // tiene su propia composición y sus reglas (la campana solo aplica a cocina).
+  // Lo que este botón entrega DE VERDAD según el tipo de proyecto. El motor
+  // vectorial acotado sólo existe para cocina; para lo demás sale una lámina
+  // de presentación sin cotas. Rotularlo siempre «Alzado + planta + medidas»
+  // era prometer medidas que no llegaban.
+  const etiquetaFicha = (tid) => (
+    tid === 'cocina' ? 'Alzado + planta + medidas'
+      : tid === 'armario' ? 'Alzado acotado → Armarios'
+        : 'Lámina de presentación (sin medidas)'
+  );
+
   const fichaPromptPorTipo = (tid) => {
     // REGLA DE ORO (ver CLAUDE.md): un modelo de IMAGEN nunca escribe cotas — las
     // inventa. Esta lámina es solo la PARTE GRÁFICA (vistas limpias sin números);
@@ -1156,6 +1113,70 @@ export default function AIRenderStudio({ state, setState }) {
   // Genera los planos EXACTOS (planta acotada + alzado alámbrico) a partir de una
   // distribución detectada. Devuelve las láminas listas para el historial. Si un
   // endpoint falla, propaga el error (con motivo) en lugar de tragárselo.
+  // Saca la distribución del render o, si no puede, de la descripción escrita.
+  // Devuelve null y deja el motivo puesto: quien llama decide qué hacer.
+  const deducirDistribucion = async (motivos) => {
+    const img = currentImage();
+    if (img) {
+      try {
+        const dataUrl = await imageToDataUrl(img);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) return dj.distribucion;
+      } catch (e) { motivos.push(`del render: ${e?.message || 'no se pudo leer'}`); }
+    }
+    if ((description || '').trim()) {
+      try {
+        const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
+        if (dt?.success) return dt.distribucion;
+      } catch (e) { motivos.push(`de la descripción: ${e?.message || 'no se pudo leer'}`); }
+    }
+    return null;
+  };
+
+  // BOCETO EN PERSPECTIVA a lápiz: lo que el master pidió enseñando sus
+  // referencias. Cada arista sale de un ancho o una altura REALES; no lo
+  // dibuja una IA, porque una IA redibuja y al redibujar mueve cosas — y en un
+  // boceto eso pesa MÁS que en un render, porque un dibujo a mano se lee como
+  // «esto lo ha hecho el diseñador».
+  const generarPerspectiva = async () => {
+    if (editing) return;
+    setEditing(true); setError(null); setAvisoGeom(null);
+    try {
+      const motivos = [];
+      const distribucion = await deducirDistribucion(motivos);
+      if (!distribucion) {
+        const falta = !medidas.ancho
+          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
+          : '';
+        setError(`No he podido deducir la distribución${motivos.length ? ` (${motivos.join(' · ')})` : ''}.${falta}`);
+        return;
+      }
+      const pr = await postJson('/api/estudio-cocinas/perspectiva', {
+        nombre_cliente: cliente || 'Cliente',
+        distribucion_estructurada: distribucion,
+        boceto: true,
+      });
+      if (!pr?.perspectivaBase64) { setError('No se pudo generar el boceto en perspectiva.'); return; }
+      const lamina = {
+        success: true,
+        result: { images: [pr.perspectivaBase64] },
+        description: 'Boceto en perspectiva (a lápiz, sin cotas)',
+        timestamp: new Date(),
+      };
+      setRenderResult(lamina);
+      setRenderHistory(prev => [lamina, ...prev].slice(0, 14));
+      // Lo que no se ha podido dibujar se DICE. Si se quedara en el servidor,
+      // el master vería una cocina a la que le faltan muebles y sin saber por qué.
+      const sinDibujar = (pr.omitidos || []).map(o => o.label || o.id).filter(Boolean);
+      if (sinDibujar.length) {
+        setError(`Boceto generado, pero sin estos módulos por falta de datos: ${sinDibujar.join(', ')}.`);
+      }
+      setAvisoGeom(pr.avisos?.length ? pr.avisos : null);
+    } catch (e) {
+      setError(`Error al generar el boceto en perspectiva: ${e?.message || 'error desconocido'}.`);
+    } finally { setEditing(false); }
+  };
+
   // Vista ALÁMBRICA en blanco y negro (estilo CAD tipo TeoWin), con o sin cotas.
   // Es el mismo motor vectorial determinista: nunca hay medidas inventadas.
   const generarVistaAlambrica = async (conCotas) => {
@@ -1202,6 +1223,7 @@ export default function AIRenderStudio({ state, setState }) {
         distribucion_estructurada: distribucion,
         con_cotas: !!conCotas,
         monocromo: true,
+        boceto: bocetoAlzado,
       });
       if (!ar?.alzadoBase64) { setError('No se pudo generar la vista alámbrica.'); return; }
       const lamina = {
@@ -1219,14 +1241,23 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   const generarPlanosExactos = async (distribucion) => {
-    const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: distribucion });
+    // El interruptor de boceto vale para TODAS las vías que dibujan el alzado,
+    // no solo para la alámbrica: si valiera para una sola, el master lo
+    // encendería y por tres de los cuatro botones seguiría saliendo a línea
+    // limpia sin que nada dijera por qué.
+    const body = JSON.stringify({
+      nombre_cliente: cliente || 'Cliente',
+      distribucion_estructurada: distribucion,
+      boceto: bocetoAlzado,
+    });
     const [pr, ar] = await Promise.all([
       postJson('/api/estudio-cocinas/plano-2d', body),
       postJson('/api/estudio-cocinas/alzado', body),
     ]);
+    const suf = bocetoAlzado ? ' · boceto a lápiz' : '';
     const extra = [];
-    if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
-    if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
+    if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: `Planta acotada (exacta)${suf}`, timestamp: new Date() });
+    if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: `Alzado alámbrico acotado (exacto)${suf}`, timestamp: new Date() });
     return extra;
   };
 
@@ -1243,6 +1274,23 @@ export default function AIRenderStudio({ state, setState }) {
       setError('Indica arriba el ANCHO REAL de la estancia (cm) antes de generar la ficha: sin esa escala las cotas no serían medidas reales.');
       return;
     }
+    // EL BOTÓN NO PUEDE PROMETER LO QUE NO VA A DAR. El motor vectorial
+    // acotado de más abajo sólo está modelado para cocina; en un armario o un
+    // baño esta ruta se lo saltaba y devolvía únicamente una lámina de IA —una
+    // imagen bonita, sin una sola cota— con el mismo rótulo «Alzado + planta +
+    // medidas». El master pulsaba y no entendía por qué «no hacía el alzado».
+    //
+    // El armario SÍ tiene alzado acotado, pero necesita sus medidas reales
+    // (ancho/alto/fondo/módulos), que viven en el configurador de Armarios y
+    // no aquí. Así que se dice dónde está, en vez de entregar un sustituto.
+    if (tipo3d === 'armario') {
+      setError('El alzado acotado del armario se genera en el Presupuestador de Armarios (botón PLANOS): necesita el ancho, alto, fondo y número de módulos reales, y aquí no están. Desde este botón sólo saldría una lámina sin cotas.');
+      return;
+    }
+    // Para baño y «otro mueble» la lámina de presentación SÍ sirve y se sigue
+    // generando: lo que no puede es venderse como un alzado acotado. El rótulo
+    // del botón cambia (ver `etiquetaFicha`) y el resultado se nombra por lo
+    // que es. Quitar la lámina habría sido cargarse algo que funcionaba.
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -1724,7 +1772,13 @@ export default function AIRenderStudio({ state, setState }) {
   // rechaza el JSON → "Error al guardar". Para archivo basta 1600px JPEG.
   const shrinkForSave = async (src) => {
     const dataUrl = await imageToDataUrl(src);
-    if (!dataUrl || !String(dataUrl).startsWith('data:image')) return dataUrl;
+    // Antes, cualquier cosa que no fuese `data:image` se devolvía TAL CUAL y
+    // seguía su camino haciéndose pasar por una imagen. Si no lo es, se corta
+    // aquí: más vale un error claro que un render fantasma.
+    if (dataUrl && !String(dataUrl).startsWith('data:image')) {
+      throw new Error('La imagen del render no se pudo leer.');
+    }
+    if (!dataUrl) return dataUrl;
     return await new Promise((resolve) => {
       const im = new window.Image();
       im.onload = () => {
@@ -3395,9 +3449,28 @@ export default function AIRenderStudio({ state, setState }) {
                     ▦ Esquema
                   </button>
                   <button onClick={generarFichaTecnica} disabled={editing}
+                    title={tipo3d === 'cocina'
+                      ? 'Planta y alzado acotados (vectoriales) + lámina de presentación'
+                      : tipo3d === 'armario'
+                        ? 'El alzado acotado del armario se genera en el Presupuestador de Armarios (botón PLANOS), que es donde están sus medidas'
+                        : 'Lámina de presentación. El alzado y la planta acotados sólo están modelados para cocina'}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
-                    {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} Alzado + planta + medidas
+                    {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} {etiquetaFicha(tipo3d)}
                   </button>
+                  {/* Interruptor del BOCETO. No es un botón que dibuje: cambia
+                      cómo salen los planos de los botones de al lado. Mismo
+                      dibujo, mismos módulos y mismas cotas — solo el trazo. */}
+                  {tipo3d === 'cocina' && (
+                  <button onClick={() => setBocetoAlzado(b => !b)}
+                    title="Trazo de lápiz en la planta y el alzado. El dibujo y las cotas son EXACTAMENTE los mismos: solo cambia la línea."
+                    aria-pressed={bocetoAlzado}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-black flex items-center gap-1.5 transition-colors ${
+                      bocetoAlzado
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                        : 'bg-white text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50'}`}>
+                    ✎ Boceto {bocetoAlzado ? 'ON' : 'OFF'}
+                  </button>
+                  )}
                   {tipo3d === 'cocina' && (
                   <button onClick={generarPlanosTecnicos} disabled={editing}
                     title="Planta acotada + alzado alámbrico EXACTOS (vectoriales, con cotas). Modelado para cocina."
@@ -3423,6 +3496,11 @@ export default function AIRenderStudio({ state, setState }) {
                       title="Vista alámbrica en blanco y negro (estilo CAD) SIN medidas, dibujo limpio."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-zinc-900 ring-1 ring-zinc-900 hover:bg-zinc-100 disabled:opacity-50 flex items-center gap-1.5">
                       {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Alámbrica s/ medidas
+                    </button>
+                    <button onClick={generarPerspectiva} disabled={editing}
+                      title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, no por una IA. Sin cotas: es de presentación."
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-stone-700 text-white hover:bg-stone-800 disabled:opacity-50 flex items-center gap-1.5">
+                      {editing ? <Loader size={12} className="animate-spin" /> : <>✎</>} Boceto en perspectiva
                     </button>
                   </>
                   )}

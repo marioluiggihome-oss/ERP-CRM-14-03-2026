@@ -35,69 +35,12 @@ import {
   Send, Plus, ChevronLeft, ChevronRight, ClipboardList
 } from 'lucide-react';
 import FichaFabricacion from './FichaFabricacion';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { jsPDF } from 'jspdf';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
 // ─── Hook Web Speech API (voz que se AÑADE al texto, no lo pisa) ─────────────
-function useSpeechRecognition() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef(null);
-  const finalRef = useRef('');
-
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'es-ES';
-
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalRef.current += result[0].transcript;
-          } else {
-            interimTranscript += result[0].transcript;
-          }
-        }
-        setTranscript(finalRef.current + interimTranscript);
-      };
-
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
-      recognitionRef.current = recognition;
-    }
-  }, []);
-
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      finalRef.current = '';
-      setTranscript('');
-      try { recognitionRef.current.start(); } catch (_) {}
-      setIsListening(true);
-    }
-  }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  }, []);
-
-  const resetTranscript = useCallback(() => {
-    finalRef.current = '';
-    setTranscript('');
-  }, []);
-
-  return { isListening, transcript, isSupported, startListening, stopListening, resetTranscript };
-}
 
 // ─── Temas ────────────────────────────────────────────────────────────────────
 const THEMES = {

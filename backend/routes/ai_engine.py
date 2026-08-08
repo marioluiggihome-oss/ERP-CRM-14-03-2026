@@ -1137,7 +1137,19 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
         _im.save(_buf, format="JPEG", quality=88, optimize=True)  # baseline, sin perfil raro
         img = "data:image/jpeg;base64," + _b64x.b64encode(_buf.getvalue()).decode()
     except Exception as _e:
+        # Antes esto solo dejaba un aviso en el log y se llamaba a Gemini
+        # IGUALMENTE con la imagen que no se había podido preparar. El master
+        # veía entonces un "400 INVALID_ARGUMENT: Unable to process input image"
+        # con un enlace a la documentación de Google, que no dice nada de lo que
+        # pasó de verdad ni de qué hacer. Si la imagen no se puede leer aquí, no
+        # hay nada que analizar: se corta y se dice en castellano.
         logger.warning("detect-installations: no se pudo normalizar la imagen: %s", _e)
+        raise HTTPException(
+            status_code=400,
+            detail="No se pudo leer la imagen del render (llegó vacía o en un "
+                   "formato que no se reconoce). Vuelve a generar el render e "
+                   "inténtalo otra vez.",
+        )
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():

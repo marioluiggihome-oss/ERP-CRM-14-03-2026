@@ -23,6 +23,12 @@ from services.jwt_service import (
     get_current_user, require_auth, require_admin, ADMIN_ROLE_FLAGS,
     create_access_token, create_refresh_token, verify_refresh_token,
 )
+from services.cambios_proyecto import (
+    resumen_cambio, cambios_sin_aprobar, puede_fabricar, ORIGENES,
+)
+from services.comparador_fabricacion import comparar
+from services.validacion_fabricacion import validar
+from services.expediente import montar as montar_expediente
 
 from services.activity_tracker import get_tracker, ActivityType
 
@@ -200,6 +206,18 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
     if update_data:
         await db.projects.update_one({"id": project_id}, {"$set": update_data})
 
+    # ── CONTROL DE CAMBIOS ──────────────────────────────────────────────────
+    # `versions` (arriba) guarda el estado anterior para no perder trabajo.
+    # Esto es otra cosa: deja anotado QUÉ se movió, QUIÉN lo hizo y CUÁNTO
+    # costó, que es lo que hay que poder contestar cuando el cliente pregunta
+    # por qué la factura no cuadra con lo que firmó. Si el proyecto ya estaba
+    # aceptado, el cambio nace marcado como crítico y bloquea la fabricación
+    # hasta que alguien lo apruebe.
+    tras_guardar = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    cambio = resumen_cambio(existing, tras_guardar, autor=current_user.get("username"))
+    if cambio:
+        await db.projects.update_one({"id": project_id}, {"$push": {"cambios": cambio}})
+
     # Tracking de actividad
     tracker = get_tracker()
     if tracker and existing.get("userId"):
@@ -213,6 +231,163 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
 
     updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
     return updated
+
+
+@router.get("/projects/{project_id}/cambios")
+async def listar_cambios(project_id: str, current_user: dict = Depends(require_auth)):
+    """Historial de cambios del proyecto y si puede pasar a fabricación."""
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    ok, motivo = puede_fabricar(proyecto)
+    return {
+        "success": True,
+        "cambios": proyecto.get("cambios", []),
+        "pendientes": cambios_sin_aprobar(proyecto.get("cambios")),
+        "puedeFabricar": ok,
+        "motivo": motivo,
+        "origenes": ORIGENES,
+    }
+
+
+@router.patch("/projects/{project_id}/cambios/{indice}")
+async def anotar_cambio(project_id: str, indice: int, payload: dict,
+                        current_user: dict = Depends(require_auth)):
+    """Completa un cambio: quién lo pidió y por qué.
+
+    Esto lo rellena una PERSONA. No se deduce de quién tecleó: el comercial
+    teclea lo que pide el cliente, así que dar por hecho que el autor es el
+    solicitante convertiría el historial en una coartada falsa.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    cambios = proyecto.get("cambios") or []
+    if not 0 <= indice < len(cambios):
+        raise HTTPException(status_code=404, detail="Ese cambio no existe.")
+
+    upd = {}
+    if "pedidoPor" in payload:
+        v = payload["pedidoPor"]
+        if v not in ORIGENES and v not in (None, ""):
+            raise HTTPException(status_code=400, detail=f"Origen no válido: {v}")
+        upd[f"cambios.{indice}.pedidoPor"] = v or None
+    if "motivo" in payload:
+        upd[f"cambios.{indice}.motivo"] = str(payload["motivo"] or "")[:500]
+
+    if not upd:
+        raise HTTPException(status_code=400, detail="No hay nada que anotar.")
+    await db.projects.update_one({"id": project_id}, {"$set": upd})
+    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return {"success": True, "cambio": nuevo["cambios"][indice]}
+
+
+@router.post("/projects/{project_id}/cambios/{indice}/aprobar")
+async def aprobar_cambio(project_id: str, indice: int,
+                         current_user: dict = Depends(require_admin)):
+    """Aprueba un cambio crítico y desbloquea la fabricación.
+
+    Solo mando (`require_admin`): aprobar un cambio con impacto económico sobre
+    un presupuesto ya aceptado es una decisión de gerencia, no de quien lo
+    teclea. Si lo pudiera aprobar el mismo que lo hizo, el control sobraría.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    cambios = proyecto.get("cambios") or []
+    if not 0 <= indice < len(cambios):
+        raise HTTPException(status_code=404, detail="Ese cambio no existe.")
+    if cambios[indice].get("aprobadoAt"):
+        raise HTTPException(status_code=400, detail="Ese cambio ya estaba aprobado.")
+
+    ahora = datetime.now(timezone.utc).isoformat()
+    await db.projects.update_one({"id": project_id}, {"$set": {
+        f"cambios.{indice}.aprobadoPor": current_user.get("username"),
+        f"cambios.{indice}.aprobadoAt": ahora,
+    }})
+    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    ok, motivo = puede_fabricar(nuevo)
+    return {"success": True, "cambio": nuevo["cambios"][indice],
+            "puedeFabricar": ok, "motivo": motivo}
+
+
+@router.get("/projects/{project_id}/expediente")
+async def expediente_proyecto(project_id: str, current_user: dict = Depends(require_auth)):
+    """El EXPEDIENTE UNICO: todo lo de la obra en una respuesta.
+
+    Filtrado por permiso EN EL SERVIDOR. Los importes no se enmascaran para que
+    la pantalla los tape: sencillamente no se envian a quien no puede verlos.
+    Ocultar en el navegador no protege nada — el dato se ve abriendo el
+    inspector.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    pendientes = cambios_sin_aprobar(proyecto.get("cambios"))
+    val = validar(proyecto, pendientes_cambios=len(pendientes))
+    return {"success": True,
+            **montar_expediente(proyecto, val, pendientes, current_user)}
+
+
+@router.get("/projects/{project_id}/validacion")
+async def expediente_validacion(project_id: str, current_user: dict = Depends(require_auth)):
+    """¿Está este proyecto en condiciones de bajar al taller?
+
+    Contesta con las comprobaciones una a una, agrupadas para la pantalla, y
+    con los motivos de bloqueo señalando DÓNDE está el problema — un aviso que
+    no lleva a ninguna parte obliga a repasar el proyecto entero, y eso no se
+    hace: se ignora.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    pendientes = len(cambios_sin_aprobar(proyecto.get("cambios")))
+    return {"success": True, **validar(proyecto, pendientes_cambios=pendientes)}
+
+
+@router.get("/projects/{project_id}/comparar-fabricacion")
+async def comparar_con_fabricacion(project_id: str, current_user: dict = Depends(require_auth)):
+    """Compara lo PRESUPUESTADO con lo que hay en la orden de FABRICACIÓN.
+
+    Se presupuestan unas cosas y a veces acaban fabricándose otras: por un
+    cambio pactado, por un error al trascribir, o porque alguien tocó la orden
+    después. El dinero se pierde igual en los tres casos, y hoy no se ve hasta
+    que el montador llega a la obra.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    # Proyecto -> pedido (por nº de presupuesto) -> orden de fabricación.
+    pedido = None
+    if proyecto.get("budgetNumber"):
+        pedido = await db.orders.find_one(
+            {"budgetNumber": proyecto["budgetNumber"]}, {"_id": 0, "id": 1})
+    orden = None
+    if pedido:
+        orden = await db.manufacturing_orders.find_one(
+            {"sourceOrderId": pedido["id"]}, {"_id": 0})
+
+    if not orden:
+        # Sin orden de fabricación no hay nada que comparar, y decirlo es mejor
+        # que devolver "todo cuadra": no es lo mismo que coincida que que aún
+        # no exista el otro lado.
+        return {"success": True, "hayOrden": False,
+                "mensaje": "Este proyecto todavía no tiene orden de fabricación.",
+                "comparacion": None}
+
+    presupuestado = (proyecto.get("itemsMontada") or []) + (proyecto.get("itemsDespiece") or [])
+    comparacion = comparar(presupuestado, orden.get("items") or [])
+    return {
+        "success": True,
+        "hayOrden": True,
+        "ordenNumero": orden.get("orderNumber"),
+        "numeroFabricacion": orden.get("manufacturingNumber"),
+        "comparacion": comparacion,
+    }
 
 
 @router.post("/projects/{project_id}/clone")
