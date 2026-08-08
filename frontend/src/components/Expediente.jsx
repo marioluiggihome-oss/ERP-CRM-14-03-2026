@@ -342,13 +342,16 @@ const Medida = ({ m, onTomar, onConfirmar, ocupada }) => {
 
 const NuevaMedida = ({ onCrear, ocupada }) => {
   const [m, setM] = useState({ etiqueta: '', introducida: '', unidad: 'mm', critica: true });
-  const listo = m.etiqueta.trim().length > 0;
 
   // La clave sale de la etiqueta: sin clave la medida no se puede volver a
   // encontrar ni comparar con nada, así que no se deja crear sin ella.
   const claveDe = (t) => t.trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  // Sin clave la medida no se puede volver a encontrar ni comparar con nada,
+  // y el servidor la rechaza. Una etiqueta de solo signos («¿?») da clave
+  // vacía, así que se mira la clave y no la etiqueta.
+  const listo = claveDe(m.etiqueta).length > 0;
 
   return (
     <div className="p-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white min-w-0 space-y-2">
@@ -556,10 +559,15 @@ export default function Expediente({ state }) {
       // Se manda la lista entera: guardar NO sube de nivel (eso son `tomar` y
       // `confirmar`, cada una con su autor y su fecha), así que las que ya
       // estaban vuelven tal cual.
+      // Se devuelven TAMBIÉN quién y cuándo: lo que no se mande aquí se
+      // pierde, y añadir una medida borraría quién tomó las demás. Una medida
+      // que no se le puede preguntar a nadie vale la mitad.
       const lista = [...(medidas?.medidas || []).map(m => ({
         clave: m.clave, etiqueta: m.etiqueta, unidad: m.unidad, critica: m.critica,
         introducida: m.introducida, tomada: m.tomada, confirmada: m.confirmada,
         notas: m.notas,
+        tomadaPor: m.tomadaPor, tomadaAt: m.tomadaAt,
+        confirmadaPor: m.confirmadaPor, confirmadaAt: m.confirmadaAt,
       })), nueva];
       setMedidas(await medidasAPI.guardar(obra.id, lista));
     } catch (e) {
