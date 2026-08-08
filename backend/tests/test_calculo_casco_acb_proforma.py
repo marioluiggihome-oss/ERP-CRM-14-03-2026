@@ -320,13 +320,30 @@ def test_las_piezas_sueltas_no_piden_casco():
     """El lector marca `esMueble: true` en TODAS las filas, asi que un
     COSTADO VISTO, un zocalo o una regleta salian en rojo con «sin
     equivalencia» y un boton pidiendo un casco que no van a tener nunca: son
-    tablero."""
+    tablero.
+
+    La lista de palabras ya no vive dentro de `_es_pieza_suelta`: esta en las
+    constantes `_ES_*`, que son las MISMAS que usan el emparejador de cascos y
+    el destino del pedido (antes habia cuatro copias y podian separarse). Se
+    comprueban ahi, y ademas que el predicado las consulte TODAS: si dejara de
+    mirar una, esa familia volveria a pedir casco.
+    """
     src = _leer(IMPORTER)
     assert "_es_pieza_suelta" in src, "ha vuelto a tratarse todo como mueble"
+
+    familias = ("_ES_PUERTA", "_ES_COSTADO", "_ES_REGLETA", "_ES_TABLERO")
+    constantes = ""
+    for fam in familias:
+        j = src.index(f"const {fam}")
+        constantes += src[j:src.index("\n", j)]
+
+    for pieza in ("COSTADO", "REGLETA", "COPETE", "ZOCALO", "TRASERA"):
+        assert pieza in constantes, f"«{pieza}» vuelve a contarse como mueble"
+
     i = src.index("const _es_pieza_suelta")
     cuerpo = src[i:src.index("\n};", i)]
-    for pieza in ("COSTADO", "REGLETA", "COPETE", "ZOCALO", "TRASERA"):
-        assert pieza in cuerpo, f"«{pieza}» vuelve a contarse como mueble"
+    for fam in familias:
+        assert fam in cuerpo, f"`_es_pieza_suelta` ha dejado de mirar {fam}"
 
 
 def test_un_mueble_que_no_se_reconoce_SIGUE_pidiendo_casco():

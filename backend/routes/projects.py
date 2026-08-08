@@ -29,6 +29,7 @@ from services.cambios_proyecto import (
 from services.comparador_fabricacion import comparar
 from services.validacion_fabricacion import validar
 from services.expediente import montar as montar_expediente
+from services import medicion_obra
 
 from services.activity_tracker import get_tracker, ActivityType
 
@@ -346,6 +347,118 @@ async def expediente_validacion(project_id: str, current_user: dict = Depends(re
 
     pendientes = len(cambios_sin_aprobar(proyecto.get("cambios")))
     return {"success": True, **validar(proyecto, pendientes_cambios=pendientes)}
+
+
+@router.get("/projects/{project_id}/medidas")
+async def medidas_proyecto(project_id: str, tolerancia: float = 0,
+                           current_user: dict = Depends(require_auth)):
+    """Las medidas de la obra, con el nivel en el que está cada una.
+
+    Introducida (la de la venta), tomada (la del metro en la obra) y confirmada
+    (la que se ha dado por buena para fabricar). Las tres conviven: la
+    diferencia entre ellas es justo lo que hay que poder mirar cuando algo sale
+    mal.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return {"success": True, **medicion_obra.revisar(proyecto.get("medidas"), tolerancia)}
+
+
+@router.put("/projects/{project_id}/medidas")
+async def guardar_medidas(project_id: str, payload: dict,
+                          current_user: dict = Depends(require_auth)):
+    """Guarda la lista de medidas de la obra tal cual.
+
+    Se guarda lo que mandan, SIN tocar niveles: subir de nivel es un acto
+    (tomar, confirmar) y tiene su propia ruta, con su autor y su fecha. Si
+    guardar pudiera confirmar de paso, confirmar dejaría de significar nada.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    medidas = payload.get("medidas")
+    if not isinstance(medidas, list):
+        raise HTTPException(status_code=422, detail="Hace falta una lista de medidas.")
+    sin_clave = [i for i, m in enumerate(medidas) if not str((m or {}).get("clave") or "").strip()]
+    if sin_clave:
+        # Sin clave no se puede comparar con nada ni volver a encontrarla: es
+        # una medida que se pierde en cuanto se guarda.
+        raise HTTPException(
+            status_code=422,
+            detail=f"Estas medidas no tienen nombre y no se podrían volver a encontrar: {sin_clave}.")
+
+    await db.projects.update_one({"id": project_id}, {"$set": {"medidas": medidas}})
+    return {"success": True, **medicion_obra.revisar(medidas)}
+
+
+async def _cambiar_nivel(project_id: str, clave: str, payload: dict, usuario: dict, accion: str):
+    """Tomar o confirmar una medida. Es la misma operación con distinto nombre,
+    y por eso está escrita una vez: dos copias acabarían guardando cosas
+    distintas."""
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    medidas = list(proyecto.get("medidas") or [])
+    idx = next((i for i, m in enumerate(medidas)
+                if str((m or {}).get("clave") or "").strip() == clave), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail=f"Esta obra no tiene ninguna medida «{clave}».")
+
+    quien = (usuario or {}).get("username") or (usuario or {}).get("email") or ""
+    ahora = datetime.now(timezone.utc).isoformat()
+    fn = medicion_obra.tomar if accion == "tomar" else medicion_obra.confirmar
+    try:
+        medidas[idx] = fn(medidas[idx], payload.get("valor"), quien=quien, cuando=ahora)
+    except ValueError as e:
+        # El motor exige el valor a propósito: confirmar sin número sería un
+        # botón que no comprueba nada y encima parece que sí.
+        raise HTTPException(status_code=422, detail=str(e))
+
+    await db.projects.update_one({"id": project_id}, {"$set": {"medidas": medidas}})
+    return {"success": True, "medida": medicion_obra.revisar_una(medidas[idx]),
+            **medicion_obra.revisar(medidas)}
+
+
+@router.post("/projects/{project_id}/medidas/{clave}/tomar")
+async def tomar_medida(project_id: str, clave: str, payload: dict,
+                       current_user: dict = Depends(require_auth)):
+    """Apunta la medida tomada en obra. NO pisa la de la venta."""
+    return await _cambiar_nivel(project_id, clave, payload, current_user, "tomar")
+
+
+@router.post("/projects/{project_id}/medidas/{clave}/confirmar")
+async def confirmar_medida(project_id: str, clave: str, payload: dict,
+                           current_user: dict = Depends(require_auth)):
+    """Da una medida por buena para fabricar, CON su valor.
+
+    El valor va aparte y es obligatorio: puede no ser ni la de la venta ni la
+    primera de obra —se vuelve a medir y salen otros milímetros—, y eso tiene
+    que caber.
+    """
+    return await _cambiar_nivel(project_id, clave, payload, current_user, "confirmar")
+
+
+@router.post("/projects/{project_id}/medidas/comparar")
+async def comparar_mediciones_proyecto(project_id: str, payload: dict,
+                                       current_user: dict = Depends(require_auth)):
+    """Compara las medidas guardadas con OTRA medición de la misma obra.
+
+    Es el caso de «la midió el comercial y luego el montador». Se enseñan las
+    dos y las diferencias, y NO se elige: quedarse con la más nueva, o con la
+    de quien tiene más galones, es como se acaba cortando con la mala.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    otras = payload.get("medidas")
+    if not isinstance(otras, list):
+        raise HTTPException(status_code=422, detail="Hace falta la otra lista de medidas.")
+    return {"success": True, **medicion_obra.comparar_mediciones(
+        proyecto.get("medidas"), otras,
+        str(payload.get("etiquetaA") or "guardada"),
+        str(payload.get("etiquetaB") or "nueva"))}
 
 
 @router.get("/projects/{project_id}/comparar-fabricacion")
