@@ -108,7 +108,14 @@ const _medidas_mm = (it) => {
   return { ancho, alto, fondo };
 };
 
-/** PIEZAS SUELTAS: lo que NO es un mueble y por tanto nunca tendrá casco.
+/** QUÉ ES CADA LÍNEA: puerta, costado, regleta o tablero.
+ *
+ * ESTO ESTABA ESCRITO EN CUATRO SITIOS. La misma lista de palabras aparecía en
+ * `_es_pieza_suelta`, en `_tipo_acb_auto`, en `_destino_auto` y otra vez dentro
+ * del cálculo, cada una con su versión. Bastaba tocar una para que una puerta
+ * dejase de pagarse por m² pero siguiera saliendo de la lista de cascos, o al
+ * revés — y sin dar ningún error. Ahora la lista está UNA vez y todos preguntan
+ * aquí.
  *
  * Costados, puertas, zócalos, regletas, copetes, tableros, traseras y bandas
  * son TABLERO, no cascos. El lector de la proforma marca `esMueble: true` en
@@ -121,15 +128,32 @@ const _medidas_mm = (it) => {
  * saliendo como mueble sin equivalencia, porque ese SÍ necesita que el master
  * le elija el casco a mano. Confundir «no es un mueble» con «no lo he sabido
  * leer» le quitaría el botón justo donde hace falta.
+ *
+ * OJO CON «PUERTA» A SECAS: un mueble se describe como «BAJO 2 PUERTAS», así
+ * que buscar esa palabra en cualquier parte convertiría muebles enteros en
+ * puertas y los dejaría sin casco. Por eso solo cuenta AL PRINCIPIO de la
+ * línea (ahí no empieza ningún mueble, que empiezan por BAJO/ALTO/COLUMNA) o en
+ * «PUERTA DE INTEGRACIÓN», que es una puerta y no otra cosa.
  */
+const _ES_PUERTA = /^PTA[ .]|^PUERTA\b|PUERTA DE INTEGRACION|PUERTA DE INTEGRACIÓN/;
+const _ES_COSTADO = /COSTADO/;
+const _ES_REGLETA = /^REG |REGLETA|COPETE|ZOCALO|ZÓCALO/;
+const _ES_TABLERO = /^TABLERO|TRASERA|^BANDA |SIN TIRADOR/;
+
+const _may = (desc) => (desc || '').toUpperCase();
+const _es_puerta = (desc) => _ES_PUERTA.test(_may(desc));
+const _es_costado = (desc) => _ES_COSTADO.test(_may(desc));
+const _es_regleta = (desc) => _ES_REGLETA.test(_may(desc));
+
 const _es_pieza_suelta = (desc) => {
-  const t = (desc || '').toUpperCase();
-  return /^PTA |PUERTA DE INTEGRACION|COSTADO|^REG |REGLETA|COPETE|ZOCALO|ZÓCALO|^TABLERO|TRASERA|^BANDA |SIN TIRADOR/.test(t);
+  const t = _may(desc);
+  return _ES_PUERTA.test(t) || _ES_COSTADO.test(t) || _ES_REGLETA.test(t) || _ES_TABLERO.test(t);
 };
 
 const _tipo_acb_auto = (desc, tipo, grosor) => {
   const t = (desc || '').toUpperCase();
-  if (/PUERTA DE INTEGRACION|^PTA |ZOCALO|ZÓCALO|^REG |REGLETA|COPETE|COSTADO/.test(t)) return null;
+  // Ni puertas, ni costados, ni regletas llevan casco: no son muebles.
+  if (_ES_PUERTA.test(t) || _ES_COSTADO.test(t) || _ES_REGLETA.test(t)) return null;
   if (t.includes('FREGADERO')) return 'Bajo Fregadero';
   if (t.includes('BAJO')) return 'Bajo Con Balda';
   // COLUMNAS. Dos cosas iban mal a la vez y se tapaban entre ellas:
@@ -266,9 +290,8 @@ const DESTINOS = {
 };
 
 const _destino_auto = (it, acb) => {
-  const t = (it.descripcion || '').toUpperCase();
-  if (/^PTA |PUERTA DE INTEGRACION/.test(t)) return 'puertas';
-  if (/COSTADO|^REG |REGLETA|COPETE|ZOCALO|ZÓCALO|TABLERO|TRASERA|BANDA/.test(t)) return 'otros';
+  if (_es_puerta(it.descripcion)) return 'puertas';
+  if (_es_pieza_suelta(it.descripcion)) return 'otros';
   if (acb) return 'cascos';
   return 'otros';
 };
@@ -277,6 +300,47 @@ const _herraje_especial = (desc) => {
   for (const h of HERRAJE_ESPECIAL) if (h.re.test(desc || '')) return h.label;
   return null;
 };
+
+// ── Columnas de la tabla ─────────────────────────────────────────────────────
+//
+// UNA SOLA LISTA. La cabecera y los anchos salen de aquí, en este orden, y las
+// celdas de `FilaMueble` van en el mismo. Antes las cabeceras estaban escritas
+// una a una y el ancho lo repartía el navegador: al echar el candado
+// desaparecían ocho columnas de golpe y las que quedaban se estiraban a lo
+// bruto, que es lo que se veía descuadrado.
+//
+// Cada ancho es el de PARTIDA y se puede arrastrar: se tira del borde derecho
+// de la cabecera. Se guarda en el navegador, así que la mesa queda como cada
+// uno la deja.
+//
+// `dinero: true` marca las que se van con el candado. Están aquí y no en un
+// `if` suelto para que la cabecera y las celdas caigan A LA VEZ: una fila con
+// más <td> que <th> descuadra la tabla entera.
+const COLUMNAS = [
+  { clave: 'borrar',  etiqueta: '',                  ancho: 34,  fijo: true },
+  { clave: 'pedir',   etiqueta: 'Pedir',             ancho: 46,  titulo: 'Marcar para incluir en el pedido' },
+  { clave: 'n',       etiqueta: '#',                 ancho: 36 },
+  { clave: 'cod',     etiqueta: 'Código',            ancho: 140 },
+  { clave: 'desc',    etiqueta: 'Descripción',       ancho: 320 },
+  { clave: 'uds',     etiqueta: 'Uds',               ancho: 52,  titulo: 'Unidades de la línea: multiplican casco, herraje, mano de obra y puertas' , alinea: 'center' },
+  { clave: 'casco',   etiqueta: 'Casco ACB (equiv.)', ancho: 250 },
+  { clave: 'pcg',     etiqueta: 'P/C/G',             ancho: 62,  titulo: 'Puertas / cajones / gavetas' , alinea: 'center' },
+  { clave: 'alvic',   etiqueta: 'Val. Alvic',        ancho: 92,  dinero: true , alinea: 'right' },
+  { clave: 'tarifa',  etiqueta: 'Tarifa ACB',        ancho: 92,  dinero: true , alinea: 'right' },
+  { clave: 'cascoE',  etiqueta: 'Casco coste',       ancho: 96,  dinero: true , alinea: 'right' },
+  { clave: 'herraje', etiqueta: 'Herraje',           ancho: 92,  dinero: true , alinea: 'right' },
+  { clave: 'mat',     etiqueta: 'Coste mat.',        ancho: 96,  dinero: true , alinea: 'right' },
+  { clave: 'mo',      etiqueta: 'Mano obra',         ancho: 92,  dinero: true , alinea: 'right' },
+  { clave: 'puertas', etiqueta: 'Puertas',           ancho: 92,  dinero: true , alinea: 'right' },
+  { clave: 'total',   etiqueta: 'Total línea',       ancho: 104, dinero: true , alinea: 'right' },
+  { clave: 'destino', etiqueta: 'Pedido a',          ancho: 112 },
+];
+
+// Plegada, la columna Código enseña seis caracteres; desplegada tiene dentro un
+// campo para escribirlo. Son dos anchos distintos y no se puede tener uno solo.
+const ANCHO_COD_PLEGADA = 48;
+const ANCHO_MINIMO_COLUMNA = 30;
+const CLAVE_ANCHOS = 'alvic_costes_anchos_columna';
 
 // Diagnóstico de red
 const _diagnostico = async (e) => {
@@ -313,6 +377,14 @@ export default function ProformaImporter({ esMaster }) {
   // La columna Código nace PLEGADA: ocupa un ancho fijo y lo que hay que leer
   // de un vistazo es la descripción. Se despliega pinchando en su cabecera.
   const [mostrarCodigo, setMostrarCodigo] = useState(false);
+  // Ancho de cada columna, en píxeles, tal como lo haya dejado quien la usa.
+  // Vive en el navegador porque es una preferencia de la mesa, no del proyecto:
+  // la misma proforma abierta en la tablet y en el portátil no quiere los
+  // mismos anchos.
+  const [anchos, setAnchos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CLAVE_ANCHOS) || '{}') || {}; }
+    catch { return {}; }
+  });
   const fileRef = useRef(null);
 
   // Guardar/cargar proyectos
@@ -431,14 +503,13 @@ export default function ProformaImporter({ esMaster }) {
   const calc = useMemo(() => {
     const facCasco = (1 - (Number(p.desc1) || 0) / 100) * (1 - (Number(p.desc2) || 0) / 100);
     const pm2 = Number(precioM2Puerta) || 0;
-    const esPuertaDesc = (d) => /^PTA |PUERTA DE INTEGRACION/i.test(d || '');
     // puertasEditadas se indexa por la POSICION dentro de la lista de puertas,
     // no por la fila; este mapa permite casar una cosa con la otra para que el
     // coste respete las medidas corregidas en el editor de puertas.
     const idxPuertaPorOrig = {};
     let _np = 0;
     items.forEach((it, i) => {
-      if (!deletedRows.has(i) && esPuertaDesc(it.descripcion)) { idxPuertaPorOrig[i] = _np; _np += 1; }
+      if (!deletedRows.has(i) && _es_puerta(it.descripcion)) { idxPuertaPorOrig[i] = _np; _np += 1; }
     });
     const moGeneral = Number(p.manoObra) || 0;
     const rows = items
@@ -511,10 +582,12 @@ export default function ProformaImporter({ esMaster }) {
     const totHerr = rows.reduce((a, r) => a + r._herraje, 0);
     const totAlvic = rows.reduce((a, r) => a + r._totalAlvic, 0);
 
-    // Puertas: items con tipo 'panel' que contienen PTA o PUERTA DE INTEGRACION
-    const puertas = items.filter((it, i) => !deletedRows.has(i) && /^PTA |PUERTA DE INTEGRACION/i.test(it.descripcion || ''));
-    const costados = items.filter((it, i) => !deletedRows.has(i) && /COSTADO/i.test(it.descripcion || ''));
-    const regletas = items.filter((it, i) => !deletedRows.has(i) && /^REG |REGLETA|COPETE|ZOCALO|ZÓCALO/i.test(it.descripcion || ''));
+    // Las tres listas del editor salen del MISMO criterio que decide si la
+    // línea lleva casco y a qué proveedor va. Con criterios distintos, una
+    // puerta podía pagarse por m² y a la vez pedirse como casco.
+    const puertas = items.filter((it, i) => !deletedRows.has(i) && _es_puerta(it.descripcion));
+    const costados = items.filter((it, i) => !deletedRows.has(i) && _es_costado(it.descripcion));
+    const regletas = items.filter((it, i) => !deletedRows.has(i) && _es_regleta(it.descripcion));
     const totPuertas = rows.reduce((a, r) => a + (r.puertas || 0) * (r._uds || 1), 0);
     const sinMatch = rows.filter(r => r.esMueble && !r._acb).length;
     // Líneas valoradas en un color distinto al del proyecto porque ese casco no
@@ -547,6 +620,59 @@ export default function ProformaImporter({ esMaster }) {
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
              puertas, costados, regletas, costePuertas, pm2 };
   }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas]);
+
+  // ── Anchos de columna: se arrastran y se recuerdan ────────────────────────
+  //
+  // El master lo pidió con estas palabras: «q pueda mover las columnas
+  // verticales con los datos a la medida de ancho que quiera». Se tira del
+  // borde derecho de la cabecera; doble clic devuelve esa columna a su ancho de
+  // partida.
+  const anchoPorDefecto = useCallback((c) => (
+    c.clave === 'cod' && !mostrarCodigo ? ANCHO_COD_PLEGADA : c.ancho
+  ), [mostrarCodigo]);
+
+  const anchoDe = useCallback((c) => (
+    Number(anchos[c.clave]) > 0 ? Number(anchos[c.clave]) : anchoPorDefecto(c)
+  ), [anchos, anchoPorDefecto]);
+
+  const columnasVisibles = useMemo(
+    () => COLUMNAS.filter(c => !c.dinero || !ocultarImportes),
+    [ocultarImportes]);
+
+  const anchoTotal = useMemo(
+    () => columnasVisibles.reduce((a, c) => a + anchoDe(c), 0),
+    [columnasVisibles, anchoDe]);
+
+  useEffect(() => {
+    try { localStorage.setItem(CLAVE_ANCHOS, JSON.stringify(anchos)); } catch { /* navegador sin sitio */ }
+  }, [anchos]);
+
+  const arrastrarAncho = useCallback((clave, anchoIni, xIni) => {
+    // Se escucha en `window` y no en el tirador: el dedo o el ratón se salen
+    // del tirador enseguida y si los eventos van ahí, la columna se queda a
+    // medio mover.
+    const mover = (ev) => {
+      const x = ev.clientX ?? (ev.touches && ev.touches[0]?.clientX);
+      if (x == null) return;
+      setAnchos(prev => ({ ...prev, [clave]: Math.max(ANCHO_MINIMO_COLUMNA, Math.round(anchoIni + (x - xIni))) }));
+    };
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+      window.removeEventListener('pointercancel', soltar);
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+    window.addEventListener('pointercancel', soltar);
+  }, []);
+
+  // Al plegar o desplegar el Código cambia lo que hay dentro (seis caracteres o
+  // un campo para escribirlo), así que el ancho a mano deja de valer: vuelve al
+  // que le toca en ese estado.
+  const alternarCodigo = useCallback(() => {
+    setMostrarCodigo(v => !v);
+    setAnchos(prev => { const { cod, ...resto } = prev; return resto; });
+  }, []);
 
   // ── Guardar proyecto ──────────────────────────────────────────────────────
   const guardarProyecto = async () => {
@@ -1027,49 +1153,67 @@ export default function ProformaImporter({ esMaster }) {
                 className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
                 Desmarcar todas
               </button>
+              {/* Solo aparece si se ha movido alguna columna: un botón para
+                  deshacer lo que nadie ha hecho todavía es ruido. */}
+              {Object.keys(anchos).length > 0 && (
+                <button onClick={() => setAnchos({})}
+                  className="ml-auto px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50"
+                  title="Devolver todas las columnas a su ancho de partida">
+                  Anchos originales
+                </button>
+              )}
               <button onClick={anadirLinea}
-                className="ml-auto px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40">
+                className={`${Object.keys(anchos).length > 0 ? '' : 'ml-auto'} px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40`}>
                 + Añadir línea
               </button>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-200">
-              {/* Con el candado echado la tabla pierde las ocho columnas de dinero
-                  (y por eso también el ancho mínimo: sin ellas cabe de sobra). */}
-              <table className={`w-full text-xs ${ocultarImportes ? 'min-w-[640px]' : 'min-w-[1180px]'}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                <thead className="bg-slate-50 text-slate-500 [&_th]:whitespace-nowrap">
+              {/* ANCHO FIJO Y DECLARADO, columna a columna. El navegador ya no
+                  reparte lo que sobra: cada una mide lo que dice el `colgroup`,
+                  y por eso al echar el candado —que se lleva ocho columnas de
+                  golpe— las que quedan se quedan donde estaban en vez de
+                  estirarse a lo bruto. */}
+              <table className="text-xs [&_td]:overflow-hidden" style={{ tableLayout: 'fixed', width: anchoTotal, minWidth: '100%', fontVariantNumeric: 'tabular-nums' }}>
+                <colgroup>
+                  {columnasVisibles.map(c => <col key={c.clave} style={{ width: anchoDe(c) }} />)}
+                </colgroup>
+                <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    <th className="px-2 py-2 w-6"></th>
-                    <th className="px-2 py-2 w-6" title="Marcar para incluir en el pedido">Pedir</th>
-                    <th className="px-2 py-2">#</th>
-                    {/* CÓDIGO plegable. Nace plegado: ocupa un ancho fijo y lo
-                        que hace falta leer de un vistazo es la descripción. Se
-                        despliega pinchando en el propio nombre de la columna. */}
-                    <th className={`px-2 py-2 ${mostrarCodigo ? '' : 'w-8'}`}>
-                      <button
-                        onClick={() => setMostrarCodigo(v => !v)}
-                        title={mostrarCodigo ? 'Ocultar la columna Código' : 'Mostrar la columna Código'}
-                        className="flex items-center gap-1 font-bold text-slate-500 hover:text-indigo-600"
-                      >
-                        {mostrarCodigo ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-                        {mostrarCodigo ? 'Código' : 'Cód.'}
-                      </button>
-                    </th>
-                    <th className="px-2 py-2 w-full">Descripción</th>
-                    <th className="px-2 py-2 text-center" title="Unidades de la línea: multiplican casco, herraje, mano de obra y puertas">Uds</th>
-                    <th className="px-2 py-2">Casco ACB (equiv.)</th>
-                    <th className="px-2 py-2 text-center">P/C/G</th>
-                    {!ocultarImportes && <>
-                      <th className="px-2 py-2 text-right text-slate-400">Val. Alvic</th>
-                      <th className="px-2 py-2 text-right">Tarifa ACB</th>
-                      <th className="px-2 py-2 text-right">Casco coste</th>
-                      <th className="px-2 py-2 text-right">Herraje</th>
-                      <th className="px-2 py-2 text-right">Coste mat.</th>
-                      <th className="px-2 py-2 text-right">Mano obra</th>
-                      <th className="px-2 py-2 text-right">Puertas</th>
-                      <th className="px-2 py-2 text-right font-black">Total línea</th>
-                    </>}
-                    <th className="px-2 py-2">Pedido a</th>
+                    {columnasVisibles.map(c => (
+                      <th key={c.clave} className="relative px-2 py-2 align-bottom" title={c.titulo}>
+                        <div className={`truncate ${c.alinea === 'right' ? 'text-right' : c.alinea === 'center' ? 'text-center' : ''}`}
+                             style={c.clave === 'total' ? { fontWeight: 900 } : undefined}>
+                          {c.clave === 'cod' ? (
+                            /* CÓDIGO plegable. Nace plegado: lo que hace falta
+                               leer de un vistazo es la descripción. Se despliega
+                               pinchando en el propio nombre de la columna. */
+                            <button
+                              onClick={alternarCodigo}
+                              title={mostrarCodigo ? 'Ocultar la columna Código' : 'Mostrar la columna Código'}
+                              className="flex items-center gap-1 font-bold text-slate-500 hover:text-indigo-600"
+                            >
+                              {mostrarCodigo ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                              {mostrarCodigo ? 'Código' : 'Cód.'}
+                            </button>
+                          ) : c.etiqueta}
+                        </div>
+                        {/* El tirador. `touch-action: none` es lo que hace que
+                            en la tablet arrastre la columna en vez de mover la
+                            página. */}
+                        {!c.fijo && (
+                          <span
+                            role="separator"
+                            aria-label={`Ancho de la columna ${c.etiqueta || c.clave}`}
+                            onPointerDown={(e) => { e.preventDefault(); arrastrarAncho(c.clave, anchoDe(c), e.clientX); }}
+                            onDoubleClick={() => setAnchos(prev => { const q = { ...prev }; delete q[c.clave]; return q; })}
+                            title="Arrastra para cambiar el ancho · doble clic para dejarlo como estaba"
+                            className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-indigo-300/60 active:bg-indigo-400"
+                            style={{ touchAction: 'none' }}
+                          />
+                        )}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -1227,7 +1371,7 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
       <td className="px-2 py-1.5 font-mono">
         {mostrarCodigo ? (
           <input value={r.cod || ''} onChange={e => onCod(e.target.value)} placeholder="código"
-            className="w-28 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
+            className="w-full min-w-0 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
         ) : (
           /* Plegada: se deja el código a la vista pero sin ocupar la mitad de
              la tabla. Se despliega desde la cabecera para poder editarlo. */
@@ -1236,10 +1380,10 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
           </span>
         )}
       </td>
-      <td className="px-2 py-1.5 w-full">
+      <td className="px-2 py-1.5">
         <input value={r.descripcion || ''} onChange={e => onDescripcion(e.target.value)}
           title={`${r.descripcion} · ${r.color}`}
-          className="w-full min-w-[280px] px-1 py-0.5 border border-slate-200 rounded text-xs" />
+          className="w-full min-w-0 px-1 py-0.5 border border-slate-200 rounded text-xs" />
         <div className="flex items-center gap-1 flex-wrap">
           {r.herrajeBlum && <span className="text-[9px] font-black text-orange-600">BLUM</span>}
           {r._herrajeEsp && (
@@ -1256,9 +1400,9 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
           {r._uds}
         </span>
       </td>
-      <td className="px-2 py-1.5 text-slate-600 min-w-[160px]">
+      <td className="px-2 py-1.5 text-slate-600">
         {editando ? (
-          <div className="flex flex-col gap-1 min-w-[230px]">
+          <div className="flex flex-col gap-1 min-w-0">
             {/* BARRA DE BÚSQUEDA. Los desplegables de abajo obligan a saberse el
                 nombre exacto del tipo ACB; aquí basta con escribir «alto balda
                 900». Es la vía para las líneas que salen «sin equivalencia». */}
@@ -1384,7 +1528,7 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
             placeholder={r._mo ? r._mo.toFixed(2) : '0'}
             onChange={e => onMo(e.target.value)}
             title="Vacío = mano de obra general. Escribe un valor para esta línea."
-            className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${moLinea !== undefined && moLinea !== '' ? 'border-emerald-400 font-bold text-emerald-700' : 'border-slate-200 text-slate-500'}`}
+            className={`w-full min-w-0 px-1 py-0.5 border rounded text-right text-xs ${moLinea !== undefined && moLinea !== '' ? 'border-emerald-400 font-bold text-emerald-700' : 'border-slate-200 text-slate-500'}`}
           />
         </td>
         {/* Puertas: vacio = m2 x precio/m2. Solo tiene sentido en las puertas. */}
@@ -1396,7 +1540,7 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
               placeholder={r._puerta ? r._puerta.toFixed(2) : '0'}
               onChange={e => onPuerta(e.target.value)}
               title="Vacío = área × precio/m². Escribe un precio para esta puerta."
-              className={`w-20 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
+              className={`w-full min-w-0 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
             />
           )}
         </td>
@@ -1405,7 +1549,7 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
       <td className="px-2 py-1.5">
         <select value={r._destino} onChange={e => onDestino(e.target.value)}
           title="Proveedor al que se pedirá esta línea"
-          className="border border-slate-200 rounded px-1 py-0.5 text-[10px]"
+          className="w-full min-w-0 border border-slate-200 rounded px-1 py-0.5 text-[10px]"
           style={{ color: DESTINOS[r._destino].color }}>
           {Object.values(DESTINOS).filter(d => d.id !== 'herrajes').map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
         </select>
