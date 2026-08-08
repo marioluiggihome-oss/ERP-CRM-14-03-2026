@@ -428,6 +428,41 @@ export default function AIRenderStudio({ state, setState }) {
   // Créditos de IA del usuario (bolsa mensual ligada a su suscripción).
   const [aiCredits, setAiCredits] = useState(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
+
+  // PANTALLA COMPLETA DEL APARATO, no solo una capa encima de la pagina. En una
+  // tablet de 8" la barra del navegador y las pestanias se comen un tercio del
+  // alto: sin esto, «pantalla completa» dejaba el render en un recuadro.
+  const entrarEnPantallaCompleta = useCallback(() => {
+    setShowFullscreen(true);
+    const el = document.documentElement;
+    const pedir = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    // Si el aparato no lo soporta (Safari de iPhone), no se rompe nada: se
+    // queda la capa CSS, que es lo que habia hasta ahora.
+    if (pedir) { try { pedir.call(el); } catch { /* sin pantalla completa nativa */ } }
+  }, []);
+
+  const salirDePantallaCompleta = useCallback(() => {
+    setShowFullscreen(false);
+    const salir = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (salir && (document.fullscreenElement || document.webkitFullscreenElement)) {
+      try { salir.call(document); } catch { /* ya estaba fuera */ }
+    }
+  }, []);
+
+  // Si el usuario sale con la tecla Escape o con el gesto del sistema, el
+  // navegador NO avisa a React: sin esto la capa negra se quedaba puesta y
+  // parecia que la aplicacion se habia colgado.
+  useEffect(() => {
+    const alCambiar = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) setShowFullscreen(false);
+    };
+    document.addEventListener('fullscreenchange', alCambiar);
+    document.addEventListener('webkitfullscreenchange', alCambiar);
+    return () => {
+      document.removeEventListener('fullscreenchange', alCambiar);
+      document.removeEventListener('webkitfullscreenchange', alCambiar);
+    };
+  }, []);
   const [analyzingRef, setAnalyzingRef] = useState(false);
   // Guardado de proyectos (cliente + referencia) y descarga.
   const [cliente, setCliente] = useState('');
@@ -3427,9 +3462,9 @@ export default function AIRenderStudio({ state, setState }) {
                   title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}>
                   <Layers size={14} className={interactiveMode ? 'text-white' : 'text-slate-600'} />
                 </button>
-                <button onClick={() => setShowFullscreen(true)}
+                <button onClick={entrarEnPantallaCompleta}
                   className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-                  title="Ver en pantalla completa">
+                  title="Ver en pantalla completa (oculta la barra del navegador)">
                   <Maximize2 size={14} className="text-slate-600" />
                 </button>
                 {/* Separador + nuevo render */}
@@ -3483,8 +3518,13 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="shrink-0 mb-2">
                   {/* El botón que abre esto vive en la barra de acciones: aquí
                       ocupaba una fila entera para un solo botón. */}
+                  {/* En pantalla ancha la barra se reparte en varias filas; en
+                      una tablet de 8" eso son CUATRO filas de botones que se
+                      comen el alto del visor y dejan el render en una rendija.
+                      Por debajo de `sm` no se desdobla: rueda en horizontal,
+                      que cuesta un gesto y no cuesta altura. */}
                   {showInstall && (
-                  <div className="mt-2 flex items-center gap-1.5 flex-wrap bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
+                  <div className="mt-2 flex items-center gap-1.5 overflow-x-auto sm:overflow-visible sm:flex-wrap [&>*]:shrink-0 sm:[&>*]:shrink bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
                   <button onClick={detectInstalaciones} disabled={detecting}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
@@ -4003,16 +4043,26 @@ export default function AIRenderStudio({ state, setState }) {
         </div>
       )}
 
-      {/* Fullscreen Modal */}
+      {/* PANTALLA COMPLETA DE VERDAD.
+          Esto era solo una capa CSS encima de la página: en una tablet de 8"
+          seguían ahí la barra de direcciones y las pestañas del navegador, así
+          que el render se quedaba en un recuadro pequeño y no había manera de
+          «poner la pantalla entera». Ahora se pide además el modo pantalla
+          completa al navegador (`requestFullscreen`), que es lo que hace
+          desaparecer su barra. Si el aparato no lo soporta —el Safari del
+          iPhone, por ejemplo— se queda la capa de antes, que ya funcionaba. */}
       {showFullscreen && renderResult?.result?.images?.[0] && (
-        <div className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4" onClick={() => setShowFullscreen(false)}>
-          <button className="absolute top-6 right-6 text-white/70 hover:text-white" onClick={() => setShowFullscreen(false)}>
-            <X size={32} />
+        <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center p-1 sm:p-4"
+          onClick={() => salirDePantallaCompleta()}>
+          <button className="absolute top-3 right-3 p-2 rounded-full bg-white/15 text-white/90 hover:bg-white/25 z-10"
+            title="Salir de pantalla completa"
+            onClick={(e) => { e.stopPropagation(); salirDePantallaCompleta(); }}>
+            <X size={26} />
           </button>
           <img
             src={assetSrc(renderResult.result.images[0])}
             alt="Render 3D"
-            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+            className="max-w-full max-h-full object-contain"
           />
         </div>
       )}
