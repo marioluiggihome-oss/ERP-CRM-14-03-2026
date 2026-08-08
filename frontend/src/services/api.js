@@ -838,6 +838,77 @@ export const expedienteAPI = {
 
 
 // ============================================
+// ALMACÉN: EXISTENCIAS, RESERVAS Y PLAN DE COMPRA
+// ============================================
+//
+// El cálculo está en el servidor (`services/almacen.py` y `almacen_datos.py`),
+// probado y sin base de datos. Aquí no se calcula nada: lo que no venga en la
+// respuesta NO se rellena — y en particular un stock desconocido llega como
+// `null` y tiene que seguir siendo `null`, que no es lo mismo que cero.
+
+export const almacenAPI = {
+  _h: () => {
+    const token = getToken();
+    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  },
+
+  listarStock: async () => {
+    const r = await fetch(`${API_URL}/api/almacen/stock`, { headers: almacenAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudieron leer las existencias');
+    return r.json();
+  },
+
+  guardarStock: async (referencia, ficha) => {
+    const r = await fetch(`${API_URL}/api/almacen/stock/${encodeURIComponent(referencia)}`, {
+      method: 'PUT', headers: almacenAPI._h(), body: JSON.stringify(ficha)
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo guardar la ficha');
+    return r.json();
+  },
+
+  borrarStock: async (referencia) => {
+    const r = await fetch(`${API_URL}/api/almacen/stock/${encodeURIComponent(referencia)}`, {
+      method: 'DELETE', headers: almacenAPI._h()
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo borrar la ficha');
+    return r.json();
+  },
+
+  listarReservas: async (proyecto = null) => {
+    const q = proyecto ? `?proyecto=${encodeURIComponent(proyecto)}` : '';
+    const r = await fetch(`${API_URL}/api/almacen/reservas${q}`, { headers: almacenAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudieron leer las reservas');
+    return r.json();
+  },
+
+  crearReserva: async (reserva) => {
+    const r = await fetch(`${API_URL}/api/almacen/reservas`, {
+      method: 'POST', headers: almacenAPI._h(), body: JSON.stringify(reserva)
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo apartar el material');
+    return r.json();
+  },
+
+  borrarReserva: async (referencia, proyecto) => {
+    const r = await fetch(
+      `${API_URL}/api/almacen/reservas?referencia=${encodeURIComponent(referencia)}&proyecto=${encodeURIComponent(proyecto)}`,
+      { method: 'DELETE', headers: almacenAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo soltar la reserva');
+    return r.json();
+  },
+
+  plan: async (proyecto, lineas, pedidos = null) => {
+    const r = await fetch(`${API_URL}/api/almacen/plan`, {
+      method: 'POST', headers: almacenAPI._h(),
+      body: JSON.stringify({ proyecto, lineas, pedidos })
+    });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo calcular el plan de compra');
+    return r.json();
+  },
+};
+
+
+// ============================================
 // INVOICES (FACTURACIÓN)
 // ============================================
 
