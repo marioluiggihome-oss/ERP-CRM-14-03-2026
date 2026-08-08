@@ -130,6 +130,72 @@ def test_la_tarifa_va_en_milimetros():
     assert c["ancho"] == 600 and c["alto"] == 900 and c["fondo"] == 330
 
 
+# ─── 1-bis. Las columnas: cada gama tiene SUS tipos ─────────────────────────
+#
+# Segundo numero que dio el master: una COLUMNA HORNO MICRO de 220 salia a
+# 139,59 EUR cuando en grafito vale 150,46. Dos fallos encadenados:
+#
+#   a) TODA columna caia en «Columna Despensa» —horno y micro incluidos—.
+#   b) «Columna Despensa» NO EXISTE en 19 mm. Al no encontrar nada, el
+#      emparejador se caia al respaldo y cogia un casco de 16 mm en Roble.
+#
+# Por eso el tipo depende del GROSOR: no es nomenclatura, es que en cada gama
+# existen unos cascos y no otros.
+
+def _por_tipo(tipo, grosor, ancho, alto):
+    for c in _cascos():
+        if (c.get("tipo") == tipo and c.get("grosor") == grosor
+                and c.get("ancho") == ancho and c.get("alto") == alto):
+            return c
+    return None
+
+
+def test_la_columna_horno_micro_de_220_vale_150_46_en_grafito():
+    """El numero del master."""
+    c = _por_tipo("Columna Horno-Micro 2000/2200", 19, 600, 2200)
+    assert c is not None, "no esta en el catalogo la Columna Horno-Micro 2000/2200"
+    assert c["precios"]["grafito"] == 150.46
+
+
+def test_lo_que_cogia_por_error_era_un_roble_de_16():
+    """«Columna Despensa 300 · Roble 16» a 139,59: otro tipo, otra gama y otro
+    color. Se fija para que la diferencia quede escrita."""
+    c = _por_tipo("Columna Despensa", 16, 300, 2200)
+    assert c is not None and c["precios"]["roble"] == 139.59
+
+
+def test_columna_despensa_no_existe_en_19mm():
+    """Es la raiz del fallo: mapear ahi una columna de la gama en kit garantiza
+    que el filtro de 19 mm no encuentre nada y se caiga al respaldo."""
+    hay = [c for c in _cascos()
+           if c.get("tipo") == "Columna Despensa" and c.get("grosor") == 19
+           and (c.get("precios") or {}).get("grafito") is not None]
+    assert hay == [], (
+        "ahora SI existe Columna Despensa en 19 mm: revisa el mapeo de tipos, "
+        "puede que ya no haga falta desdoblarlo por gama")
+
+
+def test_en_19mm_las_columnas_se_llaman_con_sus_nombres_de_gama():
+    src = _leer(IMPORTER)
+    i = src.index("const _tipo_acb_auto")
+    cuerpo = src[i:src.index("\n};", i)]
+    for nombre in ("Columna Horno-Micro 2000/2200", "Columna Horno 2000/2200",
+                   "Columna Con Baldas"):
+        assert nombre in cuerpo, f"falta el tipo de 19 mm «{nombre}»"
+    assert "grosor" in cuerpo, (
+        "el tipo ya no depende del grosor: en 19 mm y en 16 mm las columnas se "
+        "llaman distinto y no existen las mismas")
+
+
+def test_el_horno_y_el_horno_micro_no_son_el_mismo_casco():
+    a = _por_tipo("Columna Horno 2000/2200", 19, 600, 2200)
+    b = _por_tipo("Columna Horno-Micro 2000/2200", 19, 600, 2200)
+    assert a is not None and b is not None
+    # Hoy coinciden en precio, pero son referencias distintas: lo que se
+    # protege es que exista cada una, no que valgan lo mismo.
+    assert a["tipo"] != b["tipo"]
+
+
 # ─── 2. El ancho sale de la proforma, no del codigo ─────────────────────────
 
 def _cuerpo_medidas():

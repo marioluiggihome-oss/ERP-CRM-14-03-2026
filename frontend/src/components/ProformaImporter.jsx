@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check } from 'lucide-react';
+import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
 
@@ -83,13 +83,40 @@ const _medidas_mm = (it) => {
   return { ancho, alto, fondo };
 };
 
-const _tipo_acb_auto = (desc, tipo) => {
+const _tipo_acb_auto = (desc, tipo, grosor) => {
   const t = (desc || '').toUpperCase();
   if (/PUERTA DE INTEGRACION|^PTA |ZOCALO|ZÓCALO|^REG |REGLETA|COPETE|COSTADO/.test(t)) return null;
   if (t.includes('FREGADERO')) return 'Bajo Fregadero';
   if (t.includes('BAJO')) return 'Bajo Con Balda';
-  if (/SEMICOLUMNA/.test(t)) return 'Semicolumna Despensa';
-  if (/COLUMNA/.test(t)) return 'Columna Despensa';
+  // COLUMNAS. Dos cosas iban mal a la vez y se tapaban entre ellas:
+  //
+  // 1) TODA columna caía en «Columna Despensa», así que una COLUMNA HORNO
+  //    MICRO se valoraba como una despensa. Son cascos distintos: el horno y
+  //    el microondas llevan huecos, travesaños y refuerzos.
+  //
+  // 2) «Columna Despensa» NO EXISTE en 19 mm. En la gama en kit —la normal de
+  //    esta casa— las columnas se llaman «Columna Con Baldas» y
+  //    «Columna Horno(-Micro) 2000/2200». Al no encontrar nada en 19, el
+  //    emparejador se caía al respaldo y acababa cogiendo un casco de 16 mm en
+  //    Roble: de ahí el «Columna Despensa 300 · Roble 16» a 139,59 € donde el
+  //    bueno era «Columna Horno-Micro 2000/2200» en grafito a 150,46 €.
+  //
+  // Por eso el tipo DEPENDE DEL GROSOR: no es un detalle de nomenclatura, es
+  // que en cada gama existen unos cascos y no otros.
+  const _micro = /MICRO|MICROONDAS/.test(t);
+  const _kit = (grosor || 19) === 19;
+  if (/SEMICOLUMNA/.test(t)) {
+    if (_kit) return 'Semicolumna 1300/1500 X580';
+    return (/HORNO/.test(t) || _micro) ? 'Semicolumna (Horno-Micro)' : 'Semicolumna Despensa';
+  }
+  if (/COLUMNA/.test(t)) {
+    if (/HORNO/.test(t)) {
+      if (_kit) return _micro ? 'Columna Horno-Micro 2000/2200' : 'Columna Horno 2000/2200';
+      return _micro ? 'Columna Horno-Micro' : 'Columna Horno';
+    }
+    // Despensa, escobero y demás columnas de baldas.
+    return _kit ? 'Columna Con Baldas' : 'Columna Despensa';
+  }
   if (/SOBREMODULO|SOBREMÓDULO|SOBRE MODULO|SOBRE COLUMNA/.test(t)) return 'Alto Con Balda';
   if (t.includes('ALTO') && t.includes('PLATERO')) return 'Alto Platero Con Balda';
   if (t.includes('ALTO') || t.includes('ALTILLO')) return 'Alto Con Balda';
@@ -139,13 +166,13 @@ const _match_acb = (it, ov, colorProyecto) => {
     if (elegido) return _valorar(elegido, colorKey, true);
   }
 
-  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo);
+  const grosor = o.grosor || 19;
+  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo, grosor);
   if (!tipoAcb) return null;
   const { ancho, alto, fondo } = _medidas_mm(it);
   // Sin ancho no se empareja: el ancho es LO QUE MANDA en el precio del casco.
   // Elegir "el más parecido" sin conocerlo es poner un precio a dedo.
   if (ancho == null) return null;
-  const grosor = o.grosor || 19;
   let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosor && c.precios && c.precios[colorKey] != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosor && _precio_color(c) != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
@@ -239,6 +266,9 @@ export default function ProformaImporter({ esMaster }) {
   // nada: quien entra aquí ya es master.
   const [ocultarImportes, setOcultarImportes] = useState(false);
   const [showDesc2, setShowDesc2] = useState(false);
+  // La columna Código nace PLEGADA: ocupa un ancho fijo y lo que hay que leer
+  // de un vistazo es la descripción. Se despliega pinchando en su cabecera.
+  const [mostrarCodigo, setMostrarCodigo] = useState(false);
   const fileRef = useRef(null);
 
   // Guardar/cargar proyectos
@@ -684,32 +714,38 @@ export default function ProformaImporter({ esMaster }) {
             </span>
           )}
 
-          {/* Guardar proyecto */}
-          {items.length > 0 && (
-            <div className="flex items-center gap-1 ml-auto">
-              <input
-                type="text"
-                placeholder="Nombre del proyecto…"
-                value={nombreProyecto}
-                onChange={e => setNombreProyecto(e.target.value)}
-                className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs w-44"
-              />
-              <button
-                onClick={guardarProyecto}
-                disabled={guardando}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {guardando ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Guardar
-              </button>
-            </div>
-          )}
-          <button
-            onClick={cargarProyectos}
-            disabled={cargandoProyecto}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            {cargandoProyecto ? <Loader size={12} className="animate-spin" /> : <FolderOpen size={12} />} Proyectos
-          </button>
+          {/* Guardar proyecto + Proyectos, SIEMPRE pegados al borde derecho.
+              El `ml-auto` estaba en el bloque de guardar, y ese bloque solo se
+              pinta cuando hay líneas cargadas: sin PDF abierto no había nada
+              que empujara y «Proyectos» se quedaba pegado al botón de
+              importar. Ahora el `ml-auto` va en el grupo, que existe siempre. */}
+          <div className="flex items-center gap-1 ml-auto">
+            {items.length > 0 && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Nombre del proyecto…"
+                  value={nombreProyecto}
+                  onChange={e => setNombreProyecto(e.target.value)}
+                  className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs w-44"
+                />
+                <button
+                  onClick={guardarProyecto}
+                  disabled={guardando}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {guardando ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Guardar
+                </button>
+              </>
+            )}
+            <button
+              onClick={cargarProyectos}
+              disabled={cargandoProyecto}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              {cargandoProyecto ? <Loader size={12} className="animate-spin" /> : <FolderOpen size={12} />} Proyectos
+            </button>
+          </div>
         </div>
 
         {error && <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
@@ -945,8 +981,20 @@ export default function ProformaImporter({ esMaster }) {
                     <th className="px-2 py-2 w-6"></th>
                     <th className="px-2 py-2 w-6" title="Marcar para incluir en el pedido">Pedir</th>
                     <th className="px-2 py-2">#</th>
-                    <th className="px-2 py-2">Código</th>
-                    <th className="px-2 py-2">Descripción</th>
+                    {/* CÓDIGO plegable. Nace plegado: ocupa un ancho fijo y lo
+                        que hace falta leer de un vistazo es la descripción. Se
+                        despliega pinchando en el propio nombre de la columna. */}
+                    <th className={`px-2 py-2 ${mostrarCodigo ? '' : 'w-8'}`}>
+                      <button
+                        onClick={() => setMostrarCodigo(v => !v)}
+                        title={mostrarCodigo ? 'Ocultar la columna Código' : 'Mostrar la columna Código'}
+                        className="flex items-center gap-1 font-bold text-slate-500 hover:text-indigo-600"
+                      >
+                        {mostrarCodigo ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                        {mostrarCodigo ? 'Código' : 'Cód.'}
+                      </button>
+                    </th>
+                    <th className="px-2 py-2 w-full">Descripción</th>
                     <th className="px-2 py-2 text-center" title="Unidades de la línea: multiplican casco, herraje, mano de obra y puertas">Uds</th>
                     <th className="px-2 py-2">Casco ACB (equiv.)</th>
                     <th className="px-2 py-2 text-center">P/C/G</th>
@@ -981,6 +1029,7 @@ export default function ProformaImporter({ esMaster }) {
                       onDescripcion={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, descripcion: v } : x))}
                       onCod={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, cod: v } : x))}
                       colorProyecto={p.colorCasco}
+                      mostrarCodigo={mostrarCodigo}
                     />
                   ))}
                 </tbody>
@@ -1083,7 +1132,7 @@ export default function ProformaImporter({ esMaster }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto }) {
+function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto, mostrarCodigo }) {
   const [editando, setEditando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
@@ -1108,13 +1157,21 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
       </td>
       <td className="px-2 py-1.5">{r.n}</td>
       <td className="px-2 py-1.5 font-mono">
-        <input value={r.cod || ''} onChange={e => onCod(e.target.value)} placeholder="código"
-          className="w-24 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
+        {mostrarCodigo ? (
+          <input value={r.cod || ''} onChange={e => onCod(e.target.value)} placeholder="código"
+            className="w-28 px-1 py-0.5 border border-slate-200 rounded text-xs font-mono" />
+        ) : (
+          /* Plegada: se deja el código a la vista pero sin ocupar la mitad de
+             la tabla. Se despliega desde la cabecera para poder editarlo. */
+          <span className="text-[10px] text-slate-400" title={r.cod || ''}>
+            {(r.cod || '—').slice(0, 6)}{(r.cod || '').length > 6 ? '…' : ''}
+          </span>
+        )}
       </td>
-      <td className="px-2 py-1.5 max-w-[180px]">
+      <td className="px-2 py-1.5 w-full">
         <input value={r.descripcion || ''} onChange={e => onDescripcion(e.target.value)}
           title={`${r.descripcion} · ${r.color}`}
-          className="w-full min-w-[150px] px-1 py-0.5 border border-slate-200 rounded text-xs" />
+          className="w-full min-w-[280px] px-1 py-0.5 border border-slate-200 rounded text-xs" />
         <div className="flex items-center gap-1 flex-wrap">
           {r.herrajeBlum && <span className="text-[9px] font-black text-orange-600">BLUM</span>}
           {r._herrajeEsp && (
