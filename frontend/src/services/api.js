@@ -885,6 +885,44 @@ export const medidasAPI = {
 
 
 // ============================================
+// PROYECTOS DE COCINA DESMONTADA (proformas)
+// ============================================
+//
+// Cocina Desmontada guarda sus proyectos en su propia colección, aparte de los
+// de Cocina Montada 1 y 2. Se leen desde aquí para que el almacén pueda pedir
+// material de los TRES presupuestadores y no solo de dos.
+
+export const proformaAPI = {
+  _h: () => {
+    const token = getToken();
+    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  },
+
+  listar: async () => {
+    const r = await fetch(`${API_URL}/api/cascos/proforma/proyectos`, { headers: proformaAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudieron leer los proyectos de Cocina Desmontada');
+    return r.json();
+  },
+
+  get: async (id) => {
+    const r = await fetch(`${API_URL}/api/cascos/proforma/proyectos/${encodeURIComponent(id)}`, { headers: proformaAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudo abrir el proyecto de Cocina Desmontada');
+    return r.json();
+  },
+
+  // Los presupuestos y pedidos de casco: es lo que de verdad se teclea en la
+  // pantalla de Cocina Desmontada, y vive en otra colección distinta de las
+  // proformas de Alvic.
+  listarPedidos: async (userId) => {
+    const q = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const r = await fetch(`${API_URL}/api/cascos/orders${q}`, { headers: proformaAPI._h() });
+    if (!r.ok) throw await _errorDe(r, 'No se pudieron leer los pedidos de Cocina Desmontada');
+    return r.json();
+  },
+};
+
+
+// ============================================
 // ALMACÉN: EXISTENCIAS, RESERVAS Y PLAN DE COMPRA
 // ============================================
 //

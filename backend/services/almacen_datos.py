@@ -29,6 +29,21 @@ distinto — aquí lo único que hay que hacer es NO rellenar el hueco.
 """
 
 
+# El lector de líneas se carga a mano y no con un `from services import`: este
+# módulo es cálculo puro y se prueba cargándolo por ruta, sin levantar el
+# paquete `services` —que arrastra la autenticación y exige un JWT_SECRET—.
+# `linea_pedido` tampoco importa nada, así que se carga igual de suelto.
+try:
+    from services import linea_pedido                 # dentro del ERP
+except Exception:                                     # cargado suelto, por ruta
+    import importlib.util as _ilu
+    import os as _os
+    _r = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "linea_pedido.py")
+    _sp = _ilu.spec_from_file_location("_linea_pedido_almacen", _r)
+    linea_pedido = _ilu.module_from_spec(_sp)
+    _sp.loader.exec_module(linea_pedido)
+
+
 def _num(v):
     """Número, o None si no consta. Cadena vacía NO es cero."""
     if v is None or v == "":
@@ -108,16 +123,15 @@ def necesidades_del_despiece(lineas):
     """
     total = {}
     for l in lineas or []:
-        ref = _ref(l.get("referencia") or l.get("code") or l.get("productCode"))
+        # El código y las unidades los lee `linea_pedido`, que conoce los
+        # nombres de LOS TRES presupuestadores. Antes aquí solo se miraba
+        # `code`/`productCode`, así que una proforma de Cocina Desmontada
+        # —que escribe `cod` y `cantidad`— era invisible entera: el plan de
+        # compra decía «ninguna línea trae referencia». Y no daba error.
+        ref = _ref(linea_pedido.codigo(l))
         if not ref:
             continue
-        cant = _num(l.get("cantidad"))
-        if cant is None:
-            cant = _num(l.get("quantity"))
-        # Una línea sin cantidad es UNA unidad: es lo que significa una línea
-        # suelta en un pedido. Cero la haría desaparecer del plan de compra.
-        if cant is None:
-            cant = 1.0
+        cant = linea_pedido.cantidad(l)
         if cant <= 0:
             continue
         total[ref] = round(total.get(ref, 0.0) + cant, 3)

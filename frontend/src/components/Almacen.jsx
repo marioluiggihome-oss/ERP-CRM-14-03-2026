@@ -36,7 +36,7 @@ import {
   Boxes, Search, RefreshCw, Loader, AlertTriangle, Plus, Trash2, Save,
   ShoppingCart, HelpCircle, CheckCircle2, Bookmark,
 } from 'lucide-react';
-import { projectsAPI, almacenAPI } from '../services/api';
+import { projectsAPI, proformaAPI, almacenAPI } from '../services/api';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 const PESTANAS = [
@@ -291,8 +291,13 @@ export default function Almacen({ state }) {
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
 
-  // Plan
+  // Plan. Las obras vienen de los TRES presupuestadores: Cocina Montada 1 y 2
+  // guardan en `projects`, y Cocina Desmontada en su propia colección de
+  // proformas. Son la misma pregunta —«qué material necesita esta obra»— así
+  // que aquí se eligen del mismo desplegable.
   const [proyectos, setProyectos] = useState([]);
+  const [proformas, setProformas] = useState([]);
+  const [pedidosCasco, setPedidosCasco] = useState([]);
   const [proyectoId, setProyectoId] = useState('');
   const [plan, setPlan] = useState(null);
   const [calculando, setCalculando] = useState(false);
@@ -318,6 +323,14 @@ export default function Almacen({ state }) {
     projectsAPI.getAll(usuarioId)
       .then(d => setProyectos(Array.isArray(d) ? d : (d?.projects || [])))
       .catch(() => { /* el plan avisa por su cuenta si no hay proyectos */ });
+    // Las proformas son solo del master. Si no lo es, el servidor contesta que
+    // no y esta lista se queda vacía: no es un error que haya que enseñar.
+    proformaAPI.listar()
+      .then(d => setProformas(d?.proyectos || []))
+      .catch(() => setProformas([]));
+    proformaAPI.listarPedidos(usuarioId)
+      .then(d => setPedidosCasco(d?.orders || []))
+      .catch(() => setPedidosCasco([]));
   }, [usuarioId]);
 
   // Lo apartado por referencia, sumando TODOS los proyectos. En la lista de
@@ -363,23 +376,64 @@ export default function Almacen({ state }) {
   // El plan necesita las líneas del proyecto. Salen del propio presupuesto —
   // los dos juegos de líneas, montada y desmontada— sin tocarlas: el servidor
   // ya sabe sumar las referencias repetidas.
-  const calcularPlan = useCallback(async (idProyecto, pedidosActuales) => {
-    const proy = proyectos.find(p => p.id === idProyecto);
-    if (!proy) return;
+  // El valor del desplegable lleva de dónde sale la obra: `proj:` de Cocina
+  // Montada 1 y 2, `prof:` de Cocina Desmontada. Sin el prefijo habría que
+  // adivinarlo por el id, y dos obras de módulos distintos pueden llamarse
+  // igual.
+  const calcularPlan = useCallback(async (valor, pedidosActuales) => {
+    if (!valor) return;
+    const [origen, id] = valor.split(':');
     setCalculando(true);
     setErrorPlan('');
     setPlan(null);
     try {
-      const detalle = await projectsAPI.getById(idProyecto).catch(() => proy);
-      const lineas = [...(detalle.itemsMontada || []), ...(detalle.itemsDespiece || [])];
+      let lineas = [];
+      let referencia = id;
+
+      if (origen === 'prof') {
+        // Cocina Desmontada: las líneas son las de la proforma, quitando las
+        // borradas y las desmarcadas en pantalla. Si se mandaran todas, el
+        // plan pediría material que alguien ya había decidido no pedir.
+        const d = await proformaAPI.get(id);
+        const p = d?.proyecto || {};
+        const fuera = new Set([
+          ...(p.deletedRows || []).map(Number),
+          ...Object.keys(p.excluidas || {}).filter(k => p.excluidas[k]).map(Number),
+        ]);
+        lineas = (p.items || []).filter((_, i) => !fuera.has(i));
+        referencia = p.nombre || id;
+      } else if (origen === 'casco') {
+        // COCINA DESMONTADA no tiene código de proveedor por línea: lo que
+        // identifica un casco es su FIRMA —módulo + acabado—, que es la misma
+        // por la que la pantalla junta dos líneas iguales en el carro. Para el
+        // almacén eso es exactamente lo que hace falta: dos cascos con la
+        // misma firma son la misma pieza en la estantería.
+        //
+        // Va escrito aquí y no metido en el lector general de líneas a
+        // propósito: la firma NO es un código de tarifa, y colarla como tal
+        // haría que la validación técnica diera por buenas líneas que no
+        // tienen código de verdad.
+        const pedido = pedidosCasco.find(o => o.id === id) || {};
+        lineas = (pedido.lines || []).map(l => ({
+          referencia: l.sig || '',
+          cantidad: l.qty,
+          descripcion: [l.tipo, l.ancho, l.colorLabel].filter(Boolean).join(' '),
+        }));
+        referencia = pedido.expediente || pedido.ref || pedido.cliente || id;
+      } else {
+        const proy = proyectos.find(p => p.id === id);
+        const detalle = await projectsAPI.getById(id).catch(() => proy || {});
+        lineas = [...(detalle.itemsMontada || []), ...(detalle.itemsDespiece || [])];
+        referencia = detalle.budgetNumber || detalle.id || id;
+      }
+
       setLineasDelProyecto(lineas.length);
-      const referencia = detalle.budgetNumber || detalle.id;
       const r = await almacenAPI.plan(referencia, lineas, pedidosActuales || null);
       setPlan({ ...r, proyecto: referencia });
     } catch (e) {
       setErrorPlan(e.message || 'No se pudo calcular el plan de compra.');
     } finally { setCalculando(false); }
-  }, [proyectos]);
+  }, [proyectos, pedidosCasco]);
 
   const apartarDelPlan = useCallback(async (referencia, cantidad) => {
     if (!plan?.proyecto) return;
@@ -504,11 +558,29 @@ export default function Almacen({ state }) {
                 onChange={e => { setProyectoId(e.target.value); setPlan(null); setPedidos({}); }}
                 className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 text-[14px]">
                 <option value="">— elige una obra —</option>
-                {proyectos.filter(p => (p.status || '') !== 'archived').map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.budgetNumber || p.id} · {p.customerName || 'sin cliente'}
-                  </option>
-                ))}
+                <optgroup label="Cocina Montada (1 y 2)">
+                  {proyectos.filter(p => (p.status || '') !== 'archived').map(p => (
+                    <option key={p.id} value={`proj:${p.id}`}>
+                      {p.budgetNumber || p.id} · {p.customerName || 'sin cliente'}
+                    </option>
+                  ))}
+                </optgroup>
+                {pedidosCasco.length > 0 && (
+                  <optgroup label="Cocina Desmontada">
+                    {pedidosCasco.map(o => (
+                      <option key={o.id} value={`casco:${o.id}`}>
+                        {o.expediente || o.ref || o.id} · {o.cliente || 'sin cliente'}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {proformas.length > 0 && (
+                  <optgroup label="Proformas de proveedor">
+                    {proformas.map(p => (
+                      <option key={p.id} value={`prof:${p.id}`}>{p.nombre || p.id}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <button onClick={() => calcularPlan(proyectoId, pedidos)} disabled={!proyectoId || calculando}
                 className="w-full min-h-[44px] rounded-xl bg-slate-900 text-white text-[13px] font-black uppercase tracking-wide disabled:opacity-40 flex items-center justify-center gap-2">

@@ -42,15 +42,25 @@ Si todo bloqueara, se saltaría el circuito entero a la primera urgencia.
 #
 # No es un respaldo silencioso: si el fichero no estuviera, las dos vías
 # fallarían y se enteraría todo el mundo.
+def _cargar_suelto(nombre, alias):
+    import importlib.util as _ilu
+    import os as _os
+    ruta = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), nombre + ".py")
+    spec = _ilu.spec_from_file_location(alias, ruta)
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 try:
     from services import medicion_obra           # dentro del ERP
 except Exception:                                # cargado suelto, por ruta
-    import importlib.util as _ilu
-    import os as _os
-    _ruta = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "medicion_obra.py")
-    _spec = _ilu.spec_from_file_location("_medicion_obra_de_validacion", _ruta)
-    medicion_obra = _ilu.module_from_spec(_spec)
-    _spec.loader.exec_module(medicion_obra)
+    medicion_obra = _cargar_suelto("medicion_obra", "_medicion_obra_de_validacion")
+
+try:
+    from services import linea_pedido
+except Exception:
+    linea_pedido = _cargar_suelto("linea_pedido", "_linea_pedido_de_validacion")
 
 # Estados de una comprobación.
 OK = "ok"
@@ -74,10 +84,14 @@ def _lineas(proyecto):
 
 
 def _ident(linea, i):
-    """Cómo se nombra una línea en un aviso, para poder ir a ella."""
-    return (str(linea.get("code") or linea.get("productCode") or "").strip()
-            or str(linea.get("name") or linea.get("productName") or "").strip()
-            or f"línea {i + 1}")
+    """Cómo se nombra una línea en un aviso, para poder ir a ella.
+
+    Lo resuelve `linea_pedido`, que conoce los nombres de los tres
+    presupuestadores. Con la lista de antes, una línea de Cocina Desmontada
+    —que trae `cod` y `descripcion`— salía siempre como «línea 7», que no lleva
+    a ninguna parte.
+    """
+    return linea_pedido.identificar(linea, i)
 
 
 def _check(clave, grupo, etiqueta, estado, bloquea=False, detalle="", donde=None):
@@ -137,7 +151,7 @@ def _sentido_apertura(proyecto):
     """
     lineas = _lineas(proyecto)
     pendientes = [_ident(l, i) for i, l in enumerate(lineas)
-                  if "D/I" in str(l.get("code") or l.get("productCode") or "").upper()]
+                  if "D/I" in linea_pedido.codigo(l).upper()]
     if not lineas:
         return _check("apertura", "DISEÑO", "Sentidos de apertura definidos", SIN_DATOS, False)
     if not pendientes:
@@ -180,7 +194,7 @@ def _codigos_tarifa(proyecto):
     if not lineas:
         return _check("codigos", "FABRICACIÓN", "Líneas con código de tarifa", SIN_DATOS, False)
     sin = [_ident(l, i) for i, l in enumerate(lineas)
-           if not str(l.get("code") or l.get("productCode") or "").strip()]
+           if not linea_pedido.codigo(l)]
     if not sin:
         return _check("codigos", "FABRICACIÓN", "Líneas con código de tarifa", OK)
     return _check("codigos", "FABRICACIÓN", "Líneas con código de tarifa", FALTA, False,
