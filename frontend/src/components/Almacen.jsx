@@ -37,6 +37,7 @@ import {
   ShoppingCart, HelpCircle, CheckCircle2, Bookmark,
 } from 'lucide-react';
 import { projectsAPI, almacenAPI } from '../services/api';
+import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 const PESTANAS = [
   { id: 'existencias', label: 'Existencias', icono: Boxes },
@@ -410,6 +411,10 @@ export default function Almacen({ state }) {
           aria-label="Recargar">
           <RefreshCw size={16} className={cargando ? 'animate-spin' : ''} />
         </button>
+        {/* En el almacén se anda con la tablet en la mano entre estanterías:
+            cada línea de pantalla que se recupera cuenta. */}
+        <BotonPantallaCompleta mostrarTexto={false}
+          className="shrink-0 p-2 rounded-xl text-slate-300 active:bg-white/10" />
       </div>
 
       <div className="shrink-0 flex gap-1 px-2 pt-2 bg-white border-b border-slate-200 overflow-x-auto">

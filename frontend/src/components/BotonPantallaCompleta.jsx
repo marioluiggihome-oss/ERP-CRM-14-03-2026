@@ -6,17 +6,24 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
 
 /**
- * El F11 del portátil, pero para tablet y móvil.
+ * El F11 del portátil, en cualquier sitio y para cualquiera.
  *
  * En una tablet de 8" el navegador se queda con la barra de pestañas y la de
  * direcciones: unos 150 px de alto, casi un quinto de la pantalla, en el
- * dispositivo que MENOS alto tiene. Esto lo recupera.
+ * dispositivo que MENOS alto tiene. En el ordenador recupera la barra de
+ * pestañas y la de marcadores. Esto lo quita todo.
  *
- * Lo definitivo es instalar el ERP en la pantalla de inicio (manifest.json con
- * display: standalone): así abre sin barras y no hay que acordarse de nada. Este
- * botón es para quien no lo tiene instalado. Por eso, si ya se está ejecutando
- * como app instalada, el botón NO se pinta: no hay ninguna barra que quitar y
- * sería un botón que no hace nada.
+ * ANTES SE ESCONDÍA SOLO cuando el ERP estaba instalado en la pantalla de
+ * inicio, con el razonamiento de que ahí ya no hay barras que ocultar. Se ha
+ * quitado esa condición: aun instalado, la pantalla completa se lleva también
+ * la barra de estado del sistema, y sobre todo el botón desaparecía sin que
+ * nadie entendiera por qué —el master lo pidió "en todos los usuarios, PC,
+ * móvil o tablet", y un botón que a veces está y a veces no es peor que uno
+ * que no hace nada—.
+ *
+ * Solo queda una razón para no pintarlo: que el navegador NO sepa hacerlo
+ * (Safari de iPhone, por ejemplo, no lo permite). Ahí no es que sobre: es que
+ * pulsarlo no haría nada.
  */
 export default function BotonPantallaCompleta({ className = '', mostrarTexto = true }) {
   const [activa, setActiva] = useState(false);
@@ -25,11 +32,7 @@ export default function BotonPantallaCompleta({ className = '', mostrarTexto = t
   useEffect(() => {
     const raiz = document.documentElement;
     const soportado = Boolean(raiz.requestFullscreen || raiz.webkitRequestFullscreen);
-    // Instalada en la pantalla de inicio ya no hay barras que ocultar.
-    const comoApp = Boolean(
-      window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
-    ) || window.navigator.standalone === true;
-    setVisible(soportado && !comoApp);
+    setVisible(soportado);
 
     const alCambiar = () => setActiva(
       Boolean(document.fullscreenElement || document.webkitFullscreenElement)
@@ -72,8 +75,11 @@ export default function BotonPantallaCompleta({ className = '', mostrarTexto = t
     >
       {activa ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
       {mostrarTexto && (
+        /* «Reducir», NO «Salir»: justo debajo, en la misma columna, está el
+           botón de cerrar sesión, que también dice «Salir». Dos botones
+           pegados con la misma palabra y distinto efecto es una trampa. */
         <span className="text-[7px] font-black uppercase tracking-widest">
-          {activa ? 'Salir' : 'Pantalla'}
+          {activa ? 'Reducir' : 'Pantalla'}
         </span>
       )}
     </button>

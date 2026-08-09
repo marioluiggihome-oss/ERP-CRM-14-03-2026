@@ -880,6 +880,10 @@ const App = () => {
           </span>
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-slate-300">{_u.clientName || _u.username}</span>
+            {/* Pantalla completa TAMBIEN aqui. Estas cascaras se pintan enteras
+                aparte del menu principal, asi que el boton de alli no llega: si
+                no se repite, este usuario no lo tiene. */}
+            <BotonPantallaCompleta mostrarTexto={false} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors" />
             <button onClick={async () => { await authLogout(); setState(p => ({ ...p, currentUser: null })); }}
               className="text-[11px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg">
               Salir
@@ -1001,7 +1005,8 @@ const App = () => {
     return (
       <div className="h-screen flex flex-col bg-zinc-950 overflow-hidden">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
-        <div className="flex items-center justify-end px-4 py-2 bg-zinc-900 shrink-0">
+        <div className="flex items-center justify-end gap-3 px-4 py-2 bg-zinc-900 shrink-0">
+          <BotonPantallaCompleta mostrarTexto={false} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors" />
           <button
             onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
             className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-widest"
@@ -1029,12 +1034,15 @@ const App = () => {
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
         <div className="flex items-center justify-between px-4 py-2 bg-slate-900 shrink-0">
           <span className="text-xs font-black text-indigo-300 uppercase tracking-widest">CRM</span>
-          <button
-            onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
-            className="text-xs font-bold text-indigo-300 hover:text-indigo-200 uppercase tracking-widest"
-          >
-            Salir
-          </button>
+          <div className="flex items-center gap-3">
+            <BotonPantallaCompleta mostrarTexto={false} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors" />
+            <button
+              onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
+              className="text-xs font-bold text-indigo-300 hover:text-indigo-200 uppercase tracking-widest"
+            >
+              Salir
+            </button>
+          </div>
         </div>
         <div className="flex-1 min-h-0">
           <ErrorBoundary>
