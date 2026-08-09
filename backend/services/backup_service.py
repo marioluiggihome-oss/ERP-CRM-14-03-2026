@@ -264,6 +264,71 @@ class BackupService:
         
         return backups
     
+    def verificar_backup(self, backup_name: str) -> dict:
+        """¿Se puede restaurar esta copia? Se comprueba SIN tocar la base de datos.
+
+        Una copia de seguridad que nunca se ha restaurado es una esperanza, no
+        una estrategia. Esto abre el archivo de verdad, lo descomprime en un
+        temporal, lee cada fichero y cuenta lo que hay dentro. Si algo está
+        dañado, se sabe HOY y no el día que haga falta.
+
+        No dice «la restauración irá bien»: dice qué contiene y que se puede
+        leer, que es lo que se puede afirmar sin escribir en producción.
+        """
+        backup_path = self.backup_dir / backup_name
+        if not backup_path.exists():
+            return {"success": False, "error": "Esa copia no existe."}
+
+        tmp = self.backup_dir / "verify_temp"
+        try:
+            from bson import json_util
+
+            if tmp.exists():
+                shutil.rmtree(tmp)
+            shutil.unpack_archive(str(backup_path), tmp)
+
+            db_dir = None
+            for d in tmp.rglob("*"):
+                if d.is_dir() and any(d.glob("*.json")):
+                    db_dir = d
+                    break
+            if db_dir is None:
+                return {"success": False, "restaurable": False,
+                        "error": "El archivo se abre, pero no contiene datos restaurables (.json)."}
+
+            colecciones, documentos, danadas = {}, 0, []
+            for json_file in sorted(db_dir.glob("*.json")):
+                try:
+                    with open(json_file, "r", encoding="utf-8") as f:
+                        docs = json_util.loads(f.read())
+                    colecciones[json_file.stem] = len(docs or [])
+                    documentos += len(docs or [])
+                except Exception as e:
+                    danadas.append(f"{json_file.name}: {e}")
+
+            return {
+                "success": True,
+                # Restaurable solo si NINGUNA está dañada: con una rota, la
+                # restauración se pararía a medias y no vale de nada.
+                "restaurable": not danadas and bool(colecciones),
+                "colecciones": colecciones,
+                "totalColecciones": len(colecciones),
+                "totalDocumentos": documentos,
+                "danadas": danadas,
+                "resumen": (f"{len(colecciones)} colecciones y {documentos} documentos legibles"
+                            if not danadas else
+                            f"{len(danadas)} fichero(s) dañados: NO se podría restaurar entera"),
+            }
+        except Exception as e:
+            return {"success": False, "restaurable": False,
+                    "error": f"No se puede ni abrir el archivo: {e}"}
+        finally:
+            try:
+                if tmp.exists():
+                    shutil.rmtree(tmp)
+            except Exception:
+                pass
+
     async def restore_backup(self, backup_name: str) -> dict:
         """Restaurar un backup específico"""
         backup_path = self.backup_dir / backup_name
@@ -299,11 +364,27 @@ class BackupService:
             client = AsyncIOMotorClient(self.mongo_url, serverSelectionTimeoutMS=5000, connectTimeoutMS=10000, maxPoolSize=5)
             db = client[self.db_name]
 
+            # SE LEE TODO ANTES DE BORRAR NADA.
+            #
+            # Antes se hacía colección a colección: leer, BORRAR la de
+            # producción y luego insertar. Si el fichero número siete estaba
+            # corrupto, las seis primeras ya estaban borradas y la séptima
+            # también — una restauración a medias, el peor día, y sin vuelta
+            # atrás. Ahora si algo no se puede leer, la base de datos sigue
+            # intacta y se dice cuál falla.
+            en_memoria = {}
+            for json_file in sorted(db_dir.glob("*.json")):
+                try:
+                    with open(json_file, "r", encoding="utf-8") as f:
+                        en_memoria[json_file.stem] = json_util.loads(f.read())
+                except Exception as e:
+                    client.close()
+                    return {"success": False,
+                            "error": (f"El backup está dañado en «{json_file.name}»: {e}. "
+                                      "NO se ha tocado la base de datos.")}
+
             restored = 0
-            for json_file in db_dir.glob("*.json"):
-                coll_name = json_file.stem
-                with open(json_file, "r", encoding="utf-8") as f:
-                    docs = json_util.loads(f.read())
+            for coll_name, docs in en_memoria.items():
                 await db[coll_name].drop()
                 if docs:
                     await db[coll_name].insert_many(docs)

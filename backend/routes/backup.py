@@ -231,6 +231,32 @@ async def backup_status(current_user: dict = Depends(require_auth)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@router.get("/verificar/{filename}")
+async def verificar_copia(filename: str, user=Depends(require_admin)):
+    """¿Se puede restaurar esta copia? Se comprueba SIN tocar la base de datos.
+
+    Una copia que nunca se ha restaurado es una esperanza, no una estrategia.
+    Esto abre el archivo de verdad, lee cada fichero y cuenta lo que hay
+    dentro; si algo está dañado se sabe HOY, y no el día que haga falta.
+
+    Es de solo lectura a propósito: la prueba de una copia no puede consistir
+    en machacar los datos buenos para ver si funciona.
+    """
+    if "/" in filename or "\\" in filename or filename.startswith("."):
+        # El nombre viene de fuera y aquí se abre un fichero: sin esto se
+        # podría pedir cualquier ruta del servidor.
+        raise HTTPException(status_code=400, detail="Nombre de copia no válido.")
+    try:
+        from services.backup_service import BackupService
+        svc = BackupService(os.environ.get("MONGO_URL", ""), os.environ.get("DB_NAME", ""))
+        return svc.verificar_backup(filename)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("verificar copia: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"No se pudo verificar la copia: {e}")
+
+
 @router.post("/create")
 async def create_full_backup(user=Depends(require_admin)):
     """Create a complete backup of code and database"""

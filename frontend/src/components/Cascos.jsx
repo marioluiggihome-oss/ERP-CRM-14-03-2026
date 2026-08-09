@@ -8,7 +8,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
-import { guardarSesion, leerSesion } from '../services/navegacion';
+import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import RentabilidadUnificada from './RentabilidadUnificada';
 import RelacionReview from './RelacionReview';
 
@@ -1076,6 +1076,31 @@ const Cascos = ({ state, setState }) => {
               <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"><Download size={16} /> PDF</button>
             </div>
             <button onClick={pedidoProveedor} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900 disabled:opacity-50"><ClipboardList size={16} /> Pedido a proveedor</button>
+
+            {/* EL ATAJO A LA OBRA. El expediente y el almacén ya sabían leer un
+                pedido de cascos, pero desde aquí no había forma de llegar: para
+                ver cómo iba la obra que acabas de presupuestar tenías que
+                salir, entrar en otro módulo y buscarla por el nombre.
+
+                Solo aparece con el pedido GUARDADO: sin id no hay obra que
+                abrir, y un botón que a veces lleva a un sitio vacío se deja de
+                pulsar. */}
+            {savedId && (
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200">
+                <button
+                  onClick={() => irA(setState, 'expediente')}
+                  title="Ver el expediente de esta obra: en qué punto está y qué falta"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm border border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <ClipboardList size={16} /> Expediente
+                </button>
+                <button
+                  onClick={() => irA(setState, 'almacen')}
+                  title="Qué material de este pedido hay en el almacén y qué hay que comprar"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm border border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <Package size={16} /> Almacén
+                </button>
+              </div>
+            )}
           </div>
         </div>
         )}
