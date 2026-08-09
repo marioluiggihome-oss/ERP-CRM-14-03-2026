@@ -190,7 +190,7 @@ const Invoices = ({ currentUser }) => {
   return (
     <div className="h-full flex flex-col bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-4 sm:px-6 py-4">
+      <div className="hueco-logo bg-white border-b border-slate-100 px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-500 rounded-xl shadow">

@@ -150,7 +150,7 @@ const CommandCenter = ({ currentUser }) => {
   return (
     <div className="h-full flex flex-col bg-slate-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-4 sm:px-6 py-4">
+      <div className="hueco-logo bg-gradient-to-r from-slate-900 to-slate-800 px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Panel de Mando</p>

@@ -4,8 +4,8 @@
  * Prohibida su copia, distribución, modificación o uso sin autorización
  * escrita del titular.
  */
-import React, { useState } from 'react';
-import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X, Clock, Printer, CheckCircle2, CircleDashed } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X, Clock, Printer, CheckCircle2, CircleDashed, ArrowLeft, FileText, Copy } from 'lucide-react';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -33,8 +33,131 @@ const tipoBadge = (t) => {
   return BADGES[h % BADGES.length];
 };
 
+/**
+ * La ficha de UNA obra, encima del informe.
+ *
+ * POR QUÉ ASÍ Y NO EN UNA PESTAÑA NUEVA
+ * -------------------------------------
+ * Hasta ahora, de una promoción solo se podía «abrir» su enlace, y eso se lleva
+ * a otra pestaña del navegador: se pierde de vista el informe —que ha costado
+ * una búsqueda con IA— y volver es acordarse de qué pestaña era.
+ *
+ * Esta ficha se pinta ENCIMA (`absolute inset-0`), así que el informe de debajo
+ * no se desmonta ni se vuelve a pedir: sigue exactamente donde estaba, con su
+ * filtro, su scroll y sus marcas de visitada. Cerrarla es volver, sin más.
+ *
+ * El enlace a la web de la promoción sigue abriendo pestaña, porque eso es una
+ * página de fuera y ahí no mandamos nosotros.
+ */
+const FichaObra = ({ d, estado, onEstado, mapUrl, onVolver }) => {
+  // Escape cierra: es lo que espera cualquiera que haya abierto una ficha.
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onVolver(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onVolver]);
+
+  const [copiado, setCopiado] = useState(false);
+  const copiar = async () => {
+    const txt = [
+      d.name, d.promoter, d.type, d.address, d.location,
+      d.phone ? `Tel: ${d.phone}` : '',
+      d.priceStart ? `Desde ${d.priceStart}` : '',
+      [d.startDate, d.deliveryDate].filter(Boolean).join(' → '),
+    ].filter(Boolean).join('\n');
+    try { await navigator.clipboard.writeText(txt); setCopiado(true); setTimeout(() => setCopiado(false), 1800); } catch { /* sin portapapeles */ }
+  };
+
+  const Dato = ({ icon, label, valor, children }) => (!valor && !children) ? null : (
+    <div className="flex items-start gap-2.5 py-2 border-b border-slate-100 last:border-0">
+      <span className="text-slate-300 mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+        <div className="text-sm text-slate-700 font-semibold break-words">{children || valor}</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="absolute inset-0 z-30 bg-sky-50 overflow-y-auto p-4 sm:p-6 pb-24">
+      {/* La vuelta, arriba del todo y pegada: es lo primero que se busca. */}
+      <div className="sticky top-0 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 px-4 sm:px-6 py-3 bg-white/95 backdrop-blur border-b border-slate-200 flex items-center gap-3 flex-wrap z-10">
+        <button onClick={onVolver}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-sm">
+          <ArrowLeft size={16} /> Volver al informe
+        </button>
+        <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">El informe sigue abierto detrás</span>
+        <button onClick={onVolver} title="Cerrar (Esc)" className="ml-auto p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"><X size={18} /></button>
+      </div>
+
+      <div className="max-w-3xl mx-auto space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-black text-slate-900 break-words">{d.name || 'Promoción'}</h2>
+              <p className="text-sm text-slate-500 font-bold">{d.promoter || 'Promotor sin identificar'}</p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-black shrink-0 ${tipoBadge(d.type)}`}>{d.type || 'Otro'}</span>
+          </div>
+
+          <div className="mt-3">
+            <Dato icon={<MapPin size={15} />} label="Zona" valor={d.location} />
+            <Dato icon={<MapPin size={15} />} label="Dirección" valor={d.address} />
+            <Dato icon={<Phone size={15} />} label="Teléfono">
+              {d.phone ? <a href={`tel:${d.phone}`} className="text-indigo-600 font-black">{d.phone}</a> : null}
+            </Dato>
+            <Dato icon={<Tag size={15} />} label="Precio de partida" valor={d.priceStart} />
+            <Dato icon={<Calendar size={15} />} label="Fechas"
+              valor={(d.startDate || d.deliveryDate) ? `${d.startDate || '—'} → ${d.deliveryDate || '—'}` : ''} />
+            <Dato icon={<FileText size={15} />} label="Descripción" valor={d.description} />
+          </div>
+
+          {/* Lo que NO consta se dice, no se rellena con un guion y ya está: es
+              la lista de lo que hay que averiguar antes de llamar. */}
+          {(() => {
+            const faltan = [
+              !d.promoter && 'promotor', !d.phone && 'teléfono', !d.address && 'dirección',
+              !d.priceStart && 'precio', !(d.startDate || d.deliveryDate) && 'fechas',
+            ].filter(Boolean);
+            return faltan.length ? (
+              <p className="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                Sin datos de: {faltan.join(', ')}. La búsqueda no los encontró — hay que confirmarlos antes de ofrecer nada.
+              </p>
+            ) : null;
+          })()}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center gap-2">
+          <button onClick={() => onEstado('visited')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${estado === 'visited' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
+            <CheckCircle2 size={15} /> Visitada
+          </button>
+          <button onClick={() => onEstado('todo')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${estado === 'todo' ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}>
+            <CircleDashed size={15} /> Por visitar
+          </button>
+          <button onClick={copiar} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+            <Copy size={15} /> {copiado ? 'Copiado' : 'Copiar datos'}
+          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <a href={mapUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
+              <MapPin size={15} className="text-rose-500" /> Ver en mapa
+            </a>
+            {safeUrl(d.url) && (
+              <a href={safeUrl(d.url)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                Web de la promoción <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PropData = ({ state }) => {
   const [mode, setMode] = useState('search'); // 'search' | 'image'
+  const [ficha, setFicha] = useState(null); // la obra abierta, encima del informe
   const [portal, setPortal] = useState('');
   const [location, setLocation] = useState('');
   const [img, setImg] = useState(null); // {b64, name}
@@ -160,9 +283,13 @@ const PropData = ({ state }) => {
   ];
 
   return (
+    // El informe vive aquí debajo y NO se desmonta al abrir una ficha: la ficha
+    // se pinta encima. Por eso volver de una obra deja el informe tal cual —
+    // mismo filtro, mismo scroll— en vez de tener que buscarlo otra vez.
+    <div className="h-full relative">
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-sky-50 overflow-y-auto">
-      <div className="rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
-        <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Prospección de Obra Nueva</h1>
+      <div className="hueco-logo rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
+        <h1 className="text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Prospección de Obra Nueva</h1>
         <p className="hidden sm:block text-xs text-white/80">Localiza promociones y promotores a los que ofrecer cocinas · IA</p>
       </div>
 
@@ -280,10 +407,13 @@ const PropData = ({ state }) => {
               return (
               <div key={i} className={`rounded-2xl border border-slate-200 border-l-4 p-4 hover:shadow-md transition-shadow ${ring}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-black text-slate-800 truncate">{d.name || 'Promoción'}</p>
+                  {/* El nombre abre la ficha AQUÍ DENTRO. Antes lo único que se
+                      podía abrir de una obra era su web, y eso se lleva a otra
+                      pestaña y deja el informe atrás. */}
+                  <button onClick={() => setFicha(d)} className="min-w-0 text-left group">
+                    <p className="font-black text-slate-800 truncate group-hover:text-indigo-700 group-hover:underline">{d.name || 'Promoción'}</p>
                     <p className="text-xs text-slate-500 truncate">{d.promoter || '—'}</p>
-                  </div>
+                  </button>
                   <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 ${tipoBadge(d.type)}`}>{d.type || 'Otro'}</span>
                 </div>
                 <div className="mt-2 space-y-1 text-[12px] text-slate-600">
@@ -295,6 +425,7 @@ const PropData = ({ state }) => {
                 </div>
                 {d.description && <p className="mt-2 text-[11px] text-slate-400 line-clamp-2">{d.description}</p>}
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <button onClick={() => setFicha(d)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700"><FileText size={13} /> Ficha</button>
                   <a href={mapUrl(d)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50"><MapPin size={13} className="text-rose-500" /> Ver en mapa</a>
                   {safeUrl(d.url) && <a href={safeUrl(d.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">Promoción <ExternalLink size={12} /></a>}
                   <div className="ml-auto flex items-center gap-1">
@@ -333,6 +464,17 @@ const PropData = ({ state }) => {
           )}
         </div>
       )}
+    </div>
+
+    {ficha && (
+      <FichaObra
+        d={ficha}
+        estado={estados[keyOf(ficha)]}
+        onEstado={(v) => setEstado(ficha, v)}
+        mapUrl={mapUrl(ficha)}
+        onVolver={() => setFicha(null)}
+      />
+    )}
     </div>
   );
 };

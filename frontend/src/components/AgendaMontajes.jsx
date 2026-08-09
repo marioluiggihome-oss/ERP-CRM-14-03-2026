@@ -347,7 +347,7 @@ const AgendaMontajes = ({ currentUser }) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="hueco-logo-centrado flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
               <Wrench className="text-white" size={24} />

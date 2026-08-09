@@ -1034,7 +1034,7 @@ export default function EstudioCocinas({ state, setState }) {
     <div className={`flex flex-col h-full overflow-hidden transition-colors duration-200 ${t.root}`}>
 
       {/* Header */}
-      <div className={`flex items-center gap-2 px-3 md:px-6 py-2.5 flex-shrink-0 ${t.header}`}>
+      <div className={`hueco-logo flex items-center gap-2 px-3 md:px-6 py-2.5 flex-shrink-0 ${t.header}`}>
         {/* Hamburguesa mobile */}
         <button onClick={() => setMobileMenuOpen(v => !v)}
           className={`lg:hidden flex items-center justify-center w-8 h-8 rounded-lg transition-all ${mobileMenuOpen ? 'bg-amber-600 text-white' : t.dlBtn}`}

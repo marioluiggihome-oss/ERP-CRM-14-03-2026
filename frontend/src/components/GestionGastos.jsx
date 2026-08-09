@@ -217,7 +217,7 @@ const GestionGastos = ({ currentUser }) => {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="hueco-logo-centrado flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white"><Wallet size={24} /></div>
           <div>

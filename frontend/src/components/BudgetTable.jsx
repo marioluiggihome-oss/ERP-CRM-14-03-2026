@@ -1175,7 +1175,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
 
   return (
     <div className="flex flex-col h-full bg-indigo-50/10 overflow-hidden relative">
-      <div className="px-8 py-3 border-b border-indigo-100 bg-white flex justify-between items-center z-30 no-print shadow-sm">
+      <div className="hueco-logo px-8 py-3 border-b border-indigo-100 bg-white flex justify-between items-center z-30 no-print shadow-sm">
         <div className="flex items-center gap-4">
            <div className="flex bg-indigo-50 p-1 rounded-xl border border-indigo-100">
               {hasMontada && (

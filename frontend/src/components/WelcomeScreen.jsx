@@ -101,7 +101,7 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
     <div className="h-full overflow-y-auto bg-slate-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
         {/* Bienvenida */}
-        <div className="mb-6 sm:mb-8">
+        <div className="hueco-logo-centrado mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
             Bienvenido{name ? `, ${name}` : ''} 👋
           </h1>

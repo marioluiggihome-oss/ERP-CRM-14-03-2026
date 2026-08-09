@@ -1762,7 +1762,7 @@ const PortalFabrica = ({ currentUser }) => {
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50">
     <div className="flex-1 overflow-y-auto p-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="hueco-logo mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-600 rounded-2xl">

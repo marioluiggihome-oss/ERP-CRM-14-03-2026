@@ -169,7 +169,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-5 flex items-center justify-between">
+      <div className="hueco-logo bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white/10 rounded-xl">
             <BarChart3 size={24} />

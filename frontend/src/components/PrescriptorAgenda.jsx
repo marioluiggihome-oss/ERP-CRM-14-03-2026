@@ -360,7 +360,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       {/* Header */}
       <div className="bg-white border-b border-amber-200 px-6 py-4 shadow-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="hueco-logo-centrado max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Logo from System Settings */}
             {(systemLogo || currentUser?.companyLogo) ? (

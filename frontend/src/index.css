@@ -211,3 +211,32 @@ code {
   border-radius: 9999px;
   animation: barra-indeterminada 1.3s ease-in-out infinite;
 }
+
+/* ── EL HUECO DEL LOGO FLOTANTE ──────────────────────────────────────────────
+   Cuando el menú lateral está plegado, la aplicación pinta el logo —que además
+   es el botón de abrir el menú— en `fixed top-3 left-3` con z-[60]: ocupa los
+   60 primeros píxeles de la esquina superior izquierda de la pantalla, por
+   encima de TODO lo que haya debajo.
+
+   Y debajo hay, en casi todos los módulos, la cabecera con el título. Resultado:
+   el logo se comía el icono y el principio del título.
+
+   Antes esto se parcheaba módulo a módulo con `ml-14 sm:ml-2` — o sea, dejando
+   hueco SOLO en móvil. Pero el botón no depende del ancho de la pantalla, sino
+   de si el menú está plegado: en un ordenador con el menú plegado seguía tapando.
+   La regla correcta es esta, y es una sola:
+
+     el hueco existe exactamente cuando existe el botón.
+
+   `menu-plegado` lo pone App.js en el <main> mientras el botón está pintado.  */
+.menu-plegado .hueco-logo { padding-left: 3.75rem; }
+
+/* Para cabeceras CENTRADAS (un bloque con ancho máximo y `mx-auto`): en pantalla
+   ancha ese bloque no llega a la esquina —el logo no tapa nada— y meterle el
+   hueco solo lo descentraría. Ahí el hueco hace falta únicamente cuando el
+   bloque se pega al borde izquierdo. 1280 px es el ancho del bloque más ancho
+   que hay en la aplicación (`max-w-7xl`): por debajo de ahí cualquiera de ellos
+   toca ya el borde. */
+@media (max-width: 1280px) {
+  .menu-plegado .hueco-logo-centrado { padding-left: 3.75rem; }
+}

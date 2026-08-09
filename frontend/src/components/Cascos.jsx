@@ -700,8 +700,8 @@ const Cascos = ({ state, setState }) => {
 
   return (
     <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#f0e9d8] overflow-y-auto">
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white px-4 py-2.5 mb-4 shadow-lg flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2 whitespace-nowrap"><Box size={18} /> Cocina Desmontada</h1>
+      <div className="hueco-logo rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white px-4 py-2.5 mb-4 shadow-lg flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-base sm:text-lg font-black flex items-center gap-2 whitespace-nowrap"><Box size={18} /> Cocina Desmontada</h1>
         <div className="flex items-center gap-1.5 flex-wrap">
           <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs" title="Ventas: presupuestos"><FolderOpen size={15} /> Presupuestos</button>
           <button onClick={() => openHistory('pedido')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs" title="Pedidos de venta (cliente)"><ClipboardList size={15} /> Pedidos Ventas</button>

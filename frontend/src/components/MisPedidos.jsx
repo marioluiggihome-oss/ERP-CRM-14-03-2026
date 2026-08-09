@@ -293,7 +293,7 @@ const MisPedidos = ({ currentUser }) => {
     <div className="h-full flex flex-col bg-slate-50">
     <div className="flex-1 overflow-y-auto p-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-600 to-amber-500 rounded-2xl p-6 mb-6 text-white shadow-xl">
+      <div className="hueco-logo bg-gradient-to-r from-orange-600 to-amber-500 rounded-2xl p-6 mb-6 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="bg-white/20 p-3 rounded-xl">

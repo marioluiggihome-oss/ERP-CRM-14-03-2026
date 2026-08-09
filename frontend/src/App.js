@@ -1611,7 +1611,12 @@ const App = () => {
             onOpenCalendar={(evt) => setState(p => ({ ...p, currentTab: 'crm-calendar', crmFocusEvent: evt || null }))}
           />
 
-          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 flex flex-col ${!sidebarOpen ? 'ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
+          {/* `menu-plegado` marca que el logo flotante está pintado sobre la
+              esquina superior izquierda. Las cabeceras de los módulos llevan
+              `hueco-logo` y le dejan sitio SOLO mientras esa clase esté puesta
+              (ver index.css). Va aquí, en el mismo sitio y con la misma
+              condición que pinta el botón, para que no puedan desincronizarse. */}
+          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 flex flex-col ${!sidebarOpen ? 'menu-plegado ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
             {/* Miga de vuelta: si has llegado aquí desde otro módulo (Estudio 3D →
                 analizador → presupuesto), esto te devuelve al punto exacto de
                 donde saliste, con su sesión intacta. Una sola barra para todos
@@ -1717,7 +1722,7 @@ const App = () => {
             {/* Electros — catálogo de electrodomésticos (menú principal) */}
             {state.currentTab === 'electros' && !state.currentUser?.isTienda && (
               <ErrorBoundary>
-                <div className="max-w-6xl mx-auto p-4 sm:p-8">
+                <div className="hueco-logo-centrado max-w-6xl mx-auto p-4 sm:p-8">
                   <ElectrosTab
                     isMaster={!!state.currentUser?.isPrimaryAdmin}
                     isAdmin={!!state.currentUser?.isAdmin}

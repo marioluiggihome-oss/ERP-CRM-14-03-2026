@@ -348,7 +348,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 to-purple-50 p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="hueco-logo flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="p-4 bg-purple-600 rounded-2xl shadow-xl">
             <Sparkles size={32} className="text-white" />

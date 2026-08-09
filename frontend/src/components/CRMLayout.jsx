@@ -40,7 +40,7 @@ const CRMLayout = ({ currentUser, initialTab, focusEvent }) => {
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Top Nav */}
-      <div className="bg-white border-b border-slate-100 px-3 sm:px-6 flex items-center gap-2 shrink-0 overflow-x-auto scrollbar-none">
+      <div className="hueco-logo bg-white border-b border-slate-100 px-3 sm:px-6 flex items-center gap-2 shrink-0 overflow-x-auto scrollbar-none">
         {CRM_TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

@@ -407,7 +407,7 @@ const ProjectLibrary = ({ state, setState }) => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="hueco-logo flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl">
             <FolderOpen size={28} className="text-white" />

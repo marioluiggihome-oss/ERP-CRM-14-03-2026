@@ -343,7 +343,7 @@ const ResumenCocinas = ({ state }) => {
   return (
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
       <div style={dragStyle} className={`w-full max-w-4xl ${alignCls} flex items-center justify-between mb-1 gap-3 flex-wrap`}>
-        <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Layers size={22} /> Resumen Totales</h1>
+        <h1 className="hueco-logo text-2xl font-black text-slate-800 flex items-center gap-2"><Layers size={22} /> Resumen Totales</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <input value={docName} onChange={e => setDocName(e.target.value)} placeholder="Nombre del resumen…"
             className="px-3 py-2 border border-slate-300 rounded-xl text-sm w-48" />

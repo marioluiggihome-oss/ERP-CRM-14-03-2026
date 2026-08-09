@@ -457,7 +457,7 @@ export default function Almacen({ state }) {
 
   return (
     <div className="h-full flex flex-col bg-slate-50 min-w-0">
-      <div className="shrink-0 px-3 py-2 bg-slate-900 text-white flex items-center gap-2 min-w-0">
+      <div className="hueco-logo shrink-0 px-3 py-2 bg-slate-900 text-white flex items-center gap-2 min-w-0">
         <Boxes size={18} className="shrink-0" />
         <h1 className="text-[14px] font-black uppercase tracking-wide truncate">Almacén</h1>
         <button onClick={cargar}

@@ -647,7 +647,7 @@ export default function Expediente({ state }) {
   if (!obra) {
     return (
       <div className="h-full flex flex-col bg-slate-50 min-w-0">
-        <div className="shrink-0 flex items-center gap-2 px-3 py-2 bg-slate-900 text-white">
+        <div className="hueco-logo shrink-0 flex items-center gap-2 px-3 py-2 bg-slate-900 text-white">
           <ClipboardList size={18} className="shrink-0" />
           <h1 className="text-[14px] font-black uppercase tracking-wide truncate">Expediente de obra</h1>
           <div className="ml-auto shrink-0">

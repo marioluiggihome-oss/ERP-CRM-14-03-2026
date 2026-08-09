@@ -782,7 +782,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
       {/* Cabecera + progreso */}
       <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
-        <h1 className="text-2xl font-black text-slate-800 ml-16">Cocinas 3D</h1>
+        <h1 className="hueco-logo text-2xl font-black text-slate-800">Cocinas 3D</h1>
         <div className="flex items-center gap-2">
           <input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="Nombre del proyecto…"
             className="px-3 py-2 border border-slate-300 rounded-xl text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
