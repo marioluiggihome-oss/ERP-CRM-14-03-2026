@@ -273,3 +273,34 @@ def test_sin_bloqueos_la_excepcion_no_pinta_nada(vf):
         "motivo": "x", "autorizadaPor": "y", "riesgo": "z"}})
     assert r["conExcepcion"] is False
     assert "EXCEPCIÓN" not in r["resumen"]
+
+
+# ─── UN CERO NO ES UNA MEDIDA ───────────────────────────────────────────────
+
+def test_un_modulo_con_alto_cero_NO_pasa_por_bueno(vf):
+    """CANDADO. Pasaba EN VERDE: `_num(0)` es 0.0, no None, asi que la
+    comprobacion daba por hecho que el alto estaba puesto. Y de ahi bajaba al
+    taller."""
+    p = {**P(), "itemsMontada": [{"code": "B60", "ancho": 600, "alto": 0,
+                                  "fondo": 560, "material": "Grafito"}]}
+    r = vf.validar(p)
+    c = next(x for x in r["checks"] if x["clave"] == "medidas_modulos")
+    assert c["estado"] == vf.FALTA and c["bloquea"] is True
+    assert r["puedeLiberar"] is False
+
+
+def test_un_fondo_a_cero_tampoco(vf):
+    p = {**P(), "itemsMontada": [
+        {"code": "B60", "ancho": 600, "alto": 800, "fondo": 560, "material": "G"},
+        {"code": "B90", "ancho": 900, "alto": 800, "fondo": 0, "material": "G"}]}
+    c = next(x for x in vf.validar(p)["checks"] if x["clave"] == "fondos")
+    assert c["estado"] == vf.FALTA and "B90" in c["detalle"]
+
+
+def test_las_medidas_de_verdad_siguen_pasando(vf):
+    """La otra mitad: esto no puede haberse vuelto tiquismiquis con lo bueno."""
+    p = {**P(), "itemsMontada": [{"code": "B60", "ancho": 600, "alto": 800,
+                                  "fondo": 560, "material": "Grafito"}]}
+    for clave in ("medidas_modulos", "fondos"):
+        c = next(x for x in vf.validar(p)["checks"] if x["clave"] == clave)
+        assert c["estado"] == vf.OK

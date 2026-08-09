@@ -394,3 +394,58 @@ def test_manda_la_confirmada_y_si_no_la_de_obra(mo):
     assert r["diferencia"] == -10
     sin_confirmar = {k: v for k, v in PARED_B.items() if k != "confirmada"}
     assert mo.impacto_en_modulos(sin_confirmar, MODULOS)["diferencia"] == -53
+
+
+# ─── 9. UN CERO NO ES UNA MEDIDA ────────────────────────────────────────────
+#
+# Es peor que un hueco vacio: un vacio se ve, y un 0 parece un dato. Se colaba
+# en el despiece, pasaba las comprobaciones EN VERDE y nadie lo miraba dos
+# veces. Una pared de 0 mm no existe; un hueco de columna de 0 mm tampoco.
+
+def test_un_cero_no_sube_el_nivel_de_la_medida(mo):
+    """CANDADO. Con un 0 en `introducida`, la medida figuraba como
+    «introducida» — o sea, como si alguien la hubiera puesto."""
+    assert mo.nivel({"introducida": 0}) == mo.SIN_MEDIR
+    assert mo.nivel({"introducida": 3200, "tomada": 0}) == mo.INTRODUCIDA
+
+
+def test_no_se_corta_con_un_cero_confirmado(mo):
+    """CANDADO PRINCIPAL: `valor_para_fabricar` devolvia 0.0 y eso baja al
+    taller como medida buena."""
+    assert mo.valor_para_fabricar({"confirmada": 0}) is None
+
+
+def test_no_se_puede_confirmar_un_cero(mo):
+    with pytest.raises(ValueError):
+        mo.confirmar({"clave": "h"}, 0)
+    with pytest.raises(ValueError):
+        mo.tomar({"clave": "h"}, 0)
+
+
+def test_un_cero_no_produce_una_diferencia_falsa(mo):
+    """Con 3.200 de venta y un 0 de obra salia «−3.200 mm de diferencia», que
+    manda a revisar una pared que nadie ha medido."""
+    assert mo.diferencia({"introducida": 3200, "tomada": 0}) is None
+    assert mo.hay_discrepancia({"introducida": 3200, "tomada": 0}) is False
+
+
+def test_un_punto_a_cero_no_cuenta_como_pared_medida(mo):
+    irr = mo.irregularidad({"puntos": [3150, 0, 3143]})
+    assert len(irr["puntos"]) == 2 and irr["minimo"] == 3143
+
+
+def test_un_ancho_de_modulo_a_cero_no_suma_en_el_impacto(mo):
+    """Sumar un 0 hace que el frente parezca mas corto de lo que es, y esa
+    suma es la que dice cuanto hay que recortar."""
+    r = mo.impacto_en_modulos(
+        {"pared": "Pared B", "introducida": 3200, "tomada": 3147},
+        [{"id": "M01", "pared": "Pared B", "ancho": 600},
+         {"id": "M02", "pared": "Pared B", "ancho": 0}])
+    assert r["suma"] == 600 and r["sinAncho"] == ["M02"]
+
+
+def test_una_cantidad_de_cero_SI_sigue_significando_algo(mo):
+    """La regla es para MEDIDAS. Un cero de cantidad o de stock quiere decir
+    «ninguno», que es un dato de verdad — y meterlos en el mismo saco romperia
+    el almacen."""
+    assert mo._num(0) == 0

@@ -56,6 +56,17 @@ def _num(v):
         return None
 
 
+def _medida(v):
+    """Un número que puede ser una MEDIDA, o None.
+
+    UN CERO NO ES UNA MEDIDA. Una ficha con el hueco a 0 es una ficha a medio
+    rellenar, no un aparato que cabe en cualquier sitio: con `_num` pasaba por
+    completa y contestaba «cabe» con una holgura enorme.
+    """
+    n = _num(v)
+    return None if n is None or n <= 0 else n
+
+
 def _txt(v):
     return str(v or "").strip()
 
@@ -63,7 +74,7 @@ def _txt(v):
 def ficha_completa(ficha):
     """¿Tiene esta ficha lo mínimo para poder comprobar algo?"""
     f = ficha or {}
-    return all(_num(f.get(c)) is not None for c in IMPRESCINDIBLES)
+    return all(_medida(f.get(c)) is not None for c in IMPRESCINDIBLES)
 
 
 def fondo_util(hueco, ficha):
@@ -73,7 +84,7 @@ def fondo_util(hueco, ficha):
     ocupar. Restarla aquí es la diferencia entre un frigorífico que entra y uno
     que entra y no enfría.
     """
-    fondo = _num((hueco or {}).get("fondo"))
+    fondo = _medida((hueco or {}).get("fondo"))
     if fondo is None:
         return None
     vent = _num((ficha or {}).get("ventilacionFondo")) or 0
@@ -94,7 +105,7 @@ def comprobar(ficha, hueco):
     h = hueco or {}
 
     if not ficha_completa(f):
-        faltan = [c for c in IMPRESCINDIBLES if _num(f.get(c)) is None]
+        faltan = [c for c in IMPRESCINDIBLES if _medida(f.get(c)) is None]
         return {
             "estado": SIN_FICHA,
             "cabe": None,
@@ -109,9 +120,9 @@ def comprobar(ficha, hueco):
 
     # Lo que pide el fabricante contra lo que deja el diseño.
     pares = [
-        ("ancho", _num(f.get("anchoHueco")), _num(h.get("ancho"))),
-        ("alto", _num(f.get("altoHueco")), _num(h.get("alto"))),
-        ("fondo", _num(f.get("fondoHueco")), fondo_util(h, f)),
+        ("ancho", _medida(f.get("anchoHueco")), _medida(h.get("ancho"))),
+        ("alto", _medida(f.get("altoHueco")), _medida(h.get("alto"))),
+        ("fondo", _medida(f.get("fondoHueco")), fondo_util(h, f)),
     ]
 
     holguras, motivos, avisos, sin_comprobar = {}, [], [], []

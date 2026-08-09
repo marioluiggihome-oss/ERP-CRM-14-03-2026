@@ -191,3 +191,19 @@ def test_el_aparato_se_nombra_para_poder_buscarlo(eh):
     assert eh.comprobar(HORNO, {"ancho": 564, "alto": 596})["aparato"] == "Siemens HB334A0S0"
     assert eh.comprobar({"codigo": "X1", "anchoHueco": 1, "altoHueco": 1},
                         {"ancho": 9, "alto": 9})["aparato"] == "X1"
+
+
+# ─── 6. Un cero no es una medida ────────────────────────────────────────────
+
+def test_una_ficha_con_el_hueco_a_cero_NO_esta_completa(eh):
+    """CANDADO. Una ficha a medio rellenar pasaba por completa y contestaba
+    «cabe» con una holgura enorme."""
+    media = {"marca": "X", "anchoHueco": 0, "altoHueco": 590}
+    assert eh.ficha_completa(media) is False
+    r = eh.comprobar(media, {"ancho": 600, "alto": 600})
+    assert r["cabe"] is None and "anchoHueco" in r["faltaEnFicha"]
+
+
+def test_un_hueco_disenado_a_cero_tampoco_se_comprueba(eh):
+    r = eh.comprobar(HORNO, {"ancho": 0, "alto": 596, "fondo": 560})
+    assert r["cabe"] is None and "ancho" in r["faltaEnHueco"]

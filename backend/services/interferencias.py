@@ -58,6 +58,21 @@ def _num(v):
         return None
 
 
+def _medida(v):
+    """Un número que puede ser una MEDIDA, o None.
+
+    UN CERO NO ES UNA MEDIDA. Una distancia entre paredes de 0 cm no es una
+    cocina estrechísima: es una medida que nadie ha puesto. Sin esto, salía
+    «el paso queda en −120 cm», que no significa nada y encima parece un
+    cálculo.
+
+    Ojo: el JUNQUILLO sí puede ser 0 —quiere decir que no hay junquillo, que es
+    justo el caso que hace chocar la puerta—, así que ese sigue con `_num`.
+    """
+    n = _num(v)
+    return None if n is None or n <= 0 else n
+
+
 def _txt(v):
     return str(v or "").strip()
 
@@ -81,10 +96,10 @@ def paso_libre(distancia, fondo_a, fondo_b=0):
     lineal esa distancia muchas veces NO está medida, y suponerla es
     exactamente lo que este ERP no hace.
     """
-    d = _num(distancia)
+    d = _medida(distancia)
     if d is None:
         return None
-    return round(d - (_num(fondo_a) or 0) - (_num(fondo_b) or 0), 1)
+    return round(d - (_medida(fondo_a) or 0) - (_medida(fondo_b) or 0), 1)
 
 
 def revisar_paso(distancia, fondo_a, fondo_b=0, minimo=PASO_LIBRE_MIN,
@@ -152,7 +167,7 @@ def revisar_rincon(rincon, apertura=None, holgura=HOLGURA_RINCON_MIN, donde="el 
     con D/I lo decide el taller con un 50 % de acertar.
     """
     r = rincon or {}
-    fondo = _num(r.get("fondo"))
+    fondo = _medida(r.get("fondo"))
     if fondo is None:
         return [_aviso("rincon", "sin_comprobar",
                        "No consta el fondo del rincón: no se puede comprobar si la "
@@ -217,8 +232,10 @@ def revisar_instalaciones(modulos, instalaciones, zonas=None):
             continue
 
         for m in modulos or []:
+            # La POSICIÓN sí puede ser 0 —el primer módulo empieza en la
+            # esquina—, pero un largo de 0 es un módulo que no existe.
             mx = _num(m.get("x"))
-            largo = _num(m.get("largo"))
+            largo = _medida(m.get("largo"))
             if mx is None or largo is None:
                 continue
             # ¿El módulo pisa la zona de la instalación?

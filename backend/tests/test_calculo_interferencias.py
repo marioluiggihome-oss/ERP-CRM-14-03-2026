@@ -207,3 +207,30 @@ def test_ningun_aviso_propone_mover_el_modulo_por_su_cuenta(it):
 def test_sin_datos_no_revienta(it):
     r = it.revisar({})
     assert r["limpio"] is True and r["avisos"] == []
+
+
+# ─── 7. Un cero no es una medida ────────────────────────────────────────────
+
+def test_una_distancia_de_cero_no_es_una_cocina_estrechisima(it):
+    """CANDADO. Salia «el paso queda en −120 cm», que no significa nada y
+    encima parece un calculo. Una distancia de 0 es una medida que nadie ha
+    puesto."""
+    r = it.revisar_paso(0, 60, 60)
+    assert r[0]["nivel"] == "sin_comprobar"
+
+
+def test_el_junquillo_SI_puede_ser_cero(it):
+    """Es justo el caso que hace chocar la puerta: no hay junquillo. La regla
+    del cero es para MEDIDAS, no para todo."""
+    r = it.revisar_rincon({"fondo": 60, "junquillo": 0}, apertura="D")
+    assert r[0]["nivel"] == "error"
+
+
+def test_la_posicion_de_un_modulo_SI_puede_ser_cero(it):
+    """El primer modulo empieza en la esquina, en el 0. Un LARGO de 0, en
+    cambio, es un modulo que no existe."""
+    r = it.revisar_instalaciones([{"id": "M01", "x": 0, "largo": 60}],
+                                 [{"tipo": "desague", "x": 30}])
+    assert len(r) == 1 and r[0]["nivel"] == "aviso"
+    assert it.revisar_instalaciones([{"id": "M01", "x": 0, "largo": 0}],
+                                    [{"tipo": "desague", "x": 30}]) == []

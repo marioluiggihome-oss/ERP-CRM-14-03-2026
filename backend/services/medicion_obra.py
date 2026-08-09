@@ -91,6 +91,21 @@ def _num(v):
         return None
 
 
+def _medida(v):
+    """Un número que puede ser una MEDIDA, o None.
+
+    UN CERO NO ES UNA MEDIDA. Y es peor que un hueco vacío: un vacío se ve, y
+    un 0 parece un dato — se cuela en el despiece, pasa las comprobaciones en
+    verde y nadie lo mira dos veces. Una pared de 0 mm no existe; un hueco de
+    columna de 0 mm tampoco.
+
+    Ojo: esto vale para MEDIDAS. Una cantidad de 0 o un stock de 0 sí
+    significan algo («ninguno»), y por eso ahí se sigue usando `_num`.
+    """
+    n = _num(v)
+    return None if n is None or n <= 0 else n
+
+
 def _txt(v):
     return str(v or "").strip()
 
@@ -104,11 +119,11 @@ def nivel(medida):
     el formulario.
     """
     m = medida or {}
-    if _num(m.get("confirmada")) is not None:
+    if _medida(m.get("confirmada")) is not None:
         return CONFIRMADA
-    if _num(m.get("tomada")) is not None:
+    if _medida(m.get("tomada")) is not None:
         return TOMADA
-    if _num(m.get("introducida")) is not None:
+    if _medida(m.get("introducida")) is not None:
         return INTRODUCIDA
     return SIN_MEDIR
 
@@ -120,7 +135,7 @@ def valor_para_fabricar(medida):
     medida que alguien apuntó; confirmarla es el acto de darla por buena, y
     saltárselo aquí lo borraría del proceso entero.
     """
-    return _num((medida or {}).get("confirmada"))
+    return _medida((medida or {}).get("confirmada"))
 
 
 def diferencia(medida):
@@ -129,8 +144,8 @@ def diferencia(medida):
     En las unidades en que estén escritas: este módulo no convierte nada, y por
     eso tampoco puede equivocarse convirtiendo.
     """
-    intro = _num((medida or {}).get("introducida"))
-    tomada = _num((medida or {}).get("tomada"))
+    intro = _medida((medida or {}).get("introducida"))
+    tomada = _medida((medida or {}).get("tomada"))
     if intro is None or tomada is None:
         return None
     return round(tomada - intro, 3)
@@ -163,10 +178,10 @@ def puntos_de(medida):
     fuera = []
     for i, p in enumerate(((medida or {}).get("puntos") or [])):
         if isinstance(p, dict):
-            v = _num(p.get("valor"))
+            v = _medida(p.get("valor"))
             etq = _txt(p.get("etiqueta")) or f"Punto {i + 1}"
         else:
-            v = _num(p)
+            v = _medida(p)
             etq = f"Punto {i + 1}"
         if v is None:
             continue
@@ -240,9 +255,9 @@ def revisar_una(medida, tolerancia=0):
         "clave": _txt(m.get("clave")),
         "etiqueta": _txt(m.get("etiqueta")) or _txt(m.get("clave")),
         "unidad": _txt(m.get("unidad")) or "mm",
-        "introducida": _num(m.get("introducida")),
-        "tomada": _num(m.get("tomada")),
-        "confirmada": _num(m.get("confirmada")),
+        "introducida": _medida(m.get("introducida")),
+        "tomada": _medida(m.get("tomada")),
+        "confirmada": _medida(m.get("confirmada")),
         "nivel": n,
         "nivelEtiqueta": ETIQUETA_NIVEL[n],
         "diferencia": d,
@@ -321,9 +336,11 @@ def tomar(medida, valor, quien="", cuando=""):
     que se quiere poder mirar, y pisarla la borraría.
     """
     m = dict(medida or {})
-    v = _num(valor)
+    v = _medida(valor)
     if v is None:
-        raise ValueError("Una medida tomada sin valor no es una medida tomada.")
+        raise ValueError(
+            "Una medida tomada sin valor no es una medida tomada. Y un cero "
+            "tampoco: una pared de 0 no existe.")
     m["tomada"] = v
     m["tomadaPor"] = _txt(quien)
     m["tomadaAt"] = _txt(cuando)
@@ -339,10 +356,11 @@ def confirmar(medida, valor, quien="", cuando=""):
     corta.
     """
     m = dict(medida or {})
-    v = _num(valor)
+    v = _medida(valor)
     if v is None:
         raise ValueError(
-            "Confirmar es escribir la medida buena: sin valor no se confirma.")
+            "Confirmar es escribir la medida buena: sin valor no se confirma, "
+            "y un cero no es una medida.")
     m["confirmada"] = v
     m["confirmadaPor"] = _txt(quien)
     m["confirmadaAt"] = _txt(cuando)
@@ -369,10 +387,10 @@ def impacto_en_modulos(medida, modulos):
     pared = _txt(m.get("pared"))
     # La diferencia que importa es contra la medida con la que se va a
     # fabricar; si aun no hay confirmada, contra la de obra.
-    nueva = _num(m.get("confirmada"))
+    nueva = _medida(m.get("confirmada"))
     if nueva is None:
-        nueva = _num(m.get("tomada"))
-    vieja = _num(m.get("introducida"))
+        nueva = _medida(m.get("tomada"))
+    vieja = _medida(m.get("introducida"))
 
     if nueva is None or vieja is None:
         return {"pared": pared, "diferencia": None, "modulos": [], "suma": None,
@@ -391,7 +409,7 @@ def impacto_en_modulos(medida, modulos):
     de_esa_pared = [x for x in (modulos or []) if _txt(x.get("pared")) == pared]
     sin_pared = [x for x in (modulos or []) if not _txt(x.get("pared"))]
 
-    anchos = [_num(x.get("ancho")) for x in de_esa_pared]
+    anchos = [_medida(x.get("ancho")) for x in de_esa_pared]
     suma = round(sum(a for a in anchos if a is not None), 3) if de_esa_pared else None
     sin_ancho = [_nombre(x) for x, a in zip(de_esa_pared, anchos) if a is None]
     nombres_sin_pared = [_nombre(x) for x in sin_pared]
@@ -485,7 +503,7 @@ def valor_visible(medida):
     """
     m = medida or {}
     for campo in ("confirmada", "tomada", "introducida"):
-        v = _num(m.get(campo))
+        v = _medida(m.get(campo))
         if v is not None:
             return v
     return None

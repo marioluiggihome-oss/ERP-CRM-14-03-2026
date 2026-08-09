@@ -78,6 +78,20 @@ def _num(v):
         return None
 
 
+def _medida(v):
+    """Un número que puede ser una MEDIDA, o None.
+
+    UN CERO NO ES UNA MEDIDA, y es peor que un hueco vacío: un vacío se ve, y
+    un 0 parece un dato. Un módulo con alto 0 y fondo 0 pasaba estas
+    comprobaciones EN VERDE, y de ahí bajaba al taller.
+
+    Vale solo para medidas. Una cantidad de 0 o un stock de 0 sí significan
+    algo, y ahí se sigue usando `_num`.
+    """
+    n = _num(v)
+    return None if n is None or n <= 0 else n
+
+
 def _lineas(proyecto):
     p = proyecto or {}
     return (p.get("itemsMontada") or []) + (p.get("itemsDespiece") or [])
@@ -112,11 +126,13 @@ def _medidas_de_modulos(proyecto):
     for i, l in enumerate(lineas):
         sin = [n for n, v in (("ancho", l.get("width") or l.get("ancho")),
                               ("alto", l.get("height") or l.get("alto")))
-               if _num(v) is None]
+               if _medida(v) is None]
         if sin:
             faltan.append((_ident(l, i), sin))
     if not faltan:
         return _check("medidas_modulos", "MEDIDAS", "Medidas de los módulos", OK)
+    # «falta» cubre las dos cosas —no está o está a cero— y las dos se
+    # arreglan igual: yendo a esa línea y escribiendo la medida buena.
     detalle = "; ".join(f"{ident}: falta {' y '.join(qs)}" for ident, qs in faltan[:5])
     return _check("medidas_modulos", "MEDIDAS", "Medidas de los módulos", FALTA, True,
                   detalle + ("…" if len(faltan) > 5 else ""),
@@ -130,7 +146,7 @@ def _fondos(proyecto):
     if not lineas:
         return _check("fondos", "MEDIDAS", "Profundidades confirmadas", SIN_DATOS, False)
     sin_fondo = [_ident(l, i) for i, l in enumerate(lineas)
-                 if _num(l.get("depth") or l.get("fondo")) is None]
+                 if _medida(l.get("depth") or l.get("fondo")) is None]
     if not sin_fondo:
         return _check("fondos", "MEDIDAS", "Profundidades confirmadas", OK)
     if len(sin_fondo) == len(lineas):
