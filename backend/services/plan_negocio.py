@@ -135,6 +135,30 @@ def capacidad(datos):
 
 # ─── 2. Coste por mueble ────────────────────────────────────────────────────
 
+def mano_obra_de(ref, coste_equipo_hora, media_por_mueble):
+    """Lo que cuesta MONTAR ese mueble, a partir del TIEMPO que lleva.
+
+    POR QUÉ EL TIEMPO Y NO UN COSTE
+    -------------------------------
+    Un coste por mueble no se mide: se estima. El tiempo sí — con un cronómetro,
+    en la propia fábrica. Y es lo único que cambia de verdad entre referencias:
+    un bajo de 90 con cajones no lleva lo mismo que un alto de 45, y darles a los
+    dos la misma mano de obra reparte mal el coste y luego el margen.
+
+    Los MINUTOS son de EQUIPO, no de persona: si los dos montan el mismo mueble
+    durante 20 minutos, son 20 minutos de equipo, no 40. Es la misma cuenta que
+    la capacidad (3 muebles/hora del equipo), y mezclarlas duplicaría el coste.
+
+    Si no se ha medido, se usa la media que sale de la capacidad. Es un dato
+    peor —una media reparte igual lo caro y lo barato— y por eso se dice de dónde
+    viene con `fuente`.
+    """
+    minutos = _positivo((ref or {}).get("minutosPorMueble"))
+    if minutos is not None and coste_equipo_hora is not None:
+        return _r(coste_equipo_hora * minutos / 60), "medido", minutos
+    return media_por_mueble, "media", minutos
+
+
 def coste_referencia(ref, mano_obra):
     """El coste directo de UNA referencia: materiales + mano de obra.
 
@@ -243,7 +267,10 @@ def calcular(entrada):
     refs_in = e.get("referencias") or []
     refs = []
     for r in refs_in:
-        c = coste_referencia(r, mo)
+        mo_ref, fuente_mo, minutos = mano_obra_de(r, cap["costeEquipoHora"], mo)
+        c = coste_referencia(r, mo_ref)
+        c["fuenteManoObra"] = fuente_mo
+        c["minutosPorMueble"] = minutos
         c["margenB2B"] = margen(r.get("precioB2B"), c["costeDirecto"])
         c["margenB2C"] = margen(r.get("precioB2C"), c["costeDirecto"])
         c["precioB2B"] = _precio(r.get("precioB2B"))
@@ -306,6 +333,7 @@ def calcular(entrada):
     return {
         "capacidad": cap,
         "referencias": refs,
+        "avisoTiempos": _cuadran_los_tiempos(cap, refs),
         "costeDirectoMedio": coste_medio,
         "b2c": b2c,
         "margenB2BMedio": margen_b2b_medio,
@@ -324,6 +352,39 @@ def calcular(entrada):
         "escenarios": _escenarios(e, margen_medio, precio_medio, estructura["total"]),
         "faltan": _que_falta(cap, refs, b2c, reparto, estructura, e),
         "sostenible": _sostenible(parte_capacidad),
+    }
+
+
+def _cuadran_los_tiempos(cap, refs):
+    """¿Los minutos medidos cuadran con los 3 muebles/hora declarados?
+
+    DOS MEDIDAS DE LO MISMO QUE NO COINCIDEN NO SE PROMEDIAN: SE DICEN.
+
+    La capacidad dice cuántos muebles salen en una hora; los minutos medidos
+    dicen lo que tarda cada uno. Son la misma cosa contada de dos maneras, y si
+    no cuadran una de las dos está mal — y las dos se están usando: la capacidad
+    para el techo de producción y los minutos para el coste. Callarlo deja un
+    plan que se contradice consigo mismo sin que se note.
+
+    Devuelve None mientras no haya con qué comparar. Un margen del 15 % es de
+    casa: por debajo de eso la diferencia es ruido de medir.
+    """
+    mh = cap.get("mueblesHora")
+    medidos = [r.get("minutosPorMueble") for r in refs if r.get("minutosPorMueble")]
+    if not mh or len(medidos) < 2:
+        return None
+    esperado = 60.0 / mh                      # minutos de equipo por mueble
+    media = sum(medidos) / len(medidos)
+    desvio = abs(media - esperado) / esperado
+    if desvio <= 0.15:
+        return None
+    return {
+        "esperado": _r(esperado, 1),
+        "medido": _r(media, 1),
+        "texto": (f"Los tiempos medidos dan una media de {media:.0f} min por mueble, "
+                  f"pero {mh:g} muebles/hora son {esperado:.0f} min. Una de las dos "
+                  "medidas está mal, y las dos se están usando: la capacidad para el "
+                  "techo de producción y los minutos para el coste."),
     }
 
 

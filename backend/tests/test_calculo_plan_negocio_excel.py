@@ -132,11 +132,19 @@ def test_el_equilibrio_mira_el_margen_ponderado_y_la_estructura(libro):
     assert s.cell(row=fila_est, column=1).value == "TOTAL ESTRUCTURA"
 
 
-def test_la_mano_de_obra_de_cada_mueble_viene_de_capacidad(libro):
+def test_la_mano_de_obra_sale_del_TIEMPO_de_cada_mueble(libro):
+    """CANDADO. Es la unidad que se mide: la hora de fabrica, repartida por los
+    minutos que lleva ese mueble. Sin medir, la media — y eso es un dato peor,
+    porque da lo mismo a un alto de 45 que a un bajo de 90 con cajones."""
     cm, cap = libro["Coste_mueble"], libro["Capacidad"]
-    col = _columna(cm, "Mano de obra")
-    assert cm[f"{col}5"].value == "=Capacidad!$B$13"
-    assert cap["A13"].value == "MANO DE OBRA POR MUEBLE"
+    col_min = _columna(cm, "Min / mueble")
+    formula = cm[f"{_columna(cm, 'Mano de obra')}5"].value
+    assert f'IF({col_min}5<>""' in formula, "el tiempo medido no manda"
+    assert "/60" in formula, "los minutos tienen que pasarse a horas"
+    fila_hora = int(formula.split("Capacidad!$B$")[1].split("*")[0])
+    assert cap.cell(row=fila_hora, column=1).value == "HORA DE FÁBRICA (equipo)"
+    fila_media = int(formula.rsplit("Capacidad!$B$", 1)[1].rstrip(")"))
+    assert cap.cell(row=fila_media, column=1).value == "Mano de obra por mueble (media)"
 
 
 def test_ninguna_formula_apunta_a_una_hoja_que_no_existe(libro):

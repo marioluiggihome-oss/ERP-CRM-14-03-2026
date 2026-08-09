@@ -64,8 +64,17 @@ ETIQUETA_MATERIAL = {
 COL_MUEBLE = 2                                   # B — un solo número por mueble
 COL_DESGLOSE = 3                                 # C — primera partida del desglose
 COL_MATERIAL = COL_DESGLOSE + 8                  # el material que se usa al final
-COL_MANO_OBRA = COL_MATERIAL + 1
+COL_MINUTOS = COL_MATERIAL + 1                   # el tiempo MEDIDO de ese mueble
+COL_MANO_OBRA = COL_MINUTOS + 1
 COL_COSTE_DIRECTO = COL_MANO_OBRA + 1
+
+# Y lo mismo con las filas de `Capacidad` a las que apuntan otras hojas: en un
+# sitio, con nombre, y no repartidas por el codigo como numeros sueltos.
+FILA_PERSONAS = 4
+FILA_MUEBLES_HORA = 5
+FILA_COSTE_HORA_PERSONA = 12
+FILA_HORA_FABRICA = 13
+FILA_MANO_OBRA_MEDIA = 14
 
 B2C = ("comisionComercial", "montaje", "transporte", "postventa")
 ETIQUETA_B2C = {"comisionComercial": "Comisión comercial", "montaje": "Montaje",
@@ -180,16 +189,29 @@ def _hoja_capacidad(wb, d):
     ws["D12"] = "Bruto + Seguridad Social de la empresa. No es el sueldo neto."
     ws["D12"].font = NOTA
 
-    ws["A13"] = "MANO DE OBRA POR MUEBLE"
+    # LA HORA DE FÁBRICA. Es la unidad que de verdad se mide: lo que cuesta
+    # tener al equipo montando durante una hora. De aquí sale el coste de cada
+    # mueble, repartido según los minutos que lleve.
+    ws["A13"] = "HORA DE FÁBRICA (equipo)"
     ws["A13"].font = FUERTE
-    ws["B13"] = '=IF(OR($B$12="",$B$4="",$B$5=""),"falta dato",$B$4*$B$12/$B$5)'
+    ws["B13"] = '=IF(OR($B$12="",$B$4=""),"falta dato",$B$4*$B$12)'
     ws["B13"].font = NEGRO
     ws["B13"].number_format = EUR
     ws["B13"].fill = CLARO
-    ws["C13"] = "€/mueble"
+    ws["C13"] = "€/hora"
     ws["C13"].font = NOTA
-    ws["D13"] = "Coste del equipo por hora entre los muebles de esa hora."
+    ws["D13"] = "Todas las personas juntas. Es lo que se reparte por minutos."
     ws["D13"].font = NOTA
+
+    ws["A14"] = "Mano de obra por mueble (media)"
+    ws["A14"].font = NEGRO
+    ws["B14"] = '=IF(OR(NOT(ISNUMBER($B$13)),$B$5=""),"falta dato",$B$13/$B$5)'
+    ws["B14"].font = NEGRO
+    ws["B14"].number_format = EUR
+    ws["C14"] = "€/mueble"
+    ws["C14"].font = NOTA
+    ws["D14"] = "Solo se usa en las referencias cuyo tiempo NO se ha medido."
+    ws["D14"].font = NOTA
 
 
 # ─── Coste por mueble ───────────────────────────────────────────────────────
@@ -207,8 +229,8 @@ def _hoja_coste(wb, d):
     # DÓNDE está el coste. Si hay número por mueble, MANDA ÉL — sumar los dos
     # contaría el material dos veces.
     cols = ["Referencia", "Material / mueble"] + [ETIQUETA_MATERIAL[c] for c in MATERIALES] + \
-           ["MATERIAL", "Mano de obra", "COSTE DIRECTO"]
-    for i, ancho in enumerate([15, 16] + [12] * len(MATERIALES) + [13, 13, 14]):
+           ["MATERIAL", "Min / mueble", "Mano de obra", "COSTE DIRECTO"]
+    for i, ancho in enumerate([15, 16] + [12] * len(MATERIALES) + [13, 12, 13, 14]):
         ws.column_dimensions[get_column_letter(1 + i)].width = ancho
     _cab(ws, 4, cols)
 
@@ -236,8 +258,15 @@ def _hoja_coste(wb, d):
         c.font = NEGRO
         c.number_format = EUR
         c.border = BORDE
-        mo = ws.cell(row=f, column=col_mo, value="=Capacidad!$B$13")
-        mo.font = VERDE
+        # El TIEMPO es lo que se mide con un cronómetro; el coste sale de él.
+        # Sin medir, se reparte la media de la fábrica — peor dato, porque da lo
+        # mismo a un alto de 45 que a un bajo de 90 con cajones.
+        M = get_column_letter(COL_MINUTOS)
+        _entrada(ws, f"{M}{f}", r.get("minutosPorMueble"), NUM)
+        mo = ws.cell(row=f, column=col_mo,
+                     value=(f'=IF({M}{f}<>"",Capacidad!$B${FILA_HORA_FABRICA}*{M}{f}/60,'
+                            f'Capacidad!$B${FILA_MANO_OBRA_MEDIA})'))
+        mo.font = NEGRO
         mo.number_format = EUR
         mo.border = BORDE
         L = get_column_letter(col_mat)

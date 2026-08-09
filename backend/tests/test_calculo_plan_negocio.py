@@ -105,6 +105,92 @@ def test_sin_ninguna_de_las_dos_formas_se_pide_UNA_cosa_no_ocho(pn):
     assert r["faltan"] == ["costeMaterialesMueble"]
 
 
+# ─── 0 bis. La mano de obra se mide EN TIEMPO ───────────────────────────────
+
+def test_los_minutos_medidos_dan_la_mano_de_obra(pn):
+    """CANDADO. Un coste por mueble se estima; el TIEMPO se mide con un
+    cronometro. 2 personas a 18 €/h son 36 €/h de equipo: 30 min son 18 €."""
+    mo, fuente, minutos = pn.mano_obra_de({"minutosPorMueble": 30},
+                                          coste_equipo_hora=36, media_por_mueble=12)
+    assert mo == 18 and fuente == "medido" and minutos == 30
+
+
+def test_los_minutos_son_de_EQUIPO_no_de_persona(pn):
+    """Si los dos montan el mismo mueble 20 minutos, son 20 minutos de equipo,
+    no 40. Contarlos por persona duplicaria el coste."""
+    mo, _, _ = pn.mano_obra_de({"minutosPorMueble": 20}, coste_equipo_hora=36,
+                               media_por_mueble=12)
+    assert mo == 12, "20 min de equipo a 36 €/h son 12 €, no 24"
+
+
+def test_cada_referencia_puede_llevar_su_tiempo(pn):
+    """Un bajo de 90 con cajones no lleva lo mismo que un alto de 45. Darles la
+    misma mano de obra reparte mal el coste y luego el margen."""
+    r = pn.calcular({
+        "capacidad": CAPACIDAD,
+        "referencias": [_ref("Alto 45", minutosPorMueble=12),
+                        _ref("Bajo 90", minutosPorMueble=32)],
+    })
+    alto, bajo = r["referencias"]
+    assert alto["manoObra"] == 7.2 and bajo["manoObra"] == 19.2
+    assert bajo["costeDirecto"] > alto["costeDirecto"]
+
+
+def test_sin_medir_se_usa_la_media_y_SE_DICE(pn):
+    """Una media reparte igual lo caro y lo barato. Es un dato peor, y hay que
+    poder distinguirlo de uno medido."""
+    r = pn.calcular({"capacidad": CAPACIDAD, "referencias": [_ref()]})
+    assert r["referencias"][0]["manoObra"] == 12
+    assert r["referencias"][0]["fuenteManoObra"] == "media"
+
+
+def test_un_tiempo_de_cero_no_es_un_mueble_que_se_monta_solo(pn):
+    """La regla del cero, tambien aqui."""
+    mo, fuente, _ = pn.mano_obra_de({"minutosPorMueble": 0}, coste_equipo_hora=36,
+                                    media_por_mueble=12)
+    assert fuente == "media" and mo == 12
+
+
+def test_sin_coste_por_hora_el_tiempo_medido_no_sirve_de_nada(pn):
+    """Se sabe cuanto tarda, pero no cuanto vale esa hora."""
+    mo, _, _ = pn.mano_obra_de({"minutosPorMueble": 30}, coste_equipo_hora=None,
+                               media_por_mueble=None)
+    assert mo is None
+
+
+# ─── 0 ter. Dos medidas de lo mismo que no cuadran ──────────────────────────
+
+def test_si_los_tiempos_no_cuadran_con_la_capacidad_SE_DICE(pn):
+    """CANDADO. 3 muebles/hora son 20 min por mueble. Si lo medido da 40, una de
+    las dos esta mal — y las dos se estan usando: la capacidad para el techo de
+    produccion y los minutos para el coste. Un plan que se contradice consigo
+    mismo sin avisar es peor que uno incompleto."""
+    r = pn.calcular({
+        "capacidad": CAPACIDAD,
+        "referencias": [_ref("A", minutosPorMueble=40), _ref("B", minutosPorMueble=40)],
+    })
+    aviso = r["avisoTiempos"]
+    assert aviso is not None
+    assert aviso["esperado"] == 20 and aviso["medido"] == 40
+    assert "capacidad" in aviso["texto"]
+
+
+def test_si_cuadran_no_molesta(pn):
+    """Un aviso que salta siempre se aprende a ignorar."""
+    r = pn.calcular({
+        "capacidad": CAPACIDAD,
+        "referencias": [_ref("A", minutosPorMueble=18), _ref("B", minutosPorMueble=22)],
+    })
+    assert r["avisoTiempos"] is None
+
+
+def test_con_un_solo_tiempo_medido_no_se_juzga_la_capacidad(pn):
+    """Una referencia suelta no dice nada de la media de la fabrica."""
+    r = pn.calcular({"capacidad": CAPACIDAD,
+                     "referencias": [_ref("A", minutosPorMueble=40), _ref("B")]})
+    assert r["avisoTiempos"] is None
+
+
 # ─── 1. Un hueco no es un cero ──────────────────────────────────────────────
 
 def test_un_coste_por_mueble_a_cero_no_es_un_mueble_gratis(pn):

@@ -267,11 +267,19 @@ export default function PlanNegocio({ state }) {
                     onChange={(v) => tocar(prev => ({ ...prev, capacidad: { ...prev.capacidad, [k]: v } }))} />
                 </div>
               ))}
-              <Dato label="Mano de obra / mueble" valor={eur(cap.manoObraPorMueble)} />
+              <Dato label="Hora de fábrica" valor={eur(cap.costeEquipoHora)} nota="el equipo entero" />
+              <Dato label="Mano de obra / mueble" valor={eur(cap.manoObraPorMueble)} nota="media, si no se mide el tiempo" />
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
               Las horas son del EQUIPO, ya sin vacaciones ni festivos. La capacidad da por hecho que las dos personas están las mismas horas.
+              La <b className="text-slate-500">hora de fábrica</b> ({eur(cap.costeEquipoHora) || '…'}) es lo que se reparte según los minutos que lleve cada mueble.
             </p>
+
+            {res?.avisoTiempos && (
+              <p className="mt-2 text-[12px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2 flex items-start gap-1.5">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {res.avisoTiempos.texto}
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto">
@@ -295,6 +303,7 @@ export default function PlanNegocio({ state }) {
                     ? <th className="px-1 whitespace-nowrap">Material / mueble</th>
                     : MATERIALES.map(([k, l]) => <th key={k} className="px-1 whitespace-nowrap">{l}</th>)}
                   <th className="px-1">Material</th>
+                  <th className="px-1 whitespace-nowrap" title="Minutos de EQUIPO que lleva montar ese mueble. Es lo que se mide con un cronómetro.">Min / mueble</th>
                   <th className="px-1">M. obra</th>
                   <th className="px-1">Coste directo</th>
                 </tr>
@@ -322,7 +331,17 @@ export default function PlanNegocio({ state }) {
                           <span className="block text-[9px] text-slate-400">a mano</span>
                         )}
                       </td>
-                      <td className="px-1 text-right text-slate-500">{eur(calc.manoObra) || <span className="text-amber-600 text-xs">falta</span>}</td>
+                      <td className="px-1">
+                        <Casilla valor={r.minutosPorMueble} ancho="w-16" paso="1"
+                          titulo="Minutos de EQUIPO, no por persona: si los dos montan el mismo mueble 20 minutos, son 20."
+                          onChange={(v) => cambiarRef(i, 'minutosPorMueble', v)} />
+                      </td>
+                      <td className="px-1 text-right text-slate-500">
+                        {eur(calc.manoObra) || <span className="text-amber-600 text-xs">falta</span>}
+                        {calc.fuenteManoObra === 'media' && calc.manoObra != null && (
+                          <span className="block text-[9px] text-slate-400" title="Sin medir: se reparte la media de la fábrica, que da lo mismo a lo caro y a lo barato.">media</span>
+                        )}
+                      </td>
                       <td className="px-1 text-right font-black text-slate-800">{eur(calc.costeDirecto) || <span className="text-amber-600 text-xs">falta</span>}</td>
                     </tr>
                   );

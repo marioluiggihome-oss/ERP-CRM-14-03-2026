@@ -96,7 +96,10 @@ def _vacio() -> dict:
         # `costeMaterialesMueble` es la forma normal de empezar: un solo número
         # por mueble. El desglose en ocho partidas está para cuando haga falta
         # saber DÓNDE está el coste, no para tener que rellenarlo hoy.
+        # `minutosPorMueble`: lo que se MIDE con un cronómetro. Sin él se usa la
+        # media de la fábrica, que reparte igual lo caro y lo barato.
         "referencias": [{"nombre": n, "costeMaterialesMueble": None,
+                         "minutosPorMueble": None,
                          **{c: None for c in motor.COSTES_DE_MATERIAL},
                          "precioB2B": None, "precioB2C": None} for n in motor.REFERENCIAS],
         "b2c": {c: None for c in motor.COSTES_B2C},
