@@ -321,3 +321,76 @@ def test_se_admiten_numeros_sueltos_que_es_como_se_teclea_en_obra(mo):
 def test_un_punto_sin_valor_no_cuenta_como_cero(mo):
     irr = mo.irregularidad({"puntos": [{"valor": 3150}, {"valor": ""}, {"valor": 3143}]})
     assert len(irr["puntos"]) == 2 and irr["minimo"] == 3143
+
+
+# ─── 8. A QUE MUEBLES afecta la diferencia (propuesta 228) ──────────────────
+#
+# «La pared da 53 mm menos» no le dice nada a nadie hasta que se sabe a que
+# muebles toca. Es la diferencia entre enterarse ahora y enterarse durante el
+# montaje.
+
+PARED_B = {"clave": "pared_b", "etiqueta": "Pared B", "pared": "Pared B",
+           "introducida": 3200, "tomada": 3147, "confirmada": 3147}
+
+MODULOS = [{"id": "M01", "pared": "Pared B", "ancho": 600},
+           {"id": "M02", "pared": "Pared B", "ancho": 900},
+           {"id": "M03", "pared": "Pared B", "ancho": 600},
+           {"id": "M09", "pared": "Pared C", "ancho": 600}]
+
+
+def test_dice_a_que_muebles_afecta_y_a_cuales_no(mo):
+    r = mo.impacto_en_modulos(PARED_B, MODULOS)
+    assert r["modulos"] == ["M01", "M02", "M03"]
+    assert "M09" not in r["modulos"], "ha tocado un mueble de otra pared"
+    assert r["diferencia"] == -53
+    assert r["suma"] == 2100
+
+
+def test_NO_elige_a_cual_se_le_quitan_los_milimetros(mo):
+    """CANDADO. Recortar el ultimo, meter un relleno o repartirlo entre todos
+    son decisiones distintas y con precios distintos."""
+    r = mo.impacto_en_modulos(PARED_B, MODULOS)
+    assert "NO elige" in r["resumen"]
+    for prohibido in ("recortarEn", "moduloAjustado", "nuevoAncho", "reparto"):
+        assert prohibido not in r, f"«{prohibido}»: esta decidiendo por su cuenta"
+
+
+def test_una_medida_sin_pared_no_dice_que_no_afecta_a_nada(mo):
+    """Mentir en la direccion peligrosa: «no afecta a nada» se lee como que
+    esta todo bien."""
+    r = mo.impacto_en_modulos({**PARED_B, "pared": ""}, MODULOS)
+    assert r["sinComprobar"] is True
+    assert "no se puede saber" in r["resumen"]
+
+
+def test_los_muebles_sin_pared_asignada_se_nombran(mo):
+    """No se puede afirmar que NO les afecta."""
+    r = mo.impacto_en_modulos(PARED_B, MODULOS + [{"id": "M20", "ancho": 300}])
+    assert "M20" in r["sinPared"]
+    assert r["sinComprobar"] is True
+
+
+def test_un_mueble_sin_ancho_no_cuenta_como_cero(mo):
+    r = mo.impacto_en_modulos(PARED_B, [{"id": "M01", "pared": "Pared B"}])
+    assert r["suma"] == 0 and r["sinAncho"] == ["M01"]
+    assert "Sin ancho: M01" in r["resumen"]
+    assert r["sinComprobar"] is True
+
+
+def test_si_la_pared_mide_lo_previsto_no_afecta_a_nadie(mo):
+    r = mo.impacto_en_modulos({**PARED_B, "tomada": 3200, "confirmada": 3200}, MODULOS)
+    assert r["diferencia"] == 0
+    assert "no afecta" in r["resumen"]
+
+
+def test_sin_las_dos_medidas_no_se_puede_decir_a_que_afecta(mo):
+    r = mo.impacto_en_modulos({"pared": "Pared B", "introducida": 3200}, MODULOS)
+    assert r["diferencia"] is None and r["sinComprobar"] is True
+
+
+def test_manda_la_confirmada_y_si_no_la_de_obra(mo):
+    """Es la medida con la que se va a fabricar."""
+    r = mo.impacto_en_modulos({**PARED_B, "confirmada": 3190}, MODULOS)
+    assert r["diferencia"] == -10
+    sin_confirmar = {k: v for k, v in PARED_B.items() if k != "confirmada"}
+    assert mo.impacto_en_modulos(sin_confirmar, MODULOS)["diferencia"] == -53

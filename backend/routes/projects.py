@@ -440,7 +440,37 @@ async def confirmar_medida(project_id: str, clave: str, payload: dict,
     return await _cambiar_nivel(project_id, clave, payload, current_user, "confirmar")
 
 
-@router.post("/projects/{project_id}/medidas/comparar")
+@router.post("/projects/{project_id}/medidas/{clave}/impacto")
+async def impacto_de_una_medida(project_id: str, clave: str, payload: dict = {},
+                                current_user: dict = Depends(require_auth)):
+    """¿A qué muebles afecta esta diferencia de medida?
+
+    «La pared da 53 mm menos» no le dice nada a nadie hasta que se sabe a qué
+    muebles toca. Es la diferencia entre enterarse ahora y enterarse durante el
+    montaje.
+
+    Los módulos se pueden mandar en la llamada o salir del proyecto. Si no hay
+    ninguno con pared asignada, el motor lo DICE — no contesta «no afecta a
+    nada», que se leería como que está todo bien.
+    """
+    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    medidas = proyecto.get("medidas") or []
+    medida = next((m for m in medidas
+                   if str((m or {}).get("clave") or "").strip() == clave), None)
+    if medida is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Esta obra no tiene ninguna medida «{clave}».")
+
+    modulos = payload.get("modulos")
+    if not isinstance(modulos, list):
+        modulos = proyecto.get("modulos") or []
+    return {"success": True, **medicion_obra.impacto_en_modulos(medida, modulos)}
+
+
+@router.post("/projects/{project_id}/medidas/comparar")@router.post("/projects/{project_id}/medidas/comparar")
 async def comparar_mediciones_proyecto(project_id: str, payload: dict,
                                        current_user: dict = Depends(require_auth)):
     """Compara las medidas guardadas con OTRA medición de la misma obra.

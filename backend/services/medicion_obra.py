@@ -349,6 +349,93 @@ def confirmar(medida, valor, quien="", cuando=""):
     return m
 
 
+def impacto_en_modulos(medida, modulos):
+    """A QUE MUEBLES afecta esta diferencia de medida.
+
+    «La pared da 53 mm menos» no le dice nada a nadie hasta que se sabe a que
+    muebles toca. Es la diferencia entre enterarse ahora y enterarse durante el
+    montaje.
+
+    `medida`: la de siempre, con `pared` para saber de cual se habla.
+    `modulos`: [{id, pared, ancho}] — los de esa pared, en las MISMAS unidades
+               que la medida. Aqui no se convierte nada, y por eso tampoco se
+               puede equivocar convirtiendo.
+
+    LO QUE NO HACE: elegir a cual se le quitan los milimetros. Recortar el
+    ultimo, meter un relleno o repartirlo entre todos son decisiones distintas,
+    con precios distintos, y las toma quien firma el proyecto.
+    """
+    m = medida or {}
+    pared = _txt(m.get("pared"))
+    # La diferencia que importa es contra la medida con la que se va a
+    # fabricar; si aun no hay confirmada, contra la de obra.
+    nueva = _num(m.get("confirmada"))
+    if nueva is None:
+        nueva = _num(m.get("tomada"))
+    vieja = _num(m.get("introducida"))
+
+    if nueva is None or vieja is None:
+        return {"pared": pared, "diferencia": None, "modulos": [], "suma": None,
+                "resumen": "Faltan las dos medidas para poder decir a qué afecta.",
+                "sinComprobar": True}
+
+    dif = round(nueva - vieja, 3)
+    if not pared:
+        # Sin saber de que pared se habla no se puede tocar nada. Decir «no
+        # afecta a nada» seria mentir en la direccion peligrosa.
+        return {"pared": "", "diferencia": dif, "modulos": [], "suma": None,
+                "resumen": ("Esta medida no dice de qué pared es: no se puede saber a "
+                            "qué muebles afecta."),
+                "sinComprobar": True}
+
+    de_esa_pared = [x for x in (modulos or []) if _txt(x.get("pared")) == pared]
+    sin_pared = [x for x in (modulos or []) if not _txt(x.get("pared"))]
+
+    anchos = [_num(x.get("ancho")) for x in de_esa_pared]
+    suma = round(sum(a for a in anchos if a is not None), 3) if de_esa_pared else None
+    sin_ancho = [_nombre(x) for x, a in zip(de_esa_pared, anchos) if a is None]
+    nombres_sin_pared = [_nombre(x) for x in sin_pared]
+
+    return {
+        "pared": pared,
+        "diferencia": dif,
+        "modulos": [_nombre(x) for x in de_esa_pared],
+        "suma": suma,
+        "sinAncho": sin_ancho,
+        # Modulos que no dicen en que pared estan: no se puede afirmar que NO
+        # les afecta, asi que se nombran.
+        "sinPared": nombres_sin_pared,
+        "sinComprobar": bool(sin_ancho or sin_pared) or not de_esa_pared,
+        "resumen": _resumen_impacto(pared, dif, de_esa_pared, suma, sin_ancho,
+                                    nombres_sin_pared),
+    }
+
+
+def _nombre(modulo):
+    return _txt((modulo or {}).get("id")) or "sin nombre"
+
+
+def _resumen_impacto(pared, dif, de_esa_pared, suma, sin_ancho, sin_pared):
+    if dif == 0:
+        return f"La {pared} mide lo previsto: no afecta a ningún mueble."
+    if not de_esa_pared:
+        return (f"La {pared} cambia {dif:+g}, pero no hay ningún mueble asignado a "
+                "esa pared: no se puede decir a qué afecta.")
+    quienes = ", ".join(_nombre(x) for x in de_esa_pared)
+    verbo = "faltan" if dif < 0 else "sobran"
+    texto = (f"La {pared} cambia {dif:+g}: {verbo} {abs(dif):g} en un frente de "
+             f"{len(de_esa_pared)} mueble(s) — {quienes}. El programa NO elige a cuál "
+             "se le quitan: recortar uno, meter un relleno o repartirlo son "
+             "decisiones distintas.")
+    if suma is not None:
+        texto += f" Suman {suma:g}."
+    if sin_ancho:
+        texto += f" Sin ancho: {', '.join(sin_ancho)}."
+    if sin_pared:
+        texto += f" Y hay muebles sin pared asignada ({', '.join(sin_pared)}): mírales."
+    return texto
+
+
 def comparar_mediciones(medidas_a, medidas_b, etiqueta_a="A", etiqueta_b="B"):
     """Dos mediciones de la misma obra, una al lado de la otra.
 
