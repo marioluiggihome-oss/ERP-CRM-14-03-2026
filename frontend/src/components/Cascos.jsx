@@ -9,6 +9,8 @@ import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, Clipb
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
+import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
+import { aMilimetros } from '../utils/medidas';
 import RentabilidadUnificada from './RentabilidadUnificada';
 import RelacionReview from './RelacionReview';
 
@@ -172,6 +174,13 @@ const Cascos = ({ state, setState }) => {
   const [menuImportar, setMenuImportar] = useState(false);   // menú de vías de importación
   const [sistemaRenta, setSistemaRenta] = useState(null);    // 'alvic' | 'mv' al abrir desde el menú
   const relacionInputRef = useRef(null);
+
+  // Rentabilidad se abría SOLO con Shift+clic, y una tablet no tiene tecla
+  // Shift: en tablet el margen no estaba protegido, estaba inalcanzable. Ahora
+  // se abre igual manteniendo pulsado el candado.
+  const candadoRenta = usePulsacionLarga(() => {
+    if (esMasterRenta) { setSistemaRenta('mv'); setShowRenta(v => !v); }
+  });
 
   // Descarga el PDF de nomenclaturas rellenable (56 familias) desde el backend.
   const descargarNomenclaturas = async () => {
@@ -362,14 +371,43 @@ const Cascos = ({ state, setState }) => {
       const fam = famOf(det.tipo);
       let cand = pool.filter(m => famOf(m.tipo) === fam);
       if (!cand.length) cand = pool;
-      const target = Number(det.ancho) || 0;
-      let best = null, bd = Infinity;
-      for (const m of cand) { const d = Math.abs((Number(m.ancho) || 0) - target); if (d < bd) { bd = d; best = m; } }
+      // A MILÍMETROS ANTES DE COMPARAR. El catálogo está en mm y hay orígenes
+      // que mandan cm: comparar 60 contra 600 no da error, da el casco más
+      // estrecho del catálogo — y el presupuesto sale con muebles que nadie ha
+      // pedido, con la misma pinta que uno bueno.
+      const anchoDet = aMilimetros(det.ancho);
+      const altoDet = aMilimetros(det.alto);
+      const fondoDet = aMilimetros(det.fondo);
+      // Manda el ANCHO; con el ancho igualado, decide el ALTO; y en último
+      // término el fondo. Un bajo de 80 de alto y uno de 70 no son el mismo
+      // mueble, y hasta ahora el alto no pintaba nada: una columna de 220 se
+      // emparejaba con una de 200 sin que nadie lo notara.
+      const distancia = (m) => {
+        const dAncho = Math.abs((Number(m.ancho) || 0) - anchoDet);
+        const dAlto = altoDet ? Math.abs((Number(m.alto) || 0) - altoDet) : 0;
+        const dFondo = fondoDet ? Math.abs((Number(m.fondo) || 0) - fondoDet) : 0;
+        return [dAncho, dAlto, dFondo];
+      };
+      let best = null, bd = null;
+      for (const m of cand) {
+        const d = distancia(m);
+        if (!bd || d[0] < bd[0] || (d[0] === bd[0] && (d[1] < bd[1] || (d[1] === bd[1] && d[2] < bd[2])))) {
+          bd = d; best = m;
+        }
+      }
+      // Si el ancho pedido y el del casco no se parecen ni de lejos, esto NO es
+      // un emparejamiento: es el catálogo diciendo que no tiene esa medida.
+      // Antes se colaba como bueno y el presupuesto no decía nada.
+      const SIN_PARECIDO_MM = 60;   // 6 cm: más de eso ya es otro mueble
+      if (best && anchoDet && bd[0] > SIN_PARECIDO_MM) best = null;
       if (best) {
         const base = best.precios[colorActivo];
         return { key: `vk-${Date.now()}-${idx}`, sig: `${best.id}|${colorActivo}`, tipo: best.tipo, grosor: best.grosor, dibujo: best.dibujo, fondo: best.fondo, alto: best.alto, ancho: best.ancho, color: colorActivo, colorLabel: colorLabel(colorActivo), gama: best.gama || 'kit', precio: pc(base), precioBase: base, qty: det.qty || 1 };
       }
-      return { key: `vk-${Date.now()}-${idx}`, sig: `estimado|${norm(det.tipo)}|${det.ancho}`, tipo: det.tipo, grosor: grosorActivo, dibujo: null, fondo: det.fondo || 0, alto: det.alto || 0, ancho: det.ancho || 0, color: colorActivo, colorLabel: colorLabel(colorActivo), gama, precio: 0, precioBase: 0, qty: det.qty || 1, estimado: true };
+      // Sin casco que se le parezca: entra con SUS medidas y a 0 €, marcado como
+      // estimado. Vale más una línea que se ve que está sin precio que una línea
+      // con el casco equivocado y un precio que parece bueno.
+      return { key: `vk-${Date.now()}-${idx}`, sig: `estimado|${norm(det.tipo)}|${anchoDet}|${altoDet}`, tipo: det.tipo, grosor: grosorActivo, dibujo: null, fondo: fondoDet, alto: altoDet, ancho: anchoDet, color: colorActivo, colorLabel: colorLabel(colorActivo), gama, precio: 0, precioBase: 0, qty: det.qty || 1, estimado: true };
     });
     setCart(prev => {
       const next = [...prev];
@@ -796,11 +834,15 @@ const Cascos = ({ state, setState }) => {
                - Shift+clic = abrir/cerrar panel de Rentabilidad */}
           {esMasterCascos && (
             <button
+              {...candadoRenta.props}
               onClick={(e) => {
+                // La pulsación larga ya ha abierto Rentabilidad: el clic que
+                // llega al soltar no debe además bloquear el presupuesto.
+                if (candadoRenta.consumir()) return;
                 if (e.shiftKey) { if (esMasterRenta) { setSistemaRenta('mv'); setShowRenta(v => !v); } }
                 else { setPresupuestoBloqueado(v => !v); }
               }}
-              title={`${presupuestoBloqueado ? 'Desbloquear' : 'Bloquear'} edición del presupuesto${esMasterRenta ? ' (Shift+clic = Rentabilidad)' : ''}`}
+              title={`${presupuestoBloqueado ? 'Desbloquear' : 'Bloquear'} edición del presupuesto${esMasterRenta ? ` · Rentabilidad: ${AYUDA_CANDADO}` : ''}`}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-black text-xs transition-colors ${
                 presupuestoBloqueado
                   ? 'bg-red-500 text-white hover:bg-red-600'

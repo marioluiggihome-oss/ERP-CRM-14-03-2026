@@ -31,6 +31,31 @@
  * cada pocos segundos en Android. Cuando eso pasa, `event.results` empieza de
  * cero, así que lo dicho hasta ahí se guarda en `previoRef` al cerrarse la
  * sesión y se antepone a lo siguiente. Si no, cada corte borraría lo dicho.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * SEGUNDA VUELTA (09/08). Seguía saliendo mal en la tablet:
+ *
+ *     «elelelel bajoel bajoel bajoel bajo fre»
+ *
+ * Lo de arriba arreglaba una cosa y dejaba otra viva. Rehacer el texto desde
+ * `event.results` es correcto SOLO si se leen los resultados FINALES. Los
+ * PROVISIONALES son otra cosa: son el navegador pensando en voz alta, y va
+ * mandando la frase a medias una y otra vez —«el», «el bajo», «el bajo fre»—.
+ * Sumarlos todos da exactamente ese churro: cada versión intermedia pegada
+ * detrás de la anterior.
+ *
+ * La regla, ahora sí:
+ *
+ *   · LOS FINALES SE SUMAN (rehaciéndolos enteros cada vez: sigue siendo
+ *     idempotente, que era lo bueno de la primera vuelta).
+ *   · DEL PROVISIONAL SOLO VALE EL ÚLTIMO, y no se suma NUNCA: se enseña
+ *     detrás para que se vea que el micro está oyendo, y en cuanto llega el
+ *     final se sustituye por él.
+ *
+ * Y una cosa más que no era un fallo pero lo parecía: en Android el dictado se
+ * corta solo cada pocos segundos. Antes eso paraba el micro y había que volver
+ * a tocarlo a media frase. Ahora, mientras el usuario no diga que para, se
+ * vuelve a arrancar solo y lo dicho se conserva.
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 
@@ -44,6 +69,28 @@ const unir = (a, b) => {
   return `${x} ${y}`;
 };
 
+/**
+ * Convierte lo que manda el navegador en texto. Es la regla entera, aparte para
+ * poder mirarla sin tener que leer el hook.
+ *
+ * Devuelve { firme, provisional }:
+ *   firme       — lo que el navegador ya da por bueno. Se rehace ENTERO en cada
+ *                 evento, así que da igual cuántas veces reentregue lo mismo.
+ *   provisional — lo que está oyendo ahora mismo. SOLO EL ÚLTIMO, y no se suma
+ *                 jamás: sumarlos era lo que producía «elelelel bajoel bajoel».
+ */
+export function leerResultados(resultados) {
+  let firme = '';
+  let provisional = '';
+  for (let i = 0; i < (resultados?.length || 0); i++) {
+    const r = resultados[i];
+    const texto = r?.[0]?.transcript || '';
+    if (r?.isFinal) firme = unir(firme, texto);
+    else provisional = texto;   // asignación, NUNCA suma
+  }
+  return { firme, provisional };
+}
+
 export default function useSpeechRecognition({ lang = 'es-ES' } = {}) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -51,7 +98,10 @@ export default function useSpeechRecognition({ lang = 'es-ES' } = {}) {
 
   const recognitionRef = useRef(null);
   const previoRef = useRef('');   // lo dicho en sesiones ya cerradas
-  const sesionRef = useRef('');   // lo dicho en la sesión en curso
+  const sesionRef = useRef('');   // lo FIRME de la sesión en curso
+  // ¿El usuario sigue queriendo dictar? Android corta la sesión solo cada pocos
+  // segundos; mientras esto sea true, se vuelve a arrancar sin que él lo note.
+  const quiereEscuchar = useRef(false);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -64,34 +114,48 @@ export default function useSpeechRecognition({ lang = 'es-ES' } = {}) {
     recognition.lang = lang;
 
     recognition.onresult = (event) => {
-      // Se rehace el texto COMPLETO desde el principio de la sesión. Nada de
-      // ir sumando: es lo que hacía que una palabra reentregada se duplicara.
-      let texto = '';
-      for (let i = 0; i < event.results.length; i++) {
-        texto += event.results[i][0].transcript;
-      }
-      sesionRef.current = texto;
-      setTranscript(unir(previoRef.current, texto));
+      const { firme, provisional } = leerResultados(event.results);
+      // Solo lo FIRME se guarda. Lo provisional se enseña, pero no se queda:
+      // en cuanto el navegador se decida, llegará como firme.
+      sesionRef.current = firme;
+      setTranscript(unir(unir(previoRef.current, firme), provisional));
     };
 
-    recognition.onerror = () => setIsListening(false);
+    recognition.onerror = (e) => {
+      // Si es que no hay permiso o no hay micro, no se insiste: reintentar en
+      // bucle contra un permiso denegado no lo concede, solo calienta el móvil.
+      if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed'
+          || e?.error === 'audio-capture') {
+        quiereEscuchar.current = false;
+      }
+      setIsListening(false);
+    };
 
     recognition.onend = () => {
       // La sesión se cierra (el usuario para, o Android la corta solo): lo
-      // dicho pasa a ser definitivo para que la siguiente no lo pise.
+      // FIRME pasa a ser definitivo para que la siguiente no lo pise.
       previoRef.current = unir(previoRef.current, sesionRef.current);
       sesionRef.current = '';
+      if (quiereEscuchar.current) {
+        // Android corta cada pocos segundos. Se vuelve a abrir enseguida: antes
+        // esto dejaba el micro parado a media frase y había que tocarlo otra vez.
+        try { recognition.start(); return; } catch (_) { /* no ha dejado */ }
+      }
       setIsListening(false);
     };
 
     recognitionRef.current = recognition;
-    return () => { try { recognition.abort(); } catch (_) { /* ya parado */ } };
+    return () => {
+      quiereEscuchar.current = false;   // si no, el `onend` del cierre lo revive
+      try { recognition.abort(); } catch (_) { /* ya parado */ }
+    };
   }, [lang]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
     previoRef.current = '';
     sesionRef.current = '';
+    quiereEscuchar.current = true;
     setTranscript('');
     try { recognitionRef.current.start(); } catch (_) { /* ya estaba escuchando */ }
     setIsListening(true);
@@ -99,6 +163,9 @@ export default function useSpeechRecognition({ lang = 'es-ES' } = {}) {
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
+    // PRIMERO se quita la intención y luego se para: al revés, el `onend` que
+    // llega justo después volvería a arrancarlo y el micro no se apagaría.
+    quiereEscuchar.current = false;
     try { recognitionRef.current.stop(); } catch (_) { /* ya estaba parado */ }
     setIsListening(false);
   }, []);

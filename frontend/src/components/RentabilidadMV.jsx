@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Trash2, Loader, Calculator, TrendingUp, Upload, Lock, Unlock, Download } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS } from '../data/cascos';
+import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const H = () => authHeaders({ 'Content-Type': 'application/json' });
@@ -270,6 +271,11 @@ export default function RentabilidadMV({ esMaster, seed }) {
     return { rows, tot };
   }, [lineas, p, pv]);
 
+  // El candado del coste/margen. Se abre manteniendo pulsado o con Shift+clic.
+  // Va ANTES del `return null` de abajo: un hook no puede quedarse a un lado de
+  // un `if`, o React se pierde entre un render y el siguiente.
+  const candadoMargen = usePulsacionLarga(() => setMargenVisible(v => !v));
+
   if (!esMaster) return null;
 
   return (
@@ -278,8 +284,14 @@ export default function RentabilidadMV({ esMaster, seed }) {
         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-200 px-2 py-0.5 rounded">Solo master</span>
         <h3 className="text-sm font-black text-emerald-900 flex items-center gap-1.5"><TrendingUp size={15} /> Rentabilidad Tarifa MV</h3>
         <button
-          onClick={(e) => { if (e.shiftKey) setMargenVisible(v => !v); else setPvpVisible(v => !v); }}
-          title="Clic: ver/ocultar PVP · Shift+clic: ver/ocultar coste y margen"
+          {...candadoMargen.props}
+          onClick={(e) => {
+            // La pulsación larga ya ha hecho lo suyo: el clic que manda el
+            // navegador al soltar no debe deshacerlo.
+            if (candadoMargen.consumir()) return;
+            if (e.shiftKey) setMargenVisible(v => !v); else setPvpVisible(v => !v);
+          }}
+          title={`Toque: ver/ocultar PVP · Coste y margen: ${AYUDA_CANDADO}`}
           className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${margenVisible ? 'bg-emerald-600 text-white' : (pvpVisible ? 'bg-emerald-200 text-emerald-800' : 'bg-white border border-emerald-300 text-emerald-700')}`}>
           {(pvpVisible || margenVisible) ? <Unlock size={12} /> : <Lock size={12} />} {margenVisible ? 'Coste' : (pvpVisible ? 'PVP' : 'Ver')}
         </button>

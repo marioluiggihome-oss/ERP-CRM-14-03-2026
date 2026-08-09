@@ -18,6 +18,7 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Search, Check, Loader, AlertTriangle, FileUp, Lock, Unlock } from 'lucide-react';
+import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import { despiece, MV_COSTES_DEFAULT } from './RentabilidadMV';
 
 const eur = (n) => (n == null ? '—' : `${Number(n).toFixed(2)} €`);
@@ -65,7 +66,8 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState('');
-  const [verCoste, setVerCoste] = useState(false); // candado: coste/margen solo con Shift+clic
+  const [verCoste, setVerCoste] = useState(false); // candado: coste/margen tras un gesto deliberado
+  const [pistaCandado, setPistaCandado] = useState(''); // cómo se abre, para quien no lo sepa
 
   // Costes de componentes (los mismos que Rentabilidad MV, vía localStorage).
   const p = useMemo(() => {
@@ -136,7 +138,9 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   useEffect(() => { setSel(0); }, [busca]);
 
   // Alturas seleccionables según el TIPO de familia (deja las otras medidas posibles).
-  const OPCIONES_ALTURA = { h7090: [70, 90], h127147: [127, 147], h200220: [200, 220] };
+  // El primero de cada lista es el que sale por defecto. En los altos manda el
+  // 90: es la altura de la casa, y el 70 es la excepción — no al revés.
+  const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [200, 220] };
   const alturasDe = (m) => {
     const t = familias?.[m.familia]?.type;
     return OPCIONES_ALTURA[t] || null; // null = altura fija (p. ej. bajos a 80)
@@ -164,6 +168,33 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     return { ...m, alto, pvp: puntosLocal(m, alto) };
   }));
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
+
+  // LA ALTURA POR DEFECTO SE APLICA AL DATO, NO SOLO AL DESPLEGABLE.
+  //
+  // Antes el desplegable enseñaba la primera altura de la lista, pero el mueble
+  // se quedaba SIN altura por dentro y con el precio que hubiera venido. O sea
+  // que se veía «90» y se cobraba otra cosa, sin que nada avisara. Aquí se le
+  // pone la altura de la casa de verdad y se recalcula su PVP con ella.
+  //
+  // No es inventarse una medida: es el estándar de la casa, decidido a mano, y
+  // la fila queda marcada para que se vea que esa altura NO venía en la
+  // relación del cliente.
+  useEffect(() => {
+    if (!familias) return;
+    setMuebles(prev => {
+      let cambia = false;
+      const sig = prev.map(m => {
+        if (m.alto) return m;
+        const opciones = OPCIONES_ALTURA[familias?.[m.familia]?.type];
+        if (!opciones) return m;           // altura fija: no hay nada que elegir
+        cambia = true;
+        return { ...m, alto: opciones[0], _altoDeLaCasa: true, pvp: puntosLocal(m, opciones[0]) };
+      });
+      return cambia ? sig : prev;
+    });
+    // Depende solo de que llegue el catálogo y de que haya filas nuevas: la
+    // función de dentro se protege sola (si ya tiene altura, no toca nada).
+  }, [familias, muebles.length]);   // eslint-disable-line
 
   const filas = muebles.map(m => {
     const coste = m.encontrado ? costeDe(m, p) : 0;
@@ -236,7 +267,18 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   };
 
   const noEncontrados = muebles.filter(m => !m.encontrado).length;
-  const candadoClick = (e) => { if (e.shiftKey) setVerCoste(v => !v); };
+
+  // El candado del coste/margen. Se abre manteniendo pulsado o con Shift+clic:
+  // en tablet no hay tecla Shift, así que con Shift solo el margen era
+  // sencillamente inalcanzable — el botón se tocaba y no pasaba nada.
+  const candadoLargo = usePulsacionLarga(() => { setPistaCandado(''); setVerCoste(v => !v); });
+  const candadoClick = (e) => {
+    if (candadoLargo.consumir()) return;   // ya lo ha abierto la pulsación
+    if (e.shiftKey || verCoste) { setPistaCandado(''); setVerCoste(v => !v); return; }
+    // Un toque suelto no lo abre — pero sí dice CÓMO se abre. Un botón que no
+    // hace nada al tocarlo parece roto.
+    setPistaCandado(AYUDA_CANDADO + ' para ver coste y margen.');
+  };
   const oculto = '•••';
 
   return (
@@ -325,6 +367,11 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
         {/* Listado */}
         <div className="px-5 py-3 overflow-y-auto flex-1">
+          {pistaCandado && (
+            <p className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 mb-2 flex items-center gap-1.5">
+              <Lock size={12} /> {pistaCandado}
+            </p>
+          )}
           {noEncontrados > 0 && (
             <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-2">
               {noEncontrados} mueble(s) sin código de tarifa (van igualmente, precio a ajustar).
@@ -357,13 +404,15 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                 <th className="text-center">Uds</th>
                 <th className="text-right">PVP MV</th>
                 <th className="text-right whitespace-nowrap">
-                  <button onClick={candadoClick} title="Coste/Margen (solo master) — mantén Shift y haz clic"
+                  <button onClick={candadoClick} {...candadoLargo.props}
+                    title={`Coste y margen (solo master) — ${AYUDA_CANDADO}`}
                     className="inline-flex items-center gap-1 text-slate-400 hover:text-emerald-600">
                     {verCoste ? <Unlock size={12} /> : <Lock size={12} />} Coste
                   </button>
                 </th>
                 <th className="text-right">
-                  <button onClick={candadoClick} className="text-slate-400 hover:text-emerald-600" title="Shift+clic para ver">Margen</button>
+                  <button onClick={candadoClick} {...candadoLargo.props}
+                    className="text-slate-400 hover:text-emerald-600" title={AYUDA_CANDADO}>Margen</button>
                 </th>
                 <th></th>
               </tr>

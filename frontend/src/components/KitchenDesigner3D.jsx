@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { getToken } from '../services/api';
 import { irA } from '../services/navegacion';
+import { aMilimetros } from '../utils/medidas';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -672,7 +673,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         // no se volcaba ningún casco → faltaba el 90% del pedido.
         // El catálogo de Cascos trabaja en MILÍMETROS, así que los muebles se pasan
         // en mm (no en cm) para que el emparejador por ancho acierte el módulo.
-        const toMm = (v) => { const n = Number(v) || 0; return n > 0 && n < 320 ? Math.round(n * 10) : Math.round(n); };
+        const toMm = aMilimetros;
         const cabs = cotizables.map(f => ({
           tipo: (f.tipo || f.subtipo || f.nombre_catalogo || 'Bajo').toString(),
           ancho: toMm(f.ancho_real || f.ancho_estimado),

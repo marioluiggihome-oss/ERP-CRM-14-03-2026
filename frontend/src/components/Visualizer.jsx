@@ -9,6 +9,7 @@ import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X,
 import { getProductIcon } from './FurnitureIcons';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
+import { aMilimetros } from '../utils/medidas';
 import DOMPurify from 'dompurify';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -215,7 +216,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
       if (navigate) irA(setState, 'presupuestador2');
     } else if (target === 'desmontada') {
       // Cocina Desmontada trabaja en MILIMETROS y empareja por tipo + ancho.
-      const aMm = (v) => { const n = Number(v) || 0; return n > 0 && n < 320 ? Math.round(n * 10) : Math.round(n); };
+      const aMm = aMilimetros;
       const cabs = productos.map(f => ({
         tipo: (f.tipo || f.subtipo || f.nombre_catalogo || 'Bajo').toString(),
         ancho: aMm(f.ancho_real || f.ancho_estimado),
