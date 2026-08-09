@@ -33,7 +33,7 @@ import {
   ClipboardList, Search, RefreshCw, Loader, AlertTriangle, CheckCircle2,
   ChevronLeft, Factory, Euro, User, ArrowRight, ShieldCheck, XCircle, Ruler,
 } from 'lucide-react';
-import { projectsAPI, expedienteAPI, medidasAPI } from '../services/api';
+import { projectsAPI, proformaAPI, expedienteAPI, medidasAPI } from '../services/api';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 // Cómo se lee cada importe. `margen` y `descuento` son porcentajes; el resto,
@@ -150,7 +150,10 @@ const SelectorDeObra = ({ proyectos, cargando, error, onElegir, onRecargar, busq
                 {p.customerName || p.clientCode || 'Sin cliente'}
               </p>
               <p className="text-[11px] text-slate-500 truncate">
-                {p.budgetNumber || p.id}
+                <span className={p._origen === 'casco' ? 'text-cyan-700 font-bold' : 'text-slate-400'}>
+                  {p._de}
+                </span>
+                {' · '}{p.budgetNumber || p.id}
                 {p.internalReference ? ` · ${p.internalReference}` : ''}
               </p>
             </div>
@@ -482,12 +485,32 @@ export default function Expediente({ state }) {
   const [errorMedidas, setErrorMedidas] = useState('');
   const [ocupadaMedida, setOcupadaMedida] = useState(false);
 
+  // LAS OBRAS DE LAS TRES COCINAS, EN UNA SOLA LISTA. Cocina Montada 1 y 2
+  // guardan proyectos; Cocina Desmontada guarda pedidos de casco. Para quien
+  // busca una obra es la misma pregunta —«¿cómo va lo de María García?»— así
+  // que no se le pide que sepa en qué módulo se tecleó.
   const cargarLista = useCallback(async () => {
     setCargandoLista(true);
     setErrorLista('');
     try {
-      const data = await projectsAPI.getAll(usuarioId);
-      setProyectos(Array.isArray(data) ? data : (data?.projects || []));
+      const [proj, casco] = await Promise.all([
+        projectsAPI.getAll(usuarioId).catch(() => []),
+        // Los pedidos de casco pueden estar cerrados para este usuario; si no
+        // llegan, la lista sigue con lo demás en vez de quedarse vacía.
+        proformaAPI.listarPedidos(usuarioId).then(d => d?.orders || []).catch(() => []),
+      ]);
+      const proyectos = (Array.isArray(proj) ? proj : (proj?.projects || []))
+        .map(p => ({ ...p, _origen: 'proj', _de: 'Cocina Montada' }));
+      const pedidos = casco.map(o => ({
+        ...o, _origen: 'casco', _de: 'Cocina Desmontada',
+        // Se traduce lo justo para pintar la ficha; lo demás lo trae el
+        // expediente cuando se abre.
+        budgetNumber: o.expediente || o.ref || o.id,
+        customerName: o.cliente || '',
+        internalReference: o.ref || '',
+        status: o.kind === 'presupuesto' ? 'borrador' : 'aceptado',
+      }));
+      setProyectos([...proyectos, ...pedidos]);
     } catch (e) {
       setErrorLista(e.message || 'No se pudo cargar la lista de obras.');
     } finally {
@@ -497,11 +520,11 @@ export default function Expediente({ state }) {
 
   useEffect(() => { cargarLista(); }, [cargarLista]);
 
-  const cargarExpediente = useCallback(async (projectId) => {
+  const cargarExpediente = useCallback(async (projectId, origen = 'proj') => {
     setCargandoExp(true);
     setErrorExp('');
     try {
-      const data = await expedienteAPI.get(projectId);
+      const data = await expedienteAPI.get(projectId, origen);
       setExp(data);
     } catch (e) {
       // Se deja `exp` como estaba y se dice qué ha fallado. Vaciarlo dejaría
@@ -512,10 +535,10 @@ export default function Expediente({ state }) {
     }
   }, []);
 
-  const cargarMedidas = useCallback(async (projectId) => {
+  const cargarMedidas = useCallback(async (projectId, origen = 'proj') => {
     setErrorMedidas('');
     try {
-      setMedidas(await medidasAPI.listar(projectId));
+      setMedidas(await medidasAPI.listar(projectId, origen));
     } catch (e) {
       setErrorMedidas(e.message || 'No se pudieron leer las medidas.');
     }
@@ -528,8 +551,8 @@ export default function Expediente({ state }) {
     setErrorComparacion('');
     setMedidas(null);
     setErrorMedidas('');
-    cargarExpediente(p.id);
-    cargarMedidas(p.id);
+    cargarExpediente(p.id, p._origen);
+    cargarMedidas(p.id, p._origen);
   }, [cargarExpediente, cargarMedidas]);
 
   // Tomar y confirmar son la MISMA operación con distinto nombre, y el motor
@@ -540,11 +563,11 @@ export default function Expediente({ state }) {
     setErrorMedidas('');
     try {
       const fn = accion === 'tomar' ? medidasAPI.tomar : medidasAPI.confirmar;
-      setMedidas(await fn(obra.id, clave, valor === '' ? null : Number(valor)));
+      setMedidas(await fn(obra.id, clave, valor === '' ? null : Number(valor), obra._origen));
       // Una medida crítica confirmada puede desbloquear la fabricación, y eso
       // lo dice el expediente: si no se recarga, el cartel de arriba sigue
       // diciendo que hay bloqueos que ya no hay.
-      cargarExpediente(obra.id);
+      cargarExpediente(obra.id, obra._origen);
     } catch (e) {
       setErrorMedidas(e.message || 'No se pudo guardar la medida.');
     } finally { setOcupadaMedida(false); }
@@ -570,7 +593,7 @@ export default function Expediente({ state }) {
         tomadaPor: m.tomadaPor, tomadaAt: m.tomadaAt,
         confirmadaPor: m.confirmadaPor, confirmadaAt: m.confirmadaAt,
       })), nueva];
-      setMedidas(await medidasAPI.guardar(obra.id, lista));
+      setMedidas(await medidasAPI.guardar(obra.id, lista, obra._origen));
     } catch (e) {
       setErrorMedidas(e.message || 'No se pudo añadir la medida.');
     } finally { setOcupadaMedida(false); }
@@ -667,13 +690,16 @@ export default function Expediente({ state }) {
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-black truncate">{cab.cliente || obra.customerName || 'Sin cliente'}</p>
             <p className="text-[11px] text-slate-300 truncate">
-              {cab.proyecto || obra.budgetNumber || obra.id}
+              {/* De qué cocina viene, siempre a la vista: el expediente es el
+                  mismo pero la obra no, y confundirlas cuesta un pedido. */}
+              <span className="text-slate-400">{obra._de || 'Cocina Montada'}</span>
+              {' · '}{cab.proyecto || obra.budgetNumber || obra.id}
               {cab.referencia ? ` · ${cab.referencia}` : ''}
             </p>
           </div>
           <button
             type="button"
-            onClick={() => cargarExpediente(obra.id)}
+            onClick={() => cargarExpediente(obra.id, obra._origen)}
             className="shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl active:bg-white/10"
             aria-label="Actualizar el expediente"
           >
@@ -797,8 +823,12 @@ export default function Expediente({ state }) {
             </div>
 
             {/* Presupuestado contra fabricado. Bajo petición porque tira de la
-                orden de fabricación y no siempre existe. */}
-            <div className="min-w-0">
+                orden de fabricación y no siempre existe.
+
+                Solo para Cocina Montada: una obra de Desmontada no pasa por
+                orden de fabricación, así que el botón no se pinta en vez de
+                pintarse y contestar siempre que no hay nada. */}
+            <div className={`min-w-0 ${obra._origen === 'casco' ? 'hidden' : ''}`}>
               <button
                 type="button"
                 onClick={compararConFabrica}

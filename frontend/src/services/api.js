@@ -803,14 +803,21 @@ const _errorDe = async (r, porDefecto) => {
   return new Error(e.detail || porDefecto);
 };
 
+// Una obra puede venir de Cocina Montada (un proyecto) o de Cocina Desmontada
+// (un pedido de cascos). El expediente es EL MISMO; lo único que cambia es de
+// dónde salen los datos, así que lo único que cambia aquí es la ruta.
+const _baseDeObra = (origen, id) => (origen === 'casco'
+  ? `${API_URL}/api/cascos/orders/${encodeURIComponent(id)}`
+  : `${API_URL}/api/projects/${encodeURIComponent(id)}`);
+
 export const expedienteAPI = {
   _h: () => {
     const token = getToken();
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   },
 
-  get: async (projectId) => {
-    const r = await fetch(`${API_URL}/api/projects/${projectId}/expediente`, { headers: expedienteAPI._h() });
+  get: async (projectId, origen = 'proj') => {
+    const r = await fetch(`${_baseDeObra(origen, projectId)}/expediente`, { headers: expedienteAPI._h() });
     if (!r.ok) throw await _errorDe(r, 'No se pudo abrir el expediente');
     return r.json();
   },
@@ -852,30 +859,30 @@ export const medidasAPI = {
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   },
 
-  listar: async (projectId) => {
-    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas`, { headers: medidasAPI._h() });
+  listar: async (projectId, origen = 'proj') => {
+    const r = await fetch(`${_baseDeObra(origen, projectId)}/medidas`, { headers: medidasAPI._h() });
     if (!r.ok) throw await _errorDe(r, 'No se pudieron leer las medidas');
     return r.json();
   },
 
-  guardar: async (projectId, medidas) => {
-    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas`, {
+  guardar: async (projectId, medidas, origen = 'proj') => {
+    const r = await fetch(`${_baseDeObra(origen, projectId)}/medidas`, {
       method: 'PUT', headers: medidasAPI._h(), body: JSON.stringify({ medidas })
     });
     if (!r.ok) throw await _errorDe(r, 'No se pudieron guardar las medidas');
     return r.json();
   },
 
-  tomar: async (projectId, clave, valor) => {
-    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas/${encodeURIComponent(clave)}/tomar`, {
+  tomar: async (projectId, clave, valor, origen = 'proj') => {
+    const r = await fetch(`${_baseDeObra(origen, projectId)}/medidas/${encodeURIComponent(clave)}/tomar`, {
       method: 'POST', headers: medidasAPI._h(), body: JSON.stringify({ valor })
     });
     if (!r.ok) throw await _errorDe(r, 'No se pudo apuntar la medida');
     return r.json();
   },
 
-  confirmar: async (projectId, clave, valor) => {
-    const r = await fetch(`${API_URL}/api/projects/${projectId}/medidas/${encodeURIComponent(clave)}/confirmar`, {
+  confirmar: async (projectId, clave, valor, origen = 'proj') => {
+    const r = await fetch(`${_baseDeObra(origen, projectId)}/medidas/${encodeURIComponent(clave)}/confirmar`, {
       method: 'POST', headers: medidasAPI._h(), body: JSON.stringify({ valor })
     });
     if (!r.ok) throw await _errorDe(r, 'No se pudo confirmar la medida');

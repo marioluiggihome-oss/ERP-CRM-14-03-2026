@@ -93,6 +93,103 @@ async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = 
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ─── EXPEDIENTE DE UNA OBRA DE COCINA DESMONTADA ────────────────────────────
+#
+# «Desmontada tiene que tener expediente también». No se convierte el pedido en
+# proyecto —eso duplicaría la obra en dos sitios y al día siguiente uno de los
+# dos estaría desactualizado—: se TRADUCE al vuelo y los motores de siempre
+# hacen el resto. Ver `services/expediente_origen.py`.
+
+async def _pedido_o_404(order_id: str, current_user: Optional[dict]) -> dict:
+    doc = await _get_db().cascos_orders.find_one({"id": order_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Ese pedido de cascos no existe.")
+    if not _can_access(doc, current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
+    return doc
+
+
+@router.get("/cascos/orders/{order_id}/expediente")
+async def expediente_de_pedido(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """El expediente de una obra de Cocina Desmontada.
+
+    Mismo expediente, misma validación y mismas medidas que Cocina Montada: lo
+    único que cambia es de dónde salen los datos.
+    """
+    pedido = await _pedido_o_404(order_id, current_user)
+    vista = expediente_origen.desde_pedido_casco(pedido)
+    pendientes = cambios_sin_aprobar(vista.get("cambios"))
+    val = validar(vista, pendientes_cambios=len(pendientes))
+    return {"success": True,
+            "origen": vista["origen"], "origenEtiqueta": vista["origenEtiqueta"],
+            **montar_expediente(vista, val, pendientes, current_user)}
+
+
+@router.get("/cascos/orders/{order_id}/medidas")
+async def medidas_de_pedido(order_id: str, tolerancia: float = 0,
+                            current_user: Optional[dict] = Depends(get_current_user)):
+    pedido = await _pedido_o_404(order_id, current_user)
+    return {"success": True, **medicion_obra.revisar(pedido.get("medidas"), tolerancia)}
+
+
+@router.put("/cascos/orders/{order_id}/medidas")
+async def guardar_medidas_de_pedido(order_id: str, payload: dict,
+                                    current_user: Optional[dict] = Depends(get_current_user)):
+    """Guarda la lista de medidas SIN tocar niveles.
+
+    Se escriben en el propio pedido, con `$set` de un solo campo: así el
+    trabajo de la pantalla de Cocina Desmontada no las pisa al volver a
+    guardar, ni ellas pisan lo suyo.
+    """
+    await _pedido_o_404(order_id, current_user)
+    medidas = payload.get("medidas")
+    if not isinstance(medidas, list):
+        raise HTTPException(status_code=422, detail="Hace falta una lista de medidas.")
+    sin_clave = [i for i, m in enumerate(medidas) if not str((m or {}).get("clave") or "").strip()]
+    if sin_clave:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Estas medidas no tienen nombre y no se podrían volver a encontrar: {sin_clave}.")
+    await _get_db().cascos_orders.update_one({"id": order_id}, {"$set": {"medidas": medidas}})
+    return {"success": True, **medicion_obra.revisar(medidas)}
+
+
+async def _nivel_de_medida(order_id: str, clave: str, payload: dict,
+                           current_user: Optional[dict], accion: str):
+    """Tomar o confirmar. Es la misma operación con distinto nombre, y por eso
+    está escrita una vez."""
+    pedido = await _pedido_o_404(order_id, current_user)
+    medidas = list(pedido.get("medidas") or [])
+    idx = next((i for i, m in enumerate(medidas)
+                if str((m or {}).get("clave") or "").strip() == clave), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail=f"Este pedido no tiene ninguna medida «{clave}».")
+
+    quien = (current_user or {}).get("username") or (current_user or {}).get("email") or ""
+    ahora = datetime.now(timezone.utc).isoformat()
+    fn = medicion_obra.tomar if accion == "tomar" else medicion_obra.confirmar
+    try:
+        medidas[idx] = fn(medidas[idx], payload.get("valor"), quien=quien, cuando=ahora)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    await _get_db().cascos_orders.update_one({"id": order_id}, {"$set": {"medidas": medidas}})
+    return {"success": True, "medida": medicion_obra.revisar_una(medidas[idx]),
+            **medicion_obra.revisar(medidas)}
+
+
+@router.post("/cascos/orders/{order_id}/medidas/{clave}/tomar")
+async def tomar_medida_de_pedido(order_id: str, clave: str, payload: dict,
+                                 current_user: Optional[dict] = Depends(get_current_user)):
+    return await _nivel_de_medida(order_id, clave, payload, current_user, "tomar")
+
+
+@router.post("/cascos/orders/{order_id}/medidas/{clave}/confirmar")
+async def confirmar_medida_de_pedido(order_id: str, clave: str, payload: dict,
+                                     current_user: Optional[dict] = Depends(get_current_user)):
+    return await _nivel_de_medida(order_id, clave, payload, current_user, "confirmar")
+
+
 def _can_access(order: dict, current_user: Optional[dict]) -> bool:
     """Admin/elevado ve todo; el resto solo sus propios pedidos."""
     if not current_user or not current_user.get("id"):
@@ -470,6 +567,10 @@ async def estado_proforma(job_id: str, current_user: Optional[dict] = Depends(ge
 # ─── Tarifa MV (puntos) para el módulo de Rentabilidad ──────────────────────────
 import json as _mvjson, os as _mvos
 from services.db_client import get_db as _get_db
+from services import expediente_origen, medicion_obra
+from services.validacion_fabricacion import validar
+from services.expediente import montar as montar_expediente
+from services.cambios_proyecto import cambios_sin_aprobar
 _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
 
