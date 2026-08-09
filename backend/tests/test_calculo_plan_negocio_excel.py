@@ -80,6 +80,20 @@ def libro(xls, datos):
     return xls.construir(datos)
 
 
+def _columna(ws, cabecera, fila_cabecera=4):
+    """La letra de la columna que se llama asi.
+
+    Se busca POR NOMBRE y no por letra a proposito: aniadir una columna delante
+    corre todas las demas, y una prueba atada a la letra empieza a comprobar la
+    columna de al lado sin enterarse — que es peor que no comprobar nada.
+    """
+    from openpyxl.utils import get_column_letter
+    for c in range(1, ws.max_column + 1):
+        if ws.cell(row=fila_cabecera, column=c).value == cabecera:
+            return get_column_letter(c)
+    raise AssertionError(f"no hay columna «{cabecera}» en {ws.title}")
+
+
 # ─── 1. Las formulas apuntan donde tienen que apuntar ───────────────────────
 
 def test_cada_referencia_de_precios_mira_SU_coste(libro, motor):
@@ -98,10 +112,11 @@ def test_cada_referencia_de_precios_mira_SU_coste(libro, motor):
 
 
 def test_la_columna_que_mira_es_la_del_COSTE_DIRECTO(libro):
-    """Mirar la de materiales dejaria la mano de obra fuera del margen."""
+    """Mirar la de material dejaria la mano de obra fuera del margen."""
     p, cm = libro["Precios"], libro["Coste_mueble"]
     col = p["B5"].value.split("!")[1].rstrip("0123456789")
     assert cm[f"{col}4"].value == "COSTE DIRECTO"
+    assert col == _columna(cm, "COSTE DIRECTO")
 
 
 def test_el_equilibrio_mira_el_margen_ponderado_y_la_estructura(libro):
@@ -119,8 +134,8 @@ def test_el_equilibrio_mira_el_margen_ponderado_y_la_estructura(libro):
 
 def test_la_mano_de_obra_de_cada_mueble_viene_de_capacidad(libro):
     cm, cap = libro["Coste_mueble"], libro["Capacidad"]
-    formula = cm["K5"].value
-    assert formula == "=Capacidad!$B$13"
+    col = _columna(cm, "Mano de obra")
+    assert cm[f"{col}5"].value == "=Capacidad!$B$13"
     assert cap["A13"].value == "MANO DE OBRA POR MUEBLE"
 
 
@@ -140,9 +155,28 @@ def test_ninguna_formula_apunta_a_una_hoja_que_no_existe(libro):
 def test_el_excel_tampoco_suma_un_coste_a_medias(libro, motor):
     """Si falta una partida, el Excel tiene que decir «falta dato», no sumar lo
     que hay: un coste a medias da un margen enorme y un plan precioso."""
-    formula = libro["Coste_mueble"]["J5"].value
+    cm = libro["Coste_mueble"]
+    formula = cm[f"{_columna(cm, 'MATERIAL')}5"].value
     assert "COUNT(" in formula and "falta dato" in formula
     assert f"<{len(motor.COSTES_DE_MATERIAL)}" in formula
+
+
+def test_el_coste_por_mueble_MANDA_sobre_el_desglose_tambien_en_el_excel(libro):
+    """CANDADO. Es la misma regla que dentro del ERP. Si el Excel sumara los dos
+    contaria el material dos veces, y habria dos planes que no coinciden."""
+    cm = libro["Coste_mueble"]
+    col_mueble = _columna(cm, "Material / mueble")
+    formula = cm[f"{_columna(cm, 'MATERIAL')}5"].value
+    assert formula.startswith(f'=IF({col_mueble}5<>""'), (
+        "el Excel no da prioridad al coste escrito a mano por mueble: "
+        f"«{formula}»")
+
+
+def test_la_columna_por_mueble_va_la_PRIMERA(libro):
+    """Es como se empieza. Si estuviera detras de ocho columnas de desglose,
+    nadie la encontraria y todos rellenarian lo dificil."""
+    cm = libro["Coste_mueble"]
+    assert _columna(cm, "Material / mueble") == "B"
 
 
 def test_el_margen_del_excel_va_sobre_el_precio_de_venta(libro):
@@ -174,9 +208,11 @@ def test_una_casilla_sin_rellenar_sale_VACIA_no_a_cero(xls, motor):
         "estructura": {}, "inversion": {},
     }
     wb = xls.construir(datos)
-    c = wb["Coste_mueble"]["B5"]
-    assert c.value is None, "una casilla sin dato NO puede salir a cero"
-    assert c.fill.fgColor.rgb.endswith("FFFF00"), "y tiene que verse en amarillo"
+    cm = wb["Coste_mueble"]
+    for cabecera in ("Material / mueble", "Casco (compra)"):
+        c = cm[f"{_columna(cm, cabecera)}5"]
+        assert c.value is None, f"«{cabecera}» sin dato NO puede salir a cero"
+        assert c.fill.fgColor.rgb.endswith("FFFF00"), "y tiene que verse en amarillo"
     assert wb["Capacidad"]["B12"].value is None
 
 
@@ -184,7 +220,8 @@ def test_lo_que_si_se_sabe_sale_escrito(libro):
     assert libro["Capacidad"]["B4"].value == 2      # personas
     assert libro["Capacidad"]["B5"].value == 3      # muebles/hora
     assert libro["Capacidad"]["B8"].value == 1600   # horas/año
-    assert libro["Coste_mueble"]["B5"].value == 40  # casco
+    cm = libro["Coste_mueble"]
+    assert cm[f"{_columna(cm, 'Casco (compra)')}5"].value == 40
 
 
 def test_las_seis_referencias_estan(libro, motor):

@@ -86,6 +86,10 @@ export default function PlanNegocio({ state }) {
   const [guardado, setGuardado] = useState(false);
   const [error, setError] = useState('');
   const [pestana, setPestana] = useState('coste'); // coste | precios | estructura | resultado
+  // Cómo se da el coste del material: UN número por mueble (lo normal al
+  // empezar) o el desglose en ocho partidas (para saber dónde está el coste
+  // cuando haya que apretar al proveedor). Empieza por lo sencillo.
+  const [modoCoste, setModoCoste] = useState('mueble'); // mueble | desglose
 
   const u = state?.currentUser;
   const esMaster = !!(u?.isAdmin || u?.isPrimaryAdmin || u?.isMaster);
@@ -271,13 +275,26 @@ export default function PlanNegocio({ state }) {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-4 overflow-x-auto">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Coste por referencia (€ por mueble)</p>
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Coste del material (€ por mueble)</p>
+              <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+                {[['mueble', 'Por mueble'], ['desglose', 'Desglosado']].map(([k, l]) => (
+                  <button key={k} onClick={() => setModoCoste(k)}
+                    className={`px-3 py-1 rounded-md text-[11px] font-bold ${modoCoste === k ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="text-[10px] uppercase text-slate-400">
                   <th className="text-left py-1 sticky left-0 bg-white">Referencia</th>
-                  {MATERIALES.map(([k, l]) => <th key={k} className="px-1 whitespace-nowrap">{l}</th>)}
-                  <th className="px-1">Materiales</th>
+                  {modoCoste === 'mueble'
+                    ? <th className="px-1 whitespace-nowrap">Material / mueble</th>
+                    : MATERIALES.map(([k, l]) => <th key={k} className="px-1 whitespace-nowrap">{l}</th>)}
+                  <th className="px-1">Material</th>
                   <th className="px-1">M. obra</th>
                   <th className="px-1">Coste directo</th>
                 </tr>
@@ -288,12 +305,23 @@ export default function PlanNegocio({ state }) {
                   return (
                     <tr key={i} className="border-t border-slate-100">
                       <td className="py-1 font-black text-slate-700 sticky left-0 bg-white whitespace-nowrap">{r.nombre}</td>
-                      {MATERIALES.map(([k]) => (
+                      {modoCoste === 'mueble' ? (
+                        <td className="px-1">
+                          <Casilla valor={r.costeMaterialesMueble} ancho="w-28"
+                            titulo="Todo lo que se compra o se consume para ese mueble. SIN mano de obra: esa la calcula la fábrica."
+                            onChange={(v) => cambiarRef(i, 'costeMaterialesMueble', v)} />
+                        </td>
+                      ) : MATERIALES.map(([k]) => (
                         <td key={k} className="px-1">
                           <Casilla valor={r[k]} ancho="w-20" onChange={(v) => cambiarRef(i, k, v)} />
                         </td>
                       ))}
-                      <td className="px-1 text-right text-slate-500">{eur(calc.materiales) || <span className="text-amber-600 text-xs">falta</span>}</td>
+                      <td className="px-1 text-right text-slate-500">
+                        {eur(calc.materiales) || <span className="text-amber-600 text-xs">falta</span>}
+                        {calc.fuente === 'por_mueble' && calc.materiales != null && (
+                          <span className="block text-[9px] text-slate-400">a mano</span>
+                        )}
+                      </td>
                       <td className="px-1 text-right text-slate-500">{eur(calc.manoObra) || <span className="text-amber-600 text-xs">falta</span>}</td>
                       <td className="px-1 text-right font-black text-slate-800">{eur(calc.costeDirecto) || <span className="text-amber-600 text-xs">falta</span>}</td>
                     </tr>
@@ -301,9 +329,21 @@ export default function PlanNegocio({ state }) {
                 })}
               </tbody>
             </table>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Si falta una sola partida, el coste sale «falta»: un coste a medias no es un coste bajo, es un coste desconocido.
-            </p>
+
+            {modoCoste === 'mueble' ? (
+              <p className="text-[11px] text-slate-400 mt-2">
+                Todo lo que se compra o se consume para ese mueble: casco, herrajes, componentes y embalaje.
+                <b className="text-slate-500"> Sin mano de obra</b> — esa sale sola de la fábrica ({eur(cap.manoObraPorMueble) || '…'} por mueble) y se suma aquí al lado.
+                Si más adelante quieres saber dónde está el coste, pásate a «Desglosado».
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-2">
+                Si falta una sola partida, el coste sale «falta»: un coste a medias no es un coste bajo, es un coste desconocido.
+                {refs.some(r => r.costeMaterialesMueble != null) && (
+                  <b className="text-amber-600"> Ojo: hay referencias con el coste puesto a mano, y ese manda sobre el desglose.</b>
+                )}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -138,27 +138,53 @@ def capacidad(datos):
 def coste_referencia(ref, mano_obra):
     """El coste directo de UNA referencia: materiales + mano de obra.
 
-    Si falta cualquier partida de material, el coste es None. No se suma «lo que
-    hay»: un coste a medias no es un coste bajo, es un coste desconocido, y
-    presentado como número se convierte en un margen que no existe.
+    DOS FORMAS DE DAR EL MATERIAL, Y LAS DOS VALEN
+    ----------------------------------------------
+    1. UN SOLO NÚMERO por mueble (`costeMaterialesMueble`). Es lo normal al
+       empezar: se sabe lo que cuesta el mueble entero y no cómo se reparte.
+    2. EL DESGLOSE en ocho partidas. Sirve para saber DÓNDE está el coste
+       cuando llegue el momento de apretar al proveedor.
+
+    Si hay número por mueble, MANDA ÉL. El desglose se queda guardado pero no se
+    usa: sumar los dos sería contar el material dos veces, y mezclar en silencio
+    dos fuentes que no cuadran es peor que no tener ninguna. Por eso se devuelve
+    `fuente`, para que la pantalla diga cuál está usando.
+
+    OJO: es el coste del MATERIAL, sin mano de obra. La mano de obra sale de la
+    fábrica (personas, muebles/hora y coste por hora) y se suma aquí. Meterla
+    también en ese número la contaría dos veces.
+
+    Si se va por el desglose y falta una sola partida, el coste es None. No se
+    suma «lo que hay»: un coste a medias no es un coste bajo, es un coste
+    desconocido, y presentado como número se convierte en un margen que no
+    existe.
     """
     r = ref or {}
-    partidas = {}
-    falta = []
-    for c in COSTES_DE_MATERIAL:
-        v = _precio(r.get(c))
-        partidas[c] = v
-        if v is None:
-            falta.append(c)
 
-    materiales = None if falta else _r(sum(partidas.values()))
-    directo = _r(materiales + mano_obra) if (materiales is not None and mano_obra is not None) else None
+    directo_material = _precio(r.get("costeMaterialesMueble"))
+    partidas = {c: _precio(r.get(c)) for c in COSTES_DE_MATERIAL}
+
+    if directo_material is not None:
+        materiales, falta, fuente = directo_material, [], "por_mueble"
+    else:
+        falta = [c for c, v in partidas.items() if v is None]
+        # Con el desglose entero a medias, lo que falta de verdad es EL COSTE:
+        # decir «faltan ocho partidas» cuando no se ha empezado a rellenar nada
+        # es ruido. Se nombra la pieza que desbloquea, que es el casco.
+        materiales = None if falta else _r(sum(partidas.values()))
+        fuente = "desglose"
+        if len(falta) == len(COSTES_DE_MATERIAL):
+            falta = ["costeMaterialesMueble"]
+
+    coste = _r(materiales + mano_obra) if (materiales is not None and mano_obra is not None) else None
 
     return {
         "nombre": r.get("nombre") or r.get("id") or "",
         "materiales": materiales,
         "manoObra": mano_obra,
-        "costeDirecto": directo,
+        "costeDirecto": coste,
+        "fuente": fuente,
+        "partidas": partidas,
         "faltan": falta + ([] if mano_obra is not None else ["manoObra"]),
     }
 
@@ -372,10 +398,10 @@ def _que_falta(cap, refs, b2c, reparto, estructura, entrada):
         falta.append({"que": "Coste por hora de una persona (coste empresa)",
                       "donde": "capacidad.costeHoraPersona",
                       "porque": "Sin él no hay mano de obra por mueble, y sin ella no hay coste."})
-    sin_casco = [r["nombre"] for r in refs if "casco" in (r["faltan"] or [])]
-    if sin_casco:
-        falta.append({"que": f"Precio de compra del casco ({', '.join(sin_casco)})",
-                      "donde": "referencias[].casco",
+    sin_coste = [r["nombre"] for r in refs if r["materiales"] is None]
+    if sin_coste:
+        falta.append({"que": f"Coste del material por mueble ({', '.join(sin_coste)})",
+                      "donde": "referencias[].costeMaterialesMueble (o el desglose)",
                       "porque": "Es el dato número uno: sin coste no hay margen y sin margen no hay plan."})
     sin_precio = [r["nombre"] for r in refs if r["precioB2B"] is None and r["precioB2C"] is None]
     if sin_precio:

@@ -55,6 +55,18 @@ ETIQUETA_MATERIAL = {
     "componentes": "Componentes", "embalaje": "Embalaje",
     "otrosDirectos": "Otros directos",
 }
+# EL SITIO DE CADA COLUMNA DE `Coste_mueble`, ESCRITO UNA SOLA VEZ.
+#
+# Estaba calculado a mano en dos funciones distintas, y al meter la columna de
+# «Material / mueble» delante se corrieron todas: la hoja de Precios se quedó
+# mirando la de mano de obra y daba un margen que no era. No salta ningún error
+# — sale un plan con los números cruzados y buena pinta.
+COL_MUEBLE = 2                                   # B — un solo número por mueble
+COL_DESGLOSE = 3                                 # C — primera partida del desglose
+COL_MATERIAL = COL_DESGLOSE + 8                  # el material que se usa al final
+COL_MANO_OBRA = COL_MATERIAL + 1
+COL_COSTE_DIRECTO = COL_MANO_OBRA + 1
+
 B2C = ("comisionComercial", "montaje", "transporte", "postventa")
 ETIQUETA_B2C = {"comisionComercial": "Comisión comercial", "montaje": "Montaje",
                 "transporte": "Transporte y logística", "postventa": "Postventa"}
@@ -190,28 +202,37 @@ def _hoja_coste(wb, d):
     ws["A2"] = "Sin el precio de compra del casco no hay plan: es el dato que desbloquea todo lo demás."
     ws["A2"].font = NOTA
 
-    cols = ["Referencia"] + [ETIQUETA_MATERIAL[c] for c in MATERIALES] + \
-           ["MATERIALES", "Mano de obra", "COSTE DIRECTO"]
-    for i, ancho in enumerate([15] + [12] * len(MATERIALES) + [13, 13, 14]):
+    # La primera columna de coste es UN SOLO NÚMERO por mueble: es como se
+    # empieza de verdad. El desglose viene detrás, para cuando haga falta saber
+    # DÓNDE está el coste. Si hay número por mueble, MANDA ÉL — sumar los dos
+    # contaría el material dos veces.
+    cols = ["Referencia", "Material / mueble"] + [ETIQUETA_MATERIAL[c] for c in MATERIALES] + \
+           ["MATERIAL", "Mano de obra", "COSTE DIRECTO"]
+    for i, ancho in enumerate([15, 16] + [12] * len(MATERIALES) + [13, 13, 14]):
         ws.column_dimensions[get_column_letter(1 + i)].width = ancho
     _cab(ws, 4, cols)
 
     refs = d.get("referencias") or []
     n = len(refs)
-    col_mat = 2 + len(MATERIALES)          # J si hay 8 materiales
-    col_mo = col_mat + 1
-    col_tot = col_mo + 1
+    assert COL_MATERIAL == COL_DESGLOSE + len(MATERIALES), (
+        "el numero de partidas de material ha cambiado y las columnas no")
+    col_desglose, col_mat = COL_DESGLOSE, COL_MATERIAL
+    col_mo, col_tot = COL_MANO_OBRA, COL_COSTE_DIRECTO
     for i, r in enumerate(refs):
         f = 5 + i
         ws.cell(row=f, column=1, value=r.get("nombre") or "").font = FUERTE
         ws.cell(row=f, column=1).border = BORDE
+        _entrada(ws, f"B{f}", r.get("costeMaterialesMueble"), EUR)
         for j, clave in enumerate(MATERIALES):
-            _entrada(ws, f"{get_column_letter(2 + j)}{f}", r.get(clave), EUR)
-        rango = f"{get_column_letter(2)}{f}:{get_column_letter(1 + len(MATERIALES))}{f}"
-        # Si falta una sola partida, NO se suma lo que hay: un coste a medias no
-        # es un coste bajo, es un coste desconocido.
+            _entrada(ws, f"{get_column_letter(col_desglose + j)}{f}", r.get(clave), EUR)
+        ini = get_column_letter(col_desglose)
+        fin = get_column_letter(col_desglose + len(MATERIALES) - 1)
+        rango = f"{ini}{f}:{fin}{f}"
+        # Manda el número por mueble; si no lo hay, se suma el desglose — y solo
+        # si está ENTERO: un coste a medias no es un coste bajo, es un coste
+        # desconocido.
         c = ws.cell(row=f, column=col_mat,
-                    value=f'=IF(COUNT({rango})<{len(MATERIALES)},"falta dato",SUM({rango}))')
+                    value=f'=IF(B{f}<>"",B{f},IF(COUNT({rango})<{len(MATERIALES)},"falta dato",SUM({rango})))')
         c.font = NEGRO
         c.number_format = EUR
         c.border = BORDE
@@ -255,8 +276,7 @@ def _hoja_precios(wb, d):
 
     refs = d.get("referencias") or []
     n = len(refs)
-    col_tot = 2 + len(MATERIALES) + 2      # columna COSTE DIRECTO en Coste_mueble
-    T = get_column_letter(col_tot)
+    T = get_column_letter(COL_COSTE_DIRECTO)   # columna COSTE DIRECTO en Coste_mueble
     for i, r in enumerate(refs):
         f = 5 + i
         fc = 5 + i

@@ -63,11 +63,59 @@ def _ref(nombre="Bajo 60", **cambios):
     return base
 
 
+# ─── 0. El coste se puede dar de dos formas ─────────────────────────────────
+
+def test_un_solo_numero_por_mueble_basta(pn):
+    """Es como se empieza de verdad: se sabe lo que cuesta el mueble entero y
+    todavia no como se reparte. Pedir ocho partidas para poder calcular nada es
+    la forma segura de que el plan se quede vacio."""
+    r = pn.coste_referencia({"nombre": "Bajo 60", "costeMaterialesMueble": 66}, mano_obra=12)
+    assert r["materiales"] == 66
+    assert r["costeDirecto"] == 78
+    assert r["fuente"] == "por_mueble"
+    assert r["faltan"] == []
+
+
+def test_el_numero_por_mueble_MANDA_sobre_el_desglose(pn):
+    """CANDADO. Sumar los dos contaria el material dos veces. Y mezclar en
+    silencio dos fuentes que no cuadran es peor que no tener ninguna."""
+    r = pn.coste_referencia(_ref(costeMaterialesMueble=80), mano_obra=12)
+    assert r["materiales"] == 80, "el desglose suma 66; tiene que ganar el 80 escrito a mano"
+    assert r["costeDirecto"] == 92
+    assert r["fuente"] == "por_mueble"
+
+
+def test_el_desglose_se_guarda_aunque_no_se_use(pn):
+    """Lo escrito no se pierde por cambiar de forma de contar."""
+    r = pn.coste_referencia(_ref(costeMaterialesMueble=80), mano_obra=12)
+    assert r["partidas"]["casco"] == 40
+
+
+def test_el_coste_por_mueble_NO_lleva_mano_de_obra_dentro(pn):
+    """Si la llevara, se contaria dos veces: la fabrica ya la calcula sola."""
+    r = pn.coste_referencia({"nombre": "X", "costeMaterialesMueble": 66}, mano_obra=12)
+    assert r["materiales"] == 66 and r["manoObra"] == 12 and r["costeDirecto"] == 78
+
+
+def test_sin_ninguna_de_las_dos_formas_se_pide_UNA_cosa_no_ocho(pn):
+    """Decir «faltan ocho partidas» cuando no se ha empezado a rellenar es
+    ruido: lo que falta es el coste."""
+    r = pn.coste_referencia({"nombre": "Bajo 60"}, mano_obra=12)
+    assert r["costeDirecto"] is None
+    assert r["faltan"] == ["costeMaterialesMueble"]
+
+
 # ─── 1. Un hueco no es un cero ──────────────────────────────────────────────
 
-def test_un_casco_a_cero_no_es_un_casco_gratis(pn):
+def test_un_coste_por_mueble_a_cero_no_es_un_mueble_gratis(pn):
     """CANDADO PRINCIPAL. Con `_num` a secas, un 0 pasaba por precio y el
     margen salia del 100 %."""
+    r = pn.coste_referencia({"nombre": "X", "costeMaterialesMueble": 0}, mano_obra=12)
+    assert r["costeDirecto"] is None
+
+
+def test_un_casco_a_cero_no_es_un_casco_gratis(pn):
+    """Lo mismo, yendo por el desglose."""
     r = pn.coste_referencia(_ref(casco=0), mano_obra=12)
     assert r["costeDirecto"] is None
     assert "casco" in r["faltan"]
@@ -237,11 +285,12 @@ def test_un_plan_vacio_dice_todo_lo_que_le_falta(pn):
             "no basta con decir que falta: hay que decir donde va y por que bloquea")
 
 
-def test_el_casco_sale_el_primero_de_la_lista(pn):
-    """Es el dato que desbloquea todo lo demas."""
+def test_el_coste_sale_el_primero_de_la_lista(pn):
+    """Es el dato que desbloquea todo lo demas: sin coste no hay margen."""
     r = pn.calcular({"capacidad": CAPACIDAD, "referencias": [_ref(casco=None)]})
     textos = [f["que"] for f in r["faltan"]]
-    assert any("casco" in t for t in textos)
+    assert any("Coste del material por mueble" in t for t in textos)
+    assert any("Bajo 60" in t for t in textos), "y dice de QUE referencia falta"
 
 
 def test_un_plan_completo_no_tiene_nada_pendiente(pn):

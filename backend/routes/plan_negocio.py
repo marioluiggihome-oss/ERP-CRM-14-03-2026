@@ -93,7 +93,11 @@ def _vacio() -> dict:
     return {
         "capacidad": {"personas": 2, "mueblesHora": 3, "horasDia": 7,
                       "diasSemana": 5, "horasAno": 1600, "costeHoraPersona": None},
-        "referencias": [{"nombre": n, **{c: None for c in motor.COSTES_DE_MATERIAL},
+        # `costeMaterialesMueble` es la forma normal de empezar: un solo número
+        # por mueble. El desglose en ocho partidas está para cuando haga falta
+        # saber DÓNDE está el coste, no para tener que rellenarlo hoy.
+        "referencias": [{"nombre": n, "costeMaterialesMueble": None,
+                         **{c: None for c in motor.COSTES_DE_MATERIAL},
                          "precioB2B": None, "precioB2C": None} for n in motor.REFERENCIAS],
         "b2c": {c: None for c in motor.COSTES_B2C},
         "repartoB2B": None,
