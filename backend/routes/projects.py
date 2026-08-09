@@ -470,7 +470,7 @@ async def impacto_de_una_medida(project_id: str, clave: str, payload: dict = {},
     return {"success": True, **medicion_obra.impacto_en_modulos(medida, modulos)}
 
 
-@router.post("/projects/{project_id}/medidas/comparar")@router.post("/projects/{project_id}/medidas/comparar")
+@router.post("/projects/{project_id}/medidas/comparar")
 async def comparar_mediciones_proyecto(project_id: str, payload: dict,
                                        current_user: dict = Depends(require_auth)):
     """Compara las medidas guardadas con OTRA medición de la misma obra.
