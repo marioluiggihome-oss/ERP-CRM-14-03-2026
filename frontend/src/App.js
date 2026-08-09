@@ -126,7 +126,8 @@ const App = () => {
     const defaultState = {
       currentUser: null,
       currentModule: 'montada', 
-      currentTab: 'budget', 
+      // La casa es la bandeja de inicio, tambien antes de que nadie entre.
+      currentTab: 'welcome', 
       currentLibrary: 'ZC', // Biblioteca activa (ZC, MV, etc.)
       allowedLibraries: ['ZC'], // Bibliotecas permitidas para el usuario actual
       libraries: [], // Lista de bibliotecas con sus pointValues
@@ -419,34 +420,32 @@ const App = () => {
       ? savedLibrary
       : (userLibraries[0] || 'ZC');
 
-    // En MÓVIL/TABLET (vista responsive), si el usuario tiene el CRM activado,
-    // entrar directamente al CRM al loguearse.
-    let _w = 1920;
-    try { _w = window.innerWidth || 1920; } catch (e) { /* noop */ }
-    const _isMobileTablet = _w < 1024;
+    // TODO EL MUNDO ENTRA POR LA BANDEJA DE INICIO. Antes, en móvil y tablet,
+    // quien tenía el CRM caía directamente en el calendario del CRM: entrabas a
+    // la aplicación y ya estabas dentro de un módulo, sin haber elegido. La
+    // bandeja es la casa: desde ahí se va a lo que toque ese día.
     const _canCRM = !!user.canAccessCRM && !user.isTienda;
     // Usuario SOLO Luiggi Floor: entra directo a esa sección, sin otros presupuestadores
     const _floorOnly = !user.isAdmin && !!user.floorOnly;
     // Usuario SOLO CRM: entra directo al CRM, sin barra de navegación
     const _crmOnly = !user.isAdmin && !!user.crmOnly && _canCRM;
-    // Permisos de presupuestadores (independientes). P1 por defecto permitido
-    // (compatibilidad con usuarios antiguos); P2 requiere autorización explícita.
-    const _canP1 = user.canUsePresupuestador1 !== false;
-    const _canP2 = user.canUsePresupuestador2 !== false;
-    const _defaultBudgetTab = _canP2 ? 'presupuestador2' : 'budget';
-    // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
+    // (Aquí se elegía a qué presupuestador entrar. Ya no hace falta: se entra
+    // por la bandeja, y desde ahí cada uno abre el suyo. Los permisos de los
+    // presupuestadores siguen vivos donde importan: en el menú y en la propia
+    // bandeja, que solo enseña lo que ese usuario puede abrir.)
     // CONTROLLER (solo consulta): entra directo al informe de rentabilidad.
     const _soloController = !!user.isController && !(user.isAdmin || user.isGerente
       || user.isDirectorComercial || user.isDirectorFabrica || user.isResponsableDelegacion);
+    // Las tres excepciones NO son un privilegio: son usuarios cuya aplicación
+    // ENTERA es esa pantalla —se les pinta otra cáscara, sin barra de módulos—.
+    // Mandarlos a la bandeja los dejaría en una pantalla sin salida.
     const _landingTab = _soloController
       ? 'rentabilidad'
       : _floorOnly
       ? 'luiggifloor'
       : _crmOnly
         ? 'crm-calendar'
-        : _isMobileTablet
-          ? (_canCRM ? 'crm-calendar' : _defaultBudgetTab)  // móvil/tablet: como estaba
-          : 'welcome';  // PC: pantalla de bienvenida tras el login
+        : 'welcome';  // todos los demás: la bandeja de inicio
 
     setState(prev => ({
       ...prev,
