@@ -55,7 +55,25 @@ MODULOS_DE_RUTAS = [
     "routes.expedient",
     "routes.digitalizador",
     "routes.exports",
+    # Los seis que se cerraron en la puerta: si alguno se queda sin la
+    # dependencia por un descuido, el servidor arranca igual y nadie se entera
+    # — por eso hay abajo una prueba que lo comprueba explicitamente.
+    "routes.libraries",
+    "routes.floor",
+    "routes.shop_clients",
+    "routes.products",
+    "routes.telemetry",
+    "routes.backup",
+    "routes.clients",
+    "routes.factory_reports",
+    "routes.materials",
 ]
+
+# Los routers que NO pueden volver a quedarse abiertos. Se cerraron EN LA
+# PUERTA —con la dependencia en el propio APIRouter— para que el endpoint que
+# se aniada maniana nazca cerrado.
+ROUTERS_CERRADOS = ("libraries", "floor", "shop_clients", "products",
+                    "exports", "telemetry")
 
 
 # Los paquetes que otras pruebas SUSTITUYEN por modulos de mentira para poder
@@ -149,3 +167,55 @@ def test_las_rutas_nuevas_de_medidas_siguen_vivas():
         "/projects/{project_id}/excepcion",
     ):
         assert esperada in caminos, f"falta la ruta {esperada}"
+
+
+def test_los_routers_cerrados_siguen_cerrados():
+    """CANDADO DE SEGURIDAD. Estos seis exigen identidad EN LA PUERTA: la
+    dependencia esta en el propio `APIRouter`, no endpoint a endpoint.
+
+    Asi el que se aniada maniana nace cerrado, que es justo lo que fallo hasta
+    ahora: se aniadia una ruta, nadie se acordaba de la guarda, y quedaba
+    abierta sin que nada avisara.
+    """
+    import importlib
+
+    for nombre in ROUTERS_CERRADOS:
+        mod = importlib.import_module(f"routes.{nombre}")
+        deps = getattr(mod.router, "dependencies", [])
+        assert deps, (
+            f"`routes/{nombre}.py` ha perdido la guarda del APIRouter: sus "
+            "endpoints han quedado abiertos a cualquiera con la URL")
+
+
+def test_ningun_endpoint_de_esos_routers_se_queda_fuera():
+    """La guarda del router alcanza a TODAS sus rutas, tambien a las que se
+    aniadan sin pensar en esto."""
+    import importlib
+
+    for nombre in ROUTERS_CERRADOS:
+        mod = importlib.import_module(f"routes.{nombre}")
+        rutas = [r for r in mod.router.routes if getattr(r, "methods", None)]
+        assert rutas, f"routes/{nombre}.py se ha quedado sin rutas"
+        for r in rutas:
+            assert getattr(r, "dependencies", None), (
+                f"{r.path} de {nombre} no hereda la guarda del router")
+
+
+# Los que estan abiertos A PROPOSITO. Escribirlos aqui es la unica forma de
+# distinguir un endpoint publico de uno que se quedo abierto por descuido — y
+# de que aniadir uno nuevo a la lista sea una DECISION y no un olvido.
+PUBLICOS_A_PROPOSITO = {
+    ("routes.google_calendar", "/callback"):   "vuelta de Google tras autorizar: llega sin sesion",
+    ("routes.maintenance", "/status"):          "la pantalla lo pregunta ANTES de que nadie entre",
+    ("routes.auth_routes", "/auth/refresh"):    "renueva la sesion; valida su propio token de refresco",
+}
+
+
+def test_los_publicos_a_proposito_estan_escritos():
+    """No comprueba codigo: comprueba que la lista existe y esta razonada.
+
+    Un endpoint abierto sin explicacion al lado es indistinguible de un
+    descuido, y a los seis meses nadie se atreve a tocarlo.
+    """
+    for (modulo, ruta), motivo in PUBLICOS_A_PROPOSITO.items():
+        assert motivo.strip(), f"{modulo} {ruta} esta abierto y sin motivo escrito"

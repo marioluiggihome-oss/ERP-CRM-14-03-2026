@@ -58,7 +58,7 @@ class MaterialModel(BaseModel):
 
 
 @router.get("", response_model=List[MaterialModel])
-async def get_materials(library: str = None):
+async def get_materials(library: str = None, current_user: dict = Depends(require_auth)):
     """Obtener todos los materiales, opcionalmente filtrados por biblioteca"""
     query = {}
     if library:

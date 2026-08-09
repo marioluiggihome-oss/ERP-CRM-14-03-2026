@@ -76,7 +76,7 @@ async def get_clients(activo: Optional[bool] = None, search: Optional[str] = Non
     return clients
 
 @router.get("/clients/segments")
-async def get_client_segments():
+async def get_client_segments(current_user: dict = Depends(require_auth)):
     """Obtener lista de segmentos de clientes disponibles"""
     return {
         "segments": [

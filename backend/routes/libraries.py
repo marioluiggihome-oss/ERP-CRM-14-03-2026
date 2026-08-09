@@ -14,13 +14,17 @@ import os
 import uuid
 from services.db_client import get_db as _get_db
 
-router = APIRouter(prefix="/libraries", tags=["libraries"])
-
 try:
     from services.jwt_service import require_auth
 except Exception:  # pragma: no cover
     async def require_auth():
         raise HTTPException(status_code=503, detail="Auth service unavailable")
+
+# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
+# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
+# justo lo que fallo hasta ahora — el catalogo de tarifas de la casa.
+router = APIRouter(prefix="/libraries", tags=["libraries"],
+                   dependencies=[Depends(require_auth)])
 
 # MongoDB connection
 

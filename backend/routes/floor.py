@@ -25,14 +25,22 @@ from urllib.parse import quote
 from services.db_client import get_db as _get_db
 
 try:
-    from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
+    from services.jwt_service import get_current_user, require_auth, ADMIN_ROLE_FLAGS
 except Exception:  # pragma: no cover - fallback si cambia la ruta
     async def get_current_user():
         return None
+
+    async def require_auth():
+        # Si la autenticacion no se puede cargar, esto NO se abre: se cierra.
+        # Un respaldo que deja pasar a todo el mundo es peor que no arrancar.
+        raise HTTPException(status_code=503, detail="Auth service unavailable")
     ADMIN_ROLE_FLAGS = ["isAdmin"]
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["floor"])
+# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
+# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
+# justo lo que fallo hasta ahora — el stock y los documentos de Luiggi Floor.
+router = APIRouter(tags=["floor"], dependencies=[Depends(require_auth)])
 
 # Estados de un pedido de Luiggi Floor
 FLOOR_ORDER_STATES = ("presupuestado", "reservado", "entregado")

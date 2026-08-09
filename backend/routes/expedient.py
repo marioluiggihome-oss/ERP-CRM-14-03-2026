@@ -6,7 +6,8 @@
 Routes for Expedient Number Generation
 Extracted from server.py for better maintainability
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from services.jwt_service import require_auth
 from datetime import datetime
 import logging
 import os
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/expedient", tags=["expedient"])
 
 
 @router.get("/next")
-async def get_next_expedient_number(client_code: str = None):
+async def get_next_expedient_number(client_code: str = None, current_user: dict = Depends(require_auth)):
     """
     Obtener el siguiente número de expediente correlativo por cliente.
     Formato: EXP-AAAA-CLIENTE-NNN (ej: EXP-2026-LEON01-001)
@@ -100,7 +101,7 @@ async def get_next_expedient_number(client_code: str = None):
 
 
 @router.get("/current")
-async def get_current_expedient_info():
+async def get_current_expedient_info(current_user: dict = Depends(require_auth)):
     """Obtener información del contador de expedientes actual"""
     try:
         year = datetime.now().year
@@ -120,7 +121,7 @@ async def get_current_expedient_info():
 
 
 @router.get("/counters")
-async def get_all_counters():
+async def get_all_counters(current_user: dict = Depends(require_auth)):
     """Obtener todos los contadores de expedientes (por cliente)"""
     try:
         year = datetime.now().year

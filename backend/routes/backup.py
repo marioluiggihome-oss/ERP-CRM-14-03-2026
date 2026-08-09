@@ -8,6 +8,7 @@ Exports all data and code in ZIP format
 Includes daily automated backups with email notification
 """
 from fastapi import APIRouter, HTTPException, Depends
+from services.jwt_service import require_auth
 from fastapi.responses import FileResponse, JSONResponse
 from services.jwt_service import require_admin
 import os
@@ -212,7 +213,7 @@ class JSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 @router.get("/status")
-async def backup_status():
+async def backup_status(current_user: dict = Depends(require_auth)):
     """Check backup system status and list existing backups"""
     try:
         os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -384,7 +385,7 @@ async def send_backup_email():
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 @router.get("/scheduler-status")
-async def get_scheduler_status():
+async def get_scheduler_status(current_user: dict = Depends(require_auth)):
     """Get backup scheduler status"""
     jobs = []
     if scheduler.running:
@@ -428,7 +429,7 @@ async def download_collections_backup(filename: str, user=Depends(require_admin)
     )
 
 @router.get("/list-parts")
-async def list_backup_parts():
+async def list_backup_parts(current_user: dict = Depends(require_auth)):
     """List available backup parts"""
     parts_dir = os.path.join(BACKUP_DIR, "parts")
     if not os.path.exists(parts_dir):

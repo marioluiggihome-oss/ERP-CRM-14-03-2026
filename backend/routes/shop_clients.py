@@ -11,14 +11,19 @@ import logging
 import uuid
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Depends
+from services.jwt_service import require_auth
 
 from services.db_client import get_db as _get_db_singleton
 db = _get_db_singleton()
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/shop-clients", tags=["Shop Clients"])
+# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
+# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
+# justo lo que fallo hasta ahora — los clientes de cada tienda.
+router = APIRouter(prefix="/shop-clients", tags=["Shop Clients"],
+                   dependencies=[Depends(require_auth)])
 
 # Campos del cliente de tienda -> nombre de campo en db.clients (CRM general)
 _CRM_FIELD_MAP = {

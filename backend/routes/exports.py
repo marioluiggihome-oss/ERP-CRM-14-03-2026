@@ -18,7 +18,18 @@ import os
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/export", tags=["exports"])
+try:
+    from services.jwt_service import require_auth
+except Exception:  # pragma: no cover
+    async def require_auth():
+        # Si la autenticacion no se puede cargar, esto NO se abre: se cierra.
+        raise HTTPException(status_code=503, detail="Auth service unavailable")
+
+# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
+# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
+# justo lo que fallo hasta ahora — las exportaciones de clientes y proyectos.
+router = APIRouter(prefix="/export", tags=["exports"],
+                   dependencies=[Depends(require_auth)])
 security = HTTPBearer()
 
 # JWT settings from environment

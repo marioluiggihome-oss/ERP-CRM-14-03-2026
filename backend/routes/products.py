@@ -37,7 +37,10 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Products"])
+# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
+# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
+# justo lo que fallo hasta ahora — el catalogo y sus exportaciones.
+router = APIRouter(tags=["Products"], dependencies=[Depends(require_auth)])
 
 from models.schemas import ProductModel, ProductCreate, ZonePoints
 

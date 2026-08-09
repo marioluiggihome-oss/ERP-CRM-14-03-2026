@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Response
+from services.jwt_service import require_auth
 from fastapi.responses import StreamingResponse
 
 from services.db_client import get_db as _get_db_singleton
@@ -44,7 +45,8 @@ from models.schemas import ProjectModel, ProjectCreate, ProjectUpdate
 async def get_projects(
     user_id: Optional[str] = None,
     client_code: Optional[str] = None,
-    include_all: Optional[bool] = False
+    include_all: Optional[bool] = False,
+    current_user: dict = Depends(require_auth),
 ):
     """
     Obtener proyectos/presupuestos.
@@ -69,7 +71,7 @@ async def get_projects(
     return projects
 
 @router.get("/projects/by-client/{client_code}")
-async def get_projects_by_client(client_code: str):
+async def get_projects_by_client(client_code: str, current_user: dict = Depends(require_auth)):
     """
     Obtener todos los presupuestos de un cliente específico.
     Útil para ver el historial de presupuestos de un cliente.
@@ -86,7 +88,7 @@ async def get_projects_by_client(client_code: str):
     }
 
 @router.get("/projects/summary-by-client")
-async def get_projects_summary_by_client():
+async def get_projects_summary_by_client(current_user: dict = Depends(require_auth)):
     """
     Obtener resumen de presupuestos agrupados por código de cliente.
     Para vista de administrador/gerente.
@@ -113,7 +115,7 @@ async def get_projects_summary_by_client():
 
 
 @router.get("/projects/{project_id}", response_model=ProjectModel)
-async def get_project(project_id: str):
+async def get_project(project_id: str, current_user: dict = Depends(require_auth)):
     """Obtener un proyecto por ID"""
     project = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
@@ -121,7 +123,7 @@ async def get_project(project_id: str):
     return project
 
 @router.get("/projects/check-budget-number/{budget_number}")
-async def check_budget_number(budget_number: str):
+async def check_budget_number(budget_number: str, current_user: dict = Depends(require_auth)):
     """Verificar si ya existe un presupuesto con este número"""
     project = await db.projects.find_one({"budgetNumber": budget_number}, {"_id": 0})
     if project:
@@ -739,7 +741,7 @@ async def change_project_status(project_id: str, body: dict, current_user: dict 
 
 
 @router.get("/projects/{project_id}/status-history")
-async def get_project_status_history(project_id: str):
+async def get_project_status_history(project_id: str, current_user: dict = Depends(require_auth)):
     """Obtener el historial de cambios de estado de un presupuesto"""
     project = await db.projects.find_one({"id": project_id}, {"_id": 0, "statusHistory": 1, "status": 1, "budgetNumber": 1})
     if not project:

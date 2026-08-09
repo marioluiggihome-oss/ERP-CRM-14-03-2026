@@ -6,7 +6,8 @@
 Routes for AI Telemetry (Optical Recognition)
 Extracted from server.py for better maintainability
 """
-from fastapi import APIRouter, HTTPException, File, UploadFile, Form
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Depends
+from services.jwt_service import require_auth
 from typing import List
 import logging
 import base64
@@ -22,7 +23,11 @@ from services.telemetry_queue import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/telemetry", tags=["telemetry"])
+# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
+# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
+# justo lo que fallo hasta ahora — la telemetria de uso.
+router = APIRouter(prefix="/telemetry", tags=["telemetry"],
+                   dependencies=[Depends(require_auth)])
 
 
 @router.post("/start-job")

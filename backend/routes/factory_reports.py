@@ -6,7 +6,8 @@
 Factory Reports Router - LUIGGI HOME
 Sistema de generación de informes PDF para fábrica con despiece y logo
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from services.jwt_service import require_auth
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
@@ -366,7 +367,7 @@ def create_factory_report_pdf(
 
 
 @router.get("/production/{order_id}")
-async def generate_production_report(order_id: str):
+async def generate_production_report(order_id: str, current_user: dict = Depends(require_auth)):
     """
     Genera un PDF de informe de producción completo para una orden de fabricación.
     Incluye: Logo, datos del pedido, lista de muebles, despiece detallado.
@@ -492,7 +493,7 @@ async def generate_production_report(order_id: str):
 
 
 @router.get("/production-from-budget/{budget_id}")
-async def generate_production_report_from_budget(budget_id: str):
+async def generate_production_report_from_budget(budget_id: str, current_user: dict = Depends(require_auth)):
     """
     Genera un PDF de informe de producción desde un presupuesto.
     Útil para generar el informe antes de que se cree la orden de fabricación.
