@@ -49,6 +49,7 @@ MODULOS_DE_RUTAS = [
     "routes.projects",
     "routes.almacen",
     "routes.electro_fichas",
+    "routes.plan_negocio",
     "routes.armarios_alzado",
     "routes.estudio_cocinas",
     "routes.cascos",

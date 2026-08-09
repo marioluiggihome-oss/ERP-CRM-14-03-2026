@@ -99,6 +99,7 @@ from routes.armarios2 import router as armarios2_router
 from routes.armarios_alzado import router as armarios_alzado_router  # alzado vectorial acotado de armario
 from routes.almacen import router as almacen_router  # existencias, reservas y plan de compra
 from routes.electro_fichas import router as electro_fichas_router  # medidas de hueco de los electrodomesticos
+from routes.plan_negocio import router as plan_negocio_router  # plan de negocio de la fabrica (SOLO MASTER)
 from routes.cocinasai import router as cocinasai_router
 from routes.estudio_cocinas import router as estudio_cocinas_router  # Estudio Cocinas — diseño asistido completo
 from routes.reports import router as reports_router
@@ -282,6 +283,7 @@ api_router.include_router(armarios2_router)
 api_router.include_router(armarios_alzado_router)
 api_router.include_router(almacen_router)
 api_router.include_router(electro_fichas_router)
+api_router.include_router(plan_negocio_router)
 api_router.include_router(cocinasai_router)
 api_router.include_router(estudio_cocinas_router)
 api_router.include_router(reports_router)

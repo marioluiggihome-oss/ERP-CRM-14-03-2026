@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import GlobalEventReminder from './components/GlobalEventReminder';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes, Calculator } from 'lucide-react';
 import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
 import "./App.css";
 
@@ -51,6 +51,7 @@ const LuiggiFloor = lazy(() => import('./components/LuiggiFloor'));
 const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
 const Expediente = lazy(() => import('./components/Expediente')); // Expediente único de la obra (tablet de 8")
 const Almacen = lazy(() => import('./components/Almacen')); // Existencias, reservas y plan de compra
+const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de negocio de la fábrica (SOLO MASTER)
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
@@ -1394,6 +1395,23 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Plan de negocio de la fábrica — SOLO MASTER.
+                        No vale `canAccessRentabilidad` ni la lista ancha de roles
+                        elevados: por aquí pasan el coste de compra del casco, el
+                        descuento del proveedor y el margen por canal. La guarda
+                        de verdad está en el backend; esto solo esconde el botón. */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.isPrimaryAdmin || state.currentUser?.isMaster) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'planNegocio'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'planNegocio' ? 'bg-emerald-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="plan-negocio-nav-btn"
+                        title="Plan de negocio de la fábrica (solo master)"
+                      >
+                        <Calculator size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Plan</span>
+                      </button>
+                    )}
+
                     {/* Gastos de comercial (escaneo de tickets) - comerciales y admin, con permiso */}
                     {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessGastos !== false && (
                       <button
@@ -1712,6 +1730,11 @@ const App = () => {
             )}
             {state.currentTab === 'almacen' && state.currentUser?.canAccessAlmacen !== false && (
               <ErrorBoundary><Almacen state={state} /></ErrorBoundary>
+            )}
+            {/* El plan de negocio comprueba el master TAMBIÉN dentro (y el backend
+                otra vez): esconder el botón no es cerrar una puerta. */}
+            {state.currentTab === 'planNegocio' && (
+              <ErrorBoundary><PlanNegocio state={state} /></ErrorBoundary>
             )}
             {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
               <Digitalizador state={state} setState={setState} />
