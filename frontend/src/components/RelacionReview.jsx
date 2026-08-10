@@ -282,8 +282,12 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const oculto = '•••';
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+    // A TODA LA PANTALLA. Con `max-w-4xl` la lista de muebles se quedaba en una
+    // columna estrecha en medio, con la mitad del monitor en gris al lado y la
+    // tabla haciendo scroll para nada. Aquí se revisa una relación entera antes
+    // de volcarla: cuanto más se ve de golpe, menos se cuela.
+    <div className="fixed inset-0 z-[60] bg-black/50 flex items-stretch justify-center p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Cabecera */}
         <div className="px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-between">
           <h3 className="font-black flex items-center gap-2"><FileUp size={18} /> Revisar relación de muebles</h3>

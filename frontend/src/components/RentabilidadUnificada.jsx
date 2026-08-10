@@ -12,7 +12,7 @@ import RentabilidadMV from './RentabilidadMV';
 // Módulo unificado de rentabilidad (solo master). Un selector Sistema: ALVIC / MV
 // enruta al motor correspondiente. Mismo coste de fabricación, distinto sistema de
 // venta. Los clientes NO lo ven (gateado a master en Cocina Desmontada).
-export default function RentabilidadUnificada({ esMaster, sistemaInicial, onClose }) {
+export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorPunto, onClose }) {
   const [sistema, setSistema] = useState(sistemaInicial === 'alvic' || sistemaInicial === 'mv' ? sistemaInicial : 'mv');
   if (!esMaster) return null;
   return (
@@ -45,7 +45,7 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial, onClos
           selector MV/Alvic no se pierda al bajar. Antes se limitaba con
           `max-h-[85vh]`; ahora ocupa todo el hueco que quede bajo la cabecera. */}
       <div className="flex-1 min-h-0 border-2 border-t-0 border-slate-700 rounded-b-2xl bg-white overflow-auto">
-        {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} />}
+        {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} valorPunto={valorPunto} />}
       </div>
     </div>
   );

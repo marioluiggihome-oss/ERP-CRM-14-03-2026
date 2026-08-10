@@ -823,7 +823,7 @@ const Cascos = ({ state, setState }) => {
                 <div className="fixed inset-0 z-[9998] bg-slate-900/60 p-1.5 sm:p-3 flex text-slate-900"
                   onMouseDown={(e) => { if (e.target === e.currentTarget) setShowRenta(false); }}>
                   <div className="w-full h-full flex flex-col min-h-0">
-                    <RentabilidadUnificada esMaster={esMasterRenta} sistemaInicial={sistemaRenta} onClose={() => setShowRenta(false)} />
+                    <RentabilidadUnificada esMaster={esMasterRenta} sistemaInicial={sistemaRenta} valorPunto={coef} onClose={() => setShowRenta(false)} />
                   </div>
                 </div>
               )}

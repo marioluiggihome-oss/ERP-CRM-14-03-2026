@@ -53,7 +53,10 @@ const colorConGrosor = (k) => {
   const g = GROSOR_DE_COLOR[k];
   return g ? `${lbl} ${g}` : lbl;
 };
-const PUNTO = 2.0;
+// Valor de partida del punto de Cocina Des-Montada. El bueno viene de Ajustes
+// (`pointValueDesmontada`) por la prop `valorPunto`; esto es solo el que se usa
+// si la pantalla se abre suelta y no llega ninguno.
+const PUNTO_POR_DEFECTO = 2.0;
 
 // Tipos de cascos disponibles para el selector inline
 const TIPOS_ACB = [
@@ -220,7 +223,7 @@ const _casco_por_id = (id) => CASCOS.find(c => String(c.id) === String(id)) || n
  * cada línea se buscaba la vida por su cuenta y nadie decía nada. Una cocina
  * tiene UN color de casco, y el precio cambia con el color.
  */
-const _valorar = (c, colorPedido, elegido = false) => {
+const _valorar = (c, colorPedido, elegido = false, punto = PUNTO_POR_DEFECTO) => {
   if (!c || !c.precios) return null;
   const exacto = c.precios[colorPedido] != null;
   const alt = exacto ? null : _precio_color(c);
@@ -228,7 +231,7 @@ const _valorar = (c, colorPedido, elegido = false) => {
   const color = exacto ? colorPedido : alt.color;
   const base = exacto ? c.precios[colorPedido] : alt.precio;
   return {
-    ...c, _base: base, _precio: base * PUNTO,
+    ...c, _base: base, _precio: base * punto,
     _color: color, _colorLbl: COLOR_LBL[color] || color,
     _colorPedido: colorPedido,
     _colorSustituido: !exacto,
@@ -236,7 +239,7 @@ const _valorar = (c, colorPedido, elegido = false) => {
   };
 };
 
-const _match_acb = (it, ov, colorProyecto) => {
+const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
   const o = ov || {};
   const colorKey = o.color || colorProyecto || COLOR_CASCO_DEFECTO;
 
@@ -244,7 +247,7 @@ const _match_acb = (it, ov, colorProyecto) => {
   //    se vuelve a adivinar nada: lo eligió una persona mirando la línea.
   if (o.cascoId) {
     const elegido = _casco_por_id(o.cascoId);
-    if (elegido) return _valorar(elegido, colorKey, true);
+    if (elegido) return _valorar(elegido, colorKey, true, punto);
   }
 
   const grosor = o.grosor || 19;
@@ -265,7 +268,7 @@ const _match_acb = (it, ov, colorProyecto) => {
       + (fondo ? Math.abs((c.fondo || 0) - fondo) : 0);
     if (d < bd) { bd = d; best = c; }
   }
-  return _valorar(best, colorKey, false);
+  return _valorar(best, colorKey, false, punto);
 };
 
 /** Busca cascos por texto libre, para elegirlos a mano desde la línea.
@@ -274,7 +277,7 @@ const _match_acb = (it, ov, colorProyecto) => {
  * nombre exacto del tipo ACB. Cuando una línea sale «sin equivalencia», lo que
  * hace falta es poder escribir «alto balda 900» y elegir.
  */
-const buscarCascos = (texto, colorProyecto, limite = 40) => {
+const buscarCascos = (texto, colorProyecto, limite = 40, punto = PUNTO_POR_DEFECTO) => {
   const q = (texto || '').trim().toLowerCase();
   if (q.length < 2) return [];
   const palabras = q.split(/\s+/);
@@ -287,7 +290,7 @@ const buscarCascos = (texto, colorProyecto, limite = 40) => {
     .filter(x => x.s >= 0 && _precio_color(x.c) != null)
     .sort((a, b) => a.s - b.s)
     .slice(0, limite)
-    .map(x => _valorar(x.c, colorProyecto || COLOR_CASCO_DEFECTO, true))
+    .map(x => _valorar(x.c, colorProyecto || COLOR_CASCO_DEFECTO, true, punto))
     .filter(Boolean);
 };
 
@@ -384,7 +387,18 @@ const _diagnostico = async (e) => {
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function ProformaImporter({ esMaster }) {
+export default function ProformaImporter({ esMaster, valorPunto }) {
+  // EL VALOR DEL PUNTO DE COCINA DES-MONTADA, EL DE AJUSTES.
+  //
+  // La tarifa ACB se guarda en PUNTOS y el euro sale de multiplicarla por este
+  // valor: los 48,35 del casco de fregadero de 900×800 son 96,70 € porque el
+  // punto vale 2. Estaba escrito a fuego aquí, así que el día que se cambiara
+  // en Ajustes esta pantalla habría seguido valorando con el viejo — y sin dar
+  // ningún error: la proforma entera con otro precio y la misma pinta.
+  //
+  // Si no llega —esta pantalla también se abre suelta—, se usa el de partida,
+  // que es el que hay configurado hoy.
+  const PUNTO = Number(valorPunto) > 0 ? Number(valorPunto) : PUNTO_POR_DEFECTO;
   const [cargando, setCargando] = useState(false);
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState(null);
@@ -563,7 +577,7 @@ export default function ProformaImporter({ esMaster }) {
       .map((it, idx) => {
         const origIdx = items.indexOf(it);
         const ov = overrides[origIdx] || {};
-        const acb = _match_acb(it, ov, p.colorCasco);
+        const acb = _match_acb(it, ov, p.colorCasco, PUNTO);
         const precioAcb = acb ? (Number(acb._precio) || 0) : 0;
         // UNIDADES: una linea de 2 muebles cuesta el doble. Antes no se
         // multiplicaba en ningun sitio (ni casco, ni herraje, ni mano de obra),
@@ -1349,6 +1363,7 @@ export default function ProformaImporter({ esMaster }) {
                 <tbody>
                   {calc.rows.map((r) => (
                     <FilaMueble
+                      punto={PUNTO}
                       key={r._origIdx}
                       r={r}
                       ocultarImportes={ocultarImportes}
@@ -1480,7 +1495,7 @@ export default function ProformaImporter({ esMaster }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto, mostrarCodigo }) {
+function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto, mostrarCodigo, punto }) {
   const [editando, setEditando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
@@ -1492,8 +1507,8 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
   // Resultados de la barra de búsqueda de la línea. Se calcula aquí y no en el
   // padre para no recorrer el catálogo por cada fila de la tabla.
   const encontrados = useMemo(
-    () => (editando ? buscarCascos(busqueda, colorProyecto) : []),
-    [editando, busqueda, colorProyecto]);
+    () => (editando ? buscarCascos(busqueda, colorProyecto, 40, punto) : []),
+    [editando, busqueda, colorProyecto, punto]);
 
   return (
     <tr className={`border-t border-slate-100 ${r._herrajeEsp ? 'bg-orange-50' : ''}`}>

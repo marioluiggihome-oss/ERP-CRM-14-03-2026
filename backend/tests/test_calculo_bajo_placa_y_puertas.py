@@ -101,11 +101,27 @@ def test_los_numeros_del_master_cuadran(cascos):
     assert round((con_balda - fregadero) * PUNTO * 0.5, 2) == 12.80
 
 
-def test_el_valor_del_punto_no_se_mueve_sin_querer():
-    """Toda la valoracion de cascos cuelga de este numero."""
+def test_el_valor_del_punto_viene_de_AJUSTES():
+    """CANDADO. La tarifa ACB esta en PUNTOS y el euro sale de multiplicarla por
+    el valor del punto de Cocina Des-Montada, que se configura en Ajustes: los
+    48,35 del casco de fregadero son 96,70 € porque el punto vale 2.
+
+    Estaba escrito a fuego aqui. El dia que se cambiara en Ajustes, esta
+    pantalla habria seguido valorando con el viejo — y sin dar ningun error: la
+    proforma entera con otro precio y la misma pinta.
+    """
     src = _leer(IMPORTADOR)
-    m = re.search(r"const PUNTO = ([\d.]+)", src)
-    assert m and float(m.group(1)) == 2.0
+    assert "valorPunto" in src, (
+        "el importador vuelve a tener el valor del punto escrito a fuego: si se "
+        "cambia en Ajustes, aqui se seguiria valorando con el viejo")
+    m = re.search(r"const PUNTO_POR_DEFECTO = ([\d.]+)", src)
+    assert m and float(m.group(1)) == 2.0, "el valor de partida ya no es el de hoy"
+    # Y que quien lo tiene configurado se lo pase de verdad.
+    cascos_jsx = _leer(os.path.join(SRC, "components", "Cascos.jsx"))
+    assert "valorPunto={coef}" in cascos_jsx, (
+        "Cascos ya no le pasa el valor del punto: el importador volveria al de "
+        "partida sin decir nada")
+    assert "pointValueDesmontada" in cascos_jsx
 
 
 def test_un_fregadero_sigue_siendo_un_fregadero():
