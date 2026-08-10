@@ -574,6 +574,17 @@ class Render3DService:
                 "colors described in the brief below. Do NOT add, remove, or "
                 "rearrange any module. The proportions and widths of each module "
                 "must match the sketch. "
+                "IMPORTANT — READ ALL TEXT LABELS IN THE SKETCH: the sketch may contain "
+                "handwritten labels in Spanish that identify appliances and elements. "
+                "Translate and place them exactly where written: "
+                "'Frigo'/'Frigorifico' = tall fridge column, "
+                "'Horno' = oven column, "
+                "'Micro'/'Microondas' = microwave, "
+                "'Placa' = hob/cooktop, "
+                "'Pres.'/'Fregadero' = sink, "
+                "'Lava'/'Lavavajillas' = dishwasher, "
+                "'Escob.'/'Escobero' = tall broom cabinet. "
+                "Every labelled element MUST appear in the render at the position shown. "
             )
         elif ref_b64:
             ref_note = (
