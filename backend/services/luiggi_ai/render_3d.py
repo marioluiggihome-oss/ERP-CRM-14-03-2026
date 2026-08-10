@@ -930,9 +930,15 @@ class Render3DService:
         )
 
     def _is_sketch_reference(self, reference_image, reference_mime):
-        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado)
-        en vez de una foto de cocina existente. En ese caso el render debe
-        INTERPRETAR el plano, no EDITAR la imagen."""
+        """Detecta si la referencia es un croquis/plano manuscrito (PDF o imagen)
+        en vez de una foto fotorrealista de cocina. En ese caso el render debe
+        INTERPRETAR el plano como blueprint técnico, no editar la imagen.
+
+        Criterios de detección:
+        - PDF (siempre considerado croquis)
+        - JPEG/PNG con fondo claro y trazos oscuros (boceto a mano)
+        - Imágenes con baja saturación y alto contraste blanco/negro
+        """
         if not reference_image:
             return False
         # Si el MIME indica PDF, es casi seguro un croquis escaneado
@@ -947,6 +953,35 @@ class Render3DService:
             import base64
             header_bytes = base64.b64decode(raw[:20])
             if header_bytes[:4] == b"%PDF":
+                return True
+        except Exception:
+            pass
+        # Detectar boceto manuscrito en JPEG/PNG: fondo blanco/claro con trazos
+        # oscuros (bolígrafo, lápiz). Usamos PIL para analizar la imagen.
+        try:
+            import base64, io
+            from PIL import Image, ImageStat
+            raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
+            img_bytes = base64.b64decode(raw)
+            img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            # Reducir para análisis rápido
+            img_small = img.resize((100, 100))
+            stat = ImageStat.Stat(img_small)
+            # Brillo medio de cada canal (0-255)
+            r_mean, g_mean, b_mean = stat.mean
+            brightness = (r_mean + g_mean + b_mean) / 3
+            # Desviación estándar (contraste)
+            r_std, g_std, b_std = stat.stddev
+            contrast = (r_std + g_std + b_std) / 3
+            # Saturación media: diferencia entre max y min canal por pixel
+            pixels = list(img_small.getdata())
+            sat_sum = sum(max(p) - min(p) for p in pixels)
+            avg_sat = sat_sum / len(pixels)
+            # Un boceto manuscrito típico tiene:
+            # - Fondo muy claro (brightness > 180)
+            # - Baja saturación (avg_sat < 40, casi sin color)
+            # - Contraste moderado-alto (trazos oscuros sobre fondo blanco)
+            if brightness > 175 and avg_sat < 50:
                 return True
         except Exception:
             pass
