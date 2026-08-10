@@ -585,6 +585,12 @@ class Render3DService:
                 "'Lava'/'Lavavajillas' = dishwasher, "
                 "'Escob.'/'Escobero' = tall broom cabinet. "
                 "Every labelled element MUST appear in the render at the position shown. "
+                "A large rectangle labelled 'Frgo', 'Frigo' or 'Frigorifico' with no "
+                "interior detail drawn is a TALL INTEGRATED FRIDGE COLUMN — render it "
+                "as a full-height integrated refrigerator with a door panel matching the "
+                "cabinet finish. Do NOT omit it or replace it with an empty wall. "
+                "Similarly, a rectangle labelled 'Horno'+'Micro' stacked = oven column "
+                "with oven below and microwave above, both integrated. "
             )
         elif ref_b64:
             ref_note = (
