@@ -8,7 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Palette, Hammer, Building, Store, Search, MapPin, 
   Mail, Phone, Linkedin, Globe, CheckCircle, UserPlus, Download, 
-  Sparkles, RefreshCw, Send, ShieldCheck, AlertCircle, ExternalLink, Database
+  Sparkles, RefreshCw, Send, ShieldCheck, AlertCircle, ExternalLink, Database,
+  ChevronLeft, ChevronRight, CheckCheck
 } from 'lucide-react';
 import { getToken } from '../services/api';
 
@@ -23,27 +24,62 @@ const SECTORES = [
   { id: 'tiendas', nombre: 'Tiendas de Cocinas', icon: Store }
 ];
 
-const CIUDADES_PRESET = ['Toda España', 'Madrid', 'Toledo', 'Barcelona', 'Valencia', 'Sevilla', 'Málaga', 'Bilbao', 'Zaragoza', 'Alicante'];
+const CIUDADES_PRESET = [
+  'Toda España',
+  'Madrid',
+  'Toledo',
+  'Illescas',
+  'Talavera de la Reina',
+  'Ciudad Real',
+  'Albacete',
+  'Cuenca',
+  'Guadalajara',
+  'Barcelona',
+  'Valencia',
+  'Alicante',
+  'Sevilla',
+  'Málaga',
+  'Marbella',
+  'Bilbao',
+  'Zaragoza',
+  'Murcia',
+  'Palma de Mallorca',
+  'Valladolid',
+  'Granada',
+  'Córdoba',
+  'Santander',
+  'Vigo',
+  'A Coruña'
+];
 
 export default function ApolloProspeccion({ currentUser, onNavigateToContacts }) {
   const [sector, setSector] = useState('todos');
   const [ciudad, setCiudad] = useState('Toda España');
   const [busqueda, setBusqueda] = useState('');
   const [cargo, setCargo] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [limite, setLimite] = useState(30);
   
   const [prospectos, setProspectos] = useState([]);
+  const [totalResultados, setTotalResultados] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ configurado: false, modo: 'prospeccion_integrada' });
   const [importados, setImportados] = useState({});
   const [importingId, setImportingId] = useState(null);
+  const [importandoLote, setImportandoLote] = useState(false);
   const [mensajeExito, setMensajeExito] = useState(null);
   const [error, setError] = useState(null);
 
   // Cargar estado inicial y prospectos
   useEffect(() => {
     fetchStatus();
-    buscarProspectos();
   }, []);
+
+  useEffect(() => {
+    setPagina(1);
+    buscarProspectos(1);
+  }, [sector, ciudad]);
 
   const getHeaders = () => {
     const token = getToken();
@@ -65,7 +101,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
     }
   };
 
-  const buscarProspectos = async () => {
+  const buscarProspectos = async (numPagina = pagina) => {
     setLoading(true);
     setError(null);
     try {
@@ -77,12 +113,16 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
           ubicacion: ciudad === 'Toda España' ? 'España' : ciudad,
           cargo: cargo.trim(),
           termino: busqueda.trim(),
-          limite: 30
+          pagina: numPagina,
+          limite: limite
         })
       });
       if (res.ok) {
         const data = await res.json();
         setProspectos(data.prospectos || []);
+        setTotalResultados(data.total || (data.prospectos || []).length);
+        setTotalPaginas(data.totalPaginas || 1);
+        setPagina(numPagina);
       } else {
         setError('Error al conectar con el motor de prospección B2B.');
       }
@@ -112,13 +152,13 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
           telefono_directo: p.telefono_directo,
           linkedin: p.linkedin,
           web: p.web,
-          notas: `Importado de Apollo B2B. ${p.proyectos_recientes || ''}`
+          notas: `Importado de Base de Datos B2B. ${p.proyectos_recientes || ''}`
         })
       });
       if (res.ok) {
         const data = await res.json();
         setImportados(prev => ({ ...prev, [p.id]: true }));
-        setMensajeExito(data.mensaje || `¡${p.nombre} importado con éxito!`);
+        setMensajeExito(data.mensaje || `¡${p.nombre} importado con éxito en el CRM!`);
         setTimeout(() => setMensajeExito(null), 4000);
       }
     } catch (e) {
@@ -128,26 +168,76 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
     }
   };
 
+  const handleImportarLote = async () => {
+    const pendientes = prospectos.filter(p => !importados[p.id]);
+    if (!pendientes.length) {
+      alert('Todos los prospectos visibles ya han sido importados.');
+      return;
+    }
+    if (!window.confirm(`¿Importar los ${pendientes.length} prospectos visibles al CRM como contactos y oportunidades?`)) {
+      return;
+    }
+    setImportandoLote(true);
+    let guardados = 0;
+    try {
+      for (const p of pendientes) {
+        try {
+          const res = await fetch(`${API_URL}/api/apollo/importar-crm`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+              id: p.id,
+              nombre: p.nombre,
+              cargo: p.cargo,
+              empresa: p.empresa,
+              sector: p.sector,
+              ciudad: p.ciudad,
+              provincia: p.provincia,
+              email: p.email,
+              telefono: p.telefono,
+              telefono_directo: p.telefono_directo,
+              linkedin: p.linkedin,
+              web: p.web,
+              notas: `Importado de Base de Datos B2B en lote. ${p.proyectos_recientes || ''}`
+            })
+          });
+          if (res.ok) {
+            setImportados(prev => ({ ...prev, [p.id]: true }));
+            guardados++;
+          }
+        } catch (err) {
+          console.warn('Error al importar:', p.nombre, err);
+        }
+      }
+      setMensajeExito(`✅ ¡${guardados} prospectos importados con éxito al CRM!`);
+      setTimeout(() => setMensajeExito(null), 5000);
+    } finally {
+      setImportandoLote(false);
+    }
+  };
+
   const exportarCSV = () => {
     if (!prospectos.length) return;
-    const cabeceras = ['Nombre', 'Cargo', 'Empresa', 'Sector', 'Ciudad', 'Email', 'Teléfono', 'LinkedIn', 'Web'];
+    const cabeceras = ['Nombre', 'Cargo', 'Empresa', 'Sector', 'Ciudad', 'Provincia', 'Email', 'Teléfono', 'LinkedIn', 'Web', 'Proyectos'];
     const filas = prospectos.map(p => [
       `"${p.nombre}"`,
       `"${p.cargo}"`,
       `"${p.empresa}"`,
       `"${p.sector}"`,
       `"${p.ciudad}"`,
+      `"${p.provincia || ''}"`,
       `"${p.email}"`,
       `"${p.telefono_directo || p.telefono}"`,
       `"${p.linkedin || ''}"`,
-      `"${p.web || ''}"`
+      `"${p.web || ''}"`,
+      `"${p.proyectos_recientes || ''}"`
     ]);
     const contenido = [cabeceras.join(','), ...filas.map(f => f.join(','))].join('\n');
     const blob = new Blob([`\uFEFF${contenido}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Prospectos_Apollo_B2B_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `Prospectos_B2B_${ciudad.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -162,21 +252,26 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
               <span className="p-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg">
                 <Database size={16} />
               </span>
-              <h1 className="text-xl font-black tracking-tight text-white">Base de Datos de Clientes Potenciales</h1>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                status.configurado 
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-              }`}>
-                {status.configurado ? '● API Oficial Conectada' : '● Motor Inteligente B2B Activo'}
+              <h1 className="text-xl font-black tracking-tight text-white">Base de Datos de Clientes Potenciales (B2B)</h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                ● Base de Datos Nacional & Prospección Inteligente
               </span>
             </div>
             <p className="text-xs text-slate-300">
-              Captación directa de <b>Estudios de Arquitectura, Interioristas, Empresas de Reformas y Promotoras</b> para suministro de cocinas y mobiliario a medida.
+              Prescripción y captación de <b>Estudios de Arquitectura, Interioristas, Empresas de Reformas y Promotoras</b> para suministro de cocinas y mobiliario de Luiggi Home.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleImportarLote}
+              disabled={importandoLote || !prospectos.length}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-colors disabled:opacity-50"
+              title="Importar todos los prospectos de la lista actual al CRM"
+            >
+              {importandoLote ? <RefreshCw size={14} className="animate-spin" /> : <CheckCheck size={14} />}
+              <span>Importar Lote ({prospectos.filter(p => !importados[p.id]).length})</span>
+            </button>
             <button
               onClick={exportarCSV}
               disabled={!prospectos.length}
@@ -185,7 +280,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
               <Download size={14} /> Exportar CSV
             </button>
             <button
-              onClick={buscarProspectos}
+              onClick={() => buscarProspectos(pagina)}
               disabled={loading}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-all disabled:opacity-50"
             >
@@ -242,7 +337,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
         {/* Barra de Búsqueda Avanzada */}
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
           {/* Ciudad */}
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-4">
             <div className="relative">
               <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <select
@@ -259,24 +354,24 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
           <div className="sm:col-span-3">
             <input
               type="text"
-              placeholder="Cargo (ej: Director de Compras, Arquitecto...)"
+              placeholder="Cargo (ej: Arquitecto, Compras, Interiorista...)"
               value={cargo}
               onChange={e => setCargo(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && buscarProspectos()}
+              onKeyDown={e => e.key === 'Enter' && buscarProspectos(1)}
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
 
           {/* Empresa / Palabra clave */}
-          <div className="sm:col-span-4">
+          <div className="sm:col-span-3">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar por empresa o nombre..."
+                placeholder="Empresa, palabra o nombre..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && buscarProspectos()}
+                onKeyDown={e => e.key === 'Enter' && buscarProspectos(1)}
                 className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
@@ -285,7 +380,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
           {/* Botón Buscar */}
           <div className="sm:col-span-2">
             <button
-              onClick={buscarProspectos}
+              onClick={() => buscarProspectos(1)}
               disabled={loading}
               className="w-full flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors disabled:opacity-50"
             >
@@ -296,8 +391,8 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
         </div>
 
         {/* Estadísticas / Resumen de resultados */}
-        <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-          <span>Se han encontrado <b>{prospectos.length}</b> profesionales y empresas verificadas</span>
+        <div className="flex items-center justify-between text-xs text-slate-500 px-1 flex-wrap gap-2">
+          <span>Se han encontrado <b>{totalResultados}</b> profesionales y empresas verificadas en <b>{ciudad}</b></span>
           <span className="flex items-center gap-1 text-emerald-600 font-bold">
             <ShieldCheck size={14} /> Emails y teléfonos verificados para contacto directo
           </span>
@@ -307,136 +402,161 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
         {loading ? (
           <div className="py-16 text-center">
             <RefreshCw size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
-            <p className="text-sm font-bold text-slate-700">Consultando base de datos B2B de Apollo...</p>
-            <p className="text-xs text-slate-400">Extrayendo contactos verificados de arquitectura y reformas</p>
+            <p className="text-sm font-bold text-slate-700">Consultando base de datos B2B...</p>
+            <p className="text-xs text-slate-400">Extrayendo contactos verificados de arquitectura, interiorismo y reformas</p>
           </div>
         ) : prospectos.length === 0 ? (
           <div className="py-16 text-center bg-white rounded-2xl border border-slate-200">
             <AlertCircle size={32} className="text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-bold text-slate-700">No se encontraron prospectos con estos filtros.</p>
-            <p className="text-xs text-slate-400 mt-1">Prueba ampliando la ubicación o cambiando el sector.</p>
+            <p className="text-xs text-slate-400 mt-1">Prueba seleccionando otra ciudad o ampliando a «Toda España».</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {prospectos.map(p => {
-              const estaImportado = importados[p.id];
-              const isImporting = importingId === p.id;
-              return (
-                <div 
-                  key={p.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Cabecera Tarjeta */}
-                    <div className="flex items-start justify-between gap-2 mb-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-sm">
-                          {p.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {prospectos.map(p => {
+                const estaImportado = importados[p.id];
+                const isImporting = importingId === p.id;
+                return (
+                  <div 
+                    key={p.id}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Cabecera Tarjeta */}
+                      <div className="flex items-start justify-between gap-2 mb-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-sm">
+                            {p.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-slate-800 leading-tight">{p.nombre}</h3>
+                            <p className="text-[11px] font-bold text-indigo-600">{p.cargo}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-black text-slate-800 leading-tight">{p.nombre}</h3>
-                          <p className="text-[11px] font-bold text-indigo-600">{p.cargo}</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {p.puntuacion_interes || 95}% Match
-                      </span>
-                    </div>
-
-                    {/* Empresa y Ubicación */}
-                    <div className="space-y-1 text-xs text-slate-600 mb-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                        <Building2 size={13} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{p.empresa}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <MapPin size={11} className="text-slate-400" />
-                          {p.ciudad}, {p.pais}
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {p.puntuacion_interes || 95}% Match
                         </span>
-                        <span>{p.tamano_empresa}</span>
+                      </div>
+
+                      {/* Empresa y Ubicación */}
+                      <div className="space-y-1 text-xs text-slate-600 mb-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                          <Building2 size={13} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{p.empresa}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <MapPin size={11} className="text-slate-400" />
+                            {p.ciudad}, {p.provincia || p.pais}
+                          </span>
+                          <span>{p.tamano_empresa}</span>
+                        </div>
+                      </div>
+
+                      {/* Proyectos / Contexto */}
+                      {p.proyectos_recientes && (
+                        <p className="text-[11px] text-slate-500 italic mb-3 line-clamp-2">
+                          «{p.proyectos_recientes}»
+                        </p>
+                      )}
+
+                      {/* Datos de contacto verificados */}
+                      <div className="space-y-1 text-[11px] text-slate-600 mb-4 border-t border-slate-100 pt-2.5">
+                        {p.email && (
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 truncate text-slate-700 font-medium">
+                              <Mail size={12} className="text-indigo-500 shrink-0" />
+                              <a href={`mailto:${p.email}`} className="hover:underline truncate">{p.email}</a>
+                            </span>
+                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                              Verificado
+                            </span>
+                          </div>
+                        )}
+                        {(p.telefono_directo || p.telefono) && (
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <Phone size={12} className="text-emerald-500 shrink-0" />
+                            <a href={`tel:${p.telefono_directo || p.telefono}`} className="hover:underline font-bold">
+                              {p.telefono_directo || p.telefono}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Proyectos / Contexto */}
-                    {p.proyectos_recientes && (
-                      <p className="text-[11px] text-slate-500 italic mb-3 line-clamp-2">
-                        «{p.proyectos_recientes}»
-                      </p>
-                    )}
+                    {/* Acciones */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => handleImportar(p)}
+                        disabled={estaImportado || isImporting}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-black transition-all ${
+                          estaImportado
+                            ? 'bg-emerald-100 text-emerald-700 cursor-default'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                        }`}
+                      >
+                        {estaImportado ? (
+                          <><CheckCircle size={13} /> Importado en CRM</>
+                        ) : isImporting ? (
+                          <><RefreshCw size={13} className="animate-spin" /> Guardando...</>
+                        ) : (
+                          <><UserPlus size={13} /> Importar a CRM</>
+                        )}
+                      </button>
 
-                    {/* Datos de contacto verificados */}
-                    <div className="space-y-1 text-[11px] text-slate-600 mb-4 border-t border-slate-100 pt-2.5">
-                      {p.email && (
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-1.5 truncate text-slate-700 font-medium">
-                            <Mail size={12} className="text-indigo-500 shrink-0" />
-                            <a href={`mailto:${p.email}`} className="hover:underline truncate">{p.email}</a>
-                          </span>
-                          <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                            Verificado
-                          </span>
-                        </div>
+                      {p.telefono_directo && (
+                        <a
+                          href={`https://wa.me/${(p.telefono_directo || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${p.nombre}, le contacto de Luiggi Home (Fábrica de Cocinas y Muebles a Medida). Nos encantaría presentarle nuestro catálogo y condiciones especiales para profesionales en ${p.ciudad}.`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200 transition-colors"
+                          title="Enviar WhatsApp de presentación"
+                        >
+                          <Send size={13} />
+                        </a>
                       )}
-                      {(p.telefono_directo || p.telefono) && (
-                        <div className="flex items-center gap-1.5 text-slate-700">
-                          <Phone size={12} className="text-emerald-500 shrink-0" />
-                          <a href={`tel:${p.telefono_directo || p.telefono}`} className="hover:underline font-bold">
-                            {p.telefono_directo || p.telefono}
-                          </a>
-                        </div>
+
+                      {p.linkedin && (
+                        <a
+                          href={p.linkedin}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-xl transition-colors"
+                          title="Ver perfil de LinkedIn"
+                        >
+                          <Linkedin size={13} />
+                        </a>
                       )}
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Acciones */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      onClick={() => handleImportar(p)}
-                      disabled={estaImportado || isImporting}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-black transition-all ${
-                        estaImportado
-                          ? 'bg-emerald-100 text-emerald-700 cursor-default'
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                      }`}
-                    >
-                      {estaImportado ? (
-                        <><CheckCircle size={13} /> Importado en CRM</>
-                      ) : isImporting ? (
-                        <><RefreshCw size={13} className="animate-spin" /> Guardando...</>
-                      ) : (
-                        <><UserPlus size={13} /> Importar a CRM</>
-                      )}
-                    </button>
-
-                    {p.telefono_directo && (
-                      <a
-                        href={`https://wa.me/${(p.telefono_directo || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${p.nombre}, le contacto de Luiggi Home (Fábrica de Cocinas y Muebles a Medida). Nos encantaría presentarle nuestro catálogo y condiciones especiales para profesionales.`)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200 transition-colors"
-                        title="Enviar WhatsApp de presentación"
-                      >
-                        <Send size={13} />
-                      </a>
-                    )}
-
-                    {p.linkedin && (
-                      <a
-                        href={p.linkedin}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-xl transition-colors"
-                        title="Ver perfil de LinkedIn"
-                      >
-                        <Linkedin size={13} />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            {/* Paginador */}
+            {totalPaginas > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-6">
+                <button
+                  onClick={() => buscarProspectos(Math.max(1, pagina - 1))}
+                  disabled={pagina <= 1}
+                  className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-xs font-bold text-slate-600 px-3">
+                  Página {pagina} de {totalPaginas}
+                </span>
+                <button
+                  onClick={() => buscarProspectos(Math.min(totalPaginas, pagina + 1))}
+                  disabled={pagina >= totalPaginas}
+                  className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
