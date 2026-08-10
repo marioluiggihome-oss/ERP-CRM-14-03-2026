@@ -17,7 +17,7 @@
  *   apiUrl, authHeaders
  */
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, Search, Check, Loader, AlertTriangle, FileUp, Lock, Unlock } from 'lucide-react';
+import { X, Plus, Trash2, Search, Check, Loader, AlertTriangle, FileUp, Lock, Unlock, Download, Printer } from 'lucide-react';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import { despiece, MV_COSTES_DEFAULT } from './RentabilidadMV';
 
@@ -378,6 +378,84 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     // hace nada al tocarlo parece roto.
     setPistaCandado(AYUDA_CANDADO + ' para ver coste y margen.');
   };
+  const exportarPDF = async () => {
+    if (!muebles.length) {
+      alert('Añade muebles a la relación antes de exportar.');
+      return;
+    }
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const M = 14;
+
+      pdf.setFontSize(16);
+      pdf.setTextColor(30, 27, 65);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('PRESUPUESTO - RELACIÓN DE MUEBLES', M, 18);
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(100);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`Tarifa: ${tarifa} (${acabadosDeTarifa.slice(0, 3).join(', ')})`, M, 24);
+      pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 24, { align: 'right' });
+
+      autoTable(pdf, {
+        startY: 30,
+        head: [['Código', 'Tipo', 'Medidas (Al×An×F)', 'Mano', 'Ud.', 'PVP Unit.', 'Importe']],
+        body: filas.map(f => [
+          f.cod || (f.raw || '—').toUpperCase(),
+          f.tipo || 'Mueble',
+          `${f.alto || 80} × ${f.ancho || 60} × ${f.fondo || 58} cm`,
+          f.mano || (manoDe(f.cod) === null ? 'S/D' : '—'),
+          String(f.qty || 1),
+          eur(f.pvp),
+          eur((f.pvp || 0) * (f.qty || 1))
+        ]),
+        styles: { fontSize: 8.5, cellPadding: 2 },
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { fontStyle: 'bold', textColor: [49, 46, 129] },
+          3: { halign: 'center' },
+          4: { halign: 'center' },
+          5: { halign: 'right' },
+          6: { halign: 'right', fontStyle: 'bold' }
+        },
+        margin: { left: M, right: M },
+      });
+
+      let y = (pdf.lastAutoTable?.finalY || 30) + 8;
+      const bx = W - M - 70;
+      pdf.setFontSize(10);
+      pdf.setTextColor(40);
+      pdf.text('Total Uds:', bx, y);
+      pdf.text(String(totalUds), W - M, y, { align: 'right' });
+      y += 6;
+
+      pdf.setFillColor(79, 70, 229);
+      pdf.roundedRect(bx - 4, y, 74 + 4, 11, 2, 2, 'F');
+      pdf.setFontSize(12);
+      pdf.setTextColor(255);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('TOTAL PVP MV', bx, y + 7.5);
+      pdf.text(eur(totalPvp), W - M, y + 7.5, { align: 'right' });
+
+      pdf.save(`Relacion_Muebles_${tarifa}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (e) {
+      alert('Error generando PDF.');
+    }
+  };
+
+  const imprimirPresupuesto = () => {
+    if (!muebles.length) {
+      alert('Añade muebles a la relación antes de imprimir.');
+      return;
+    }
+    window.print();
+  };
+
   const oculto = '•••';
 
   return (
@@ -391,11 +469,27 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
         <div className="px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-between">
           <h3 className="font-black flex items-center gap-2"><FileUp size={18} /> Revisar relación de muebles</h3>
 
-          {/* GRUPO DE PRECIOS. Igual que en Cocina Montada: se elige la tarifa,
-              y al lado se enseñan sus acabados — porque nadie dice «esta cocina
-              es una T4», dice «esta cocina es ZENIT». */}
+          {/* GRUPO DE PRECIOS Y ACCIONES */}
           <div className="ml-auto mr-3 flex items-center gap-2 flex-wrap justify-end">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/70">Tarifa</span>
+            <button
+              onClick={imprimirPresupuesto}
+              disabled={!muebles.length}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors disabled:opacity-40"
+              title="Imprimir relación de muebles"
+            >
+              <Printer size={13} /> <span className="hidden sm:inline">Imprimir</span>
+            </button>
+
+            <button
+              onClick={exportarPDF}
+              disabled={!muebles.length}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors disabled:opacity-40"
+              title="Descargar presupuesto oficial en PDF"
+            >
+              <Download size={13} /> <span className="hidden sm:inline">PDF</span>
+            </button>
+
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/70 ml-1">Tarifa</span>
             <select value={tarifa} onChange={e => setTarifa(e.target.value)}
               title="Grupo de precios de la tarifa MV. Toda la cocina va a la misma."
               className="px-2 py-1 rounded-lg text-sm font-black bg-white text-indigo-700 border-2 border-white/40 outline-none">
@@ -404,7 +498,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
               ))}
             </select>
             {acabadosDeTarifa.length > 0 && (
-              <span className="text-[10px] text-white/80 max-w-[280px] truncate" title={acabadosDeTarifa.join(' · ')}>
+              <span className="text-[10px] text-white/80 max-w-[200px] truncate" title={acabadosDeTarifa.join(' · ')}>
                 {acabadosDeTarifa.join(' · ')}
               </span>
             )}
@@ -610,11 +704,27 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
               </span>
             )}
           </div>
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-bold text-sm">Cancelar</button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={imprimirPresupuesto} 
+              disabled={!muebles.length}
+              className="flex items-center gap-1 px-3 py-2 text-slate-700 hover:bg-slate-200 bg-white border border-slate-200 rounded-xl font-bold text-xs disabled:opacity-40 shadow-sm"
+              title="Imprimir presupuesto"
+            >
+              <Printer size={14} /> Imprimir
+            </button>
+            <button 
+              onClick={exportarPDF} 
+              disabled={!muebles.length}
+              className="flex items-center gap-1 px-3 py-2 text-slate-700 hover:bg-slate-200 bg-white border border-slate-200 rounded-xl font-bold text-xs disabled:opacity-40 shadow-sm"
+              title="Descargar PDF oficial"
+            >
+              <Download size={14} /> PDF
+            </button>
+            <button onClick={onClose} className="px-3.5 py-2 text-slate-600 hover:bg-slate-200 rounded-xl font-bold text-xs">Cancelar</button>
             <button onClick={confirmar} disabled={!muebles.length}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-black text-sm disabled:opacity-50">
-              <Check size={16} /> Volcar {totalUds} al presupuesto
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs disabled:opacity-50 shadow-md">
+              <Check size={15} /> Volcar {totalUds} al presupuesto
             </button>
           </div>
         </div>

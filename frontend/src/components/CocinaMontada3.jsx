@@ -20,7 +20,7 @@ import {
   FileText, Plus, Trash2, Search, Check, Loader, AlertTriangle, 
   Download, Save, FolderOpen, Lock, Unlock, Sparkles, RefreshCw,
   Copy, Layers, ArrowUpDown, ChevronRight, HelpCircle, Package,
-  ClipboardList, CheckCircle2, ChevronDown, Boxes
+  ClipboardList, CheckCircle2, ChevronDown, Boxes, Printer
 } from 'lucide-react';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -501,6 +501,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     }
   };
 
+  const imprimirPresupuesto = () => {
+    if (!muebles.length) {
+      alert('Añade muebles al presupuesto antes de imprimir.');
+      return;
+    }
+    window.print();
+  };
+
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-y-auto">
       {/* Barra de cabecera */}
@@ -524,7 +532,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           </div>
 
           {/* Selector de Tarifa Activa y Acciones */}
-          <div className="flex items-center gap-3 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-xl border border-white/20">
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Tarifa</span>
               <select 
@@ -544,9 +552,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             </div>
 
             <button
+              onClick={imprimirPresupuesto}
+              disabled={!muebles.length}
+              className="flex items-center gap-1 px-3 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+              title="Imprimir presupuesto"
+            >
+              <Printer size={14} /> <span className="hidden sm:inline">Imprimir</span>
+            </button>
+
+            <button
               onClick={exportarPDF}
               disabled={!muebles.length}
-              className="flex items-center gap-1 px-3 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+              title="Descargar presupuesto oficial en PDF"
             >
               <Download size={14} /> PDF
             </button>
