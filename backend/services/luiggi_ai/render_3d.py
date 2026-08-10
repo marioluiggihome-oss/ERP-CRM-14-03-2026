@@ -473,6 +473,7 @@ class Render3DService:
         provider: Optional[str] = None,
         reference_images: Optional[list] = None,
         project_type: Optional[str] = None,
+        room_photo: bool = False,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
