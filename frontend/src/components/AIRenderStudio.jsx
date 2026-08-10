@@ -2887,25 +2887,6 @@ export default function AIRenderStudio({ state, setState }) {
                         </div>
                       ))}
                       </div>
-                      {/* Qué es cada imagen. Sin esto hay que acertar el botón
-                          de subida correcto antes de subir, que es justo lo que
-                          nadie sabe la primera vez. */}
-                      <div className="flex flex-wrap gap-2 mt-1.5">
-                      {refImages.map((img, i) => (
-                        <label key={`papel-${i}`} className="flex flex-col gap-0.5">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                            Imagen {i + 1} es…
-                          </span>
-                            <select defaultValue="pared"
-                            onChange={e => { asignarPapel(i, e.target.value); e.target.value = 'pared'; }}
-                            className="min-w-[150px] text-[13px] font-bold border-2 border-indigo-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                            <option value="acabado">Referencia de acabado</option>
-                            <option value="plano">El plano en planta</option>
-                            <option value="pared">Un alzado de pared</option>
-                          </select>
-                        </label>
-                      ))}
-                    </div>
                     {/* Amueblado virtual: botón específico (solo con permiso). */}
                     {canUseAmueblado && (
                     <button onClick={amueblarEstanciaReal} disabled={isGenerating || !refImage}
