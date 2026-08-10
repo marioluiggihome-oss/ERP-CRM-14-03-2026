@@ -591,6 +591,14 @@ class Render3DService:
                 "cabinet finish. Do NOT omit it or replace it with an empty wall. "
                 "Similarly, a rectangle labelled 'Horno'+'Micro' stacked = oven column "
                 "with oven below and microwave above, both integrated. "
+                "WALL UNITS (muebles altos): if the sketch shows wall units (upper cabinets) "
+                "drawn above the base units on the LEFT side of the kitchen (above the hob/sink "
+                "zone), those wall units MUST appear in the render above the worktop on that "
+                "same left zone — do NOT omit them or show only the right column zone with "
+                "wall units. The wall units run continuously above ALL base units where drawn. "
+                "HOB/COOKTOP: the hob (placa de inducción) MUST be clearly visible on the "
+                "worktop surface above its base unit — render it as a flush induction hob "
+                "with visible heating zones, not hidden under the worktop. "
             )
         elif ref_b64:
             ref_note = (
