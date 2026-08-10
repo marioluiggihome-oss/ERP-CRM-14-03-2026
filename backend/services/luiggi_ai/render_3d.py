@@ -692,10 +692,7 @@ class Render3DService:
                    f"from the drawing): {brief_txt}\n\n" if brief_txt else
                    "Use plausible, restrained modern finishes; the geometry still comes 100% "
                    "from the drawing.\n\n")
-                + "Photorealistic result: realistic PBR materials, natural light, soft real "
-                "shadows and reflections, 16:9. It must look like a real professional interior "
-                "photograph, not a cartoon or videogame render. No text, dimension lines, "
-                "watermarks, logos or people in the image."
+                + "Masterpiece ultra-sharp 8K architectural interior photograph, tack-sharp focus across the entire depth of field, maximum clarity and crisp definition on every edge, seam, joint and material texture. Extreme micro-detail PBR surfaces: razor-sharp wood grain, ultra-crisp marble veining, pristine reflections on appliances and metal, flawless clean gola channels. Balanced natural architectural daylight, realistic soft shadows, 16:9 aspect ratio. Zero blur, no noise, no smoothing artifacts, no cartoon or CGI plastic look. No text, dimension lines, watermarks, logos or people."
             )
             return await self._render_dispatch(
                 task_prompt, task_prompt, parsed_params,
@@ -958,8 +955,7 @@ class Render3DService:
             + (f"- Apply ONLY these finishes/changes, keep everything else identical to the references: {brief_txt}\n"
                if brief_txt else
                "- Keep the same finishes, colors and materials shown in the references.\n")
-            + "- Photorealistic result: realistic materials, natural light, soft real shadows and "
-            "reflections. No text, watermarks, logos, people or invented extra objects."
+            + "- Masterpiece ultra-sharp 8K architectural interior photograph, pin-sharp tack focus across entire depth of field, maximum clarity on every line, joint, edge and seam. Extreme micro-detail PBR materials: razor-sharp wood grain, ultra-crisp marble veining, pristine reflections on glass and metal, clean gola channels. Balanced natural daylight, soft realistic shadows, 16:9. Zero blur, no compression noise, no plastic or CGI look. No text, watermarks, logos, people or invented extra objects."
         )
         prompt = task_prompt
         parsed_params["hasReference"] = True
