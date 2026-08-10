@@ -5,8 +5,9 @@
  * escrita del titular.
  */
 import React, { useState, useEffect } from 'react';
-import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X, Clock, Printer, CheckCircle2, CircleDashed, ArrowLeft, FileText, Copy } from 'lucide-react';
+import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X, Clock, Printer, CheckCircle2, CircleDashed, ArrowLeft, FileText, Copy, Database } from 'lucide-react';
 import { getToken } from '../services/api';
+import ApolloProspeccion from './ApolloProspeccion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const auth = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
@@ -288,11 +289,30 @@ const PropData = ({ state }) => {
     // mismo filtro, mismo scroll— en vez de tener que buscarlo otra vez.
     <div className="h-full relative">
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-sky-50 overflow-y-auto">
-      <div className="hueco-logo rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
-        <h1 className="text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Prospección de Obra Nueva</h1>
-        <p className="hidden sm:block text-xs text-white/80">Localiza promociones y promotores a los que ofrecer cocinas · IA</p>
+      <div className="hueco-logo rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Analizador de Obras & Prospección</h1>
+          <p className="hidden sm:block text-xs text-white/80">Localiza promociones, arquitectos, interioristas y constructoras · IA</p>
+        </div>
+        <div className="flex gap-1.5 bg-black/20 p-1 rounded-xl backdrop-blur">
+          <button onClick={() => setMode('database')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${mode === 'database' ? 'bg-white text-indigo-900 shadow-md ring-2 ring-amber-400' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+            <Database size={14} className="text-amber-400" /> BASE DE DATOS
+          </button>
+          <button onClick={() => setMode('search')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${mode === 'search' ? 'bg-white text-indigo-900 shadow-md' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+            <Search size={14} /> Obra Nueva
+          </button>
+          <button onClick={() => setMode('image')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${mode === 'image' ? 'bg-white text-indigo-900 shadow-md' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+            <ImageIcon size={14} /> Desde Captura
+          </button>
+        </div>
       </div>
 
+      {mode === 'database' ? (
+        <div className="flex-1 -mx-4 sm:-mx-6 -mb-24 mt-[-10px] bg-slate-50">
+          <ApolloProspeccion currentUser={state?.currentUser} />
+        </div>
+      ) : (
+      <>
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
         <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
           <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
@@ -463,6 +483,8 @@ const PropData = ({ state }) => {
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
 

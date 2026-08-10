@@ -1304,7 +1304,7 @@ const App = () => {
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'propdata' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Building2 size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Obra Nueva</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Analizador Obras</span>
                       </button>
                     )}
 
