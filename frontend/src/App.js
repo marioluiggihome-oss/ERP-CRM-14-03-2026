@@ -52,6 +52,8 @@ const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
 const Expediente = lazy(() => import('./components/Expediente')); // Expediente único de la obra (tablet de 8")
 const Almacen = lazy(() => import('./components/Almacen')); // Existencias, reservas y plan de compra
 const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de negocio de la fábrica (SOLO MASTER)
+const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // Landing comercial pública de Studio3K / RenderIA
+
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
@@ -1799,6 +1801,15 @@ const App = () => {
             
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} initialTab={(state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined} focusEvent={state.crmFocusEvent} />}
+
+            {/* Landing Comercial Studio3K */}
+            {state.currentTab === 'landingStudio' && (
+              <ErrorBoundary>
+                <div className="h-full overflow-y-auto">
+                  <LandingStudio3K onOpenApp={() => setState(p => ({ ...p, currentTab: 'estudioCocinas' }))} />
+                </div>
+              </ErrorBoundary>
+            )}
             </Suspense>
             </div>
 

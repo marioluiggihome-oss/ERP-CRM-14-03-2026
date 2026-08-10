@@ -1612,3 +1612,48 @@ async def email_crm_report(report_id: str, payload: dict):
     if not ok:
         raise HTTPException(status_code=502, detail="No se pudo enviar el email (revisa la configuración de correo).")
     return {"success": True}
+
+
+public_crm_router = APIRouter(tags=["crm_public"])
+
+@public_crm_router.post("/api/crm/lead-publico")
+async def capture_public_lead(data: dict):
+    """Captura de lead desde la landing comercial Studio3K."""
+    db = _get_db()
+    lead_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    nombre = (data.get("nombre") or "").strip()
+    email = (data.get("email") or "").strip()
+    telefono = (data.get("telefono") or "").strip()
+    empresa = (data.get("empresa") or "").strip()
+    ciudad = (data.get("ciudad") or "").strip()
+
+    contact_doc = {
+        "id": lead_id,
+        "name": nombre,
+        "company": empresa,
+        "email": email,
+        "phone": telefono,
+        "city": ciudad,
+        "type": "tienda_cocinas",
+        "origin": data.get("origen", "Landing Studio3K"),
+        "notes": f"Lead captado desde Studio3K. Ciudad: {ciudad}. Empresa: {empresa}.",
+        "createdAt": now,
+        "updatedAt": now
+    }
+    await db.crm_contacts.insert_one(contact_doc)
+
+    opp_doc = {
+        "id": str(uuid.uuid4()),
+        "contactId": lead_id,
+        "title": f"Demo Studio3K - {empresa or nombre}",
+        "value": 1188.0,
+        "stage": "nuevo",
+        "probability": 40,
+        "notes": f"Interesado en Renders 3D Studio3K. Tel: {telefono}. Email: {email}",
+        "createdAt": now,
+        "updatedAt": now
+    }
+    await db.crm_opportunities.insert_one(opp_doc)
+    return {"success": True, "lead_id": lead_id}
+

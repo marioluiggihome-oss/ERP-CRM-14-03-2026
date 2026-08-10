@@ -78,6 +78,7 @@ from routes import (
     orders_router,
     ai_engine_router,
 )
+from routes.crm_module import public_crm_router
 from routes.clients import router as clients_router
 from routes.auth_routes import router as auth_routes_router
 from routes.products import router as products_router
@@ -304,6 +305,7 @@ api_router.include_router(auth_routes_router)
 api_router.include_router(products_router)
 api_router.include_router(projects_router)
 api_router.include_router(apollo_prospects_router)
+app.include_router(public_crm_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
