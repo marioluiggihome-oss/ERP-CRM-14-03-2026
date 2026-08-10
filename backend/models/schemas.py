@@ -247,6 +247,7 @@ class UserUpdate(BaseModel):
     crmOnly: Optional[bool] = None          # Usuario SOLO CRM (entra directo, sin barra de navegación)
     canUsePresupuestador1: Optional[bool] = None  # Acceso al Presupuestador 1 (independiente del 2)
     canUsePresupuestador2: Optional[bool] = None  # Acceso al Presupuestador 2 (MV por tarifa)
+    canUsePresupuestador3: Optional[bool] = None  # Acceso a Cocina Montada 3 (Relación directa y códigos MV)
     canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None

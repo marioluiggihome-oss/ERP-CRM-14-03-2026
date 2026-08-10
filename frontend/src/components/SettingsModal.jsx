@@ -2074,6 +2074,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
+                            checked={userForm.canUsePresupuestador3 !== false}
+                            onChange={(e) => setUserForm({...userForm, canUsePresupuestador3: e.target.checked})}
+                            className="w-5 h-5 rounded border-2 border-indigo-300"
+                          />
+                          <span title="Habilita Cocina Montada 3 (presupuestación rápida por códigos MV)." className="text-sm font-black text-slate-900">Uso Cocina Montada 3</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
                             checked={userForm.allowedModules?.includes('despiece')}
                             onChange={() => handleToggleModule('despiece')}
                             className="w-5 h-5 rounded border-2 border-indigo-300"
@@ -2178,6 +2187,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-brand"
                               />
                               <span title="Acceso al presupuestador secundario (Cocina Montada 2)." className="text-xs font-bold text-slate-700">Cocina Montada 2</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={userForm.canUsePresupuestador3 !== false}
+                                onChange={(e) => setUserForm({...userForm, canUsePresupuestador3: e.target.checked})}
+                                className="w-4 h-4 rounded accent-indigo-600"
+                              />
+                              <span title="Acceso al presupuestador Cocina Montada 3 (por relación y códigos MV)." className="text-xs font-bold text-slate-700">Cocina Montada 3</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input

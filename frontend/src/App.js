@@ -1268,11 +1268,12 @@ const App = () => {
                     )}
 
                     {/* Presupuestador 3 (Relación Directa MV por Códigos) */}
-                    {(state.currentUser?.canUsePresupuestador2 !== false || state.currentUser?.isAdmin) && (
+                    {(state.currentUser?.canUsePresupuestador3 !== false) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'cocinaMontada3'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinaMontada3' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         title="Cocina Montada 3: Presupuestación rápida por relación y códigos"
+                        data-testid="cocina-montada-3-nav-btn"
                       >
                         <Layers size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada 3</span>
