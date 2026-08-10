@@ -46,7 +46,7 @@ function BarraAnalisis({ texto, hechas, total }) {
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap, Printer } from 'lucide-react';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
@@ -3430,6 +3430,13 @@ export default function AIRenderStudio({ state, setState }) {
                   title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
                   {attached ? <><CheckCircle size={12} /> <span className="hidden sm:inline truncate">Adjuntado</span></> : <><Send size={12} /> <span className="hidden sm:inline truncate">{tipo3d === 'armario' ? 'Armarios' : 'Presup.'}</span></>}
                 </button>
+                {/* Botón Blanco y Negro / Modo Taller para imprimir y anotar */}
+                <button onClick={() => setSchematic(s => !s)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black transition-colors ${schematic ? 'bg-zinc-900 text-white ring-2 ring-zinc-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  title="Modo Taller: convierte la imagen a blanco y negro de alto contraste con fondo claro, ideal para imprimir y anotar medidas a mano">
+                  <Printer size={12} />
+                  <span className="hidden sm:inline truncate">{schematic ? 'Color' : 'B/N Taller'}</span>
+                </button>
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 {/* Grupo visor */}
@@ -3647,7 +3654,7 @@ export default function AIRenderStudio({ state, setState }) {
                     className="max-w-full max-h-full object-contain transition-transform"
                     style={{
                       ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
-                      ...(schematic ? { filter: 'grayscale(1) brightness(1.22) contrast(0.82)' } : {}),
+                      ...(schematic ? { filter: 'grayscale(100%) contrast(140%) brightness(115%)' } : {}),
                     }}
                     onError={() => setImgError(true)}
                     onClick={placeMark}
