@@ -45,6 +45,25 @@ const NOMBRE_CAMPO = {
   ivaRate: 'IVA',
   globalDiscount: 'descuento global',
   globalMarkup: 'incremento global',
+  lineMarkup: 'INC% de la línea',
+  expNumber: 'nº de expediente',
+  budgetNumber: 'nº de presupuesto',
+  totalPvp: 'total',
+};
+
+// Los mensajes de Pydantic vienen en inglés y de forma técnica. Los tres o
+// cuatro que salen de verdad, dichos como los diría una persona.
+const TRADUCCION_MSG = [
+  [/unable to parse string as a number|valid number/i, 'está en blanco o no es un número'],
+  [/valid integer/i, 'tiene que ser un número entero'],
+  [/[Ff]ield required/i, 'falta por rellenar'],
+  [/greater than 0|greater_than/i, 'tiene que ser mayor que cero'],
+  [/valid string/i, 'no es un texto válido'],
+];
+
+const _traducirMsg = (msg) => {
+  for (const [patron, texto] of TRADUCCION_MSG) if (patron.test(msg)) return texto;
+  return msg;
 };
 
 const _campo = (nombre) => NOMBRE_CAMPO[nombre] || nombre;
@@ -52,7 +71,11 @@ const _campo = (nombre) => NOMBRE_CAMPO[nombre] || nombre;
 /** Convierte el `loc` de FastAPI en algo que se entienda. */
 function _donde(loc) {
   // ['body', 'lines', 0, 'quantity'] → «línea 1 · cantidad»
-  const partes = (loc || []).filter(p => p !== 'body');
+  // Del formato `campo` llega como texto: "body.lines.0.quantity" ya partido,
+  // así que los índices vienen como cadenas y hay que volverlos a número.
+  const partes = (loc || [])
+    .filter(p => p !== 'body' && p !== '')
+    .map(p => (typeof p === 'string' && /^\d+$/.test(p) ? Number(p) : p));
   const trozos = [];
   for (let i = 0; i < partes.length; i++) {
     const p = partes[i];
@@ -79,11 +102,17 @@ export function mensajeDeError(detail, status) {
   if (typeof detail === 'string' && detail.trim()) return detail;
 
   if (Array.isArray(detail) && detail.length) {
-    // Error de validación de FastAPI: una entrada por campo que no cuadra.
+    // Error de validación: una entrada por campo que no cuadra.
+    //
+    // OJO: este servidor NO manda el formato de FastAPI tal cual. Tiene su
+    // propio manejador (`_validation_error_handler` en server.py) que reescribe
+    // cada error como {campo: "body.lines.0.quantity", msg: "..."}. Se
+    // entienden LAS DOS FORMAS: si solo se leyera `loc`, el mensaje llegaba sin
+    // decir qué campo fallaba — que es la mitad de lo que sirve.
     const problemas = detail.slice(0, 3).map((e) => {
-      const donde = _donde(e?.loc);
-      const que = e?.msg || 'dato no válido';
-      return donde ? `${donde}: ${que}` : que;
+      const donde = _donde(e?.loc || String(e?.campo || '').split('.'));
+      const que = _traducirMsg(e?.msg || 'dato no válido');
+      return donde ? `${donde} ${que}` : que;
     });
     const resto = detail.length > 3 ? ` (y ${detail.length - 3} más)` : '';
     return `El servidor ha rechazado los datos — ${problemas.join('; ')}${resto}.`;

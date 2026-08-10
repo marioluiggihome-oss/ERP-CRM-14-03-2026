@@ -201,6 +201,46 @@ const Digitalizador = ({ state, setState }) => {
     setShowSaveOptionsModal(true);
   };
 
+  /**
+   * Deja las líneas como el servidor las entiende, ANTES de mandarlas.
+   *
+   * La pantalla usa la cadena vacía para decir «esta casilla está en blanco»:
+   * el INC% sin poner, la cantidad borrada. Eso está bien DENTRO de la pantalla
+   * —hay que poder dejar un hueco a medio escribir— pero al servidor no se le
+   * puede mandar: espera un número, recibe `""` y rechaza el presupuesto entero
+   * con «unable to parse string as a number».
+   *
+   * Aquí se traduce cada hueco a lo que significa DE VERDAD, sin inventar nada:
+   *
+   *   · INC% en blanco  → `null`, que es exactamente «usa el incremento
+   *     global». No es una invención: es lo mismo dicho en el idioma del
+   *     servidor.
+   *
+   *   · CANTIDAD en blanco → NO se traduce. Eso no significa 0 ni 1: significa
+   *     que falta por decidir. Poner un número ahí sería inventarme el pedido,
+   *     así que se para el guardado y se dice qué línea es.
+   */
+  const prepararLineas = () => {
+    const sinCantidad = [];
+    const limpias = lines.map((l, i) => {
+      const cantidad = (l.quantity === '' || l.quantity == null) ? null : Number(l.quantity);
+      if (cantidad === null || Number.isNaN(cantidad)) sinCantidad.push(i + 1);
+      const inc = (l.lineMarkup === '' || l.lineMarkup == null) ? null : Number(l.lineMarkup);
+      return {
+        ...l,
+        quantity: cantidad,
+        lineMarkup: Number.isNaN(inc) ? null : inc,
+        price: Number(l.price) || 0,
+        discount: Number(l.discount) || 0,
+      };
+    });
+    if (sinCantidad.length) {
+      throw new Error(`Falta la cantidad en la línea ${sinCantidad.join(', ')}. `
+        + 'Escríbela antes de guardar: dejarla en blanco no es lo mismo que poner 0.');
+    }
+    return limpias;
+  };
+
   // Ejecutar guardado con las opciones seleccionadas
   const executeSave = async () => {
     setIsSaving(true);
@@ -208,6 +248,7 @@ const Digitalizador = ({ state, setState }) => {
     let savedItems = [];
 
     try {
+      const lineasLimpias = prepararLineas();
       // 1. Guardar en historial del digitalizador (siempre)
       if (saveToHistory) {
         const historyResponse = await fetch(`${API_URL}/api/digitalizador/save`, {
@@ -226,7 +267,7 @@ const Digitalizador = ({ state, setState }) => {
             labelArmazon,
             labelCostados,
             validez,
-            lines,
+            lines: lineasLimpias,
             globalDiscount,
             globalMarkup,
             ivaRate,
@@ -260,7 +301,7 @@ const Digitalizador = ({ state, setState }) => {
             finish: acabado,
             carcassMaterial: armazon,
             sideColor: costados,
-            items: lines.map(line => ({
+            items: lineasLimpias.map(line => ({
               productId: line.id,
               productCode: line.reference || 'DIGI',
               productName: line.description,
@@ -1373,13 +1414,21 @@ const Digitalizador = ({ state, setState }) => {
                             type="number"
                             value={(line.quantity === '' || line.quantity == null) ? '' : line.quantity}
                             onChange={(e) => {
+                              // DECIMALES, no `parseInt`. Una encimera se vende por
+                              // metros: 3,5 es una cantidad normal y `parseInt` la
+                              // dejaba en 3 — cobrando medio metro de menos sin
+                              // decir nada. Y se admite la coma, que es como se
+                              // escribe aquí.
                               const v = e.target.value;
-                              if (line.isManual) updateLine(line.id, 'quantity', v === '' ? '' : (parseInt(v) || 0));
-                              else updateLine(line.id, 'quantity', parseInt(v) || 1);
+                              const n = parseFloat(String(v).replace(',', '.'));
+                              if (line.isManual) updateLine(line.id, 'quantity', v === '' ? '' : (isNaN(n) ? 0 : n));
+                              else updateLine(line.id, 'quantity', isNaN(n) ? 1 : n);
                             }}
                             placeholder={line.isManual ? '–' : '1'}
-                            className="w-12 bg-transparent text-center font-bold text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                            className="w-14 bg-transparent text-center font-bold text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
                             min="0"
+                            step="any"
+                            title="Admite decimales: una encimera va por metros lineales (3,5)"
                           />
                         </td>
                         <td className="px-4 py-3">

@@ -158,6 +158,61 @@ def test_el_guardado_del_digitalizador_ya_no_ensenia_objetos():
         "«[object Object]» otra vez")
 
 
+def test_el_traductor_entiende_el_formato_de_ESTE_servidor():
+    """CANDADO. `server.py` NO manda el formato de FastAPI: tiene su propio
+    manejador que reescribe cada error como {campo, msg}. Leyendo solo `loc`, el
+    mensaje llegaba sin decir que campo fallaba — la mitad de lo que sirve."""
+    src = _leer(ERRORES_JS)
+    assert "e?.campo" in src or "campo" in src, (
+        "el traductor solo entiende el formato estandar de FastAPI; este "
+        "servidor manda {campo, msg} y el aviso saldria sin nombrar el campo")
+    manejador = _leer(os.path.join(BACKEND, "server.py"))
+    assert '"campo"' in manejador, (
+        "el manejador de errores del servidor ha cambiado de formato: revisa "
+        "services/errores.js o los avisos dejaran de decir que campo falla")
+
+
+def test_los_huecos_vacios_no_viajan_como_texto():
+    """LO QUE ROMPIA EL GUARDADO. La pantalla usa "" para «casilla en blanco»,
+    y eso al servidor no se le puede mandar: espera un numero, recibe "" y
+    rechaza el presupuesto entero."""
+    src = _leer(DIGI_JSX)
+    assert "prepararLineas" in src, (
+        "las lineas se mandan tal cual: un INC% en blanco viaja como cadena "
+        "vacia y el servidor rechaza el presupuesto entero")
+    i = src.index("const prepararLineas")
+    cuerpo = src[i:i + 1800]
+    assert "lineMarkup" in cuerpo and "null" in cuerpo, (
+        "el INC% en blanco no se traduce a `null`, que es lo que significa: "
+        "«usa el incremento global»")
+
+
+def test_una_cantidad_en_blanco_NO_se_rellena_sola():
+    """CANDADO. Una cantidad vacia no significa 0 ni 1: significa que falta por
+    decidir. Poner un numero ahi seria inventarse el pedido del cliente."""
+    src = _leer(DIGI_JSX)
+    i = src.index("const prepararLineas")
+    cuerpo = src[i:i + 1800]
+    assert "sinCantidad" in cuerpo and "throw new Error" in cuerpo, (
+        "se rellena sola la cantidad que falta en vez de parar y decir que "
+        "linea es")
+
+
+def test_la_cantidad_admite_decimales_tambien_en_la_pantalla():
+    """De nada sirve que el servidor acepte 3,5 si la casilla lo recorta a 3 —
+    y encima sin decirlo: medio metro de encimera menos."""
+    import re as _re
+    # Sin los comentarios: la explicacion de por que NO se usa `parseInt` habla
+    # de `parseInt`, y la prueba se disparaba contra su propio comentario.
+    src = _re.sub(r"//[^\n]*", "", _leer(DIGI_JSX))
+    i = src.index("updateLine(line.id, 'quantity'")
+    trozo = src[max(0, i - 700):i + 200]
+    assert "parseInt" not in trozo, (
+        "la cantidad vuelve a leerse con `parseInt`: una encimera de 3,5 m se "
+        "quedaria en 3 sin avisar")
+    assert "replace(',', '.')" in trozo, "no admite la coma decimal"
+
+
 def test_ninguna_pantalla_mete_un_detail_crudo_en_un_Error():
     """Barre todo el frontend: era un patron copiado por muchos sitios."""
     import re
