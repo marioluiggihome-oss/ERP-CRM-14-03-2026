@@ -1,136 +1,168 @@
-# ERP-CRM Luiggi Home
+# ERP-CRM
 
-Sistema de gestión profesional para empresas de cocinas y muebles a medida. Integra presupuestación, CRM, catálogo de productos, renders 3D con IA, gestión de pedidos, facturación y rentabilidad en una única plataforma web.
+Sistema integral ERP/CRM para gestión empresarial con módulos de ventas, inventario, facturación, proyectos y renderizado 3D con IA.
 
----
+## 📋 Tabla de contenidos
 
-## Descripción general
+- [Descripción](#descripción)
+- [Arquitectura](#arquitectura)
+- [Módulos principales](#módulos-principales)
+- [Tech Stack](#tech-stack)
+- [Requisitos previos](#requisitos-previos)
+- [Instalación](#instalación)
+- [Variables de entorno](#variables-de-entorno)
+- [Uso](#uso)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Testing](#testing)
+- [Contribuir](#contribuir)
+- [Licencia](#licencia)
 
-ERP-CRM Luiggi Home es una aplicación full-stack diseñada específicamente para el sector del mueble de cocina. Permite a los equipos de venta presupuestar cocinas montadas y desmontadas (cascos ACB), gestionar clientes y oportunidades comerciales, generar renders fotorrealistas con IA, controlar pedidos a proveedor y analizar la rentabilidad por proyecto.
+## Descripción
 
-La plataforma está en producción en [erp.luiggihome.es](https://erp.luiggihome.es) y da servicio a múltiples usuarios con distintos niveles de acceso (master, gerente, comercial, carpintero, montador, tienda).
-
----
+Plataforma ERP/CRM que combina gestión comercial tradicional con herramientas de IA para renderizado 3D de productos. El sistema permite gestionar clientes, inventario, facturación, proyectos y catálogo de productos con un frontend interactivo y un backend en Python.
 
 ## Arquitectura
 
-```
-erp-repo/
-├── backend/          # API REST en Python (FastAPI)
-│   ├── routes/       # Endpoints por módulo (auth, CRM, pedidos, cascos, IA…)
-│   ├── services/     # Lógica de negocio (IA, Stripe, email, backup, JWT…)
-│   ├── models/       # Modelos Pydantic (User, Client, Project, Product…)
-│   └── main.py       # Punto de entrada FastAPI
-├── frontend/         # SPA en React (Create React App)
-│   └── src/
-│       ├── components/  # ~60 componentes (CRM, Cascos, AIRenderStudio…)
-│       └── App.js       # Router principal y gestión de estado global
-└── .github/
-    └── workflows/    # CI: build frontend + syntax check backend
-```
+El proyecto sigue una arquitectura cliente-servidor con separación de responsabilidades:
 
-**Stack tecnológico:**
-
-| Capa | Tecnología |
-|------|-----------|
-| Frontend | React 18, Tailwind CSS, Lucide Icons |
-| Backend | Python 3.11, FastAPI, Motor (async MongoDB) |
-| Base de datos | MongoDB Atlas |
-| Hosting | Railway (backend + frontend como servicios separados) |
-| IA — Renders | Google Gemini imagen, Manus AI |
-| IA — Visión/texto | Google Gemini Pro |
-| Pagos | Stripe (suscripciones carpinteros) |
-| Email | SMTP / SendGrid |
-| Almacenamiento | Google Drive (backups automáticos) |
-
----
+- **Frontend**: Aplicación JavaScript con interfaz de usuario para gestión de módulos ERP/CRM.
+- **Backend**: API en Python que expone endpoints para operaciones de negocio, persistencia de datos y integración con motores de IA.
+- **Motor de IA**: Servicio integrado para generación de renders 3D de productos a partir de parámetros de configuración.
+- **Docker**: Contenedores para despliegue consistente entre entornos de desarrollo y producción.
 
 ## Módulos principales
 
-### Presupuestación
-- **Cocina Montada** — presupuestador por puntos con catálogos MV, GTV y acabados personalizados.
-- **Cocina Desmontada (Cascos)** — catálogo ACB con equivalencias, importación desde proforma Alvic (PDF), rentabilidad MV/Alvic.
-- **Armarios** — presupuestador de armarios y vestidores a medida.
+| Módulo | Descripción |
+|---------|-------------|
+| **CRM** | Gestión de clientes, contactos y oportunidades de venta |
+| **Inventario** | Control de stock, productos y almacenes |
+| **Facturación** | Emisión de facturas, proformas y gestión de impuestos |
+| **Proyectos** | Seguimiento de proyectos y tareas asociadas |
+| **Render 3D** | Generación de renders de productos mediante IA |
+| **Digitalizador** | Herramienta de digitalización de catálogo |
 
-### CRM
-Gestión completa del ciclo de venta: contactos, pipeline de oportunidades, calendario de visitas, parte diario, postventa y marketing por email.
+## Tech Stack
 
-### Estudio 3D (AIRenderStudio)
-Generación de renders fotorrealistas por voz o texto. Soporta 4 motores de IA seleccionables: Gemini estándar, Manus, Gemini premium (prompt ultra-fotorrealista) y Gemini Flash.
+- **Frontend**: JavaScript, HTML, CSS
+- **Backend**: Python
+- **IA/Renderizado**: Motor de renderizado 3D con IA (`ai_engine.py`, `render_3d.py`)
+- **Despliegue**: Docker, Docker Compose
+- **CI/CD**: GitHub Actions
+- **Dependencias**: Dependabot para actualizaciones automáticas
 
-### Pedidos y facturación
-Control de pedidos de venta y compra, vinculación con expedientes, exportación a PDF y gestión de facturas.
+## Requisitos previos
 
-### Rentabilidad
-Análisis de margen por proyecto: coste de producción, valor de venta, rentabilidad por líneas de documento.
+- Node.js 18+ y npm
+- Python 3.10+
+- Docker y Docker Compose (opcional, para despliegue con contenedores)
+- pip (gestor de paquetes de Python)
 
-### Portal Carpintero
-Acceso independiente para carpinteros externos con sus propios catálogos, usuarios y presupuestos.
+## Instalación
 
----
-
-## Variables de entorno requeridas
-
-### Backend
-- `MONGODB_URL` — Cadena de conexión MongoDB Atlas
-- `JWT_SECRET` y `JWT_REFRESH_SECRET` — Claves de firma JWT
-- `GEMINI_API_KEY` — Google Gemini (renders + visión)
-- `REPLICATE_API_TOKEN` — Opcional, Flux Schnell renders
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` — Email
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — Pagos
-- `GOOGLE_DRIVE_FOLDER_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON` — Backups Drive
-- `BACKEND_URL`, `FRONTEND_URL`, `ENVIRONMENT`
-
-### Frontend
-- `REACT_APP_BACKEND_URL` — URL del backend en Railway
-
----
-
-## Instalación local
-
-### Requisitos previos
-- Python 3.11+
-- Node.js 18+
-- MongoDB Atlas (o instancia local)
-
-### Backend
+### Opción 1: Local
 
 ```bash
-cd backend
+# Clonar el repositorio
+git clone https://github.com/marioluiggihome-oss/ERP-CRM-14-03-2026.git
+cd ERP-CRM-14-03-2026
+
+# Instalar dependencias del frontend
+npm install
+
+# Instalar dependencias del backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8080
+# o si están en backend/
+pip install -r backend/requirements.txt
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus configuraciones
+
+# Iniciar el frontend
+npm start
+
+# Iniciar el backend (en otra terminal)
+python app.py
+# o
+python backend/app.py
 ```
 
-### Frontend
+### Opción 2: Docker
 
 ```bash
-cd frontend
-yarn install
-yarn start
+# Clonar y construir
+git clone https://github.com/marioluiggihome-oss/ERP-CRM-14-03-2026.git
+cd ERP-CRM-14-03-2026
+
+docker-compose up --build
 ```
 
----
+## Variables de entorno
 
-## CI/CD
+Crea un archivo `.env` basado en `.env.example` con las siguientes variables:
 
-| Workflow | Trigger | Qué comprueba |
-|----------|---------|---------------|
-| `frontend-build.yml` | Push a `main`, PR con cambios en `frontend/` | Compila el frontend con `yarn build` |
-| `backend-check.yml` | Push a `main`, PR con cambios en `backend/` | Sintaxis Python con `compileall` + AST parse |
+```env
+# Base de datos
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=erp_crm
+DB_USER=tu_usuario
+DB_PASSWORD=tu_password
 
----
+# API de IA (para renderizado 3D)
+AI_API_KEY=tu_api_key
+AI_PROVIDER=openai
 
-## Despliegue en Railway
+# Configuración del servidor
+PORT=5000
+FLASK_ENV=development
+SECRET_KEY=tu_secret_key
+```
 
-- **exciting-emotion** — backend FastAPI (puerto 8080)
-- **ERP-CRM-14-03-2026** — frontend React (build estático)
+> ⚠️ **Importante**: Nunca subas el archivo `.env` al repositorio. Ya está incluido en `.gitignore`.
 
-Los deploys se disparan automáticamente en cada push a `main`.
+## Uso
 
----
+1. Accede al frontend en `http://localhost:3000` (o el puerto configurado).
+2. La API del backend está disponible en `http://localhost:5000`.
+3. Para generar renders 3D, navega al módulo de Digitalizador y configura los parámetros del producto.
+
+## Estructura del proyecto
+
+```
+ERP-CRM-14-03-2026/
+├── frontend/          # Código del frontend (JavaScript)
+├── backend/           # API en Python
+│   ├── app.py         # Punto de entrada del servidor
+│   ├── ai_engine.py   # Motor de IA para renders
+│   └── render_3d.py   # Lógica de renderizado 3D
+├── .github/
+│   ├── workflows/     # Pipelines de CI/CD
+│   └── dependabot.yml # Configuración de Dependabot
+├── Dockerfile         # Imagen de la aplicación
+├── docker-compose.yml # Orquestación de contenedores
+├── LICENSE            # Licencia MIT
+└── README.md          # Este archivo
+```
+
+## Testing
+
+```bash
+# Tests del frontend
+npm test
+
+# Tests del backend
+pytest
+# o si los tests están en una carpeta específica
+pytest tests/
+```
+
+Los tests se ejecutan automáticamente en cada push y pull request mediante GitHub Actions.
+
+## Contribuir
+
+Las contribuciones son bienvenidas. Por favor, lee [CONTRIBUTING.md](CONTRIBUTING.md) para conocer el proceso de desarrollo y las normas de estilo.
 
 ## Licencia
 
-Copyright © 2024-2026 Luiggi Home. Todos los derechos reservados.
-
-Este software es propietario y confidencial. Queda prohibida su copia, distribución, modificación o uso sin autorización expresa y por escrito del titular. Véase el archivo [LICENSE](./LICENSE) para más detalles.
+Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
