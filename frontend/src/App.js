@@ -53,6 +53,8 @@ const Expediente = lazy(() => import('./components/Expediente')); // Expediente 
 const Almacen = lazy(() => import('./components/Almacen')); // Existencias, reservas y plan de compra
 const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de negocio de la fábrica (SOLO MASTER)
 const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // Landing comercial pública de Studio3K / RenderIA
+const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Presupuestador 3 (Relación y códigos MV directa)
+
 
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
@@ -1265,6 +1267,18 @@ const App = () => {
                     </button>
                     )}
 
+                    {/* Presupuestador 3 (Relación Directa MV por Códigos) */}
+                    {(state.currentUser?.canUsePresupuestador2 !== false || state.currentUser?.isAdmin) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'cocinaMontada3'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinaMontada3' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        title="Cocina Montada 3: Presupuestación rápida por relación y códigos"
+                      >
+                        <Layers size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada 3</span>
+                      </button>
+                    )}
+
                     {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
                       <button
@@ -1707,6 +1721,16 @@ const App = () => {
                 incomingLibrary={state.p2PendingLibrary}
                 onLinesConsumed={() => setState(p => ({ ...p, p2PendingLines: null, p2PendingLibrary: null }))}
               /></ErrorBoundary>
+            )}
+            {state.currentTab === 'cocinaMontada3' && (
+              <ErrorBoundary>
+                <CocinaMontada3
+                  currentUser={state.currentUser}
+                  state={state}
+                  setState={setState}
+                  logo={state.logo}
+                />
+              </ErrorBoundary>
             )}
             {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
