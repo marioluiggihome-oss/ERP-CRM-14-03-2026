@@ -574,6 +574,44 @@ from services.cambios_proyecto import cambios_sin_aprobar
 _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
 
+@router.get("/cascos/mv/tarifas")
+async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
+    """Las tarifas MV disponibles, CADA UNA CON SUS ACABADOS.
+
+    Hasta ahora la pantalla pedía siempre T1, escrito a fuego: se presupuestaba
+    todo a la tarifa más barata aunque la cocina fuera un ZENIT (T4) o un FENIX
+    (T5). No daba ningún error — daba un presupuesto barato.
+
+    Se devuelven los acabados porque es lo que se sabe al presupuestar: nadie
+    dice «esta cocina es una T4», dice «esta cocina es ZENIT». Elegir por número
+    de tarifa es pedirle al comercial que se sepa la tabla de memoria.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo el master puede ver las tarifas MV.")
+    try:
+        with open(_MV_PATH, "r", encoding="utf-8") as f:
+            data = _mvjson.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo leer la tarifa MV: {e}")
+
+    acabados_meta = (data.get("_meta", {}) or {}).get("acabados", {}) or {}
+    tarifas = []
+    for clave in data.get("tariffs", {}):
+        # `_inc` no es un acabado: son incrementos (metalizado, difuminado).
+        acabados = [a for a in (acabados_meta.get(clave) or {}) if not a.startswith("_")]
+        tarifas.append({
+            "tarifa": clave,
+            "acabados": acabados,
+            "n": int(clave[1:]) if clave[1:].isdigit() else 999,
+        })
+    tarifas.sort(key=lambda t: t["n"])
+    return {
+        "success": True,
+        "pointValue": data.get("_meta", {}).get("pointValue", 3.33),
+        "tarifas": [{"tarifa": t["tarifa"], "acabados": t["acabados"]} for t in tarifas],
+    }
+
+
 @router.get("/cascos/mv/tarifa")
 async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(get_current_user)):
     """Devuelve la tarifa MV pedida (por defecto T1) con sus códigos y puntos, y el

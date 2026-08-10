@@ -81,10 +81,37 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const [selFam, setSelFam] = useState('');
   const [selCod, setSelCod] = useState('');
   const [selQty, setSelQty] = useState(1);
+  // LA TARIFA (grupo de precios). Estaba escrita a fuego en T1, así que todo se
+  // presupuestaba a la tarifa MÁS BARATA aunque la cocina fuera un ZENIT (T4) o
+  // un FENIX (T5). No daba ningún error: daba un presupuesto barato.
+  //
+  // Se recuerda la última usada, porque una cocina entera va toda a la misma y
+  // volver a elegirla en cada relación es una ocasión más de equivocarse.
+  const [tarifa, setTarifa] = useState(() => {
+    try { return localStorage.getItem('mv_tarifa') || 'T1'; } catch { return 'T1'; }
+  });
+  const [tarifas, setTarifas] = useState([]);
+  const acabadosDeTarifa = useMemo(
+    () => (tarifas.find(t => t.tarifa === tarifa)?.acabados) || [],
+    [tarifas, tarifa]);
   useEffect(() => {
-    fetch(`${apiUrl}/api/cascos/mv/tarifa?tariff=T1`, { headers: authHeaders() })
-      .then(r => r.json()).then(d => { if (d.success) { setFamilias(d.familias); setPv(d.pointValue || 3.33); } }).catch(() => {});
+    fetch(`${apiUrl}/api/cascos/mv/tarifas`, { headers: authHeaders() })
+      .then(r => r.json()).then(d => { if (d.success) setTarifas(d.tarifas || []); }).catch(() => {});
   }, [apiUrl, authHeaders]);
+  useEffect(() => {
+    try { localStorage.setItem('mv_tarifa', tarifa); } catch { /* noop */ }
+    fetch(`${apiUrl}/api/cascos/mv/tarifa?tariff=${encodeURIComponent(tarifa)}`, { headers: authHeaders() })
+      .then(r => r.json()).then(d => { if (d.success) { setFamilias(d.familias); setPv(d.pointValue || 3.33); } }).catch(() => {});
+  }, [apiUrl, authHeaders, tarifa]);
+
+  // Al cambiar de tarifa, los muebles YA añadidos valen otro dinero. Se
+  // recalculan todos: dejarlos con el precio de la tarifa anterior daría un
+  // presupuesto mezclado, con unas líneas a un precio y otras a otro.
+  useEffect(() => {
+    if (!familias) return;
+    setMuebles(prev => prev.map(m => ({ ...m, pvp: puntosLocal(m, m.alto) })));
+    // eslint-disable-line
+  }, [familias]);   // eslint-disable-line
   const codigosFam = useMemo(() => {
     if (!familias || !selFam) return [];
     const it = familias[selFam]?.items;
@@ -168,6 +195,31 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     return { ...m, alto, pvp: puntosLocal(m, alto) };
   }));
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
+
+  // ── LA MANO DE LA PUERTA ───────────────────────────────────────────────────
+  //
+  // Un código que acaba en «D/I» —AV30D/I, BF60D/I— es un mueble al que NADIE
+  // le ha decidido todavía hacia dónde abre. Si sale así hacia el taller, lo
+  // decide el taller: acierta la mitad de las veces, y la otra mitad es un
+  // frente desmontado y vuelto a taladrar en casa del cliente.
+  //
+  // Aquí se decide, que es donde se sabe: delante del plano.
+  const _MANO_SUFIJO = /(D\/I|D|I)$/;
+  const manoDe = (cod) => {
+    const m = _MANO_SUFIJO.exec(String(cod || '').toUpperCase());
+    if (!m) return undefined;          // ese código no lleva mano
+    return m[1] === 'D/I' ? null : m[1];   // null = sin decidir
+  };
+  const setMano = (k, mano) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const cod = String(m.cod || '');
+    // Se cambia SOLO el sufijo: el resto del código es el mueble y no se toca.
+    return { ...m, cod: cod.replace(/(D\/I|D|I)$/i, mano) };
+  }));
+
+  const setNota = (k, nota) => setMuebles(prev => prev.map(m => m._k === k ? { ...m, nota } : m));
+  // Cuántos siguen sin mano decidida: se dice antes de volcar, no después.
+  const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
 
   // LA ALTURA POR DEFECTO SE APLICA AL DATO, NO SOLO AL DESPLEGABLE.
   //
@@ -263,7 +315,16 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
   const confirmar = () => {
     if (!muebles.length) return;
-    onConfirm(muebles.map(m => ({ tipo: m.tipo, ancho: m.ancho, alto: m.alto, fondo: m.fondo, qty: m.qty || 1, cod: m.cod })));
+    // La MANO va dentro del código (BF60D o BF60I), que es como la entiende el
+    // taller. La OBSERVACIÓN viaja aparte para poder imprimirla bajo la línea.
+    if (sinMano > 0 && !window.confirm(
+      `Hay ${sinMano} mueble(s) sin decidir la mano (siguen como D/I).\n\n`
+      + 'Si sale así, la mano la decide el taller — y acierta la mitad de las veces.\n\n'
+      + '¿Volcar igualmente?')) return;
+    onConfirm(muebles.map(m => ({
+      tipo: m.tipo, ancho: m.ancho, alto: m.alto, fondo: m.fondo,
+      qty: m.qty || 1, cod: m.cod, nota: (m.nota || '').trim(),
+    })));
   };
 
   const noEncontrados = muebles.filter(m => !m.encontrado).length;
@@ -291,6 +352,25 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
         {/* Cabecera */}
         <div className="px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-between">
           <h3 className="font-black flex items-center gap-2"><FileUp size={18} /> Revisar relación de muebles</h3>
+
+          {/* GRUPO DE PRECIOS. Igual que en Cocina Montada: se elige la tarifa,
+              y al lado se enseñan sus acabados — porque nadie dice «esta cocina
+              es una T4», dice «esta cocina es ZENIT». */}
+          <div className="ml-auto mr-3 flex items-center gap-2 flex-wrap justify-end">
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/70">Tarifa</span>
+            <select value={tarifa} onChange={e => setTarifa(e.target.value)}
+              title="Grupo de precios de la tarifa MV. Toda la cocina va a la misma."
+              className="px-2 py-1 rounded-lg text-sm font-black bg-white text-indigo-700 border-2 border-white/40 outline-none">
+              {(tarifas.length ? tarifas : [{ tarifa: 'T1', acabados: [] }]).map(t => (
+                <option key={t.tarifa} value={t.tarifa}>{t.tarifa}</option>
+              ))}
+            </select>
+            {acabadosDeTarifa.length > 0 && (
+              <span className="text-[10px] text-white/80 max-w-[280px] truncate" title={acabadosDeTarifa.join(' · ')}>
+                {acabadosDeTarifa.join(' · ')}
+              </span>
+            )}
+          </div>
           <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg"><X size={18} /></button>
         </div>
 
@@ -405,7 +485,9 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                 <th className="text-left">Tipo</th>
                 <th className="text-right">Ancho</th>
                 <th className="text-center">Alto</th>
+                <th className="text-center" title="Hacia dónde abre la puerta">Mano</th>
                 <th className="text-center">Uds</th>
+                <th className="text-left">Observación</th>
                 <th className="text-right">PVP MV</th>
                 <th className="text-right whitespace-nowrap">
                   <button onClick={candadoClick} {...candadoLargo.props}
@@ -440,8 +522,29 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                     )}
                   </td>
                   <td className="text-center">
+                    {manoDe(m.cod) === undefined ? <span className="text-slate-300 text-xs">—</span> : (
+                      <div className="inline-flex rounded-lg overflow-hidden border border-slate-300">
+                        {['I', 'D'].map(x => (
+                          <button key={x} onClick={() => setMano(m._k, x)}
+                            title={x === 'I' ? 'Abre a la izquierda' : 'Abre a la derecha'}
+                            className={`px-2 py-0.5 text-xs font-black ${manoDe(m.cod) === x
+                              ? 'bg-indigo-600 text-white'
+                              : manoDe(m.cod) === null ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-white text-slate-400 hover:bg-slate-50'}`}>
+                            {x}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="text-center">
                     <input type="number" min="1" value={m.qty || 1} onChange={e => setQty(m._k, e.target.value)}
                       className="w-14 text-center border border-slate-300 rounded px-1 py-0.5 text-sm" />
+                  </td>
+                  <td>
+                    <input value={m.nota || ''} onChange={e => setNota(m._k, e.target.value)}
+                      placeholder="—"
+                      title="Sale impresa en el presupuesto, debajo de la línea"
+                      className="w-full min-w-[120px] border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 placeholder:text-slate-300" />
                   </td>
                   <td className="text-right text-slate-700 font-semibold">{eur(m.pvp)}</td>
                   <td className="text-right text-slate-600">{verCoste ? (m.encontrado ? eur(m.coste) : '—') : oculto}</td>
@@ -454,7 +557,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                 </tr>
               ))}
               {!filas.length && (
-                <tr><td colSpan={9} className="text-center text-slate-400 py-6 text-sm">No hay muebles. Añade alguno arriba.</td></tr>
+                <tr><td colSpan={11} className="text-center text-slate-400 py-6 text-sm">No hay muebles. Añade alguno arriba.</td></tr>
               )}
             </tbody>
           </table>

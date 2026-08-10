@@ -58,6 +58,19 @@ const colorConGrosor = (k) => {
 // si la pantalla se abre suelta y no llega ninguno.
 const PUNTO_POR_DEFECTO = 2.0;
 
+// LA HOLGURA DE LA PUERTA.
+//
+// Una puerta NO mide lo que mide el hueco: se le quita la junta, o roza con la
+// de al lado y no cierra. Son los mismos milímetros que Cocina Montada
+// (`doorToleranceHeight` / `doorToleranceWidth` en el despiece) y los que dio el
+// master: 2 mm de alto y 3 de ancho.
+//
+// Se pueden cambiar en pantalla, porque dependen del herraje y del tipo de
+// frente. Lo que NO se puede es no aplicarlos: pedir la puerta a la medida
+// exacta del hueco es pedirla mal, y no se ve hasta que llega.
+const HOLGURA_ALTO_MM = 2;
+const HOLGURA_ANCHO_MM = 3;
+
 // Tipos de cascos disponibles para el selector inline
 const TIPOS_ACB = [
   'Alto Con Balda', 'Alto Platero Con Balda', 'Alto Campana Extraíble', 'Alto Cubretermo',
@@ -414,6 +427,17 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
   // Catorce columnas no caben en una pantalla ni al 100 %. Plegado se ve lo que
   // hace falta para trabajar; desplegado, de dónde sale cada euro. Se recuerda,
   // porque quien trabaja plegado lo quiere plegado siempre.
+  // Holgura de la puerta respecto al hueco. Se recuerda, que es de la casa.
+  const [holgura, setHolgura] = useState(() => {
+    try {
+      const g = JSON.parse(localStorage.getItem('alvic_holgura_puerta') || 'null');
+      return { alto: Number(g?.alto ?? HOLGURA_ALTO_MM), ancho: Number(g?.ancho ?? HOLGURA_ANCHO_MM) };
+    } catch { return { alto: HOLGURA_ALTO_MM, ancho: HOLGURA_ANCHO_MM }; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('alvic_holgura_puerta', JSON.stringify(holgura)); } catch { /* noop */ }
+  }, [holgura]);
+
   const [verDesglose, setVerDesglose] = useState(() => {
     try { return localStorage.getItem('alvic_ver_desglose') === '1'; } catch { return false; }
   });
@@ -646,7 +670,14 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
           frenteMixto = ((it.cajones || 0) + (it.gavetas || 0)) > 0;
           if (anchoM > 0 && altoM > 0 && !frenteMixto) {
             const n = it.puertas;
-            puertasDelMueble = { n, ancho: Math.round(anchoM / n), alto: Math.round(altoM), uds };
+            // La medida de PEDIDO lleva la holgura quitada; el ÁREA se calcula
+            // con la del hueco, que es lo que se ocupa y lo que se paga.
+            puertasDelMueble = {
+              n,
+              ancho: Math.max(1, Math.round(anchoM / n - (Number(holgura.ancho) || 0))),
+              alto: Math.max(1, Math.round(altoM - (Number(holgura.alto) || 0))),
+              uds,
+            };
             if (pm2 > 0) {
               puertaDeLinea = (anchoM / 1000) * (altoM / 1000) * pm2 * uds;
               pm2DeLinea = pm2;
@@ -728,7 +759,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
     return { rows, totMat, totCasco, totHerr, totAlvic, totPuertas, sinMatch, colorSustituido, herrajesEsp, dtoTexto,
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
              puertas, costados, regletas, costePuertas, pm2, pm2Propios };
-  }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas]);
+  }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas, holgura]);
 
   // ── Anchos de columna: se arrastran y se recuerdan ────────────────────────
   //
@@ -1434,18 +1465,32 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span>
                   <b>Puertas a cotizar:</b> {calc.totPuertas} puerta(s) — el casco ACB va desnudo.
-                  {calc.puertas.length > 0 && !ocultarImportes && (
+                  {!ocultarImportes && (
                     <label className="ml-3 inline-flex items-center gap-1">
                       <span className="text-slate-500">€/m²:</span>
                       <input
                         type="number" step="any" value={precioM2Puerta}
                         onChange={e => setPrecioM2Puerta(e.target.value)}
-                       
                         placeholder="0"
                         className="w-16 px-1.5 py-0.5 border border-amber-300 rounded text-xs font-bold"
                       />
                     </label>
                   )}
+                  {/* LA HOLGURA. Una puerta no mide lo que el hueco: se le quita
+                      la junta o roza con la de al lado. Son los mismos milímetros
+                      que en Cocina Montada, y se pueden cambiar porque dependen
+                      del herraje. */}
+                  <label className="ml-3 inline-flex items-center gap-1" title="Milímetros que se le quitan al hueco para dar la medida de pedido de la puerta">
+                    <span className="text-slate-500">Holgura alto:</span>
+                    <input type="number" step="any" value={holgura.alto}
+                      onChange={e => setHolgura(h => ({ ...h, alto: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                      className="w-12 px-1.5 py-0.5 border border-amber-300 rounded text-xs font-bold" />
+                    <span className="text-slate-400">mm · ancho:</span>
+                    <input type="number" step="any" value={holgura.ancho}
+                      onChange={e => setHolgura(h => ({ ...h, ancho: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                      className="w-12 px-1.5 py-0.5 border border-amber-300 rounded text-xs font-bold" />
+                    <span className="text-slate-400">mm</span>
+                  </label>
                 </span>
                 {(calc.puertas.length > 0 || calc.costados.length > 0 || calc.regletas.length > 0) && (
                   <button
