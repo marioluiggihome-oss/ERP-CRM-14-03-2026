@@ -291,7 +291,7 @@ const PropData = ({ state }) => {
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-sky-50 overflow-y-auto">
       <div className="hueco-logo rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Analizador de Obras & Prospección</h1>
+          <h1 className="text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Obra Nueva y Prescripción</h1>
           <p className="hidden sm:block text-xs text-white/80">Localiza promociones, arquitectos, interioristas y constructoras · IA</p>
         </div>
         <div className="flex gap-1.5 bg-black/20 p-1 rounded-xl backdrop-blur">

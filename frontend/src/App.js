@@ -1313,14 +1313,15 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Prospección de Obra Nueva (PropData IA) - permiso específico */}
+                    {/* Prospección de Obra Nueva y Prescripción (PropData IA) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canUsePropData === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'propdata'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'propdata' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        title="Obra Nueva y Prescripción: Promociones, arquitectos y prescriptores"
                       >
                         <Building2 size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Analizador Obras</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Obra Nueva & Prescripción</span>
                       </button>
                     )}
 
