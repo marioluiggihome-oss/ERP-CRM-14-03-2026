@@ -563,9 +563,9 @@ async def generate_image_with_gemini(
     client = google_genai.Client(api_key=key)
 
     contents = []
-    # Lista unificada de imágenes de referencia: admite VARIAS (p.ej. plano en
-    # planta + un boceto por cada pared), además de la referencia única clásica.
+    # Lista unificada de imágenes de referencia (sin duplicados)
     refs = []
+    seen = set()
     for it in (reference_images or []):
         if not it:
             continue
@@ -574,15 +574,20 @@ async def generate_image_with_gemini(
         else:
             data, mime = it, "image/png"
         if data:
-            refs.append((data, mime))
+            raw_d = data.split(",", 1)[-1] if isinstance(data, str) and data.startswith("data:") else data
+            h = raw_d[:80]
+            if h not in seen:
+                seen.add(h)
+                refs.append((raw_d, mime))
     if reference_image_base64:
-        refs.append((reference_image_base64, reference_mime or "image/png"))
+        raw_m = reference_image_base64.split(",", 1)[-1] if reference_image_base64.startswith("data:") else reference_image_base64
+        h = raw_m[:80]
+        if h not in seen:
+            seen.add(h)
+            refs.append((raw_m, reference_mime or "image/png"))
     for data, mime in refs:
         try:
-            ref = data
-            if isinstance(ref, str) and ref.startswith("data:"):
-                ref = ref.split(",", 1)[1]
-            img_bytes = base64.b64decode(ref)
+            img_bytes = base64.b64decode(data)
             contents.append(google_genai_types.Part.from_bytes(data=img_bytes, mime_type=mime))
         except Exception as e:
             logger.warning(f"Imagen de referencia ignorada: {e}")
