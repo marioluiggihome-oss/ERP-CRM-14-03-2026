@@ -1,0 +1,38 @@
+# EditorConfig: https://editorconfig.org
+root = true
+
+# Estilo general
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JavaScript / TypeScript / Frontend
+[*.{js,jsx,ts,tsx,json,html,css}]
+indent_style = space
+indent_size = 2
+
+# Python
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# Shell
+[*.sh]
+indent_style = space
+indent_size = 4
+
+# YAML (workflows, dependabot, docker-compose)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefile
+[Makefile]
+indent_style = tab
