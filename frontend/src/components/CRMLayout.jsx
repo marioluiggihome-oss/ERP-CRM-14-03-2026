@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone, LifeBuoy, Zap } from 'lucide-react';
+import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone, LifeBuoy, Zap, Sparkles } from 'lucide-react';
 import CRMDashboard from './CRMDashboard';
 import CRMPipeline from './CRMPipeline';
 import CRMContacts from './CRMContacts';
@@ -15,9 +15,11 @@ import CRMParteDiario from './CRMParteDiario';
 import CRMMarketing from './CRMMarketing';
 import CRMPostventa from './CRMPostventa';
 import CRMAutomation from './CRMAutomation';
+import ApolloProspeccion from './ApolloProspeccion';
 
 const CRM_TABS = [
   { id: 'dashboard',   name: 'Resumen',       icon: LayoutDashboard, color: 'text-indigo-600',  activeBg: 'bg-indigo-600' },
+  { id: 'apollo',      name: 'Apollo B2B',    icon: Sparkles,        color: 'text-amber-500',   activeBg: 'bg-amber-500' },
   { id: 'pipeline',    name: 'Oportunidades', icon: Target,          color: 'text-purple-600',  activeBg: 'bg-purple-600' },
   { id: 'contacts',    name: 'Contactos',     icon: Users,           color: 'text-blue-600',    activeBg: 'bg-blue-600' },
   { id: 'activities',  name: 'Actividades',   icon: ClipboardList,   color: 'text-green-600',   activeBg: 'bg-green-600' },
@@ -65,6 +67,7 @@ const CRMLayout = ({ currentUser, initialTab, focusEvent }) => {
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'dashboard'  && <CRMDashboard onNavigate={setActiveTab} currentUser={currentUser} />}
+        {activeTab === 'apollo'     && <ApolloProspeccion currentUser={currentUser} onNavigateToContacts={setActiveTab} />}
         {activeTab === 'pipeline'   && <CRMPipeline currentUser={currentUser} />}
         {activeTab === 'contacts'   && <CRMContacts currentUser={currentUser} />}
         {activeTab === 'activities' && <CRMActivities currentUser={currentUser} />}

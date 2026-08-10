@@ -113,6 +113,7 @@ from routes.expedient import router as expedient_router
 from routes.shop_clients import router as shop_clients_router
 from routes.google_calendar import google_calendar_router
 from routes.kitchen_projects import kitchen_projects_router
+from routes.apollo_prospects import router as apollo_prospects_router
 
 # Servicios de backup y tracking
 from services.backup_service import init_backup_service
@@ -302,6 +303,7 @@ api_router.include_router(clients_router)
 api_router.include_router(auth_routes_router)
 api_router.include_router(products_router)
 api_router.include_router(projects_router)
+api_router.include_router(apollo_prospects_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
