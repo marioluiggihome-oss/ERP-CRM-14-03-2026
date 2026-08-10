@@ -2439,19 +2439,21 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Generar render por descripción natural ─────────────────────────────
   const handleGenerateNatural = async () => {
-    if (!description.trim()) return;
-    const err = guardTipo(description);
+    const hasRef = Boolean(refImage || refImages.length || floorPlan || wallSketches.length);
+    if (!description.trim() && !hasRef) {
+      setError('Escribe una descripción o sube una imagen/foto de referencia.');
+      return;
+    }
+    const finalDesc = description.trim() || 'cocina moderna y funcional de alta calidad';
+    const err = guardTipo(finalDesc);
     if (err) { setError(err); return; }
     // Si hay plano o bocetos, se usan SIEMPRE junto con el texto y la
     // referencia de acabado: son fuentes complementarias, no alternativas.
-    // Antes esto abría un aviso de "o una cosa o la otra" que obligaba a
-    // renunciar a algo; para el caso raro de querer ignorar el plano está la
-    // opción "solo texto" en el propio panel.
     if (!soloTexto && (floorPlan || wallSketches.length > 0)) {
       await handleGenerateComposed();
       return;
     }
-        setIsGenerating(true);
+    setIsGenerating(true);
     setError(null);
     // Auto-scroll al panel de render en móvil
     if (window.innerWidth < 1024 && renderPanelRef.current) {

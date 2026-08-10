@@ -353,7 +353,7 @@ async def delete_render_design(design_id: str, current_user: Optional[dict] = De
 
 class RenderRequest(BaseModel):
     """Solicitud de render 3D por descripción natural (voz/texto)."""
-    description: str = Field(..., description="Descripción en lenguaje natural de la cocina")
+    description: Optional[str] = Field("", description="Descripción en lenguaje natural de la cocina")
     style: Optional[str] = Field(None, description="Estilo de render (photorealistic, warm, etc.)")
     layout: Optional[str] = Field(None, description="Layout override (L-shape, island, etc.)")
     referenceImage: Optional[str] = Field(None, description="Imagen/PDF de referencia en base64 para condicionar el render")

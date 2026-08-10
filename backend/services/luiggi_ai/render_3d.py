@@ -556,14 +556,14 @@ class Render3DService:
         # EXCEPCIÓN: si la referencia es un CROQUIS/PLANO MANUSCRITO (PDF escaneado
         # o imagen con trazos a mano), NO es una foto a editar sino un plano del que
         # INTERPRETAR la distribución. En ese caso usamos la rama SIN referencia pero
-        # pasando la imagen como guía de layout.
-        is_sketch = self._is_sketch_reference(reference_image, reference_mime)
+        # pasando la imagen como guía de layout. (Si room_photo es True, NUNCA es croquis: es la estancia real).
+        is_sketch = False if room_photo else self._is_sketch_reference(reference_image, reference_mime)
 
         # ── AMUEBLADO VIRTUAL: la foto es la ESTANCIA REAL (vacía / a reformar) ──
         # No hay que EDITAR un mueble existente, sino DISEÑAR uno nuevo DENTRO de esa
         # estancia respetando su arquitectura (paredes, ventanas, puertas, suelo,
         # techo, perspectiva y luz reales). Cierra ventas: el cliente ve su propio hueco.
-        if ref_b64 and not is_sketch and room_photo:
+        if ref_b64 and room_photo:
             pt2 = (project_type or "").strip().lower()
             pieza = {"armario": "fitted wardrobe/closet", "bano": "bathroom vanity/cabinetry"}.get(pt2, "kitchen")
             parsed_params["briefExpanded"] = False
@@ -997,52 +997,36 @@ class Render3DService:
             return False
 
     async def _transcribe_sketch_with_vision(self, raw_b64: str, mime: str = "image/png") -> str:
-        """Lee el croquis manuscrito con Gemini 2.5 Pro Vision y extrae de forma
+        """Lee el croquis manuscrito con Gemini Vision y extrae de forma
         estructurada los módulos, cotas, frigorífico, hornos y divisiones de puertas."""
         try:
-            from services.llm_vision import get_gemini_key, GOOGLE_GENAI_AVAILABLE
-            key = get_gemini_key()
-            if not (key and GOOGLE_GENAI_AVAILABLE):
-                return ""
-            from google import genai
-            from google.genai import types
-            client = genai.Client(api_key=key)
-            raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
-            img_bytes = base64.b64decode(raw)
-            contents = [
-                types.Part.from_bytes(data=img_bytes, mime_type=mime or "image/png"),
-                (
-                    "Analyze this hand-drawn technical kitchen blueprint / elevation drawing with extreme precision.\n"
-                    "Read every handwritten note, label (e.g. 'Micro', 'Horno', 'Frigo', 'Frijo', 'Combi', 'Placa', 'Freg', '70', '60', '30') and division line.\n"
-                    "List the EXACT composition in English as a concise numbered technical specification:\n"
-                    "1. BASE CABINETS (left to right with widths, drawer lines and appliances like sink, cooktop, dishwasher).\n"
-                    "2. WALL CABINETS (upper units, lighting and hood).\n"
-                    "3. TALL COLUMNS (left to right): explicitly identify the Oven+Microwave tower, the Refrigerator Combi unit, and the Pantry cupboard with its exact door count (e.g. 4 doors if cross lines are drawn).\n"
-                    "Keep it strictly factual and concise."
-                )
-            ]
-            resp = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: client.models.generate_content(
-                    model="gemini-2.5-pro",
-                    contents=contents,
-                )
+            from services.llm_vision import analyze_image_with_gemini
+            prompt = (
+                "Analyze this hand-drawn technical kitchen blueprint / elevation drawing with extreme precision.\n"
+                "Read every handwritten note, label (e.g. 'Micro', 'Horno', 'Frigo', 'Frijo', 'Combi', 'Placa', 'Freg', '70', '60', '30') and division line.\n"
+                "List the EXACT composition in English as a concise numbered technical specification:\n"
+                "1. BASE CABINETS (left to right with widths, drawer lines and appliances like sink, cooktop, dishwasher).\n"
+                "2. WALL CABINETS (upper units, lighting and hood).\n"
+                "3. TALL COLUMNS (left to right): explicitly identify the Oven+Microwave tower, the Refrigerator Combi unit, and the Pantry cupboard with its exact door count (e.g. 4 doors if cross lines are drawn).\n"
+                "Keep it strictly factual and concise."
             )
-            return (resp.text or "").strip()
+            raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
+            res = await analyze_image_with_gemini(raw, prompt, model="gemini-2.5-flash", image_mime=mime or "image/jpeg")
+            return res.strip() if res else ""
         except Exception as e:
             logger.warning(f"Error transcribiendo croquis con Vision: {e}")
             return ""
 
     def _is_sketch_reference(self, reference_image, reference_mime):
         """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado
-        O FOTO/ESCANEO de un dibujo a mano) en vez de una foto de cocina
-        existente."""
+        O FOTO/ESCANEO de un dibujo a mano) en vez de una foto de cocina existente."""
         if not reference_image:
             return False
         if reference_mime and "pdf" in reference_mime.lower():
             return True
         if reference_image[:60].lower().startswith("data:application/pdf"):
             return True
+        raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
         try:
             import base64
             header_bytes = base64.b64decode(raw[:20])
@@ -1050,8 +1034,6 @@ class Render3DService:
                 return True
         except Exception:
             pass
-        # Mapa de bits: mirar el CONTENIDO, que es lo único que distingue un
-        # croquis fotografiado de una foto de cocina (el MIME es el mismo).
         return self._parece_dibujo_a_mano(raw)
 
     def _prepare_reference(self, reference_image, reference_mime):
