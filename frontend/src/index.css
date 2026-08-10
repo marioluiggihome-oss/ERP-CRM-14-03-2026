@@ -231,6 +231,15 @@ code {
    `menu-plegado` lo pone App.js en el <main> mientras el botón está pintado.  */
 .menu-plegado .hueco-logo { padding-left: 3.75rem; }
 
+/* EL LOGO PROPIO DE UN MÓDULO, CUANDO YA HAY UNO FLOTANTE.
+   Algunos módulos —Digitalizador, Presupuestador 2, la agenda del prescriptor—
+   pintan el logo de la casa en su propia cabecera. Con el menú desplegado está
+   bien: es el único. Pero con el menú plegado aparece el flotante, y al dejarle
+   su hueco los dos quedaban uno al lado del otro: el mismo logo dos veces.
+   Se esconde el del módulo exactamente mientras el flotante esté ahí — el hueco
+   que se le ha hecho ya lo ocupa él. */
+.menu-plegado .logo-modulo { display: none; }
+
 /* Para cabeceras CENTRADAS (un bloque con ancho máximo y `mx-auto`): en pantalla
    ancha ese bloque no llega a la esquina —el logo no tapa nada— y meterle el
    hueco solo lo descentraría. Ahí el hueco hace falta únicamente cuando el

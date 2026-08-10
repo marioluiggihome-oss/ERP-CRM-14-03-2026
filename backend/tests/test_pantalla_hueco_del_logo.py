@@ -125,6 +125,35 @@ def test_el_modulo_le_deja_hueco_al_logo(fichero):
         "logo se le come el icono y el principio del titulo")
 
 
+# ─── 3. Y que no salga el mismo logo dos veces ──────────────────────────────
+#
+# Al hacerle hueco al logo flotante, los modulos que pintan SU PROPIO logo en la
+# cabecera lo dejaban justo al lado: se veia el mismo logo dos veces seguidas.
+LOGO_PROPIO = {
+    "Digitalizador.jsx": "logo de la casa en la barra superior",
+    "Presupuestador2.jsx": "logo en la cabecera naranja",
+    "PrescriptorAgenda.jsx": "logo de los ajustes en la cabecera",
+}
+
+
+@pytest.mark.parametrize("fichero", sorted(LOGO_PROPIO))
+def test_el_logo_del_modulo_se_esconde_si_ya_hay_uno_flotante(fichero):
+    """CANDADO. El hueco que se le hace al flotante ya lo ocupa el flotante: si
+    el modulo pinta ademas el suyo, salen dos."""
+    src = _leer(os.path.join(SRC, "components", fichero))
+    assert "logo-modulo" in src, (
+        f"{fichero} pinta su propio logo sin esconderlo cuando aparece el "
+        "flotante: se ve el mismo logo dos veces seguidas")
+
+
+def test_la_regla_de_esconderlo_existe_en_el_css():
+    css = _leer(CSS)
+    assert ".menu-plegado .logo-modulo" in css, (
+        "sin la regla, la clase `logo-modulo` no hace nada — y una clase que no "
+        "existe no da ningun error, simplemente no oculta nada")
+    assert "display: none" in css.split(".menu-plegado .logo-modulo")[1][:40]
+
+
 def test_ningun_modulo_vuelve_al_truco_de_los_anchos():
     """`ml-14 sm:ml-2` es el fallo original: hueco solo en movil. En un
     ordenador con el menu plegado el logo tapaba igual."""

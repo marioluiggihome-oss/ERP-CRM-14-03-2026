@@ -362,12 +362,13 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
       <div className="bg-white border-b border-amber-200 px-6 py-4 shadow-sm">
         <div className="hueco-logo-centrado max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Logo from System Settings */}
+            {/* Logo de los ajustes. Se esconde si el menú está plegado: ahí ya
+                está el logo flotante y se verían los dos seguidos. */}
             {(systemLogo || currentUser?.companyLogo) ? (
-              <img 
-                src={systemLogo || currentUser.companyLogo} 
-                alt="Logo" 
-                className="h-16 w-auto object-contain"
+              <img
+                src={systemLogo || currentUser.companyLogo}
+                alt="Logo"
+                className="logo-modulo h-16 w-auto object-contain"
               />
             ) : (
               <div className="p-3 bg-amber-500 rounded-2xl shadow-lg">

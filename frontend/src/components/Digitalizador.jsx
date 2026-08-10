@@ -899,7 +899,9 @@ const Digitalizador = ({ state, setState }) => {
       {/* Header */}
       <header className="hueco-logo bg-indigo-950 text-white px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-y-2 shrink-0 no-print">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+          {/* Con el menú plegado, el logo flotante ya ocupa ese sitio: este se
+              esconde para no ver el mismo logo dos veces seguidas. */}
+          <div className="logo-modulo w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
             <Logo className="w-8 h-8" customLogo={state.logo} />
           </div>
           <button

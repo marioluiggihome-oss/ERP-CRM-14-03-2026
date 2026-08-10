@@ -872,7 +872,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         {/* Fila principal */}
         <div className="hueco-logo pl-5 sm:pl-7 pr-3 sm:pr-4 py-2 flex items-center gap-2">
           {/* Logo */}
-          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
+          <div className="logo-modulo w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
             {logo
               ? <img src={logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
               : <span className="text-orange-600 font-black italic text-sm leading-none select-none">L</span>
