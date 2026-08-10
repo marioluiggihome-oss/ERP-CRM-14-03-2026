@@ -155,6 +155,18 @@ const _tipo_acb_auto = (desc, tipo, grosor) => {
   const t = (desc || '').toUpperCase();
   // Ni puertas, ni costados, ni regletas llevan casco: no son muebles.
   if (_ES_PUERTA.test(t) || _ES_COSTADO.test(t) || _ES_REGLETA.test(t)) return null;
+  // UN BAJO DE PLACA LLEVA CASCO DE FREGADERO, SIEMPRE.
+  //
+  // Los dos van RECORTADOS por arriba —uno para la encimera con la placa
+  // encastrada, el otro para la cubeta— y por eso el casco es el mismo. Sin
+  // esto, un «BAJO PLACA 1 GAVETA 2 CAJONES» se valoraba con un «Bajo Con
+  // Balda», que lleva una balda que ahí no existe: el precio salía mal y encima
+  // el pedido al proveedor pedía un casco que no vale.
+  //
+  // Va ANTES que la regla de FREGADERO a propósito: hay muebles que llevan las
+  // dos palabras y el resultado es el mismo casco, pero el orden deja claro
+  // cuál manda.
+  if (t.includes('PLACA')) return 'Bajo Fregadero';
   if (t.includes('FREGADERO')) return 'Bajo Fregadero';
   if (t.includes('BAJO')) return 'Bajo Con Balda';
   // COLUMNAS. Dos cosas iban mal a la vez y se tapaban entre ellas:
@@ -337,6 +349,18 @@ const COLUMNAS = [
   { clave: 'destino', etiqueta: 'Pedido a',          ancho: 112 },
 ];
 
+// LAS COLUMNAS DEL DESGLOSE DE COSTE.
+//
+// Catorce columnas no caben en una pantalla, ni siquiera al 100 %: hay que
+// arrastrar a un lado y a otro y se pierde de vista la línea que se está
+// mirando. Pero quitarlas del todo tampoco vale, que son las que explican de
+// dónde sale el coste.
+//
+// Estas cuatro son el DESGLOSE —de dónde sale el coste del casco— y se pueden
+// plegar. Lo que queda es lo que hay que ver para trabajar: qué es, cuántos,
+// qué casco le toca, cuánto cuesta y a quién se le pide.
+const COLUMNAS_DESGLOSE = ['alvic', 'tarifa', 'cascoE', 'herraje'];
+
 // Plegada, la columna Código enseña seis caracteres; desplegada tiene dentro un
 // campo para escribirlo. Son dos anchos distintos y no se puede tener uno solo.
 const ANCHO_COD_PLEGADA = 48;
@@ -373,6 +397,15 @@ export default function ProformaImporter({ esMaster }) {
   // códigos o el pedido no molesta a nadie. Bloquear la edición no servía para
   // nada: quien entra aquí ya es master.
   const [ocultarImportes, setOcultarImportes] = useState(false);
+  // Catorce columnas no caben en una pantalla ni al 100 %. Plegado se ve lo que
+  // hace falta para trabajar; desplegado, de dónde sale cada euro. Se recuerda,
+  // porque quien trabaja plegado lo quiere plegado siempre.
+  const [verDesglose, setVerDesglose] = useState(() => {
+    try { return localStorage.getItem('alvic_ver_desglose') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('alvic_ver_desglose', verDesglose ? '1' : '0'); } catch { /* noop */ }
+  }, [verDesglose]);
   const [showDesc2, setShowDesc2] = useState(false);
   // La columna Código nace PLEGADA: ocupa un ancho fijo y lo que hay que leer
   // de un vistazo es la descripción. Se despliega pinchando en su cabecera.
@@ -449,7 +482,14 @@ export default function ProformaImporter({ esMaster }) {
       return { ...P_DEFAULT, ...s };
     } catch { return P_DEFAULT; }
   });
-  const setNum = useCallback((k) => (e) => setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) })), []);
+  // ¿Se acaba de importar un documento y se han puesto los costes a 0? Sirve
+  // para decirlo una vez, no para dar la lata: en cuanto se toca una casilla el
+  // aviso desaparece.
+  const [importadoLimpio, setImportadoLimpio] = useState(false);
+  const setNum = useCallback((k) => (e) => {
+    if (k === 'desc1' || k === 'desc2' || k === 'manoObra') setImportadoLimpio(false);
+    setP(prev => ({ ...prev, [k]: e.target.value === '' ? '' : Number(e.target.value) }));
+  }, []);
   const cambiarMarcaCaj = (m) => { setMarcaCaj(m); setP(prev => ({ ...prev, cajon: HERRAJE[m].cajon, gaveta: HERRAJE[m].gaveta })); };
   const cambiarMarcaBis = (m) => { setMarcaBis(m); setP(prev => ({ ...prev, bisagra: BISAGRA[m] })); };
 
@@ -465,6 +505,12 @@ export default function ProformaImporter({ esMaster }) {
     if (!file) return;
     setCargando(true); setError(null); setItems([]); setProgreso(''); setOverrides({}); setDeletedRows(new Set());
     setOrigenLectura(null); setNoLeidas([]);
+    // CADA PROFORMA ES UNA COMPRA DISTINTA, con su descuento y su mano de obra.
+    // Arrastrar los del documento anterior es la forma silenciosa de valorar
+    // mal una compra: el número está puesto, parece bueno, y es de otra.
+    // Se dejan a 0 y los pone quien importa.
+    setP(prev => ({ ...prev, desc1: 0, desc2: 0, manoObra: 0 }));
+    setImportadoLimpio(true);
     try {
       const b64 = await new Promise((res, rej) => {
         const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
@@ -562,6 +608,38 @@ export default function ProformaImporter({ esMaster }) {
             puertaDeLinea = (altoP / 1000) * (anchoP / 1000) * pm2DeLinea * uds;
           }
         }
+        // LAS PUERTAS QUE VAN DENTRO DE UN MUEBLE.
+        //
+        // El casco ACB VA DESNUDO: sus puertas hay que comprarlas aparte. El
+        // aviso de arriba ya las contaba —«8 puertas a cotizar»— pero solo se
+        // cobraban las que venían como línea suelta en la proforma. Las de los
+        // muebles se contaban y no se pagaban, así que el coste de la proforma
+        // salía corto sin que nada avisara.
+        //
+        // Las medidas salen del propio mueble: `n` puertas repartidas a lo
+        // ancho, cada una de (ancho / n) × alto. El área total es la del frente
+        // se parta en las que se parta, pero las MEDIDAS hacen falta para poder
+        // pedirlas.
+        let puertasDelMueble = null;
+        let frenteMixto = false;
+        if (!esPuerta && (it.puertas || 0) > 0) {
+          const anchoM = Number(it.ancho) || 0;
+          const altoM = Number(it.largo) || 0;
+          // Un mueble con cajones tiene el frente repartido entre puerta y
+          // frentes de cajón, y la proforma NO dice qué parte es cada uno.
+          // Calcularlo sería inventarse una medida, así que se dice y se deja
+          // que lo ponga quien lo sepa, en la casilla de la línea.
+          frenteMixto = ((it.cajones || 0) + (it.gavetas || 0)) > 0;
+          if (anchoM > 0 && altoM > 0 && !frenteMixto) {
+            const n = it.puertas;
+            puertasDelMueble = { n, ancho: Math.round(anchoM / n), alto: Math.round(altoM), uds };
+            if (pm2 > 0) {
+              puertaDeLinea = (anchoM / 1000) * (altoM / 1000) * pm2 * uds;
+              pm2DeLinea = pm2;
+            }
+          }
+        }
+
         const puertaPropia = puertaLinea[origIdx];
         if (puertaPropia !== undefined && puertaPropia !== '') puertaDeLinea = Number(puertaPropia) || 0;
 
@@ -573,6 +651,7 @@ export default function ProformaImporter({ esMaster }) {
           _pvpAlvic: Number(it.pvp) || 0,
           _totalAlvic: Number(it.total) || 0,
           _mo: moDeLinea, _puerta: puertaDeLinea, _esPuerta: esPuerta, _pm2: pm2DeLinea,
+          _puertasMueble: puertasDelMueble, _frenteMixto: frenteMixto,
           _coste: casco + herraje + moDeLinea + puertaDeLinea,
           _destino: destinoLinea[origIdx] || _destino_auto(it, acb),
           _pedir: !excluidas[origIdx],
@@ -652,8 +731,9 @@ export default function ProformaImporter({ esMaster }) {
   ), [anchos, anchoPorDefecto]);
 
   const columnasVisibles = useMemo(
-    () => COLUMNAS.filter(c => !c.dinero || !ocultarImportes),
-    [ocultarImportes]);
+    () => COLUMNAS.filter(c => (!c.dinero || !ocultarImportes)
+      && (verDesglose || !COLUMNAS_DESGLOSE.includes(c.clave))),
+    [ocultarImportes, verDesglose]);
 
   const anchoTotal = useMemo(
     () => columnasVisibles.reduce((a, c) => a + anchoDe(c), 0),
@@ -968,10 +1048,18 @@ export default function ProformaImporter({ esMaster }) {
               : <div className="space-y-1 max-h-48 overflow-y-auto">
                 {proyectos.map(o => (
                   <div key={o.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+                    {/* SE GUARDA `nombre` E `items`, Y AQUÍ SE LEÍA `ref` Y
+                        `lines` — nombres copiados de la lista de presupuestos de
+                        Cascos, que sí los usa. Como en JavaScript un campo que
+                        no existe no da error, la lista salía SIEMPRE sin nombre
+                        y con «0 líneas»: parecía que el guardado no funcionaba,
+                        y lo que no funcionaba era enseñarlo. */}
                     <div>
-                      <span className="text-xs font-bold text-slate-700">{o.ref || o.cliente}</span>
-                      <span className="text-[10px] text-slate-400 ml-2">{new Date(o.createdAt).toLocaleDateString('es-ES')}</span>
-                      <span className="text-[10px] text-slate-400 ml-2">{(o.lines || []).length} líneas</span>
+                      <span className="text-xs font-bold text-slate-700">
+                        {o.nombre || o.ref || o.cliente || <span className="text-slate-400 italic">Sin nombre</span>}
+                      </span>
+                      <span className="text-[10px] text-slate-400 ml-2">{new Date(o.updatedAt || o.createdAt).toLocaleDateString('es-ES')}</span>
+                      <span className="text-[10px] text-slate-400 ml-2">{(o.items || o.lines || []).length} líneas</span>
                     </div>
                     <button
                       onClick={() => abrirProyecto(o)}
@@ -1016,6 +1104,18 @@ export default function ProformaImporter({ esMaster }) {
                   <span>
                     <b>Sin descuento de casco.</b> El coste se está calculando a tarifa
                     completa. Rellena el descuento antes de dar el coste por bueno.
+                  </span>
+                </div>
+              )}
+
+              {/* Se dice UNA vez que se han puesto a cero, y por qué. Si no, el
+                  0 parece un dato guardado y nadie lo revisa. */}
+              {importadoLimpio && (
+                <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-[11px] text-sky-800 mb-3 flex items-start gap-2">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-sky-500" />
+                  <span>
+                    Descuentos y mano de obra a <b>0</b> para este documento. Cada proforma
+                    tiene los suyos: pon los de esta antes de mirar el coste.
                   </span>
                 </div>
               )}
@@ -1173,6 +1273,15 @@ export default function ProformaImporter({ esMaster }) {
               <button onClick={() => setExcluidas(Object.fromEntries(calc.rows.map(r => [r._origIdx, true])))}
                 className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
                 Desmarcar todas
+              </button>
+              <button onClick={() => setVerDesglose(v => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black border ${verDesglose
+                  ? 'bg-slate-700 text-white border-slate-700'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                title={verDesglose
+                  ? 'Ocultar el desglose (Val. Alvic, Tarifa ACB, Casco coste y Herraje) para que la tabla quepa en la pantalla'
+                  : 'Ver de dónde sale el coste: valor Alvic, tarifa ACB, casco y herraje'}>
+                {verDesglose ? 'Menos columnas' : 'Ver desglose'}
               </button>
               {/* Solo aparece si se ha movido alguna columna: un botón para
                   deshacer lo que nadie ha hecho todavía es ruido. */}
@@ -1563,15 +1672,21 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
         </td>
         {/* Puertas: vacio = m2 x precio/m2. Solo tiene sentido en las puertas. */}
         <td className="px-2 py-1.5 text-right">
-          {!r._esPuerta ? <span className="text-slate-300">—</span> : (
+          {!r._esPuerta && !r._puertasMueble && !r._frenteMixto ? <span className="text-slate-300">—</span> : (
             <input
               type="number" step="any"
               value={puertaLinea ?? ''}
-              placeholder={r._puerta ? r._puerta.toFixed(2) : '0'}
+              placeholder={r._frenteMixto ? 'poner' : (r._puerta ? r._puerta.toFixed(2) : '0')}
               onChange={e => onPuerta(e.target.value)}
-              title={r._pm2 > 0
-                ? `Vacío = área × ${r._pm2} €/m². Escribe aquí el importe final de esta puerta.`
-                : 'Sin €/m² todavía: ponlo arriba, o uno propio para esta puerta en el editor.'}
+              title={r._frenteMixto
+                ? ('Este mueble lleva puerta Y cajones: la proforma no dice qué parte del '
+                   + 'frente es cada uno, así que no se puede calcular. Escribe aquí el importe.')
+                : r._puertasMueble
+                  ? (`${r._puertasMueble.n} puerta(s) de ${r._puertasMueble.ancho}×${r._puertasMueble.alto} mm`
+                     + (r._pm2 > 0 ? ` × ${r._pm2} €/m². Escribe aquí el importe final si lo sabes.` : '. Falta el €/m².'))
+                  : r._pm2 > 0
+                    ? `Vacío = área × ${r._pm2} €/m². Escribe aquí el importe final de esta puerta.`
+                    : 'Sin €/m² todavía: ponlo arriba, o uno propio para esta puerta en el editor.'}
               className={`w-full min-w-0 px-1 py-0.5 border rounded text-right text-xs ${puertaLinea !== undefined && puertaLinea !== '' ? 'border-amber-400 font-bold text-amber-700' : 'border-slate-200 text-slate-500'}`}
             />
           )}

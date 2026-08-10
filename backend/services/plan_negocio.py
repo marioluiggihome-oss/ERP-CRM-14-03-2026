@@ -324,6 +324,34 @@ def calcular(entrada):
     estructura = _suma_bloque(e.get("estructura"))
     inversion = _suma_bloque(e.get("inversion"))
 
+    # ── El coste COMPLETO: el directo más su parte de estructura ────────────
+    #
+    # Se calcula DOS VECES a propósito:
+    #   · a plena capacidad — el suelo teórico, el mejor caso posible.
+    #   · a las ventas que se esperan de verdad — el que hay que mirar.
+    # Enseñar solo el primero es como se firman tarifas que solo salen si la
+    # fábrica va llena, y llena no va casi nunca el primer año.
+    tasa = tasa_horaria(cap, estructura["total"])
+    ventas = _positivo(e.get("ventasEsperadas"))
+    h_vendidas = horas_vendidas(ventas, cap)
+    tasa_real = tasa_horaria({**cap, "horasAno": h_vendidas}, estructura["total"])
+
+    minutos_medios = 60.0 / cap["mueblesHora"] if cap.get("mueblesHora") else None
+    for r in refs:
+        minutos = r.get("minutosPorMueble") or minutos_medios
+        r["costeCompleto"] = coste_completo(r["materiales"], minutos, tasa["total"])
+        r["costeCompletoReal"] = coste_completo(r["materiales"], minutos, tasa_real["total"])
+        r["margenCompletoB2B"] = margen(r["precioB2B"], r["costeCompleto"])
+        r["margenCompletoB2C"] = margen(r["precioB2C"], r["costeCompleto"])
+        r["margenRealB2B"] = margen(r["precioB2B"], r["costeCompletoReal"])
+        r["margenRealB2C"] = margen(r["precioB2C"], r["costeCompletoReal"])
+        # Un mueble que a plena capacidad gana y a las ventas reales pierde es
+        # el caso que hay que ver de un vistazo: el precio no se sostiene.
+        r["pierdeEnReal"] = (r["margenRealB2B"]["euros"] is not None
+                             and r["margenRealB2B"]["euros"] < 0)
+    coste_completo_medio = _media([r["costeCompleto"] for r in refs])
+    coste_real_medio = _media([r["costeCompletoReal"] for r in refs])
+
     # Punto de equilibrio: los muebles que hay que vender al año solo para pagar
     # la estructura. Si el margen medio fuera 0 o negativo no hay punto de
     # equilibrio que valga — no es que salga un número muy grande, es que no
@@ -352,6 +380,13 @@ def calcular(entrada):
         "capacidad": cap,
         "referencias": refs,
         "avisoTiempos": _cuadran_los_tiempos(cap, refs),
+        "tasaHoraria": tasa,
+        "tasaHorariaReal": tasa_real,
+        "ventasEsperadas": ventas,
+        "horasVendidas": h_vendidas,
+        "costeCompletoMedio": coste_completo_medio,
+        "costeCompletoRealMedio": coste_real_medio,
+        "avisoAbsorcion": _aviso_absorcion(cap, estructura["total"], tasa, tasa_real, ventas),
         "costeDirectoMedio": coste_medio,
         "b2c": b2c,
         "margenB2BMedio": margen_b2b_medio,
@@ -370,6 +405,87 @@ def calcular(entrada):
         "escenarios": _escenarios(e, margen_medio, precio_medio, estructura["total"]),
         "faltan": _que_falta(cap, refs, b2c, reparto, estructura, e),
         "sostenible": _sostenible(parte_capacidad),
+    }
+
+
+def tasa_horaria(cap, estructura_total):
+    """LO QUE CUESTA UNA HORA DE FÁBRICA, CON TODO DENTRO.
+
+    La mano de obra no es lo único que se consume al montar un mueble: mientras
+    el equipo monta, la nave se paga, la luz corre, el ERP se paga y el seguro
+    también. Repartir todo eso entre las horas productivas del año da el coste
+    de verdad de una hora de fábrica.
+
+    De aquí sale la diferencia entre las dos preguntas que hay que saber
+    contestar, y que NO son la misma:
+
+      · ¿Este mueble aporta? → margen sobre el COSTE DIRECTO. Sirve para decidir
+        si vale la pena aceptar un pedido más con la fábrica ya montada.
+      · ¿Este mueble gana dinero? → margen sobre el COSTE COMPLETO. Es el que
+        dice si el precio de tarifa se sostiene.
+
+    Un negocio que solo mira el primero llena la fábrica de trabajo que aporta y
+    pierde dinero igual a fin de año.
+    """
+    mo_hora = cap.get("costeEquipoHora")
+    horas = cap.get("horasAno")
+    est_hora = (_r(estructura_total / horas)
+                if (estructura_total is not None and horas) else None)
+    total = _r(mo_hora + est_hora) if (mo_hora is not None and est_hora is not None) else None
+    return {"manoObra": mo_hora, "estructura": est_hora, "total": total}
+
+
+def coste_completo(materiales, minutos, tasa_total):
+    """El coste de un mueble con su parte de estructura dentro."""
+    if materiales is None or minutos is None or tasa_total is None:
+        return None
+    return _r(materiales + tasa_total * minutos / 60)
+
+
+def horas_vendidas(ventas_esperadas, cap):
+    """Las horas de fábrica que se van a ocupar de verdad con esas ventas."""
+    ventas = _positivo(ventas_esperadas)
+    mh = cap.get("mueblesHora")
+    if ventas is None or not mh:
+        return None
+    return _r(ventas / mh, 1)
+
+
+def _aviso_absorcion(cap, estructura_total, tasa, tasa_real, ventas):
+    """LA TRAMPA DEL COSTE COMPLETO, DICHA EN VOZ ALTA.
+
+    Repartir la estructura entre las horas del año da por hecho que esas horas
+    SE VENDEN TODAS. Si la fábrica va a media carga, la misma estructura se
+    reparte entre la mitad de muebles y cada uno carga el doble.
+
+    O sea que el coste completo NO ES UN DATO FIJO DEL MUEBLE: depende de cuánto
+    se venda. Callarlo es exactamente como se firman tarifas que solo salen a
+    plena capacidad — y a plena capacidad no se está casi nunca el primer año.
+    """
+    capacidad = cap.get("capacidadAnual")
+    if estructura_total is None or tasa.get("total") is None:
+        return None
+
+    if ventas is None or not capacidad:
+        return {
+            "nivel": "aviso",
+            "texto": ("El coste completo de arriba reparte la estructura entre "
+                      "TODAS las horas del año: sale suponiendo la fábrica llena. "
+                      "Pon cuántos muebles esperas vender y se calcula el coste "
+                      "de verdad."),
+        }
+
+    ocupacion = ventas / capacidad
+    if tasa_real.get("total") is None:
+        return None
+    return {
+        "nivel": "error" if ocupacion < 0.5 else "aviso",
+        "ocupacion": _r(ocupacion, 4),
+        "texto": (f"Con {ventas:g} muebles al año se ocupa el "
+                  f"{ocupacion * 100:.0f} % de la fábrica. La hora deja de costar "
+                  f"{tasa['total']:.0f} € y cuesta {tasa_real['total']:.0f} €: la "
+                  "misma estructura repartida entre menos horas. Los márgenes "
+                  "buenos son los de la columna «real», no los de plena capacidad."),
     }
 
 
