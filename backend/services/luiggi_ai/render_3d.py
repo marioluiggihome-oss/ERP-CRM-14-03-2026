@@ -636,58 +636,6 @@ class Render3DService:
                 provider=provider, reference_images=extra_imgs or None,
             )
 
-        # ── CROQUIS / PLANO A MANO = el DIBUJO manda ───────────────────────────
-        # El croquis NO puede compartir camino con «diseñar desde cero». Ahí se
-        # llama a `_expand_brief`, que le pide a un LLM que redacte la
-        # distribución y los módulos de izquierda a derecha **a partir del texto
-        # y SIN haber visto el dibujo**. Esa especificación inventada acaba
-        # ocupando casi todo el prompt, y el modelo de imagen la obedece a ella
-        # en vez de al croquis: sale una cocina genérica que no es la del
-        # cliente. Es lo mismo que ya estaba escrito en el render compuesto —
-        # «un texto largo de dirección de arte compite con las imágenes» — pero
-        # aquí no se había aplicado.
-        #
-        # Con un croquis delante, el prompt va CORTO y centrado en el dibujo, y
-        # el texto se queda solo con lo suyo: acabados, materiales y colores.
-        if ref_b64 and is_sketch:
-            parsed_params["briefExpanded"] = False
-            parsed_params["fromSketch"] = True
-            brief_txt = (description or "").strip()
-            task_prompt = (
-                "You are given a TECHNICAL 2D DRAWING of ONE specific kitchen: a hand-drawn "
-                "floor plan, elevation or blueprint, possibly with handwritten dimensions. "
-                "Produce a single photorealistic interior photograph of THAT SAME kitchen, "
-                "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
-                "NOT a new design — do not 'improve' it and do not substitute a nicer layout.\n\n"
-                "THE DRAWING IS THE GROUND TRUTH FOR GEOMETRY:\n"
-                "- Reproduce the EXACT overall SHAPE of the kitchen (linear, L-shaped, U-shaped, "
-                "with island or peninsula) as drawn. If it is drawn as an L, it must be an L.\n"
-                "- Reproduce the NUMBER and the ORDER of the modules from left to right, and "
-                "their relative widths and heights as drawn.\n"
-                "- Reproduce EVERY element that appears in the drawing, each in its drawn "
-                "position: base units, wall units, tall/column units, fridge and freezer "
-                "columns, broom/larder units, oven, microwave, hob, hood, dishwasher, washing "
-                "machine, sink, worktop and breakfast bar. Nothing drawn may be missing.\n"
-                "- Reproduce the OPENINGS: every window and door at the same position, width "
-                "and height as drawn.\n"
-                "- Do NOT add, remove, resize, merge, duplicate or rearrange any module, "
-                "appliance or opening, and do NOT invent extra furniture that is not drawn.\n"
-                "- Use a wide-angle corner viewpoint so the COMPLETE layout is visible at once.\n\n"
-                + (f"FINISHES (this is the ONLY thing the text decides — geometry comes 100% "
-                   f"from the drawing): {brief_txt}\n\n" if brief_txt else
-                   "Use plausible, restrained modern finishes; the geometry still comes 100% "
-                   "from the drawing.\n\n")
-                + "Photorealistic result: realistic PBR materials, natural light, soft real "
-                "shadows and reflections, 16:9. It must look like a real professional interior "
-                "photograph, not a cartoon or videogame render. No text, dimension lines, "
-                "watermarks, logos or people in the image."
-            )
-            return await self._render_dispatch(
-                task_prompt, task_prompt, parsed_params,
-                reference_image_base64=ref_b64, reference_mime=ref_mime,
-                provider=provider, reference_images=reference_images or None,
-            )
-
         # ── SIN REFERENCIA = diseño desde cero ─────────────────────────────────
         # Expandir el brief con un LLM potente (gemini-2.5-pro) para que las órdenes
         # sean mucho más explícitas y el render obedezca con detalle.
@@ -715,10 +663,22 @@ class Render3DService:
         )
 
         # Crear tarea de generación de imagen (genérica, dirigida por el brief)
-        # OJO: el caso del CROQUIS ya ha salido por su propia rama más arriba,
-        # con prompt corto y sin brief expandido. Aquí solo llegan la referencia
-        # que no es un dibujo y el diseño desde cero.
-        if ref_b64:
+        if ref_b64 and is_sketch:
+            ref_note = (
+                "A TECHNICAL 2D DRAWING (hand-drawn floor plan, elevation or blueprint) "
+                "has been attached. Treat it in STRICT STRUCTURE / PRECISE MODE: it is "
+                "the ground truth for GEOMETRY, not decoration. You MUST reproduce the "
+                "EXACT distribution drawn: the SHAPE (linear, L-shaped, U-shaped), the "
+                "NUMBER and ORDER of modules from left to right, the POSITION of each "
+                "appliance (sink, dishwasher, washing machine, oven, hob, fridge), the "
+                "TALL COLUMNS, and — critically — the OPENINGS: every window and door "
+                "(vano) must appear at the SAME position, width and height as in the "
+                "drawing, and the overall PROPORTIONS and module widths must match the "
+                "drawing to scale. Do NOT add, remove, resize or rearrange any module or "
+                "opening. Only the FINISHES, MATERIALS and COLORS come from the written "
+                "brief; the geometry comes 100% from the drawing. "
+            )
+        elif ref_b64:
             ref_note = (
                 "An IMAGE has been attached as visual reference (a photo, a sketch or a "
                 "technical breakdown/despiece). Work in PRECISE / STRUCTURE MODE: respect "
@@ -823,7 +783,8 @@ class Render3DService:
     # mandan, menos atención recibe cada una y el render se vuelve un promedio.
     # Con 7 caben plano + 5 alzados + 1 referencia de acabado, o plano + 4
     # alzados + 2 referencias, que cubre una cocina en U con acabado de muestra.
-    MAX_IMAGENES_COMPUESTAS = 7
+    # 6 imágenes: más allá el modelo mezcla unas con otras y pierde fidelidad al boceto.
+    MAX_IMAGENES_COMPUESTAS = 6
 
     async def generate_render_composed(
         self,
@@ -854,7 +815,6 @@ class Render3DService:
 
         images = []       # [{"data","mime"}] para la generación multi-imagen
         ref_lines = []    # descripción textual de cada imagen para el prompt
-        hay_croquis = False  # ¿alguna de las que manda la geometría va a mano?
 
         if floor_plan:
             b64, mime = self._prepare_reference(floor_plan, None)
@@ -865,7 +825,6 @@ class Render3DService:
                     "exact LAYOUT — position and length of every wall, placement of cabinets/"
                     "furniture, doors and windows. Respect these positions and proportions."
                 )
-                hay_croquis = hay_croquis or self._parece_dibujo_a_mano(b64)
 
         for i, sk in enumerate(wall_sketches or []):
             if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
@@ -873,12 +832,26 @@ class Render3DService:
             b64, mime = self._prepare_reference(sk, None)
             if b64:
                 images.append({"data": b64, "mime": mime})
-                ref_lines.append(
-                    f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
-                    "it shows the exact design of that wall (cabinets, shelves, appliances, "
-                    "finishes, proportions). Reproduce that wall faithfully, as shown."
-                )
-                hay_croquis = hay_croquis or self._parece_dibujo_a_mano(b64)
+                # Detectar si el boceto es un dibujo manuscrito para darle instrucciones
+                # técnicas estrictas en lugar de tratarlo como referencia de acabado.
+                sk_is_sketch = self._is_sketch_reference(b64, mime)
+                if sk_is_sketch:
+                    ref_lines.append(
+                        f"- IMAGE {len(images)} is a HAND-DRAWN TECHNICAL SKETCH / ELEVATION of WALL {i + 1}. "
+                        "Treat it as a TECHNICAL BLUEPRINT — it is the ground truth for GEOMETRY. "
+                        "You MUST reproduce the EXACT distribution drawn: the NUMBER and ORDER of "
+                        "modules from left to right, the POSITION of each appliance (sink, hob, oven, "
+                        "microwave, fridge, dishwasher), the TALL COLUMNS and their contents, and the "
+                        "PROPORTIONS and widths of each module. Do NOT add, remove, resize or rearrange "
+                        "any module or appliance. Only FINISHES, MATERIALS and COLORS come from the "
+                        "written brief; the geometry comes 100% from this drawing."
+                    )
+                else:
+                    ref_lines.append(
+                        f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
+                        "it shows the exact design of that wall (cabinets, shelves, appliances, "
+                        "finishes, proportions). Reproduce that wall faithfully, as shown."
+                    )
 
         # Referencias de ACABADO: la foto que trae el cliente ("quiero esta
         # madera, este tirador"). Se pueden usar A LA VEZ que el plano: el plano
@@ -912,23 +885,21 @@ class Render3DService:
         # prompt ni _expand_brief: solo referencias + acabados pedidos.
         brief_txt = (description or "").strip()
         refs_block = "\n".join(ref_lines)
+        # Si alguno de los bocetos es un dibujo manuscrito, añadir cláusula reforzada
+        # que deja claro que la geometría viene del dibujo, no de la IA.
+        has_sketch = any(self._is_sketch_reference(img.get("data",""), img.get("mime","")) for img in images)
         task_prompt = (
             "You are given reference images of ONE specific kitchen. Recreate THAT SAME kitchen "
             "as a single photorealistic interior photograph. This is a FAITHFUL re-render of the "
             "references, NOT a new design — copy what the images show.\n"
-            + refs_block + "\n"
-            # Si lo que manda la geometría es un DIBUJO A MANO, hay que decirlo.
-            # Sin esto el modelo puede tomar el trazo a lápiz por el acabado, o
-            # "mejorar" una distribución que le parece tosca por estar dibujada
-            # a mano: es el croquis del cliente, no un borrador a pulir.
-            + ("\nIMPORTANT: the drawing(s) above are HAND-DRAWN by the designer (pencil or pen "
-               "on paper, possibly with handwritten dimensions). They are a TECHNICAL SPECIFICATION, "
-               "not a style reference. Read the geometry from them and build it exactly: do NOT "
-               "reproduce the paper, the pencil strokes or the handwriting in the final image, and "
-               "do NOT 'tidy up', simplify or upgrade the layout because it looks rough — a "
-               "hand-drawn L-shaped kitchen must come out as that same L-shaped kitchen.\n"
-               if hay_croquis else "")
-            + "\nSTRICT RULES:\n"
+            + refs_block + "\n\n"
+            + ("CRITICAL — HAND-DRAWN SKETCH DETECTED: One or more images are technical sketches. "
+               "The sketch is NOT decorative — it is a TECHNICAL BLUEPRINT. The geometry (layout, "
+               "number of modules, appliance positions, column positions) comes 100% from the sketch. "
+               "Do NOT invent a new kitchen. Do NOT default to a generic design. Reproduce EXACTLY "
+               "what is drawn.\n\n"
+               if has_sketch else "")
+            "STRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "
             "part of the kitchen (e.g. the tall fridge/oven columns, an end run or the island). "
@@ -958,53 +929,10 @@ class Render3DService:
             provider=provider, reference_images=images,
         )
 
-    # Umbrales del detector de croquis en MAPA DE BITS (JPEG/PNG). Un croquis a
-    # lápiz o bolígrafo sobre papel es casi gris (apenas tiene color) y casi todo
-    # fondo claro; una foto de una cocina real tiene color y muchos menos píxeles
-    # blancos, incluso si la cocina es blanca (sombras, vetas, reflejos).
-    CROQUIS_SATURACION_MAX = 0.10    # saturación media, 0-1
-    CROQUIS_FONDO_CLARO_MIN = 0.55   # fracción de píxeles casi blancos
-
-    def _parece_dibujo_a_mano(self, raw_b64):
-        """¿Este mapa de bits es un croquis/plano a mano y no la FOTO de una
-        cocina real? Papel + trazo = casi sin color y con mucho fondo claro.
-
-        CONSERVADOR a propósito: ante la duda devuelve False y la imagen se
-        sigue tratando como foto, que es el comportamiento de siempre.
-        Confundir una foto con un croquis también estropea el render."""
-        try:
-            import base64
-            import io
-            from PIL import Image, ImageChops, ImageStat
-            img = Image.open(io.BytesIO(base64.b64decode(raw_b64))).convert("RGB")
-            img.thumbnail((160, 160))
-            # Saturación media: en HSV de PIL es (max-min)/max, justo lo que
-            # separa un trazo de lápiz (gris) de una cocina real (con color).
-            saturacion = ImageStat.Stat(img.convert("HSV").split()[1]).mean[0] / 255.0
-            # Fracción de píxeles casi blancos = el papel. Se mira el canal MÁS
-            # OSCURO de cada píxel: blanco de verdad es alto en R, G y B a la vez.
-            r, g, b = img.split()
-            minimo = ImageChops.darker(ImageChops.darker(r, g), b)
-            fondo_claro = ImageStat.Stat(
-                minimo.point(lambda v: 255 if v >= 200 else 0)).mean[0] / 255.0
-            return (saturacion <= self.CROQUIS_SATURACION_MAX
-                    and fondo_claro >= self.CROQUIS_FONDO_CLARO_MIN)
-        except Exception as e:
-            logger.debug(f"No se pudo analizar la referencia como croquis: {e}")
-            return False
-
     def _is_sketch_reference(self, reference_image, reference_mime):
-        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado
-        O FOTO/ESCANEO de un dibujo a mano) en vez de una foto de cocina
-        existente. En ese caso el render debe INTERPRETAR el plano, no EDITAR
-        la imagen.
-
-        OJO: hasta el 06/08 esto SOLO miraba si era un PDF. El master fotografía
-        el croquis con el móvil, así que llegaba un JPEG y se colaba por la rama
-        de «foto de una cocina existente que hay que EDITAR»: al modelo se le
-        pedía fotorrealizar un dibujo a lápiz como si fuera una cocina montada,
-        y devolvía una cocina genérica inventada. Ese era el síntoma de «el
-        render no lee el boceto»."""
+        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado)
+        en vez de una foto de cocina existente. En ese caso el render debe
+        INTERPRETAR el plano, no EDITAR la imagen."""
         if not reference_image:
             return False
         # Si el MIME indica PDF, es casi seguro un croquis escaneado
@@ -1013,18 +941,16 @@ class Render3DService:
         # Si el data URL indica PDF
         if reference_image[:60].lower().startswith("data:application/pdf"):
             return True
-        raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
         # Detectar por magic bytes del PDF (%PDF)
         try:
+            raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
             import base64
             header_bytes = base64.b64decode(raw[:20])
             if header_bytes[:4] == b"%PDF":
                 return True
         except Exception:
             pass
-        # Mapa de bits: mirar el CONTENIDO, que es lo único que distingue un
-        # croquis fotografiado de una foto de cocina (el MIME es el mismo).
-        return self._parece_dibujo_a_mano(raw)
+        return False
 
     def _prepare_reference(self, reference_image, reference_mime):
         """Normaliza la referencia: quita el prefijo data:, y si es PDF convierte
@@ -1168,11 +1094,7 @@ class Render3DService:
                 async with httpx.AsyncClient(timeout=120) as client:
                     # Crear predicción
                     resp = await client.post(
-                        # flux-1.1-pro, NO flux-schnell. Schnell genera en 4 pasos de difusion
-                        # frente a los ~25-50 del Pro: sale mas barato (~0,003 $/img)
-                        # pero la calidad no es la que el master eligio para IA 3.
-                        # Se cambio a Schnell por coste el 01/08 y se revirtio el 06/08.
-                        "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions",
+                        "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions",
                         headers=headers,
                         json={"input": flux_input},
                     )
@@ -1211,7 +1133,7 @@ class Render3DService:
                 "success": True,
                 "status": "completed",
                 "result": {"images": [data_url]},
-                "engine": f"{self.config.brand_name} (Flux Pro)",
+                "engine": f"{self.config.brand_name} (Flux Schnell)",
                 "duration_seconds": round(time.time() - start, 1),
                 "prompt_used": prompt,
             }
