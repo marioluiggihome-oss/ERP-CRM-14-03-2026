@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Palette, Hammer, Building, Store, Search, MapPin, 
   Mail, Phone, Linkedin, Globe, CheckCircle, UserPlus, Download, 
-  Sparkles, RefreshCw, Send, ShieldCheck, AlertCircle, ExternalLink
+  Sparkles, RefreshCw, Send, ShieldCheck, AlertCircle, ExternalLink, Database
 } from 'lucide-react';
 import { getToken } from '../services/api';
 
@@ -160,9 +160,9 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="p-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg">
-                <Sparkles size={16} />
+                <Database size={16} />
               </span>
-              <h1 className="text-xl font-black tracking-tight text-white">Prospección B2B con Apollo AI</h1>
+              <h1 className="text-xl font-black tracking-tight text-white">Base de Datos de Clientes Potenciales</h1>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                 status.configurado 
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 

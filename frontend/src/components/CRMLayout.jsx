@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone, LifeBuoy, Zap, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList, Mic, Megaphone, LifeBuoy, Zap, Database } from 'lucide-react';
 import CRMDashboard from './CRMDashboard';
 import CRMPipeline from './CRMPipeline';
 import CRMContacts from './CRMContacts';
@@ -19,7 +19,7 @@ import ApolloProspeccion from './ApolloProspeccion';
 
 const CRM_TABS = [
   { id: 'dashboard',   name: 'Resumen',       icon: LayoutDashboard, color: 'text-indigo-600',  activeBg: 'bg-indigo-600' },
-  { id: 'apollo',      name: 'Apollo B2B',    icon: Sparkles,        color: 'text-amber-500',   activeBg: 'bg-amber-500' },
+  { id: 'apollo',      name: 'Base de datos', icon: Database,       color: 'text-amber-600',   activeBg: 'bg-amber-600' },
   { id: 'pipeline',    name: 'Oportunidades', icon: Target,          color: 'text-purple-600',  activeBg: 'bg-purple-600' },
   { id: 'contacts',    name: 'Contactos',     icon: Users,           color: 'text-blue-600',    activeBg: 'bg-blue-600' },
   { id: 'activities',  name: 'Actividades',   icon: ClipboardList,   color: 'text-green-600',   activeBg: 'bg-green-600' },
