@@ -1,7 +1,3 @@
-# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
-# Software propietario y confidencial. Ver LICENSE.
-# Prohibida su copia, distribución, modificación o uso sin autorización
-# escrita del titular.
 """
 LuiggiAI Engine - Servicio de Render 3D
 ========================================
@@ -132,21 +128,6 @@ PRO_KITCHEN_DESIGN_PRINCIPLES = (
     "continuous worktop with matching upstand, integrated and aligned appliances, "
     "visible but tasteful hardware. The space must look designed by a professional "
     "kitchen designer: functional, ergonomic, well-lit and visually balanced."
-)
-
-
-# Prefijo de prompt para IA 3 (Gemini premium / fallback de Flux)
-_PREMIUM_PROMPT_PREFIX = (
-    "ULTRA-PREMIUM PHOTOREALISTIC KITCHEN RENDER. "
-    "Professional architectural photography, shot with Phase One IQ4 150MP medium format camera, "
-    "Schneider Kreuznach 28mm LS lens, f/8, ISO 100, perfect exposure. "
-    "Physically-based rendering (PBR) with path tracing, subsurface scattering on stone surfaces, "
-    "anisotropic reflections on metal, micro-detail wood grain texture at 16K resolution. "
-    "Cinematic natural daylight from floor-to-ceiling windows, soft fill light, "
-    "warm accent LED under-cabinet strips. Perfect depth of field, tack-sharp foreground, "
-    "subtle bokeh on background. Hyper-realistic material response: fingerprint-free matte lacquer, "
-    "veined marble with translucency, brushed metal with directional grain. "
-    "Award-winning interior design magazine quality. No CGI artifacts, no plastic look."
 )
 
 
@@ -402,22 +383,13 @@ class Render3DService:
         style_desc = style_instructions.get(style, style_instructions["photorealistic"])
 
         is_kitchen = "kitchen" in (space_type or "").lower() or "cocina" in (space_type or "").lower()
-        # OJO: aquí ponía "base units ~90 cm high", que contradice lo que se
-        # fabrica: el CASCO del bajo es de 80 y son el zócalo y la encimera los
-        # que suben la altura de trabajo a 90-94. El criterio completo (oficio,
-        # ergonomía, composición y qué hace vender una imagen) vive en
-        # services/criterios_cocina.py para no tenerlo repartido.
-        kitchen_scale = ""
-        if is_kitchen:
-            try:
-                from services.criterios_cocina import CRITERIOS_RENDER_COCINA
-                kitchen_scale = CRITERIOS_RENDER_COCINA
-            except Exception:
-                kitchen_scale = (
-                    "Use real kitchen cabinetry scale: 80 cm base carcasses on a 10-15 cm "
-                    "plinth so the worktop sits at 90-94 cm, wall units 70 or 90 cm tall "
-                    "hung 55-60 cm above a continuous worktop of uniform thickness. "
-                )
+        kitchen_scale = (
+            "Use real kitchen cabinetry scale: base units ~90 cm high with a recessed toe-kick "
+            "plinth, wall units mounted ~55-60 cm above a continuous worktop of uniform thickness "
+            "with a matching upstand/backsplash, and appliances integrated flush with the fronts; "
+            "keep reveal gaps between fronts uniform. "
+            if is_kitchen else ""
+        )
 
         parts = [
             f"{style_desc}.",
@@ -428,12 +400,6 @@ class Render3DService:
             "type of piece, exterior doors, finishes and colors, handles/pulls, "
             "materials, and the interior configuration (shelves, columns, drawers, "
             "open spaces) as specified.",
-            "PER-MODULE FRONTS ARE MANDATORY: count the fronts of EACH cabinet exactly "
-            "as stated. If a unit is described as '1 drawer + 2 gavetas (deep drawers)', "
-            "render that unit with exactly one shallow drawer front on top and two deep "
-            "drawer fronts below it — never replace it with a plain door or a different "
-            "count. A module with drawers must show drawer fronts (horizontal seams with "
-            "pulls), NOT a single full-height door.",
             "Camera angle: eye-level perspective showing the full piece within its space.",
             "Realism: photorealistic PBR materials with accurate roughness and reflectivity, "
             "realistic global illumination and contact shadows, true-to-scale proportions, "
@@ -506,8 +472,6 @@ class Render3DService:
         reference_mime: Optional[str] = None,
         provider: Optional[str] = None,
         reference_images: Optional[list] = None,
-        project_type: Optional[str] = None,
-        room_photo: bool = False,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -529,20 +493,8 @@ class Render3DService:
         if params_override:
             parsed_params.update(params_override)
 
-        # Tipo de espacio: si el usuario ELIGIÓ un tipo de proyecto (Cocina,
-        # Armario, Baño…), MANDA sobre la detección por texto — así una plantilla
-        # de cocina no puede acabar generando un armario. Solo "otro" delega en
-        # la detección automática por la descripción.
-        _forced = {
-            "cocina": "modern kitchen",
-            "armario": "fitted/built-in wardrobe (custom closet) with exterior doors and interior shelving, drawers and columns",
-            "bano": "bathroom with custom vanity/cabinetry",
-        }
-        pt = (project_type or "").strip().lower()
-        if pt in _forced:
-            space_type = _forced[pt]
-        else:
-            space_type = self.detect_space_type(description)
+        # Detectar el tipo de espacio/mueble para NO forzar "cocina"
+        space_type = self.detect_space_type(description)
         parsed_params["space_type"] = space_type
 
         # Preparar la imagen de referencia (si es PDF, convertir 1ª página a PNG)
@@ -558,49 +510,6 @@ class Render3DService:
         # INTERPRETAR la distribución. En ese caso usamos la rama SIN referencia pero
         # pasando la imagen como guía de layout.
         is_sketch = self._is_sketch_reference(reference_image, reference_mime)
-
-        # ── AMUEBLADO VIRTUAL: la foto es la ESTANCIA REAL (vacía / a reformar) ──
-        # No hay que EDITAR un mueble existente, sino DISEÑAR uno nuevo DENTRO de esa
-        # estancia respetando su arquitectura (paredes, ventanas, puertas, suelo,
-        # techo, perspectiva y luz reales). Cierra ventas: el cliente ve su propio hueco.
-        if ref_b64 and not is_sketch and room_photo:
-            pt2 = (project_type or "").strip().lower()
-            pieza = {"armario": "fitted wardrobe/closet", "bano": "bathroom vanity/cabinetry"}.get(pt2, "kitchen")
-            parsed_params["briefExpanded"] = False
-            parsed_params["virtualStaging"] = True
-            task_prompt = (
-                f"The attached photo is a REAL ROOM of the client (it may be EMPTY, being "
-                f"renovated, or STILL HAVE AN OLD {pieza} installed). Your job is to show this "
-                f"same room fitted with a BRAND-NEW {pieza}. "
-                "IF THE ROOM ALREADY HAS furniture/cabinets/appliances/worktop, REMOVE all of that "
-                "existing (old) furniture completely and REPLACE it with the newly designed one — "
-                "do NOT keep the old units, do not leave them behind and do not stack the new "
-                "design on top of them. "
-                "Keep the room's ARCHITECTURE strictly unchanged: the same walls, corners and room "
-                "shape, the SAME windows and doors at their real position and size, the SAME "
-                "ceiling, and the SAME camera viewpoint, perspective and vanishing lines as the "
-                "photo. Match the real lighting and the direction of the natural light coming from "
-                "the windows. Integrate the new furniture realistically against the real walls "
-                "(respect the free wall lengths available). You MAY update floor and wall finishes "
-                "if the brief asks, but never move or resize the openings or change the room's "
-                "proportions.\n\n"
-                "EXISTING INSTALLATIONS (very important, so the kitchen is BUILDABLE without moving "
-                "plumbing or wiring): look at the photo for existing points — water supply / tap, "
-                "drain, wall sockets, gas outlet, radiator and the boiler if visible — and DESIGN "
-                "AROUND them: place the sink and dishwasher where the water/drain already are, the "
-                "hob near its supply, and keep the fridge/oven near existing sockets. Do NOT invent "
-                "a layout that would require relocating those installations.\n\n"
-                f"Furniture to design (finishes, materials, colors, layout): {description or 'cocina moderna funcional'}.\n\n"
-                "Photorealistic result, PBR materials, realistic shadows and reflections coherent "
-                "with the room's light, 16:9. It must look like a real photo of THIS room, now "
-                "furnished. No text, watermarks or logos."
-            )
-            return await self._render_dispatch(
-                task_prompt, task_prompt, parsed_params,
-                reference_image_base64=ref_b64, reference_mime=ref_mime,
-                provider=provider,
-            )
-
         if ref_b64 and not is_sketch:
             change = (description or "").strip()
             parsed_params["briefExpanded"] = False
@@ -642,22 +551,9 @@ class Render3DService:
         expanded_brief = await self._expand_brief(description, space_type)
         parsed_params["briefExpanded"] = bool(expanded_brief) and expanded_brief != (description or "").strip()
 
-        # El brief expandido por el LLM puede "diluir" las órdenes literales por
-        # módulo (p. ej. "el mueble de la izquierda lleva 1 cajón y 2 gavetas").
-        # Antepone la descripción ORIGINAL como orden obligatoria y prioritaria,
-        # para que el modelo de imagen respete los recuentos por módulo.
-        raw_layout = (description or "").strip()
-        combined = expanded_brief or description
-        if raw_layout:
-            combined = (
-                "MANDATORY MODULE LAYOUT — obey this LITERALLY; it overrides anything else. "
-                "Count the doors and drawers of EACH module exactly as written, left to right: "
-                f"«{raw_layout}».\n\n" + (combined or "")
-            )
-
         # Construir prompt GENÉRICO guiado por la descripción (ya expandida).
         prompt = self.build_render_prompt(
-            description=combined,
+            description=expanded_brief or description,
             style=parsed_params.get("style", "photorealistic"),
             space_type=space_type,
         )
@@ -665,27 +561,25 @@ class Render3DService:
         # Crear tarea de generación de imagen (genérica, dirigida por el brief)
         if ref_b64 and is_sketch:
             ref_note = (
-                "A TECHNICAL 2D DRAWING (hand-drawn floor plan, elevation or blueprint) "
-                "has been attached. Treat it in STRICT STRUCTURE / PRECISE MODE: it is "
-                "the ground truth for GEOMETRY, not decoration. You MUST reproduce the "
-                "EXACT distribution drawn: the SHAPE (linear, L-shaped, U-shaped), the "
-                "NUMBER and ORDER of modules from left to right, the POSITION of each "
-                "appliance (sink, dishwasher, washing machine, oven, hob, fridge), the "
-                "TALL COLUMNS, and — critically — the OPENINGS: every window and door "
-                "(vano) must appear at the SAME position, width and height as in the "
-                "drawing, and the overall PROPORTIONS and module widths must match the "
-                "drawing to scale. Do NOT add, remove, resize or rearrange any module or "
-                "opening. Only the FINISHES, MATERIALS and COLORS come from the written "
-                "brief; the geometry comes 100% from the drawing. "
+                "A HAND-DRAWN FLOOR PLAN / SKETCH has been attached. It shows the "
+                "exact kitchen/furniture LAYOUT drawn by the designer. You MUST "
+                "reproduce the EXACT distribution shown in the sketch: the SHAPE "
+                "(linear, L-shaped, U-shaped), the NUMBER and ORDER of modules from "
+                "left to right, the POSITION of each appliance (sink, dishwasher, "
+                "washing machine, oven, hob, fridge), and the TALL COLUMNS. "
+                "The sketch is NOT decorative — it is a TECHNICAL blueprint. "
+                "Generate the kitchen EXACTLY as drawn, with the materials and "
+                "colors described in the brief below. Do NOT add, remove, or "
+                "rearrange any module. The proportions and widths of each module "
+                "must match the sketch. "
             )
         elif ref_b64:
             ref_note = (
                 "An IMAGE has been attached as visual reference (a photo, a sketch or a "
-                "technical breakdown/despiece). Work in PRECISE / STRUCTURE MODE: respect "
-                "the real LAYOUT, PROPORTIONS and MEASUREMENTS of the piece (number and "
-                "size of doors, drawers, shelves and columns) and the OPENINGS (windows "
-                "and doors) at their original position and proportion. Keep the geometry "
-                "faithful to the reference; apply only the finishes/colors from the brief. "
+                "technical breakdown/despiece). Use it to respect the real LAYOUT, "
+                "PROPORTIONS and MEASUREMENTS of the piece (number and size of doors, "
+                "drawers, shelves and columns). Keep the geometry faithful to the "
+                "reference; apply the finishes/colors from the brief. "
             )
         else:
             ref_note = ""
@@ -711,90 +605,12 @@ class Render3DService:
             provider=provider,
         )
 
-    async def generate_orbit_views(
-        self,
-        reference_image: str,
-        reference_mime: Optional[str] = None,
-        project_type: Optional[str] = None,
-        n: int = 6,
-        provider: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Genera VARIAS vistas de la MISMA cocina/mueble desde distintos ángulos de
-        cámara, a partir de un render base, para montar un visor orbital (girar con
-        el ratón). Cada vista reutiliza la imagen base como referencia para mantener
-        la coherencia (misma distribución, materiales, luz…); solo cambia la cámara.
-        Devuelve las imágenes ordenadas de izquierda a derecha."""
-        ref_b64, ref_mime = self._prepare_reference(reference_image, reference_mime)
-        if not ref_b64:
-            return {"success": False, "error": "Falta la imagen base del render."}
-
-        pt = (project_type or "cocina").strip().lower()
-        subject = {
-            "armario": "wardrobe/closet", "bano": "bathroom", "cocina": "kitchen",
-        }.get(pt, "kitchen/furniture")
-
-        # Ángulos orbitales, de la esquina izquierda a la derecha (recorrido continuo).
-        ANGLES = [
-            "from the far LEFT corner of the room, camera rotated about 40 degrees to the left",
-            "from the left, camera rotated about 20 degrees to the left",
-            "a straight-on FRONTAL eye-level view, centered",
-            "from the right, camera rotated about 20 degrees to the right",
-            "from the far RIGHT corner of the room, camera rotated about 40 degrees to the right",
-            "a slightly ELEVATED three-quarter view from the right corner",
-        ]
-        n = max(2, min(int(n or 6), len(ANGLES)))
-        angles = ANGLES[:n]
-
-        images = []
-        for ang in angles:
-            task_prompt = (
-                f"You are given a reference image of an EXISTING {subject} design. "
-                "Re-render the EXACT SAME scene — identical room, layout, modules, "
-                "appliances, sink, hob, hood, colors, materials, finishes, floor, walls, "
-                "windows and lighting — but seen from a DIFFERENT CAMERA ANGLE: "
-                f"{ang}. Only the camera viewpoint changes, as if the viewer walked "
-                "around the room; every object keeps its same identity, position and "
-                "proportions relative to the room. Do NOT redesign, add, remove or move "
-                "anything. Photorealistic result, PBR materials, natural light and "
-                "realistic shadows, 16:9 landscape. No text, watermarks or logos."
-            )
-            try:
-                res = await self._render_with_gemini(
-                    task_prompt, task_prompt, {"space_type": subject, "orbitAngle": ang},
-                    reference_image_base64=ref_b64, reference_mime=ref_mime,
-                )
-            except Exception as e:
-                logger.error(f"orbit view error: {e}")
-                res = None
-            if res and res.get("success"):
-                imgs = (res.get("result") or {}).get("images") or []
-                if imgs:
-                    images.append(imgs[0])
-
-        return {
-            "success": bool(images),
-            "images": images,
-            "count": len(images),
-            "engine": self.config.brand_name,
-        }
-
-    # Tope de imágenes que se mandan juntas. No es un límite del modelo (admite
-    # bastantes más): es un tope de criterio, porque cuantas más referencias se
-    # mandan, menos atención recibe cada una y el render se vuelve un promedio.
-    # Con 7 caben plano + 5 alzados + 1 referencia de acabado, o plano + 4
-    # alzados + 2 referencias, que cubre una cocina en U con acabado de muestra.
-    # 6 imágenes: más allá el modelo mezcla unas con otras y pierde fidelidad al boceto.
-    MAX_IMAGENES_COMPUESTAS = 6
-
     async def generate_render_composed(
         self,
         description: str,
         floor_plan: Optional[str] = None,
         wall_sketches: Optional[list] = None,
         params_override: Optional[Dict[str, Any]] = None,
-        reference_images: Optional[list] = None,
-        provider: Optional[str] = None,
-        project_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Genera UN render fotorrealista combinando un PLANO EN PLANTA (distribución)
         y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos.
@@ -808,9 +624,7 @@ class Render3DService:
         parsed_params = self.parse_natural_language(description or "")
         if params_override:
             parsed_params.update(params_override)
-        # El TIPO lo dice la pantalla (cocina/armario/baño); solo si no viene se
-        # adivina del texto. Adivinarlo teniendo el dato es perder informacion.
-        space_type = self.detect_space_type(project_type or description or "cocina")
+        space_type = self.detect_space_type(description or "cocina")
         parsed_params["space_type"] = space_type
 
         images = []       # [{"data","mime"}] para la generación multi-imagen
@@ -827,47 +641,13 @@ class Render3DService:
                 )
 
         for i, sk in enumerate(wall_sketches or []):
-            if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
-                break
             b64, mime = self._prepare_reference(sk, None)
             if b64:
                 images.append({"data": b64, "mime": mime})
-                # Detectar si el boceto es un dibujo manuscrito para darle instrucciones
-                # técnicas estrictas en lugar de tratarlo como referencia de acabado.
-                sk_is_sketch = self._is_sketch_reference(b64, mime)
-                if sk_is_sketch:
-                    ref_lines.append(
-                        f"- IMAGE {len(images)} is a HAND-DRAWN TECHNICAL SKETCH / ELEVATION of WALL {i + 1}. "
-                        "Treat it as a TECHNICAL BLUEPRINT — it is the ground truth for GEOMETRY. "
-                        "You MUST reproduce the EXACT distribution drawn: the NUMBER and ORDER of "
-                        "modules from left to right, the POSITION of each appliance (sink, hob, oven, "
-                        "microwave, fridge, dishwasher), the TALL COLUMNS and their contents, and the "
-                        "PROPORTIONS and widths of each module. Do NOT add, remove, resize or rearrange "
-                        "any module or appliance. Only FINISHES, MATERIALS and COLORS come from the "
-                        "written brief; the geometry comes 100% from this drawing."
-                    )
-                else:
-                    ref_lines.append(
-                        f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
-                        "it shows the exact design of that wall (cabinets, shelves, appliances, "
-                        "finishes, proportions). Reproduce that wall faithfully, as shown."
-                    )
-
-        # Referencias de ACABADO: la foto que trae el cliente ("quiero esta
-        # madera, este tirador"). Se pueden usar A LA VEZ que el plano: el plano
-        # manda en la distribución y la referencia manda en el acabado. Sin
-        # esto, elegir plano significaba renunciar a la referencia.
-        for ref in (reference_images or []):
-            if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
-                break
-            b64, mime = self._prepare_reference(ref, None)
-            if b64:
-                images.append({"data": b64, "mime": mime})
                 ref_lines.append(
-                    f"- IMAGE {len(images)} is a FINISH/STYLE reference: take from it ONLY the "
-                    "materials, colours, textures, handle system and general character. Do NOT "
-                    "take its layout, its cabinet sizes or its room: the layout comes from the "
-                    "floor plan and the wall references above."
+                    f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
+                    "it shows the exact design of that wall (cabinets, shelves, appliances, "
+                    "finishes, proportions). Reproduce that wall faithfully, as shown."
                 )
 
         if not images:
@@ -885,21 +665,12 @@ class Render3DService:
         # prompt ni _expand_brief: solo referencias + acabados pedidos.
         brief_txt = (description or "").strip()
         refs_block = "\n".join(ref_lines)
-        # Si alguno de los bocetos es un dibujo manuscrito, añadir cláusula reforzada
-        # que deja claro que la geometría viene del dibujo, no de la IA.
-        has_sketch = any(self._is_sketch_reference(img.get("data",""), img.get("mime","")) for img in images)
         task_prompt = (
             "You are given reference images of ONE specific kitchen. Recreate THAT SAME kitchen "
             "as a single photorealistic interior photograph. This is a FAITHFUL re-render of the "
             "references, NOT a new design — copy what the images show.\n"
             + refs_block + "\n\n"
-            + ("CRITICAL — HAND-DRAWN SKETCH DETECTED: One or more images are technical sketches. "
-               "The sketch is NOT decorative — it is a TECHNICAL BLUEPRINT. The geometry (layout, "
-               "number of modules, appliance positions, column positions) comes 100% from the sketch. "
-               "Do NOT invent a new kitchen. Do NOT default to a generic design. Reproduce EXACTLY "
-               "what is drawn.\n\n"
-               if has_sketch else "")
-            + "STRICT RULES:\n"
+            "STRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "
             "part of the kitchen (e.g. the tall fridge/oven columns, an end run or the island). "
@@ -920,25 +691,14 @@ class Render3DService:
         prompt = task_prompt
         parsed_params["hasReference"] = True
         parsed_params["referenceCount"] = len(images)
-        # OJO: esto llamaba DIRECTAMENTE a Gemini estandar y se saltaba el motor
-        # elegido en pantalla (IA 1/2/3/4). Al enrutar el boton principal por
-        # aqui cuando hay plano, el usuario creia seguir en su motor y no lo
-        # estaba. Va por el mismo repartidor que el resto de renders.
-        return await self._render_dispatch(
-            task_prompt, prompt, parsed_params,
-            provider=provider, reference_images=images,
+        return await self._render_with_gemini(
+            task_prompt, prompt, parsed_params, reference_images=images,
         )
 
     def _is_sketch_reference(self, reference_image, reference_mime):
-        """Detecta si la referencia es un croquis/plano manuscrito (PDF o imagen)
-        en vez de una foto fotorrealista de cocina. En ese caso el render debe
-        INTERPRETAR el plano como blueprint técnico, no editar la imagen.
-
-        Criterios de detección:
-        - PDF (siempre considerado croquis)
-        - JPEG/PNG con fondo claro y trazos oscuros (boceto a mano)
-        - Imágenes con baja saturación y alto contraste blanco/negro
-        """
+        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado)
+        en vez de una foto de cocina existente. En ese caso el render debe
+        INTERPRETAR el plano, no EDITAR la imagen."""
         if not reference_image:
             return False
         # Si el MIME indica PDF, es casi seguro un croquis escaneado
@@ -953,35 +713,6 @@ class Render3DService:
             import base64
             header_bytes = base64.b64decode(raw[:20])
             if header_bytes[:4] == b"%PDF":
-                return True
-        except Exception:
-            pass
-        # Detectar boceto manuscrito en JPEG/PNG: fondo blanco/claro con trazos
-        # oscuros (bolígrafo, lápiz). Usamos PIL para analizar la imagen.
-        try:
-            import base64, io
-            from PIL import Image, ImageStat
-            raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
-            img_bytes = base64.b64decode(raw)
-            img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-            # Reducir para análisis rápido
-            img_small = img.resize((100, 100))
-            stat = ImageStat.Stat(img_small)
-            # Brillo medio de cada canal (0-255)
-            r_mean, g_mean, b_mean = stat.mean
-            brightness = (r_mean + g_mean + b_mean) / 3
-            # Desviación estándar (contraste)
-            r_std, g_std, b_std = stat.stddev
-            contrast = (r_std + g_std + b_std) / 3
-            # Saturación media: diferencia entre max y min canal por pixel
-            pixels = list(img_small.getdata())
-            sat_sum = sum(max(p) - min(p) for p in pixels)
-            avg_sat = sat_sum / len(pixels)
-            # Un boceto manuscrito típico tiene:
-            # - Fondo muy claro (brightness > 180)
-            # - Baja saturación (avg_sat < 40, casi sin color)
-            # - Contraste moderado-alto (trazos oscuros sobre fondo blanco)
-            if brightness > 175 and avg_sat < 50:
                 return True
         except Exception:
             pass
@@ -1057,21 +788,16 @@ class Render3DService:
                                   parsed_params: Optional[Dict[str, Any]] = None,
                                   reference_image_base64: Optional[str] = None,
                                   reference_mime: str = "image/png",
-                                  reference_images: Optional[list] = None,
-                                  model_override: Optional[str] = None,
-                                  prompt_prefix: Optional[str] = None) -> Dict[str, Any]:
+                                  reference_images: Optional[list] = None) -> Dict[str, Any]:
         """Genera el render con Gemini y lo devuelve como data URL (marca blanca)."""
         from services.llm_vision import generate_image_with_gemini
         start = time.time()
-        # Aplicar prefijo de prompt si se especifica (IA 3 premium)
-        final_prompt = f"{prompt_prefix}\n\n{task_prompt}" if prompt_prefix else task_prompt
         try:
             data_url = await generate_image_with_gemini(
-                final_prompt,
+                task_prompt,
                 reference_image_base64=reference_image_base64,
                 reference_mime=reference_mime or "image/png",
                 reference_images=reference_images,
-                model_override=model_override,
             )
         except Exception as e:
             logger.error(f"Render (Gemini) error: {e}")
@@ -1092,98 +818,6 @@ class Render3DService:
         if parsed_params is not None:
             out["parsed_params"] = parsed_params
         return out
-
-    async def _render_with_flux(self, task_prompt: str, prompt: str,
-                                 parsed_params: Optional[Dict[str, Any]] = None,
-                                 reference_image_base64: Optional[str] = None,
-                                 reference_mime: str = "image/png",
-                                 replicate_key: str = "") -> Dict[str, Any]:
-        """Genera el render con Flux Pro (black-forest-labs/flux-1.1-pro) via Replicate.
-        Devuelve la imagen como data URL base64 para consistencia con los otros motores.
-        Requiere REPLICATE_API_TOKEN en el entorno."""
-        import asyncio
-        import base64
-        import httpx
-        start = time.time()
-        try:
-            # Preparar input para Flux 1.1 Pro
-            flux_input: Dict[str, Any] = {
-                "prompt": f"{_PREMIUM_PROMPT_PREFIX}\n\n{task_prompt}",
-                "aspect_ratio": "16:9",
-                "output_format": "png",
-                "output_quality": 95,
-                "safety_tolerance": 5,
-                "prompt_upsampling": True,
-            }
-            # Si hay imagen de referencia, usarla como img2img (Flux Redux)
-            # Flux 1.1 Pro no acepta img2img directamente; usamos solo el prompt
-            # (en el futuro se puede usar flux-redux para img2img)
-
-            headers = {
-                "Authorization": f"Bearer {replicate_key}",
-                "Content-Type": "application/json",
-                "Prefer": "wait",  # esperar resultado directamente (hasta 60s)
-            }
-
-            async def _call_replicate():
-                async with httpx.AsyncClient(timeout=120) as client:
-                    # Crear predicción
-                    resp = await client.post(
-                        "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions",
-                        headers=headers,
-                        json={"input": flux_input},
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                    # Con Prefer: wait, el resultado puede venir directo
-                    if data.get("status") == "succeeded" and data.get("output"):
-                        return data["output"]
-                    # Si no, hacer polling
-                    prediction_url = data.get("urls", {}).get("get") or f"https://api.replicate.com/v1/predictions/{data['id']}"
-                    for _ in range(60):  # hasta 120s
-                        await asyncio.sleep(2)
-                        poll = await client.get(prediction_url, headers=headers)
-                        poll.raise_for_status()
-                        pd = poll.json()
-                        if pd.get("status") == "succeeded":
-                            return pd.get("output")
-                        if pd.get("status") in ("failed", "canceled"):
-                            raise RuntimeError(f"Flux falló: {pd.get('error', 'unknown')}")
-                    raise RuntimeError("Flux: tiempo de espera agotado")
-
-            output = await _call_replicate()
-            # output es una URL o lista de URLs con la imagen generada
-            image_url = output[0] if isinstance(output, list) else output
-            if not image_url:
-                raise RuntimeError("Flux no devolvio imagen")
-
-            # Descargar la imagen y convertir a data URL
-            async with httpx.AsyncClient(timeout=60) as client:
-                img_resp = await client.get(image_url)
-                img_resp.raise_for_status()
-                img_b64 = base64.b64encode(img_resp.content).decode("ascii")
-                data_url = f"data:image/png;base64,{img_b64}"
-
-            out = {
-                "success": True,
-                "status": "completed",
-                "result": {"images": [data_url]},
-                "engine": f"{self.config.brand_name} (Flux Schnell)",
-                "duration_seconds": round(time.time() - start, 1),
-                "prompt_used": prompt,
-            }
-            if parsed_params is not None:
-                out["parsed_params"] = parsed_params
-            return out
-
-        except Exception as e:
-            logger.error(f"Render (Flux) error: {e}")
-            return {
-                "success": False,
-                "status": "failed",
-                "error": f"Flux Pro no pudo generar el render: {str(e)[:200]}",
-                "engine": self.config.brand_name,
-            }
 
     async def _render_with_manus(self, task_prompt: str, prompt: str,
                                  parsed_params: Optional[Dict[str, Any]] = None,
@@ -1268,7 +902,6 @@ class Render3DService:
         provider = (provider or os.environ.get("KITCHEN_RENDER_PROVIDER") or "gemini").lower()
         manus_ready = bool(getattr(self.config, "provider_api_key", ""))
 
-        # IA 2: Manus
         if provider == "manus" and manus_ready:
             res = await self._render_with_manus(
                 task_prompt, prompt, parsed_params,
@@ -1278,47 +911,6 @@ class Render3DService:
                 return res
             logger.warning("Render con Manus falló; usando Gemini como respaldo.")
 
-        # IA 3: Flux Pro (Replicate) si hay clave, si no cae a Gemini premium
-        if provider == "flux":
-            replicate_key = os.environ.get("REPLICATE_API_TOKEN", "").strip()
-            if replicate_key:
-                res = await self._render_with_flux(
-                    task_prompt, prompt, parsed_params,
-                    reference_image_base64=reference_image_base64, reference_mime=reference_mime,
-                    replicate_key=replicate_key,
-                )
-                if res.get("success"):
-                    return res
-                logger.warning("Render con Flux falló; usando Gemini premium como respaldo.")
-            else:
-                logger.info("REPLICATE_API_TOKEN no configurado; usando Gemini premium para IA 3.")
-            # Fallback a Gemini con prompt premium
-            return await self._render_with_gemini(
-                task_prompt, prompt, parsed_params,
-                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
-                reference_images=reference_images,
-                prompt_prefix=_PREMIUM_PROMPT_PREFIX,
-            )
-
-        # IA 4: Gemini Flash (más rápido)
-        if provider == "gemini_flash":
-            return await self._render_with_gemini(
-                task_prompt, prompt, parsed_params,
-                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
-                reference_images=reference_images,
-                model_override="gemini-2.5-flash-image",
-            )
-
-        # gemini_premium (legacy): Gemini con prompt enriquecido
-        if provider == "gemini_premium":
-            return await self._render_with_gemini(
-                task_prompt, prompt, parsed_params,
-                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
-                reference_images=reference_images,
-                prompt_prefix=_PREMIUM_PROMPT_PREFIX,
-            )
-
-        # IA 1 / default: Gemini estándar
         return await self._render_with_gemini(
             task_prompt, prompt, parsed_params,
             reference_image_base64=reference_image_base64, reference_mime=reference_mime,
