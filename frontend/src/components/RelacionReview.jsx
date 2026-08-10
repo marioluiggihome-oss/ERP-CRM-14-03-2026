@@ -101,17 +101,34 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   useEffect(() => {
     try { localStorage.setItem('mv_tarifa', tarifa); } catch { /* noop */ }
     fetch(`${apiUrl}/api/cascos/mv/tarifa?tariff=${encodeURIComponent(tarifa)}`, { headers: authHeaders() })
-      .then(r => r.json()).then(d => { if (d.success) { setFamilias(d.familias); setPv(d.pointValue || 3.33); } }).catch(() => {});
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setFamilias(d.familias);
+          const newPv = d.pointValue || 3.33;
+          setPv(newPv);
+          // Recalcular inmediatamente todos los muebles ya añadidos con la nueva tarifa
+          setMuebles(prev => prev.map(m => {
+            const info = d.familias?.[m.familia];
+            const e = info?.items?.[m.cod];
+            if (e == null) return m;
+            let pvp = m.pvp;
+            if (Array.isArray(e)) {
+              const t = info.type;
+              let i = 0;
+              if (t === 'h7090') i = (m.alto || 90) >= 85 ? 1 : 0;
+              else if (t === 'h127147') i = (m.alto || 127) > 137 ? 1 : 0;
+              else if (t === 'h200220') i = (m.alto || 200) > 210 ? 1 : 0;
+              pvp = Math.round((e[i] || e[0]) * newPv * 100) / 100;
+            } else if (typeof e === 'number') {
+              pvp = Math.round(e * newPv * 100) / 100;
+            }
+            return { ...m, pvp };
+          }));
+        }
+      })
+      .catch(() => {});
   }, [apiUrl, authHeaders, tarifa]);
-
-  // Al cambiar de tarifa, los muebles YA añadidos valen otro dinero. Se
-  // recalculan todos: dejarlos con el precio de la tarifa anterior daría un
-  // presupuesto mezclado, con unas líneas a un precio y otras a otro.
-  useEffect(() => {
-    if (!familias) return;
-    setMuebles(prev => prev.map(m => ({ ...m, pvp: puntosLocal(m, m.alto) })));
-    // eslint-disable-line
-  }, [familias]);   // eslint-disable-line
   const codigosFam = useMemo(() => {
     if (!familias || !selFam) return [];
     const it = familias[selFam]?.items;
@@ -282,29 +299,50 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     try {
       const r = await fetch(`${apiUrl}/api/cascos/mv/detectar-relacion`, {
         method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: t }),
+        body: JSON.stringify({ texto: t, tariff: tarifa }),
       });
       let d = {}; try { d = await r.json(); } catch { d = {}; }
       if (!r.ok || !d.success) { setAviso(d.detail || 'No se reconoció el mueble. Escríbelo como "1 b60i (altura 80)".'); return; }
       const nuevos = (d.muebles || []).map((m, i) => ({ ...m, _k: `add-${Date.now()}-${i}` }));
-      // Si el mueble ya está (mismo código Y misma altura), se suman unidades en
-      // vez de abrir otra fila. Las unidades multiplican coste, herraje y pedido
-      // al proveedor: dos filas de B60D con 1 ud cada una se leen mal de un
-      // vistazo y es fácil corregir solo una.
       setMuebles(prev => fundir(prev, nuevos));
       setBusca('');
+      setFoco(false);
     } catch (e) {
       setAviso(`Error al buscar (${e?.message || 'red'}).`);
     } finally { setBuscando(false); }
   };
+
   const añadirDelSelector = () => {
     if (!selCod) return;
     añadirTexto(`${Math.max(1, Number(selQty) || 1)} ${selCod}`);
   };
-  // Elegir una sugerencia añade UNA unidad. Volver a elegir la misma suma otra,
-  // porque los duplicados se funden: pulsar dos veces es la forma rápida de
-  // poner 2, sin soltar el teclado.
-  const añadirSugerencia = (c) => { if (c) añadirTexto(`1 ${c.cod}`); };
+
+  // Elegir una sugerencia añade UNA unidad al instante con la tarifa activa.
+  const añadirSugerencia = (c) => {
+    if (!c) return;
+    const info = familias?.[c.familia];
+    const opciones = OPCIONES_ALTURA[info?.type];
+    const alto = opciones ? opciones[0] : (c.familia?.startsWith('BAJO') ? 80 : null);
+    const pvp = puntosLocal({ cod: c.cod, familia: c.familia, pvp: c.precio?.eur }, alto);
+    const nuevo = {
+      _k: `add-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      cod: c.cod,
+      familia: c.familia,
+      tipo: c.familia?.startsWith('BAJO') ? 'BAJO' : c.familia?.startsWith('ALTO') ? 'ALTO' : 'COLUMNA',
+      ancho: c.ancho,
+      alto: alto,
+      fondo: c.familia?.startsWith('ALTO') ? 33 : 58,
+      mano: c.cod.endsWith('D') ? 'D' : c.cod.endsWith('I') ? 'I' : '',
+      qty: 1,
+      pvp: pvp,
+      encontrado: true,
+      raw: c.cod,
+    };
+    setMuebles(prev => fundir(prev, [nuevo]));
+    setBusca('');
+    setFoco(false);
+  };
+
   const teclaBuscador = (e) => {
     if (!sugerencias.length) { if (e.key === 'Enter') añadirTexto(busca); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => (s + 1) % sugerencias.length); }
@@ -384,30 +422,27 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                 <input value={busca} onChange={e => setBusca(e.target.value)}
                   onKeyDown={teclaBuscador}
                   onFocus={() => setFoco(true)}
-                  onBlur={() => setTimeout(() => setFoco(false), 120)}
+                  onBlur={() => setTimeout(() => setFoco(false), 200)}
                   placeholder='Código o palabra: "b60", "fregadero", "1 b45d (altura 80)"'
                   className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 outline-none" />
-                {/* Sugerencias del catálogo, filtradas aquí mismo. El ancho solo
-                    se pinta cuando el código lo lleva de verdad: en cornisas,
-                    zócalos, encimeras y techos se deja vacío antes que poner
-                    una cota que no es. */}
+                {/* Sugerencias del catálogo, filtradas aquí mismo con click instantáneo */}
                 {foco && sugerencias.length > 0 && (
-                  <ul className="absolute z-10 left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl">
+                  <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl">
                     {sugerencias.map((c, i) => (
                       <li key={c.familia + c.cod}>
                         <button type="button"
                           onMouseEnter={() => setSel(i)}
-                          onClick={() => añadirSugerencia(c)}
-                          className={`w-full text-left px-3 py-1.5 flex items-baseline gap-2 ${i === sel ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
-                          <span className="font-black text-indigo-900 text-xs w-24 shrink-0">{c.cod}</span>
-                          <span className="text-[11px] text-slate-500 truncate flex-1">
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); añadirSugerencia(c); }}
+                          className={`w-full text-left px-3 py-2 flex items-baseline gap-2 cursor-pointer transition-colors ${i === sel ? 'bg-indigo-50 text-indigo-950 font-bold' : 'hover:bg-slate-50'}`}>
+                          <span className="font-black text-indigo-900 text-xs w-28 shrink-0">{c.cod}</span>
+                          <span className="text-[11px] text-slate-600 truncate flex-1">
                             {c.desc || c.etiqueta.toLowerCase()}
                           </span>
                           {c.ancho != null && (
-                            <span className="text-[11px] text-slate-400 shrink-0">{c.ancho} cm</span>
+                            <span className="text-[11px] font-semibold text-slate-400 shrink-0">{c.ancho} cm</span>
                           )}
                           {c.precio && (
-                            <span className="text-[11px] font-bold text-slate-600 shrink-0 w-20 text-right">
+                            <span className="text-[11px] font-black text-slate-700 shrink-0 w-24 text-right">
                               {c.precio.desde ? 'desde ' : ''}{c.precio.eur.toFixed(2)} €
                             </span>
                           )}

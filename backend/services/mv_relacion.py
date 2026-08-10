@@ -186,12 +186,45 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
                 out.append(suelta)
                 continue
             mq = re.match(r"^(\d+)\s*[-]?\s*([a-z].*)$", tok)
-            if not mq:
-                no_leidas.append({"texto": tok, "motivo": "no se reconoce la notación"})
+            if mq:
+                qty = int(mq.group(1))
+                rest = mq.group(2).strip()
+            else:
+                qty = 1
+                rest = tok.strip()
+
+            # Caso 1: Código directo exacto en catálogo (ej: ASC60D/I, B60D/I, COL60)
+            rest_upper = rest.upper()
+            if rest_upper in idx:
+                cod = rest_upper
+                entry = idx[cod]
+                tipo = _tipo_de(cod)
+                # Extraer ancho si existe
+                m_w = re.search(r"(\d{2,3})", cod)
+                width = int(m_w.group(1)) if m_w else 60
+                dims = re.findall(r"x\s*(\d{2,3})", rest)
+                alto = int(dims[-1]) if dims else alt_g
+                if tipo == "BAJO" and not alto:
+                    alto = 80
+                pts = _puntos(entry, alto)
+                mano = "D" if cod.endswith("D") else "I" if cod.endswith("I") else ""
+                out.append({
+                    "qty": qty,
+                    "cod": cod,
+                    "familia": entry["fam"],
+                    "tipo": tipo,
+                    "ancho": width,
+                    "alto": alto,
+                    "fondo": _FONDO.get(tipo, 58),
+                    "mano": mano,
+                    "pts": pts,
+                    "pvp": round(pts * pv, 2) if pts else None,
+                    "raw": tok,
+                    "encontrado": True,
+                })
                 continue
-            qty = int(mq.group(1))
-            rest = mq.group(2).strip()
-            # Se admite separacion entre las letras y el ancho ("ASFA 60X30").
+
+            # Caso 2: Expresión con letras y ancho (ej: asc60d, b60i, a45, 1 b60i)
             mc = re.match(r"^([a-z]+)[\s.\-]*(\d{2,3})(.*)$", rest)
             if not mc:
                 no_leidas.append({"texto": tok, "motivo": "falta el ancho en el código"})
@@ -200,16 +233,15 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
             dims = re.findall(r"x\s*(\d{2,3})", tail)
             alto = int(dims[-1]) if dims else alt_g
             mano = ""
-            if re.search(r"d\s*$", tail) or re.search(r"\bd\b", tail):
+            if re.search(r"d/i", tail) or re.search(r"d/i", rest):
+                mano = ""
+            elif re.search(r"d\s*$", tail) or re.search(r"\bd\b", tail):
                 mano = "D"
             elif re.search(r"i\s*$", tail) or re.search(r"\bi\b", tail):
                 mano = "I"
             cod = _find_code(idx, letters, width, mano)
             entry = idx.get(cod) if cod else None
             if not cod:
-                # Un codigo que no esta en la tarifa vale 0 puntos: si no se
-                # avisa, el total sale corto y parece bueno. Se propone el
-                # parecido, pero NO se aplica solo.
                 sug = _sugerencia(idx, letters, width)
                 no_leidas.append({
                     "texto": tok,
