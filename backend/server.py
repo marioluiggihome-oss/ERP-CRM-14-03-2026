@@ -2754,19 +2754,28 @@ async def startup_event():
     # =============================================
     # INICIALIZAR SERVICIOS DE BACKUP Y TRACKING
     # =============================================
+    # CADA SERVICIO EN SU PROPIO `try`. Antes iban los dos en el mismo, y eso
+    # significaba que si el programador de copias fallaba —por lo que fuera—, el
+    # tracker de actividad NO LLEGABA A ARRANCAR. Sin ruido: un `warning` en el
+    # log y a seguir. Semanas despues, el informe de "Uso usuarios" del Panel
+    # Maestro contestaba "Tracker de actividad no inicializado" y nadie
+    # relacionaba una cosa con la otra.
+    #
+    # Dos servicios que no tienen nada que ver no pueden compartir el mismo
+    # `except`: uno se lleva al otro por delante y encima lo hace en silencio.
     try:
-        # Inicializar servicio de backup con programador diario (3:00 AM)
         backup_svc = init_backup_service(mongo_url, os.environ['DB_NAME'])
         await backup_svc.start_scheduler(hour=3)
         logger.info("✅ Servicio de backup diario iniciado (3:00 AM)")
-        
-        # Inicializar tracker de actividad
+    except Exception as e:
+        logger.error(f"NO se pudo iniciar el servicio de copias de seguridad: {e}")
+
+    try:
         tracker = init_activity_tracker(db)
         await tracker.setup_indexes()
         logger.info("✅ Tracker de actividad de usuarios iniciado")
-        
     except Exception as e:
-        logger.warning(f"Error inicializando servicios de backup/tracking: {e}")
+        logger.error(f"NO se pudo iniciar el tracker de actividad: {e}")
     
     # Start backup scheduler from backup module
     start_backup_scheduler()

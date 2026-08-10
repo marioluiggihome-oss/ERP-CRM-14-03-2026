@@ -214,17 +214,35 @@ def coste_referencia(ref, mano_obra):
 
 
 def margen(precio, coste):
-    """Margen en euros y en porcentaje sobre el PRECIO DE VENTA.
+    """Lo que deja un mueble, contado de las TRES maneras que se usan.
 
-    Sobre el precio, no sobre el coste: un mueble que cuesta 100 y se vende a
-    150 deja un 33 % de margen, no un 50 % de recargo. Confundirlos infla el
-    plan entero.
+    Son tres formas de mirar lo mismo, y confundirlas es el error de cuentas más
+    caro que hay en este oficio. Un mueble que cuesta 100 y se vende a 150:
+
+      · MARGEN  33,3 %  — sobre el PRECIO DE VENTA. Es el que va a la cuenta de
+        resultados y el que se compara con Howdens o Nobia.
+      · RECARGO 50,0 %  — sobre el COSTE. Es lo que se le suma al coste para
+        llegar al precio. SIEMPRE es mayor que el margen.
+      · COEFICIENTE ×1,50 — el multiplicador. Es como se trabaja en tarifa: se
+        coge el coste y se multiplica.
+
+    Dar por bueno un «50 %» sin decir sobre qué es como se acaba vendiendo con
+    un tercio menos de margen del que se creía.
     """
     p = _precio(precio)
     c = _num(coste)
     if p is None or c is None:
-        return {"euros": None, "porcentaje": None}
-    return {"euros": _r(p - c), "porcentaje": _r((p - c) / p, 4)}
+        return {"euros": None, "porcentaje": None, "recargo": None, "coeficiente": None}
+    euros = _r(p - c)
+    # El recargo y el coeficiente se dividen por el COSTE: con coste 0 o menos no
+    # significan nada, y un «infinito %» en un plan no es un dato.
+    sobre_coste = c > 0
+    return {
+        "euros": euros,
+        "porcentaje": _r((p - c) / p, 4),
+        "recargo": _r((p - c) / c, 4) if sobre_coste else None,
+        "coeficiente": _r(p / c, 3) if sobre_coste else None,
+    }
 
 
 def coste_b2c(datos):

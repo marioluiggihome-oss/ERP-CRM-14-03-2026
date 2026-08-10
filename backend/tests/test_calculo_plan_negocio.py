@@ -260,6 +260,39 @@ def test_el_margen_es_sobre_el_precio_no_sobre_el_coste(pn):
     assert m["porcentaje"] == 0.3333
 
 
+def test_el_recargo_sobre_coste_se_da_APARTE(pn):
+    """CANDADO. Son dos numeros distintos y el error de confundirlos es el mas
+    caro del oficio: creerse que se gana un 50 % cuando se gana un 33 %."""
+    m = pn.margen(150, 100)
+    assert m["recargo"] == 0.5, "lo que se le suma al coste para llegar al precio"
+    assert m["coeficiente"] == 1.5, "el multiplicador de tarifa"
+    assert m["recargo"] > m["porcentaje"], "el recargo SIEMPRE es mayor que el margen"
+
+
+def test_los_tres_numeros_cuadran_entre_si(pn):
+    """Con los numeros reales del master: Bajo 45 a 96,33 de coste y 145 de
+    venta."""
+    m = pn.margen(145, 96.33)
+    assert m["euros"] == 48.67
+    assert m["porcentaje"] == 0.3357          # sobre venta
+    assert m["recargo"] == 0.5052             # sobre coste
+    assert m["coeficiente"] == 1.505
+    # Y la comprobacion de que son la misma cosa vista de tres formas:
+    assert abs(96.33 * m["coeficiente"] - 145) < 0.5
+
+
+def test_con_coste_cero_el_recargo_no_es_infinito_es_nada(pn):
+    """Un «infinito %» en un plan de negocio no es un dato."""
+    m = pn.margen(150, 0)
+    assert m["porcentaje"] == 1.0
+    assert m["recargo"] is None and m["coeficiente"] is None
+
+
+def test_vender_a_perdida_da_recargo_negativo(pn):
+    m = pn.margen(80, 100)
+    assert m["recargo"] == -0.2 and m["coeficiente"] == 0.8
+
+
 def test_un_mueble_que_se_vende_a_perdida_lo_dice_con_signo(pn):
     m = pn.margen(80, 100)
     assert m["euros"] == -20 and m["porcentaje"] < 0

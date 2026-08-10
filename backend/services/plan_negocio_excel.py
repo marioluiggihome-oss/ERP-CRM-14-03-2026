@@ -298,10 +298,14 @@ def _hoja_precios(wb, d):
     ws["A2"] = "El margen se calcula sobre el PRECIO DE VENTA, no sobre el coste: 100 de coste y 150 de venta son un 33 %, no un 50 %."
     ws["A2"].font = NOTA
 
-    for i, ancho in enumerate([15, 14, 14, 14, 12, 14, 14, 12]):
+    # Las TRES formas de contar lo mismo, juntas: margen sobre venta, recargo
+    # sobre coste y coeficiente. Confundirlas es el error de cuentas mas caro
+    # del oficio — un «50 %» sin decir sobre que puede ser un 33 % de verdad.
+    for i, ancho in enumerate([15, 13, 12, 12, 11, 11, 8, 12, 12, 11, 11, 8]):
         ws.column_dimensions[get_column_letter(1 + i)].width = ancho
-    _cab(ws, 4, ["Referencia", "Coste directo", "Precio B2B", "Margen B2B €",
-                 "Margen B2B %", "Precio B2C", "Margen B2C €", "Margen B2C %"])
+    _cab(ws, 4, ["Referencia", "Coste directo",
+                 "Precio B2B", "Margen B2B €", "% s/venta", "% s/coste", "Coef.",
+                 "Precio B2C", "Margen B2C €", "% s/venta", "% s/coste", "Coef."])
 
     refs = d.get("referencias") or []
     n = len(refs)
@@ -314,16 +318,23 @@ def _hoja_precios(wb, d):
         c.font = VERDE
         c.number_format = EUR
         c.border = BORDE
-        _entrada(ws, f"C{f}", r.get("precioB2B"), EUR)
-        ws.cell(row=f, column=4, value=f'=IF(OR(C{f}="",NOT(ISNUMBER(B{f}))),"falta dato",C{f}-B{f})').font = NEGRO
-        ws.cell(row=f, column=4).number_format = EUR
-        ws.cell(row=f, column=5, value=f'=IF(OR(C{f}="",C{f}=0,NOT(ISNUMBER(B{f}))),"falta dato",(C{f}-B{f})/C{f})').font = NEGRO
-        ws.cell(row=f, column=5).number_format = PCT
-        _entrada(ws, f"F{f}", r.get("precioB2C"), EUR)
-        ws.cell(row=f, column=7, value=f'=IF(OR(F{f}="",NOT(ISNUMBER(B{f}))),"falta dato",F{f}-B{f})').font = NEGRO
-        ws.cell(row=f, column=7).number_format = EUR
-        ws.cell(row=f, column=8, value=f'=IF(OR(F{f}="",F{f}=0,NOT(ISNUMBER(B{f}))),"falta dato",(F{f}-B{f})/F{f})').font = NEGRO
-        ws.cell(row=f, column=8).number_format = PCT
+        for col_precio, valor in ((3, r.get("precioB2B")), (8, r.get("precioB2C"))):
+            P = get_column_letter(col_precio)
+            _entrada(ws, f"{P}{f}", valor, EUR)
+            # Margen en euros
+            ws.cell(row=f, column=col_precio + 1,
+                    value=f'=IF(OR({P}{f}="",NOT(ISNUMBER(B{f}))),"falta dato",{P}{f}-B{f})').number_format = EUR
+            # % sobre VENTA — el que va a la cuenta de resultados
+            ws.cell(row=f, column=col_precio + 2,
+                    value=f'=IF(OR({P}{f}="",{P}{f}=0,NOT(ISNUMBER(B{f}))),"falta dato",({P}{f}-B{f})/{P}{f})').number_format = PCT
+            # % sobre COSTE — lo que se le suma al coste. Siempre mayor.
+            ws.cell(row=f, column=col_precio + 3,
+                    value=f'=IF(OR({P}{f}="",NOT(ISNUMBER(B{f})),B{f}<=0),"falta dato",({P}{f}-B{f})/B{f})').number_format = PCT
+            # Coeficiente de tarifa
+            ws.cell(row=f, column=col_precio + 4,
+                    value=f'=IF(OR({P}{f}="",NOT(ISNUMBER(B{f})),B{f}<=0),"falta dato",{P}{f}/B{f})').number_format = '0.00"×"'
+            for c in range(col_precio + 1, col_precio + 5):
+                ws.cell(row=f, column=c).font = NEGRO
 
     fm = 5 + n + 1
     ws.cell(row=fm, column=1, value="MEDIA").font = FUERTE

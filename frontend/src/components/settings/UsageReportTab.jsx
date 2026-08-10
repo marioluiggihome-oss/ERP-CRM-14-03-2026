@@ -256,11 +256,25 @@ const UsageReportTab = () => {
     setError(null);
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/usage/report?days=${days}`, { headers: authHeaders() });
-      if (!response.ok) throw new Error('Error cargando informe');
+      if (!response.ok) {
+        // QUE DIGA QUÉ HA PASADO. «Error cargando informe» a secas valía para
+        // cualquier cosa —sesión caducada, sin permiso, servicio caído— y por
+        // eso no servía para ninguna: había que abrir el log del servidor solo
+        // para saber por dónde empezar a mirar.
+        let detalle = '';
+        try { detalle = (await response.json())?.detail || ''; } catch { /* no era JSON */ }
+        if (response.status === 401) throw new Error('La sesión ha caducado. Vuelve a entrar.');
+        if (response.status === 403) throw new Error('Este informe es solo para administradores.');
+        throw new Error(detalle || `El servidor ha contestado ${response.status}.`);
+      }
       const data = await response.json();
       setReport(data);
     } catch (err) {
-      setError(err.message);
+      // Un fallo de red no es un fallo del informe, y confundirlos manda a
+      // buscar el problema al sitio equivocado.
+      setError(err.message === 'Failed to fetch'
+        ? 'No se ha podido conectar con el servidor. Comprueba la conexión.'
+        : err.message);
     } finally {
       setLoading(false);
     }

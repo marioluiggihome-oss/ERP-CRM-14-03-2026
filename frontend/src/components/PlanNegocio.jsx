@@ -64,6 +64,32 @@ const Dato = ({ label, valor, destacado, nota }) => (
   </div>
 );
 
+/**
+ * El margen de un mueble, contado de las TRES maneras que se usan.
+ *
+ * Se enseñan las tres juntas a propósito. Confundirlas es el error de cuentas
+ * más caro del oficio: un «50 %» sin decir sobre qué puede ser un 33 % de
+ * margen de verdad. Con los tres delante, no hay confusión posible.
+ */
+const Margen = ({ m }) => {
+  if (!m || m.euros == null) return <span className="text-amber-600 text-xs">falta</span>;
+  const color = m.porcentaje >= 0.4 ? 'text-emerald-700' : m.porcentaje >= 0.25 ? 'text-amber-600' : 'text-rose-600';
+  return (
+    <div className="leading-tight">
+      <span className={`font-black ${color}`}>{eur(m.euros)}</span>
+      <span className="block text-[11px] text-slate-500">
+        {pct(m.porcentaje)} <span className="text-slate-300">s/venta</span>
+      </span>
+      {m.recargo != null && (
+        <span className="block text-[11px] text-slate-500">
+          +{pct(m.recargo)} <span className="text-slate-300">s/coste</span>
+          <span className="ml-1 font-bold text-indigo-600">×{Number(m.coeficiente).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </span>
+      )}
+    </div>
+  );
+};
+
 /** Una casilla que rellena el master. Amarilla mientras esté vacía. */
 const Casilla = ({ valor, onChange, ancho = 'w-24', paso = '0.01', titulo }) => {
   const vacia = valor === null || valor === undefined || valor === '';
@@ -390,22 +416,19 @@ export default function PlanNegocio({ state }) {
                       <td className="py-1 font-black text-slate-700">{r.nombre}</td>
                       <td className="px-2 text-right text-slate-500">{eur(c.costeDirecto) || <span className="text-amber-600 text-xs">falta</span>}</td>
                       <td className="px-2"><Casilla valor={r.precioB2B} onChange={(v) => cambiarRef(i, 'precioB2B', v)} /></td>
-                      <td className="px-2 text-right font-bold text-slate-700">
-                        {c.margenB2B?.euros == null ? <span className="text-amber-600 text-xs">falta</span>
-                          : <>{eur(c.margenB2B.euros)} <span className="text-slate-400 text-xs">({pct(c.margenB2B.porcentaje)})</span></>}
-                      </td>
+                      <td className="px-2 text-right"><Margen m={c.margenB2B} /></td>
                       <td className="px-2"><Casilla valor={r.precioB2C} onChange={(v) => cambiarRef(i, 'precioB2C', v)} /></td>
-                      <td className="px-2 text-right font-bold text-slate-700">
-                        {c.margenB2C?.euros == null ? <span className="text-amber-600 text-xs">falta</span>
-                          : <>{eur(c.margenB2C.euros)} <span className="text-slate-400 text-xs">({pct(c.margenB2C.porcentaje)})</span></>}
-                      </td>
+                      <td className="px-2 text-right"><Margen m={c.margenB2C} /></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
             <p className="text-[11px] text-slate-400 mt-2">
-              El margen va sobre el PRECIO DE VENTA: 100 de coste y 150 de venta son un 33 %, no un 50 %.
+              Tres formas de mirar lo mismo, y conviene no confundirlas. Con 100 de coste y 150 de venta:
+              <b className="text-slate-600"> 33,3 % s/venta</b> (el que va a la cuenta de resultados y el que se compara con Howdens o Nobia),
+              <b className="text-slate-600"> +50 % s/coste</b> (lo que le sumas al coste) y
+              <b className="text-indigo-600"> ×1,50</b> (el coeficiente de tarifa). El recargo siempre sale mayor que el margen.
             </p>
           </div>
 

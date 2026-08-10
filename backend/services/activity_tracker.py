@@ -289,4 +289,28 @@ def init_activity_tracker(db: AsyncIOMotorDatabase) -> ActivityTracker:
     return activity_tracker
 
 def get_tracker() -> ActivityTracker:
+    """El tracker, arrancandolo si hiciera falta.
+
+    ANTES ESTO DEVOLVIA `None` Y EL INFORME DE USO SE CAIA. Si el arranque del
+    servidor se saltaba la inicializacion —porque fallo otro servicio del mismo
+    bloque `try`, por ejemplo—, el Panel Maestro contestaba «Tracker de
+    actividad no inicializado» y ahi se quedaba hasta el siguiente despliegue.
+
+    Y no tiene por que: este objeto no guarda nada, es una consulta con un
+    puntero a la base de datos. Si no esta, se hace uno y ya. Un informe de solo
+    lectura no puede depender de que un paso del arranque saliera bien.
+
+    Lo unico que se pierde al crearlo aqui son los indices (`setup_indexes`),
+    que afectan a la VELOCIDAD de la consulta, no a su resultado.
+    """
+    global activity_tracker
+    if activity_tracker is None:
+        try:
+            from services.db_client import get_db
+            activity_tracker = ActivityTracker(get_db())
+            logger.warning("El tracker de actividad no se inicializo al arrancar; "
+                           "se ha creado ahora para poder contestar al informe.")
+        except Exception as e:
+            logger.error(f"No se pudo crear el tracker de actividad: {e}")
+            return None
     return activity_tracker
