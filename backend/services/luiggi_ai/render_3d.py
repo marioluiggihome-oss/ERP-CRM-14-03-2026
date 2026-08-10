@@ -472,6 +472,7 @@ class Render3DService:
         reference_mime: Optional[str] = None,
         provider: Optional[str] = None,
         reference_images: Optional[list] = None,
+        project_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -494,7 +495,7 @@ class Render3DService:
             parsed_params.update(params_override)
 
         # Detectar el tipo de espacio/mueble para NO forzar "cocina"
-        space_type = self.detect_space_type(description)
+        space_type = self.detect_space_type(project_type or description)
         parsed_params["space_type"] = space_type
 
         # Preparar la imagen de referencia (si es PDF, convertir 1ª página a PNG)
@@ -611,6 +612,9 @@ class Render3DService:
         floor_plan: Optional[str] = None,
         wall_sketches: Optional[list] = None,
         params_override: Optional[Dict[str, Any]] = None,
+        reference_images: Optional[list] = None,
+        provider: Optional[str] = None,
+        project_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Genera UN render fotorrealista combinando un PLANO EN PLANTA (distribución)
         y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos.
@@ -624,7 +628,7 @@ class Render3DService:
         parsed_params = self.parse_natural_language(description or "")
         if params_override:
             parsed_params.update(params_override)
-        space_type = self.detect_space_type(description or "cocina")
+        space_type = self.detect_space_type(project_type or description or "cocina")
         parsed_params["space_type"] = space_type
 
         images = []       # [{"data","mime"}] para la generación multi-imagen
@@ -691,8 +695,9 @@ class Render3DService:
         prompt = task_prompt
         parsed_params["hasReference"] = True
         parsed_params["referenceCount"] = len(images)
-        return await self._render_with_gemini(
-            task_prompt, prompt, parsed_params, reference_images=images,
+        return await self._render_dispatch(
+            task_prompt, prompt, parsed_params,
+            provider=provider, reference_images=images,
         )
 
     def _is_sketch_reference(self, reference_image, reference_mime):
