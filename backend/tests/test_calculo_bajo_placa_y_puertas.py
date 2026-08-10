@@ -239,3 +239,49 @@ def test_lo_que_NO_se_puede_plegar_nunca():
         assert f"'{imprescindible}'" not in m.group(1), (
             f"la columna «{imprescindible}» se puede ocultar, y sin ella la "
             "tabla no sirve")
+
+
+# ─── 6. El herraje de un ABATIBLE ───────────────────────────────────────────
+
+def test_un_abatible_no_lleva_bisagras_lleva_mecanismo():
+    """CANDADO. Un alto abatible —AVENTOS HK y compania— no se cuelga con dos
+    bisagras de 3 €: lleva un mecanismo de compas que en la tarifa Blum va a
+    15,27 € netos mas sus dos tapas de 1,10. Contarlo como dos bisagras deja el
+    herraje corto en mas de 10 € POR MUEBLE, y en una cocina con cinco altos
+    abatibles son 50 € que aparecen al pagar la factura del proveedor.
+    """
+    src = _leer(IMPORTADOR)
+    assert "_es_abatible" in src, "no se detectan los muebles abatibles"
+    i = src.index("const bisagras = esAbatible")
+    assert "esAbatible ? 0 :" in src[i:i + 120], (
+        "un abatible sigue sumando bisagras ADEMAS del mecanismo: se cuenta dos "
+        "veces lo que sujeta la puerta")
+
+
+def test_el_precio_del_abatible_es_NETO_y_lleva_incremento():
+    """El precio de la tarifa Blum es NETO DE COMPRA. Meterlo tal cual como
+    coste nuestro es no cobrar el margen de la compra."""
+    src = _leer(IMPORTADOR)
+    m = re.search(r"incAbatible: (\d+)", src)
+    assert m and int(m.group(1)) == 50, "el incremento sobre el neto ya no es el 50 % que pidio el master"
+    assert "const incAbat = 1 + (Number(p.incAbatible) || 0) / 100;" in src
+
+
+def test_el_neto_de_partida_es_el_de_la_tarifa_blum():
+    """15,27 del mecanismo HK TOP + dos tapas Orion a 1,10, que son los precios
+    que estan cargados en el ERP."""
+    src = _leer(IMPORTADOR)
+    assert "const ABATIBLE_NETO = 15.27 + 2 * 1.10;" in src
+    # Y la cuenta que sale con el 50 %: 17,47 x 1,5 = 26,21 € por mueble
+    # abatible, frente a los 6,14 € que salian contandolo como dos bisagras.
+    neto = 15.27 + 2 * 1.10
+    assert round(neto, 2) == 17.47
+    assert round(neto * 1.5, 2) == 26.2
+    assert round(2 * 3.07, 2) == 6.14          # lo que se contaba antes
+    assert round(neto * 1.5 - 2 * 3.07, 2) == 20.06   # lo que faltaba por mueble
+
+
+def test_se_puede_cambiar_el_precio_y_el_incremento():
+    """La tarifa del proveedor cambia, y el mecanismo no siempre es el mismo."""
+    src = _leer(IMPORTADOR)
+    assert "setNum('abatible')" in src and "setNum('incAbatible')" in src

@@ -89,6 +89,16 @@ const TIPOS_ACB = [
 ];
 
 // Herrajes especiales a alertar
+// UN ABATIBLE NO LLEVA BISAGRAS: LLEVA UN MECANISMO.
+//
+// Un alto abatible —AVENTOS HK y compañía— no se cuelga con dos bisagras de
+// 3 €: lleva un mecanismo de compás que en la tarifa Blum va a 15,27 € netos
+// más sus dos tapas. Contarlo como dos bisagras deja el herraje corto en más de
+// 10 € por mueble, y en una cocina con cinco altos abatibles son 50 € que
+// aparecen al pagar la factura del proveedor.
+const _ES_ABATIBLE = /ABATIBLE|AVENTOS|COMPAS|COMPÁS|ELEVABLE|BASCULANTE/i;
+const _es_abatible = (desc) => _ES_ABATIBLE.test(desc || '');
+
 const HERRAJE_ESPECIAL = [
   { re: /HERRAJE\s*270|RINCON\s*L|RINCÓN\s*L|BRI\/LTE|MAGIC\s*CORNER/i, label: 'Herraje rincón 270°' },
   { re: /LAZY\s*SUSAN/i, label: 'Lazy Susan' },
@@ -496,6 +506,9 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
     gtv: { cajon: 24.65, gaveta: 29.41 },
   };
   const BISAGRA = { blum: 3.07, emuca: 1.01 };
+  // Mecanismo abatible + sus dos tapas, a precio NETO DE COMPRA de la tarifa
+  // Blum que hay en el ERP (HK TOP 15,27 € + 2 tapas Orion a 1,10 €).
+  const ABATIBLE_NETO = 15.27 + 2 * 1.10;
   const [marcaCaj, setMarcaCaj] = useState('blum');
   const [marcaBis, setMarcaBis] = useState('blum');
   // LOS DESCUENTOS NACEN VACÍOS. Los mete el master a mano (CLAUDE.md, regla 5):
@@ -504,7 +517,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
   // lee como un dato del sistema — cuando nadie lo ha confirmado para ESTA
   // proforma. Vacíos, el coste sale a tarifa completa y el aviso ámbar de más
   // abajo lo dice a gritos; ese aviso es lo que sostiene esta decisión.
-  const P_DEFAULT = { desc1: '', desc2: '', bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, manoObra: 0, margen: 0, colorCasco: COLOR_CASCO_DEFECTO };
+  const P_DEFAULT = { desc1: '', desc2: '', bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, abatible: ABATIBLE_NETO, incAbatible: 50, manoObra: 0, margen: 0, colorCasco: COLOR_CASCO_DEFECTO };
   const [p, setP] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('alvic_costes') || 'null');
@@ -608,12 +621,20 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
         // asi que toda proforma con lineas de mas de una unidad salia barata.
         const uds = Math.max(Number(it.cantidad) || 1, 1);
         const casco = precioAcb * facCasco * uds;
-        const bisagras = (it.puertas || 0) * 2 * (Number(p.bisagra) || 0) * uds;
+        // Un abatible no lleva bisagras: lleva mecanismo. Y el precio de la
+        // tarifa Blum es NETO DE COMPRA, así que se le suma el incremento de la
+        // casa para tener el coste nuestro de verdad.
+        const esAbatible = _es_abatible(it.descripcion);
+        const incAbat = 1 + (Number(p.incAbatible) || 0) / 100;
+        const abatibles = esAbatible
+          ? Math.max(1, it.puertas || 1) * (Number(p.abatible) || 0) * incAbat * uds
+          : 0;
+        const bisagras = esAbatible ? 0 : (it.puertas || 0) * 2 * (Number(p.bisagra) || 0) * uds;
         const patas = ((it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0) * uds;
         const colgadores = ((it.tipo === 'alto') ? 2 * (Number(p.colgador) || 0) : 0) * uds;
         const guias = ((it.cajones || 0) * (Number(p.cajon) || 0)
           + (it.gavetas || 0) * (Number(p.gaveta) || 0)) * uds;
-        const herraje = bisagras + patas + colgadores + guias;
+        const herraje = bisagras + abatibles + patas + colgadores + guias;
         const herrajeEsp = _herraje_especial(it.descripcion);
 
         // Mano de obra: el valor general se aplica A CADA MUEBLE (los paneles,
@@ -690,7 +711,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
 
         return {
           ...it, _origIdx: origIdx, _acb: acb, _precioAcb: precioAcb, _uds: uds,
-          _casco: casco, _herraje: herraje, _bis: bisagras, _pat: patas,
+          _casco: casco, _herraje: herraje, _bis: bisagras, _abat: abatibles, _pat: patas,
           _col: colgadores, _gui: guias, _mat: casco + herraje,
           _herrajeEsp: herrajeEsp,
           _pvpAlvic: Number(it.pvp) || 0,
@@ -1246,6 +1267,33 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                     <input type="number" step="any" value={p[k]} onChange={setNum(k)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
                   </label>
                 ))}
+              </div>
+              {/* EL ABATIBLE. Un alto abatible no lleva dos bisagras de 3 €:
+                  lleva un mecanismo de compás. El precio de la tarifa Blum es
+                  NETO DE COMPRA, así que lleva el incremento de la casa para
+                  dar el coste nuestro. */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-amber-600 uppercase">Abatible € (neto compra)</span>
+                  <input type="number" step="any" value={p.abatible} onChange={setNum('abatible')}
+                    title="Mecanismo + tapas, a precio neto de la tarifa Blum. Sustituye a las bisagras en los muebles abatibles."
+                    className="px-2 py-1.5 border-2 border-amber-200 rounded-lg text-sm font-bold" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-amber-600 uppercase">Incremento sobre neto %</span>
+                  <input type="number" step="any" value={p.incAbatible} onChange={setNum('incAbatible')}
+                    title="Lo que se le suma al precio neto de compra para tener el coste nuestro."
+                    className="px-2 py-1.5 border-2 border-amber-200 rounded-lg text-sm font-bold" />
+                </label>
+                <div className="col-span-2 flex items-end">
+                  <p className="text-[11px] text-slate-500">
+                    Coste por mueble abatible:{' '}
+                    <b className="text-amber-700">
+                      {eur((Number(p.abatible) || 0) * (1 + (Number(p.incAbatible) || 0) / 100))}
+                    </b>
+                    {' '}· sustituye a las bisagras, no se suma a ellas.
+                  </p>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <label className="flex flex-col gap-1">
