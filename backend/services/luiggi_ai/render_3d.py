@@ -653,10 +653,17 @@ class Render3DService:
             parsed_params["briefExpanded"] = False
             parsed_params["fromSketch"] = True
             brief_txt = (description or "").strip()
+
+            # Transcripción multimodal con Vision: lee cotas, módulos, frigorífico y divisiones
+            sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
+            transcription_block = f"\nTECHNICAL BREAKDOWN EXTRACTED DIRECTLY FROM THE SKETCH:\n{sketch_transcription}\n" if sketch_transcription else ""
+
             task_prompt = (
                 "You are given a TECHNICAL 2D DRAWING of ONE specific kitchen: a hand-drawn "
-                "floor plan, elevation or blueprint, possibly with handwritten dimensions. "
+                "floor plan, elevation or blueprint, with handwritten dimensions and labels.\n"
+                + transcription_block +
                 "Produce a single photorealistic interior photograph of THAT SAME kitchen, "
+                "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
                 "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
                 "NOT a new design — do not 'improve' it and do not substitute a nicer layout.\n\n"
                 "THE DRAWING IS THE GROUND TRUTH FOR GEOMETRY:\n"
@@ -971,63 +978,80 @@ class Render3DService:
             provider=provider, reference_images=images,
         )
 
-    # Umbrales del detector de croquis en MAPA DE BITS (JPEG/PNG). Un croquis a
-    # lápiz o bolígrafo sobre papel es casi gris (apenas tiene color) y casi todo
-    # fondo claro; una foto de una cocina real tiene color y muchos menos píxeles
-    # blancos, incluso si la cocina es blanca (sombras, vetas, reflejos).
-    CROQUIS_SATURACION_MAX = 0.10    # saturación media, 0-1
-    CROQUIS_FONDO_CLARO_MIN = 0.55   # fracción de píxeles casi blancos
+    CROQUIS_SATURACION_MAX = 0.35    # saturación media admitida (permite bolígrafo rojo, azul, etc.)
+    CROQUIS_FONDO_CLARO_MIN = 0.30   # brillo medio mínimo para papel con iluminación interior
 
     def _parece_dibujo_a_mano(self, raw_b64):
-        """¿Este mapa de bits es un croquis/plano a mano y no la FOTO de una
-        cocina real? Papel + trazo = casi sin color y con mucho fondo claro.
-
-        CONSERVADOR a propósito: ante la duda devuelve False y la imagen se
-        sigue tratando como foto, que es el comportamiento de siempre.
-        Confundir una foto con un croquis también estropea el render."""
+        """Detecta si la imagen es un croquis/plano dibujado sobre papel (a lápiz,
+        bolígrafo rojo/azul, rotulador) fotografiado con móvil o escaneado."""
         try:
             import base64
             import io
-            from PIL import Image, ImageChops, ImageStat
-            img = Image.open(io.BytesIO(base64.b64decode(raw_b64))).convert("RGB")
+            from PIL import Image, ImageStat
+            raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
+            img = Image.open(io.BytesIO(base64.b64decode(raw))).convert("RGB")
             img.thumbnail((160, 160))
-            # Saturación media: en HSV de PIL es (max-min)/max, justo lo que
-            # separa un trazo de lápiz (gris) de una cocina real (con color).
-            saturacion = ImageStat.Stat(img.convert("HSV").split()[1]).mean[0] / 255.0
-            # Fracción de píxeles casi blancos = el papel. Se mira el canal MÁS
-            # OSCURO de cada píxel: blanco de verdad es alto en R, G y B a la vez.
-            r, g, b = img.split()
-            minimo = ImageChops.darker(ImageChops.darker(r, g), b)
-            fondo_claro = ImageStat.Stat(
-                minimo.point(lambda v: 255 if v >= 200 else 0)).mean[0] / 255.0
-            return (saturacion <= self.CROQUIS_SATURACION_MAX
-                    and fondo_claro >= self.CROQUIS_FONDO_CLARO_MIN)
+            
+            # Saturación y brillo general
+            hsv = img.convert("HSV")
+            saturacion = ImageStat.Stat(hsv.split()[1]).mean[0] / 255.0
+            brillo = ImageStat.Stat(hsv.split()[2]).mean[0] / 255.0
+            
+            # Si el brillo es de papel (> 0.35) y la saturación no es de una foto de exterior (< 0.35)
+            if saturacion <= self.CROQUIS_SATURACION_MAX and brillo >= self.CROQUIS_FONDO_CLARO_MIN:
+                return True
+            return False
         except Exception as e:
             logger.debug(f"No se pudo analizar la referencia como croquis: {e}")
             return False
 
+    async def _transcribe_sketch_with_vision(self, raw_b64: str, mime: str = "image/png") -> str:
+        """Lee el croquis manuscrito con Gemini 2.5 Pro Vision y extrae de forma
+        estructurada los módulos, cotas, frigorífico, hornos y divisiones de puertas."""
+        try:
+            from services.llm_vision import get_gemini_key, GOOGLE_GENAI_AVAILABLE
+            key = get_gemini_key()
+            if not (key and GOOGLE_GENAI_AVAILABLE):
+                return ""
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=key)
+            raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
+            img_bytes = base64.b64decode(raw)
+            contents = [
+                types.Part.from_bytes(data=img_bytes, mime_type=mime or "image/png"),
+                (
+                    "Analyze this hand-drawn technical kitchen blueprint / elevation drawing with extreme precision.\n"
+                    "Read every handwritten note, label (e.g. 'Micro', 'Horno', 'Frigo', 'Frijo', 'Combi', 'Placa', 'Freg', '70', '60', '30') and division line.\n"
+                    "List the EXACT composition in English as a concise numbered technical specification:\n"
+                    "1. BASE CABINETS (left to right with widths, drawer lines and appliances like sink, cooktop, dishwasher).\n"
+                    "2. WALL CABINETS (upper units, lighting and hood).\n"
+                    "3. TALL COLUMNS (left to right): explicitly identify the Oven+Microwave tower, the Refrigerator Combi unit, and the Pantry cupboard with its exact door count (e.g. 4 doors if cross lines are drawn).\n"
+                    "Keep it strictly factual and concise."
+                )
+            ]
+            resp = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: client.models.generate_content(
+                    model="gemini-2.5-pro",
+                    contents=contents,
+                )
+            )
+            return (resp.text or "").strip()
+        except Exception as e:
+            logger.warning(f"Error transcribiendo croquis con Vision: {e}")
+            return ""
+
     def _is_sketch_reference(self, reference_image, reference_mime):
         """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado
         O FOTO/ESCANEO de un dibujo a mano) en vez de una foto de cocina
-        existente. En ese caso el render debe INTERPRETAR el plano, no EDITAR
-        la imagen.
-
-        OJO: hasta el 06/08 esto SOLO miraba si era un PDF. El master fotografía
-        el croquis con el móvil, así que llegaba un JPEG y se colaba por la rama
-        de «foto de una cocina existente que hay que EDITAR»: al modelo se le
-        pedía fotorrealizar un dibujo a lápiz como si fuera una cocina montada,
-        y devolvía una cocina genérica inventada. Ese era el síntoma de «el
-        render no lee el boceto»."""
+        existente."""
         if not reference_image:
             return False
-        # Si el MIME indica PDF, es casi seguro un croquis escaneado
         if reference_mime and "pdf" in reference_mime.lower():
             return True
-        # Si el data URL indica PDF
         if reference_image[:60].lower().startswith("data:application/pdf"):
             return True
-        raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
-        # Detectar por magic bytes del PDF (%PDF)
         try:
             import base64
             header_bytes = base64.b64decode(raw[:20])
