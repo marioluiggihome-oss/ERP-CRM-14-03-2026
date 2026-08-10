@@ -2896,8 +2896,8 @@ export default function AIRenderStudio({ state, setState }) {
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                             Imagen {i + 1} es…
                           </span>
-                          <select defaultValue="acabado"
-                            onChange={e => { asignarPapel(i, e.target.value); e.target.value = 'acabado'; }}
+                            <select defaultValue="pared"
+                            onChange={e => { asignarPapel(i, e.target.value); e.target.value = 'pared'; }}
                             className="min-w-[150px] text-[13px] font-bold border-2 border-indigo-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                             <option value="acabado">Referencia de acabado</option>
                             <option value="plano">El plano en planta</option>
