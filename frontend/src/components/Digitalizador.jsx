@@ -11,6 +11,7 @@ import Logo from './Logo';
 // TODA peticion necesita el token. Iban sin el: el servidor contestaba 401 y
 // el guardado no llegaba a la base de datos.
 import { authHeaders } from '../services/api';
+import { errorDeRespuesta } from '../services/errores';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -243,8 +244,7 @@ const Digitalizador = ({ state, setState }) => {
           // Antes esto se ignoraba: el servidor contestaba 401 y la pantalla
           // decia "guardado" igual. El presupuesto no aparecia en el historial
           // y nadie sabia por que.
-          const d = await historyResponse.json().catch(() => ({}));
-          throw new Error(d.detail || `No se pudo guardar en el historial (error ${historyResponse.status}).`);
+          throw new Error('Historial — ' + await errorDeRespuesta(historyResponse));
         }
       }
 
@@ -286,8 +286,7 @@ const Digitalizador = ({ state, setState }) => {
         if (presupuestoResponse.ok) {
           savedItems.push('Presupuestos');
         } else {
-          const d = await presupuestoResponse.json().catch(() => ({}));
-          throw new Error(d.detail || `No se pudo guardar en Presupuestos (error ${presupuestoResponse.status}).`);
+          throw new Error('Presupuestos — ' + await errorDeRespuesta(presupuestoResponse));
         }
       }
 

@@ -341,7 +341,10 @@ class BudgetItemModel(BaseModel):
     productId: str
     productCode: str
     productName: str
-    quantity: int = 1
+    # Decimal por lo mismo que en el digitalizador: hay líneas que se venden por
+    # metros (encimera, zócalo, cantos) y 3,5 es una cantidad legítima. Ojo: en
+    # el DESPIECE sí es entero, porque allí una pieza es una pieza.
+    quantity: float = 1
     customWidth: Optional[float] = None
     customHeight: Optional[float] = None
     customDepth: Optional[float] = None
@@ -880,7 +883,14 @@ class DigitalizadorMatchedProduct(BaseModel):
 class DigitalizadorLine(BaseModel):
     """A single line extracted from the draft"""
     id: str
-    quantity: int = 1
+    # DECIMAL, no entero. Una ENCIMERA se vende por METROS LINEALES: 3,5 ml es
+    # una cantidad de lo más normal. Con `int`, Pydantic rechazaba el guardado
+    # entero y lo que llegaba a la pantalla era «[object Object]», así que ni
+    # siquiera se sabía por qué.
+    #
+    # Redondearla habría sido peor que el fallo: cobrar 4 metros de encimera
+    # cuando se han pedido 3,5 es cambiarle el pedido al cliente sin decírselo.
+    quantity: float = 1
     reference: str = ""
     description: str
     price: float = 0
