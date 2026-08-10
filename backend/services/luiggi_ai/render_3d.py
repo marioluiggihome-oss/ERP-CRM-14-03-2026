@@ -783,7 +783,8 @@ class Render3DService:
     # mandan, menos atención recibe cada una y el render se vuelve un promedio.
     # Con 7 caben plano + 5 alzados + 1 referencia de acabado, o plano + 4
     # alzados + 2 referencias, que cubre una cocina en U con acabado de muestra.
-    MAX_IMAGENES_COMPUESTAS = 7
+    # 6 imágenes: más allá el modelo mezcla unas con otras y pierde fidelidad al boceto.
+    MAX_IMAGENES_COMPUESTAS = 6
 
     async def generate_render_composed(
         self,
@@ -831,11 +832,26 @@ class Render3DService:
             b64, mime = self._prepare_reference(sk, None)
             if b64:
                 images.append({"data": b64, "mime": mime})
-                ref_lines.append(
-                    f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
-                    "it shows the exact design of that wall (cabinets, shelves, appliances, "
-                    "finishes, proportions). Reproduce that wall faithfully, as shown."
-                )
+                # Detectar si el boceto es un dibujo manuscrito para darle instrucciones
+                # técnicas estrictas en lugar de tratarlo como referencia de acabado.
+                sk_is_sketch = self._is_sketch_reference(b64, mime)
+                if sk_is_sketch:
+                    ref_lines.append(
+                        f"- IMAGE {len(images)} is a HAND-DRAWN TECHNICAL SKETCH / ELEVATION of WALL {i + 1}. "
+                        "Treat it as a TECHNICAL BLUEPRINT — it is the ground truth for GEOMETRY. "
+                        "You MUST reproduce the EXACT distribution drawn: the NUMBER and ORDER of "
+                        "modules from left to right, the POSITION of each appliance (sink, hob, oven, "
+                        "microwave, fridge, dishwasher), the TALL COLUMNS and their contents, and the "
+                        "PROPORTIONS and widths of each module. Do NOT add, remove, resize or rearrange "
+                        "any module or appliance. Only FINISHES, MATERIALS and COLORS come from the "
+                        "written brief; the geometry comes 100% from this drawing."
+                    )
+                else:
+                    ref_lines.append(
+                        f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
+                        "it shows the exact design of that wall (cabinets, shelves, appliances, "
+                        "finishes, proportions). Reproduce that wall faithfully, as shown."
+                    )
 
         # Referencias de ACABADO: la foto que trae el cliente ("quiero esta
         # madera, este tirador"). Se pueden usar A LA VEZ que el plano: el plano
@@ -869,11 +885,20 @@ class Render3DService:
         # prompt ni _expand_brief: solo referencias + acabados pedidos.
         brief_txt = (description or "").strip()
         refs_block = "\n".join(ref_lines)
+        # Si alguno de los bocetos es un dibujo manuscrito, añadir cláusula reforzada
+        # que deja claro que la geometría viene del dibujo, no de la IA.
+        has_sketch = any(self._is_sketch_reference(img.get("data",""), img.get("mime","")) for img in images)
         task_prompt = (
             "You are given reference images of ONE specific kitchen. Recreate THAT SAME kitchen "
             "as a single photorealistic interior photograph. This is a FAITHFUL re-render of the "
             "references, NOT a new design — copy what the images show.\n"
             + refs_block + "\n\n"
+            + ("CRITICAL — HAND-DRAWN SKETCH DETECTED: One or more images are technical sketches. "
+               "The sketch is NOT decorative — it is a TECHNICAL BLUEPRINT. The geometry (layout, "
+               "number of modules, appliance positions, column positions) comes 100% from the sketch. "
+               "Do NOT invent a new kitchen. Do NOT default to a generic design. Reproduce EXACTLY "
+               "what is drawn.\n\n"
+               if has_sketch else "")
             "STRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "
