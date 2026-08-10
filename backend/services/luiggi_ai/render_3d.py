@@ -899,7 +899,7 @@ class Render3DService:
                "Do NOT invent a new kitchen. Do NOT default to a generic design. Reproduce EXACTLY "
                "what is drawn.\n\n"
                if has_sketch else "")
-            "STRICT RULES:\n"
+            + "STRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "
             "part of the kitchen (e.g. the tall fridge/oven columns, an end run or the island). "
