@@ -864,7 +864,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[9px] font-black uppercase">Tarifa {tarifa}</span>
             </div>
             <p className="text-[9px] text-indigo-200/70 font-medium leading-none">
-              {acabadoPuerta} / {acabadoCasco}
+              {acabadoCasco}
             </p>
           </div>
         </div>
@@ -993,34 +993,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         </div>
       </div>
 
-      {/* Muestrario Desplegable de Acabados */}
+      {/* Muestrario Desplegable de Acabados — solo Cascos ACB */}
       {showMuestrario && (
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in zoom-in-95">
-          {/* Muestrario de Puertas */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm animate-in fade-in zoom-in-95">
           <div className="space-y-2">
             <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-              <Palette size={14} className="text-indigo-600" /> Acabado de Puertas ({tarifa}):
+              <Box size={14} className="text-indigo-600" /> Acabado de Cascos (Grupo ACB):
             </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {(MUESTRARIO_PUERTAS[tarifa] || MUESTRARIO_PUERTAS.T1).map(ac => (
-                <button
-                  key={ac.id}
-                  onClick={() => setAcabadoPuerta(ac.nombre)}
-                  className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${acabadoPuerta === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-300' : 'border-slate-200 hover:border-slate-300'}`}
-                >
-                  <div className="w-full h-6 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
-                  <span className="text-[10px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Muestrario de Cascos ACB */}
-          <div className="space-y-2">
-            <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-              <Box size={14} className="text-indigo-600" /> Acabado de Cascos (Grupo ACB completo):
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5">
               {MUESTRARIO_CASCOS.map(ac => (
                 <button
                   key={ac.id}
