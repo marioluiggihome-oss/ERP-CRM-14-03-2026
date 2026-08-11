@@ -4,7 +4,7 @@
  * Prohibida su copia, distribución, modificación o uso sin autorización
  * escrita del titular.
  */
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check, Factory } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
