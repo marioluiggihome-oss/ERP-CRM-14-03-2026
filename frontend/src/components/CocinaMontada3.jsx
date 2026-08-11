@@ -160,6 +160,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [acabadoCasco, setAcabadoCasco] = useState(MUESTRARIO_CASCOS[0].nombre);
   
   const [muebles, setMuebles] = useState([]);
+  const [observacionesGenerales, setObservacionesGenerales] = useState('');
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState('');
@@ -341,6 +342,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     const alto = Number(v) || null;
     return { ...m, alto, pvp: puntosLocal(m, alto) };
   }));
+
+  const setObs = (k, obs) => {
+    setMuebles(prev => prev.map(m => m._k === k ? { ...m, obs } : m));
+  };
 
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
 
@@ -533,11 +538,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       `*Tarifa:* ${tarifa} - ${TARIFAS_NOMBRES[tarifa] || 'Estándar'}`,
       `*Color Puertas:* ${acabadoPuerta}`,
       `*Color Cascos:* ${acabadoCasco}`,
+      ...(observacionesGenerales?.trim() ? [`*Observaciones:* ${observacionesGenerales.trim()}`] : []),
       `*Muebles Totales:* ${totalUds} unidades`,
       `----------------------------------------`,
       ...muebles.map(m => {
         const manoTxt = m.cod?.endsWith('D') ? ' [Dcha]' : m.cod?.endsWith('I') ? ' [Izq]' : '';
-        return `• ${m.qty}x *${m.cod}* (${m.ancho || '—'}x${m.alto || '—'} cm)${manoTxt} -> ${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}`;
+        const obsTxt = m.obs?.trim() ? `\n   └ ✎ Obs: ${m.obs.trim()}` : '';
+        return `• ${m.qty}x *${m.cod}* (${m.ancho || '—'}x${m.alto || '—'} cm)${manoTxt} -> ${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}${obsTxt}`;
       }),
       `----------------------------------------`,
       `*Subtotal:* ${eur(subtotalBruto)}`,
@@ -585,21 +592,25 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.text(`Cascos: ${acabadoCasco}`, 110, 60);
 
     // Tabla de Muebles
-    const tableBody = muebles.map((m, idx) => [
-      idx + 1,
-      m.qty,
-      m.cod || '—',
-      m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble',
-      m.ancho ? `${m.ancho} cm` : '—',
-      m.alto ? `${m.alto} cm` : '—',
-      m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—',
-      eur(m.pvp),
-      eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))
-    ]);
+    const tableBody = muebles.map((m, idx) => {
+      const descBase = m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble';
+      const descCompleta = m.obs?.trim() ? `${descBase}\n[Obs: ${m.obs.trim()}]` : descBase;
+      return [
+        idx + 1,
+        m.qty,
+        m.cod || '—',
+        descCompleta,
+        m.ancho ? `${m.ancho} cm` : '—',
+        m.alto ? `${m.alto} cm` : '—',
+        m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—',
+        eur(m.pvp),
+        eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))
+      ];
+    });
 
     doc.autoTable({
       startY: 72,
-      head: [['#', 'Cant', 'Código', 'Descripción', 'Ancho', 'Alto', 'Mano', 'PVP Ud.', 'Total']],
+      head: [['#', 'Cant', 'Código', 'Descripción / Observaciones', 'Ancho', 'Alto', 'Mano', 'PVP Ud.', 'Total']],
       body: tableBody,
       theme: 'grid',
       headStyles: { fillColor: [67, 56, 202], textColor: 255, fontStyle: 'bold', fontSize: 9 },
@@ -617,6 +628,17 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     });
 
     const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Observaciones Generales en PDF
+    if (observacionesGenerales?.trim()) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 27, 75);
+      doc.text('Observaciones Generales de la Cocina / Montaje:', 14, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(observacionesGenerales.trim(), 14, finalY + 5);
+    }
 
     // Resumen de Totales
     doc.setFillColor(248, 250, 252);
@@ -666,6 +688,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         estado: 'corte',
         prioridad: 'NORMAL',
         progreso: 15,
+        observaciones: observacionesGenerales,
         fechaInicio: new Date().toISOString().split('T')[0],
         fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
         estaciones: {
@@ -705,6 +728,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         tarifa,
         acabadoPuerta,
         acabadoCasco,
+        observaciones: observacionesGenerales,
         descuento: Number(descuento) || 0,
         ivaRate: Number(ivaRate) || 21,
         subtotal: subtotalBruto,
@@ -892,7 +916,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       )}
 
       {/* Datos del Cliente y Presupuesto */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <div>
           <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Cliente / Titular</label>
           <div className="relative">
@@ -948,6 +972,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <option value="10">10% (Reformas)</option>
               <option value="0">0% (Exento / Exportación)</option>
             </select>
+          </div>
+        </div>
+
+        <div className="sm:col-span-2 md:col-span-3 lg:col-span-1">
+          <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Observaciones Generales</label>
+          <div className="relative">
+            <FileText size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={observacionesGenerales}
+              onChange={e => setObservacionesGenerales(e.target.value)}
+              placeholder="Notas de montaje/taller…"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
+            />
           </div>
         </div>
       </div>
@@ -1192,9 +1229,26 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </div>
                       </td>
 
-                      {/* Familia / Descripción */}
-                      <td className="py-3 px-3 text-slate-600 font-medium">
-                        {m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
+                      {/* Familia / Descripción + Línea de Observaciones / Características especiales */}
+                      <td className="py-3 px-3 min-w-[220px]">
+                        <div className="font-bold text-slate-800 text-xs">
+                          {m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
+                        </div>
+                        {/* Línea de Observaciones / Características Especiales del Mueble */}
+                        <div className="mt-1 flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={m.obs || ''}
+                            onChange={e => setObs(m._k, e.target.value)}
+                            placeholder="✎ Observaciones / características especiales…"
+                            title="Escribe aquí características especiales, cajeados de pilar, accesorios interiores o notas para taller"
+                            className={`w-full px-2 py-1 rounded-lg border text-[11px] outline-none transition-all ${
+                              m.obs?.trim()
+                                ? 'border-amber-400 bg-amber-50/70 font-bold text-amber-900 shadow-xs ring-1 ring-amber-300'
+                                : 'border-slate-200 bg-slate-50/60 text-slate-500 hover:bg-white focus:bg-white focus:border-indigo-400'
+                            }`}
+                          />
+                        </div>
                       </td>
 
                       {/* Ancho */}
