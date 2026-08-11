@@ -22,12 +22,13 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 APOLLO_API_URL = "https://api.apollo.io/v1"
-APOLLO_API_KEY = os.environ.get("APOLLO_API_KEY", "eGMaEIMj0rE-g8SnywvDPA")
-
 
 def get_apollo_key() -> str:
-    """Obtiene la clave de Apollo desde variables de entorno o valor configurado."""
-    return os.environ.get("APOLLO_API_KEY", "eGMaEIMj0rE-g8SnywvDPA").strip()
+    """Obtiene la clave de Apollo desde variables de entorno."""
+    key = os.environ.get("APOLLO_API_KEY", "").strip()
+    if key and key != "eGMaEIMj0rE-g8SnywvDPA":
+        return key
+    return ""
 
 
 # ─── Sectores B2B para Luiggi Home ────────────────────────────────
