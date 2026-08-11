@@ -528,6 +528,9 @@ const Invoices = ({ currentUser, state }) => {
             const tConf = DOC_TYPES[inv.docType || 'factura'] || DOC_TYPES.factura;
             const sConf = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
             const TIcon = tConf.icon;
+            
+            const estaPagado = inv.status === 'paid';
+            const estaVencido = inv.status === 'issued' && inv.dueDate && new Date(inv.dueDate) < new Date();
 
             return (
               <div key={inv.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4 flex-wrap">
@@ -539,7 +542,21 @@ const Invoices = ({ currentUser, state }) => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-black text-sm text-slate-900">{inv.invoiceNumber}</span>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${tConf.color}`}>{tConf.label}</span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${sConf.color}`}>{sConf.label}</span>
+                      
+                      {/* Badge de Estado de Pago Destacado */}
+                      {estaPagado ? (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-600 text-white flex items-center gap-1 shadow-sm">
+                          <CheckCircle size={12} /> 💳 PAGADO / COBRADO
+                        </span>
+                      ) : estaVencido ? (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                          <AlertTriangle size={12} /> 🚨 VENCIDO (IMPAGADO)
+                        </span>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${sConf.color}`}>
+                          ⏳ PENDIENTE DE PAGO
+                        </span>
+                      )}
                     </div>
                     <h4 className="font-black text-sm text-slate-800 mt-0.5">{inv.clientName}</h4>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -556,6 +573,24 @@ const Invoices = ({ currentUser, state }) => {
 
                   {/* Acciones & Pipeline de Conversión */}
                   <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Botón directo de 1 clic para Cambiar Estado de Pago */}
+                    {estaPagado ? (
+                      <button
+                        onClick={() => handleStatus(inv, 'issued')}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1"
+                        title="Marcar este pedido/factura como pendiente de cobro"
+                      >
+                        ↩️ Pendiente
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleStatus(inv, 'paid')}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition-all flex items-center gap-1"
+                        title="Marcar este pedido/factura como PAGADO"
+                      >
+                        <CheckCircle size={13} /> 💳 Marcar Pagado
+                      </button>
+                    )}
                     {/* Botones de Conversión rápida */}
                     {(inv.docType === 'presupuesto' || !inv.docType) && (
                       <button
