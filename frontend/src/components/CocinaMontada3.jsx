@@ -58,8 +58,8 @@ const pvpDeItem = (val, pv) => {
   return null;
 };
 
-const costeDetalladoDe = (m, p, tarifa, pvVal) => {
-  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal);
+const costeDetalladoDe = (m, p, tarifa, pvVal, acabadoCasco) => {
+  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal, acabadoCasco);
 };
 
 const PALETA_RAPIDA = [
@@ -381,7 +381,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
 
   const filas = muebles.map(m => {
-    const desp = m.encontrado ? costeDetalladoDe(m, paramsCostes, tarifa, pv) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
+    const desp = m.encontrado ? costeDetalladoDe(m, paramsCostes, tarifa, pv, acabadoCasco) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
     const coste = desp.costeTotal || 0;
     const pvp = Number(m.pvp) || 0;
     const margen = pvp - coste;
@@ -567,8 +567,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.rect(0, 0, 210, 35, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('LUIGGI HOME · COCINA MONTADA', 14, 18);
+    const companyBrand = (state?.settings?.companyName || currentUser?.empresa || 'STUDIO 3K').toUpperCase() + ' · COCINA MONTADA';
+    doc.text(companyBrand, 14, 18);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('Presupuesto Oficial de Fabricación y Mobiliario MV', 14, 26);
@@ -743,7 +743,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || 'Error al guardar');
-      setSavedId(payload.id);
+      setSavedId(d.id || d._id || payload.id);
       alert('✓ Presupuesto guardado con éxito en el sistema.');
     } catch (e) {
       setAviso(`No se pudo guardar: ${e.message}`);

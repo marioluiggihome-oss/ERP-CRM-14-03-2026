@@ -49,8 +49,8 @@ const pvpDeItem = (val, pv) => {
   return null;
 };
 
-const costeDetalladoDe = (m, p, tarifa, pvVal) => {
-  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal);
+const costeDetalladoDe = (m, p, tarifa, pvVal, acabadoCasco) => {
+  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal, acabadoCasco);
 };
 
 // Accesorios habituales y muebles rápidos
@@ -101,6 +101,18 @@ const TARIFAS_NOMBRES = {
   T5: 'FENIX NTM Alta Resistencia'
 };
 
+const MUESTRARIO_CASCOS = [
+  { id: 'grafito-19', nombre: 'Grafito Antracita (19mm)' },
+  { id: 'blanco-hidro-19', nombre: 'Blanco Hidrófugo (19mm)' },
+  { id: 'roble-aurora-19', nombre: 'Roble Aurora (19mm)' },
+  { id: 'blanco-16', nombre: 'Blanco En Kit (16mm)' },
+  { id: 'aluminio-16', nombre: 'Aluminio Textura (16mm)' },
+  { id: 'spike-19', nombre: 'Spike (19mm)' },
+  { id: 'stone-19', nombre: 'Stone (19mm)' },
+  { id: 'roble-natural-16', nombre: 'Roble Natural (Diseño Grueso 16mm)' },
+  { id: 'olmo-18', nombre: 'Olmo (Diseño Grueso 18mm)' },
+];
+
 export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onClose, apiUrl, authHeaders }) {
   const [muebles, setMuebles] = useState(() => (inicial || []).map((m, i) => ({ ...m, _k: `${m.cod || 'x'}-${i}-${Date.now()}-${m.raw || ''}` })));
   const [busca, setBusca] = useState('');
@@ -131,8 +143,15 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const [tarifa, setTarifa] = useState(() => {
     try { return localStorage.getItem('mv_tarifa') || 'T1'; } catch { return 'T1'; }
   });
+  const [acabadoCasco, setAcabadoCasco] = useState(() => {
+    try { return localStorage.getItem('mv_casco') || MUESTRARIO_CASCOS[0].nombre; } catch { return MUESTRARIO_CASCOS[0].nombre; }
+  });
   const [tarifas, setTarifas] = useState([]);
   const [todasTarifasData, setTodasTarifasData] = useState({});
+
+  useEffect(() => {
+    try { localStorage.setItem('mv_casco', acabadoCasco); } catch { /* noop */ }
+  }, [acabadoCasco]);
 
   const acabadosDeTarifa = useMemo(
     () => (tarifas.find(t => t.tarifa === tarifa)?.acabados) || [],
@@ -304,7 +323,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   }, [familias, muebles.length]); // eslint-disable-line
 
   const filas = muebles.map(m => {
-    const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa, pv) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
+    const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa, pv, acabadoCasco) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
     const coste = desp.costeTotal || 0;
     const pvp = Number(m.pvp) || 0;
     const margen = pvp - coste;
@@ -434,7 +453,8 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const copiarParaWhatsApp = () => {
     const lineas = [
       `*PRESUPUESTO COCINA MONTADA MV*`,
-      `*Tarifa:* ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})`,
+      `*Tarifa Puertas:* ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})`,
+      `*Casco ACB:* ${acabadoCasco}`,
       `*Total Unidades:* ${totalUds} muebles`,
       `----------------------------------------`,
       ...muebles.map(m => {
@@ -477,12 +497,12 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
             .header { border-bottom: 2px solid #4338ca; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
             .title { font-size: 22px; font-weight: 900; color: #1e1b4b; margin: 0; }
             .badge { display: inline-block; padding: 4px 10px; background: #e0e7ff; color: #3730a3; border-radius: 6px; font-weight: bold; font-size: 12px; }
+            .badge-casco { display: inline-block; padding: 4px 10px; background: #f1f5f9; color: #334155; border-radius: 6px; font-weight: bold; font-size: 12px; margin-left: 6px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th { background: #f8fafc; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #cbd5e1; text-align: left; }
             .total-box { margin-top: 25px; margin-left: auto; width: 280px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; }
             .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
             .total-row.final { border-top: 2px solid #cbd5e1; margin-top: 6px; padding-top: 8px; font-size: 16px; font-weight: bold; color: #4338ca; }
-            @media print { button { display: none; } }
           </style>
         </head>
         <body>
@@ -493,6 +513,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
             </div>
             <div style="text-align: right;">
               <span class="badge">Tarifa ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})</span>
+              <span class="badge-casco">Casco: ${acabadoCasco}</span>
               <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${new Date().toLocaleDateString('es-ES')}</div>
             </div>
           </div>
@@ -518,16 +539,14 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
           <div class="total-box">
             <div class="total-row"><span>Total Elementos:</span> <b>${totalUds} uds</b></div>
-            <div class="total-row"><span>Muebles Bajos:</span> <b>${metricas.bajosUds} uds (${metricas.metrosBajos} m)</b></div>
-            <div class="total-row"><span>Muebles Altos:</span> <b>${metricas.altosUds} uds (${metricas.metrosAltos} m)</b></div>
-            <div class="total-row"><span>Columnas:</span> <b>${metricas.colUds} uds</b></div>
-            <div class="total-row final"><span>Total Presupuesto:</span> <span>${eur(totalPvp)}</span></div>
+            <div class="total-row"><span>Casco ACB:</span> <b>${acabadoCasco}</b></div>
+            <div class="total-row final"><span>Total (sin IVA):</span> <b>${eur(totalPvp)}</b></div>
           </div>
-
-          <script>window.onload = () => window.print();</script>
         </body>
-      </html>`);
+      </html>
+    `);
     w.document.close();
+    w.print();
   };
 
   const handlersCandado = usePulsacionLarga(() => {
@@ -539,14 +558,14 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+      <div className="bg-white w-full max-w-6xl max-h-[92vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         
         {/* Cabecera Principal */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-4 shrink-0">
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-4 shrink-0 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600/80 border border-indigo-400/30 flex items-center justify-center shadow-lg shadow-indigo-600/20">
-              <Layers size={22} className="text-white" />
+            <div className="p-2.5 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 text-indigo-300">
+              <Boxes size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -593,25 +612,41 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           </div>
         </div>
 
-        {/* Barra de Métricas y Selector de Tarifa */}
+        {/* Barra de Métricas y Selector de Tarifa / Casco */}
         <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4 flex-wrap text-xs">
-          {/* Selector de Tarifa con Acabados */}
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">Tarifa:</span>
-            <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-              {['T1', 'T2', 'T3', 'T4', 'T5'].map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTarifa(t)}
-                  className={`px-2.5 py-1 rounded-lg font-black text-xs transition-all ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-                >
-                  {t}
-                </button>
-              ))}
+          {/* Selector de Tarifa y Casco ACB */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">Tarifa:</span>
+              <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                {['T1', 'T2', 'T3', 'T4', 'T5'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setTarifa(t)}
+                    className={`px-2.5 py-1 rounded-lg font-black text-xs transition-all ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] text-slate-500 font-semibold italic hidden lg:inline">
+                ({TARIFAS_NOMBRES[tarifa] || 'Acabado estándar'})
+              </span>
             </div>
-            <span className="text-[11px] text-slate-500 font-semibold italic hidden md:inline">
-              ({TARIFAS_NOMBRES[tarifa] || 'Acabado estándar'})
-            </span>
+
+            {/* Selector de Casco ACB */}
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+              <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">Casco ACB:</span>
+              <select
+                value={acabadoCasco}
+                onChange={(e) => setAcabadoCasco(e.target.value)}
+                className="px-3 py-1 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {MUESTRARIO_CASCOS.map(c => (
+                  <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Métricas de Composición */}
@@ -994,7 +1029,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
             </div>
 
             <button
-              onClick={() => onConfirm && onConfirm(muebles)}
+              onClick={() => onConfirm && onConfirm(muebles, { tarifa, acabadoCasco })}
               className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm shadow-xl shadow-emerald-600/20 transition-all flex items-center gap-2"
             >
               <CheckCircle2 size={18} /> Volcar al Presupuesto

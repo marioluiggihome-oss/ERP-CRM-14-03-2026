@@ -294,7 +294,12 @@ const Cascos = ({ state, setState }) => {
   const isAdmin = currentUser?.isAdmin === true;
   const userDtoDesmontada = Number(currentUser?.discountDesmontada ?? currentUser?.commercialDiscount ?? 0) || 0;
   const [descuento, setDescuento] = useState(userDtoDesmontada);
-  const [descProveedor, setDescProveedor] = useState(0); // descuento comercial del proveedor
+  const [descProveedor, setDescProveedor] = useState(() => {
+    try { return Number(localStorage.getItem('cascos_descProveedor')) || 0; } catch { return 0; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('cascos_descProveedor', String(descProveedor)); } catch { /* noop */ }
+  }, [descProveedor]);
   // Centros de envío configurados en Ajustes (uno por línea: "Nombre — Dirección").
   const centros = String(state?.settings?.centrosEnvio || '').split('\n').map(l => l.trim()).filter(Boolean);
   const [centroEnvio, setCentroEnvio] = useState('');
@@ -353,6 +358,37 @@ const Cascos = ({ state, setState }) => {
     return cid;
   };
   const gamaLabelOf = (gid) => CASCOS_GAMAS.find(g => g.id === gid)?.label || '';
+
+  // Recalcular precios de cascos en carrito al cambiar el color activo (Bug #3 de la auditoría)
+  useEffect(() => {
+    if (!colorActivo) return;
+    setCart(prev => {
+      let changed = false;
+      const next = prev.map(l => {
+        if (l.accesorio || !l.grosor) return l;
+        const match = CASCOS.find(c => c.tipo === l.tipo && String(c.grosor) === String(l.grosor) && c.alto === l.alto && c.ancho === l.ancho);
+        if (match && match.precios && match.precios[colorActivo] != null) {
+          const newBase = match.precios[colorActivo];
+          const newPrecio = pc(newBase);
+          const newLabel = colorLabel(colorActivo);
+          if (l.color !== colorActivo || l.precioBase !== newBase || l.precio !== newPrecio) {
+            changed = true;
+            const newSig = `${match.id}|${colorActivo}`;
+            return {
+              ...l,
+              sig: newSig,
+              color: colorActivo,
+              colorLabel: newLabel,
+              precioBase: newBase,
+              precio: newPrecio
+            };
+          }
+        }
+        return l;
+      });
+      return changed ? next : prev;
+    });
+  }, [colorActivo, coef]);
 
   // Volcado de MUEBLES desde el Diseñador 3D: empareja cada mueble detectado con
   // el catálogo CASCOS (misma familia bajo/alto/columna + ancho más cercano) y lo

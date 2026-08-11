@@ -14,39 +14,71 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const H = () => authHeaders({ 'Content-Type': 'application/json' });
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
-// Precio del color: antracita (grafito) preferente; si el tipo no lo tiene
-// (columnas), el mejor disponible.
-const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike'];
-const precioColor = (c) => { if (!c || !c.precios) return null; for (const k of COLOR_PRIO) if (c.precios[k] != null) return c.precios[k]; return null; };
+// Mapeo de acabados de casco a su clave de color y grosor en el catálogo ACB
+const MAP_CASCO_COLOR = {
+  'grafito-19': { color: 'grafito', grosor: 19 },
+  'Grafito Antracita (19mm)': { color: 'grafito', grosor: 19 },
+  'blanco-hidro-19': { color: 'blancoHidrofugo', grosor: 19 },
+  'Blanco Hidrófugo (19mm)': { color: 'blancoHidrofugo', grosor: 19 },
+  'roble-aurora-19': { color: 'robleAurora', grosor: 19 },
+  'Roble Aurora (19mm)': { color: 'robleAurora', grosor: 19 },
+  'blanco-16': { color: 'blanco', grosor: 16 },
+  'Blanco En Kit (16mm)': { color: 'blanco', grosor: 16 },
+  'aluminio-16': { color: 'aluminio', grosor: 16 },
+  'Aluminio Textura (16mm)': { color: 'aluminio', grosor: 16 },
+  'spike-19': { color: 'spike', grosor: 19 },
+  'Spike (19mm)': { color: 'spike', grosor: 19 },
+  'stone-19': { color: 'stone', grosor: 19 },
+  'Stone (19mm)': { color: 'stone', grosor: 19 },
+  'roble-natural-16': { color: 'roble', grosor: 16 },
+  'Roble Natural (Diseño Grueso 16mm)': { color: 'roble', grosor: 16 },
+  'olmo-18': { color: 'olmo', grosor: 18 },
+  'Olmo (Diseño Grueso 18mm)': { color: 'olmo', grosor: 18 },
+};
 
-// Factor de margen de Cocina Desmontada configurado en Sección Master -> Márgenes
-export const getFactorDesmontada = () => {
-  try {
-    const rawVal = localStorage.getItem('pointValueDesmontada');
-    if (rawVal != null) return Math.max(1.0, parseFloat(rawVal) || 1.30);
-    const st = JSON.parse(localStorage.getItem('app_state') || '{}');
-    if (st?.pointValueDesmontada != null) return Math.max(1.0, parseFloat(st.pointValueDesmontada) || 1.30);
-    const set = JSON.parse(localStorage.getItem('settings') || '{}');
-    if (set?.cascosPointValue != null) return Math.max(1.0, parseFloat(set.cascosPointValue) || 1.30);
-    return 1.30;
-  } catch {
-    return 1.30;
-  }
+// Precio del color: preferencia según color indicado o por defecto el primero disponible
+const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike', 'blancoHidrofugo', 'robleAurora'];
+const precioColor = (c, colorId) => { 
+  if (!c || !c.precios) return null; 
+  if (colorId && c.precios[colorId] != null) return c.precios[colorId];
+  for (const k of COLOR_PRIO) if (c.precios[k] != null) return c.precios[k]; 
+  return null; 
 };
 
 // Coste y PVP del casco ACB: precio neto de catálogo ACB × factor de Cocina Desmontada (Master)
-export const cascoACB = (tipoAcb, ancho, alto, factor) => {
+export const cascoACB = (tipoAcb, ancho, alto, factor, acabadoCasco) => {
   const f = factor != null ? factor : getFactorDesmontada();
-  const pool = CASCOS.filter(c => c.tipo === tipoAcb && precioColor(c) != null);
-  const p19 = pool.filter(c => c.grosor === 19);
-  const use = p19.length ? p19 : pool;
-  if (!use.length) return { coste: 0, pvpDesmontada: 0, med: '' };
-  let best = use[0], bd = Infinity;
-  for (const c of use) {
-    const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
-    if (d < bd) { bd = d; best = c; }
+  const conf = MAP_CASCO_COLOR[acabadoCasco] || { color: 'grafito', grosor: 19 };
+  const targetColor = conf.color;
+  const targetGrosor = conf.grosor;
+
+  const pool = CASCOS.filter(c => c.tipo === tipoAcb);
+  if (!pool.length) return { coste: 0, pvpDesmontada: 0, med: '' };
+
+  const porGrosor = pool.filter(c => c.grosor === targetGrosor);
+  const usePool = porGrosor.length ? porGrosor : pool;
+
+  let best = null, bd = Infinity;
+  for (const c of usePool) {
+    const pNeto = (c.precios && c.precios[targetColor] != null) ? c.precios[targetColor] : precioColor(c);
+    if (pNeto != null) {
+      const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
+      if (d < bd) { bd = d; best = { ...c, pNeto }; }
+    }
   }
-  const precioNeto = precioColor(best) || 0;
+
+  if (!best) {
+    for (const c of pool) {
+      const pNeto = precioColor(c);
+      if (pNeto != null) {
+        const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
+        if (d < bd) { bd = d; best = { ...c, pNeto }; }
+      }
+    }
+  }
+
+  if (!best) return { coste: 0, pvpDesmontada: 0, med: '' };
+  const precioNeto = best.pNeto || 0;
   return { 
     coste: Math.round(precioNeto * 100) / 100, 
     pvpDesmontada: Math.round(precioNeto * f * 100) / 100, 
@@ -321,7 +353,7 @@ export const getDesglosePuertasDetallado = (cod, familia, w, altura, altoMm, R =
 };
 
 // Descompone un código MV según la regla de su familia y tarifa activa.
-export const despiece = (item, p, tariff = 'T1', pvCustom) => {
+export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   const cod = item.cod, altura = item.altura, familia = item.familia;
   const R = RULES[familia] || RULE_GENERICA;
   const dio = /D\/I/.test(cod);
@@ -329,7 +361,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   const wCasco = w < 300 ? 300 : w;
   const altoMm = R.altoSel ? (altura === '90' ? 900 : 700) : (R.altoCol ? (altura === '220' ? 2200 : 2000) : (altura === '70' ? 700 : (R.alto || 800)));
   const factorDesmontada = getFactorDesmontada();
-  const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada);
+  const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada, acabadoCasco);
   
   // Desglose técnico preciso de puertas y frentes
   const desgloseFrentes = getDesglosePuertasDetallado(cod, familia, w, altura, altoMm, R, tariff);
@@ -366,9 +398,10 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
     cascoPvp: cc.pvpDesmontada,
     puerta: costePuertas,
     puertaPvp: pvpPuertas,
-    puntosPuertas,
     puertasDetalle: desgloseFrentes.frentes,
-    dtoPuertas,
+    dtoPuertas: dto1,
+    dtoPuertas1: dto1,
+    dtoPuertas2: dto2,
     puertas,
     areaPuertas: Math.round(areaP * 100) / 100,
     bisagras: puertas * 2 * (Number(p.bisagra) || 0),
@@ -382,6 +415,21 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
     factorDesmontada,
     generica: R.generica || false,
   };
+};
+
+// Costes por defecto de componentes (editables desde la UI de Rentabilidad MV).
+// Se exporta para que CocinaMontada3 y RelacionReview puedan leerlo/usarlo.
+export const MV_COSTES_DEFAULT = {
+  dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
+  dtoPuertas2: 0,   // % descuento 2 (acumulado sobre el resultado del 1)
+  dtoPuertas: 0,    // alias legado (compatibilidad)
+  bisagra: 0.65,    // € por bisagra (2 por puerta)
+  pata4: 0.45,      // € por juego de 4 patas
+  colgador: 0.30,   // € por colgador de mueble alto (2 por mueble)
+  cajon: 3.50,      // € por cajón
+  gaveta: 4.80,     // € por gaveta (cajón con frente completo)
+  soporte: 0.15,    // € por soporte/balda (4 por balda)
+  mano: 12.00,      // € mano de obra por mueble
 };
 
 export default function RentabilidadMV({ esMaster, seed }) {
