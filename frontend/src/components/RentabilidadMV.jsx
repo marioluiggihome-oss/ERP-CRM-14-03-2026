@@ -34,6 +34,79 @@ export const getFactorDesmontada = () => {
   }
 };
 
+// Coste y PVP del casco ACB: precio neto de catálogo ACB × factor de Cocina Desmontada (Master)
+export const cascoACB = (tipoAcb, ancho, alto, factor) => {
+  const f = factor != null ? factor : getFactorDesmontada();
+  const pool = CASCOS.filter(c => c.tipo === tipoAcb && precioColor(c) != null);
+  const p19 = pool.filter(c => c.grosor === 19);
+  const use = p19.length ? p19 : pool;
+  if (!use.length) return { coste: 0, pvpDesmontada: 0, med: '' };
+  let best = use[0], bd = Infinity;
+  for (const c of use) {
+    const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
+    if (d < bd) { bd = d; best = c; }
+  }
+  const precioNeto = precioColor(best) || 0;
+  return { 
+    coste: Math.round(precioNeto * 100) / 100, 
+    pvpDesmontada: Math.round(precioNeto * f * 100) / 100, 
+    med: `${best.ancho}x${best.alto}` 
+  };
+};
+
+// Reglas de descomposición por familia MV
+export const RULES = {
+  BAJO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 'dio', baldas: 1 },
+  BAJO_FREGADERO: { casco: 'Bajo Fregadero', alto: 800, patas: 1, puertas: 'dio' },
+  BAJO_RINCON_CIEGO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1 },
+  BAJO_RINCON_ESCUADRA: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 2 },
+  BAJO_HORNO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajFn: c => /BHC|BHZ/.test(c) ? 1 : 0, gavFn: c => /BHG/.test(c) ? 1 : 0 },
+  BAJO_TERMINAL: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertasFn: c => /BTP/.test(c) ? 1 : 0, baldas: 1 },
+  BAJO_PUERTA_CAJON: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 'dio', cajones: 1 },
+  BAJO_5_CAJONES: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 5 },
+  BAJO_3CAJ_1GAV: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 3, gavetas: 1 },
+  BAJO_2GAV_1CAJ: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 1, gavetas: 2 },
+  BAJO_2CAJ_1GAV_1FRENTE: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 2, gavetas: 1 },
+  BAJO_2GAV_1FRENTE: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, gavetas: 2 },
+  ALTO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio', baldasSel: true },
+  ALTO_DECORATIVO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 0, baldasSel: true },
+  ALTO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio', vitrina: true },
+  ALTO_ESCURREPLATOS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_MICROONDAS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_CAMPANA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_CALENTADOR: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_CALDERA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_SOBREFRIGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
+  ALTO_TERMINAL: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTO_RINCON_CIEGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTO_RINCON_ESCUADRA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_RINCON_CHAFLAN: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTO_ABATIBLE: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_COMBINADO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_COMBINADO_PLUS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTO_COMBINADO_PLUS_J: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  ALTILLO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
+  ALTILLO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1, vitrina: true },
+  COLUMNA_DESPENSERO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2, baldas: 4 },
+  COLUMNA_FRIGO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  COLUMNA_HORNO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  COLUMNA_HORNO_MICRO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  MEDIACOLUMNA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', baldas: 2 },
+  MEDIA_PUERTA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1 },
+  MEDIACOLUMNA_HORNO: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1 },
+  MEDIACOLUMNA_VITRINA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', vitrina: true },
+  MEDIACOL_VITRINA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1, vitrina: true },
+};
+export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
+
+// Ancho (mm) del prefijo numérico del código
+export const anchoDe = (cod) => {
+  const m = /^[A-Z_]+(\d+)/.exec(cod || '');
+  if (!m) return 600;
+  const n = parseInt(m[1], 10);
+  return n < 20 ? n * 100 : n * 10;
+};
+
 // Matriz Oficial de Puntos de Puertas MV por Tarifa (T1 a T5)
 export const PUERTAS_MATRIZ_MV = {
   T1: {
