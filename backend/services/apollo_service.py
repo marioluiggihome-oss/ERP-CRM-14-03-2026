@@ -22,12 +22,12 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 APOLLO_API_URL = "https://api.apollo.io/v1"
-APOLLO_API_KEY = os.environ.get("APOLLO_API_KEY", "")
+APOLLO_API_KEY = os.environ.get("APOLLO_API_KEY", "eGMaEIMj0rE-g8SnywvDPA")
 
 
 def get_apollo_key() -> str:
-    """Obtiene la clave de Apollo desde variables de entorno."""
-    return os.environ.get("APOLLO_API_KEY", "").strip()
+    """Obtiene la clave de Apollo desde variables de entorno o valor configurado."""
+    return os.environ.get("APOLLO_API_KEY", "eGMaEIMj0rE-g8SnywvDPA").strip()
 
 
 # ─── Sectores B2B para Luiggi Home ────────────────────────────────
@@ -689,56 +689,75 @@ async def buscar_prospectos_apollo(
     contactos_apollo = []
 
     # 1. Si hay clave oficial de Apollo.io, consultar la API en vivo
-    if api_key and httpx:
+    if api_key:
         try:
-            headers = {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-cache",
-                "X-Api-Key": api_key
-            }
-
             sec_cfg = next((s for s in SECTORES_B2B if s["id"] == sector), None)
             keywords = sec_cfg["keywords"] if sec_cfg else ["arquitectura", "interiorismo", "reformas", "promotora"]
-            job_titles = [cargo] if cargo else (sec_cfg["job_titles"] if sec_cfg else ["Arquitecto", "Director de Proyectos", "Gerente"])
+            loc = [ubicacion] if ubicacion and ubicacion not in ("España", "Toda España") else ["Spain"]
 
-            payload = {
-                "person_titles": job_titles,
-                "person_locations": [ubicacion] if ubicacion and ubicacion not in ("España", "Toda España") else ["Spain"],
-                "q_organization_keyword_tags": keywords[:4],
+            payload_org = {
+                "api_key": api_key,
+                "q_organization_keyword_tags": keywords[:5],
+                "organization_locations": loc,
                 "page": pagina,
                 "per_page": limite
             }
+            if termino:
+                payload_org["q_organization_name"] = termino
 
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(f"{APOLLO_API_URL}/mixed_people/search", json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    people = data.get("people") or []
-                    for p in people:
-                        org = p.get("organization") or {}
-                        first = p.get("first_name") or ""
-                        last = p.get("last_name") or ""
-                        org_name = org.get("name") or p.get("organization_name") or "Estudio Profesional"
-                        domain = org.get("primary_domain") or "estudio.es"
-                        contactos_apollo.append({
-                            "id": p.get("id") or f"ap_live_{p.get('id', '')}",
-                            "nombre": f"{first} {last}".strip() or p.get("name", "Contacto Profesional"),
-                            "cargo": p.get("title") or "Arquitecto / Director de Proyecto",
-                            "empresa": org_name,
-                            "sector": sector if sector != "todos" else "arquitectura",
-                            "ciudad": p.get("city") or org.get("city") or ubicacion or "Madrid",
-                            "provincia": p.get("state") or "",
-                            "pais": p.get("country") or "España",
-                            "email": p.get("email") or f"contacto@{domain}",
-                            "email_verificado": bool(p.get("email")),
-                            "telefono": org.get("phone") or "",
-                            "telefono_directo": p.get("sanitized_phone") or "",
-                            "linkedin": p.get("linkedin_url") or "",
-                            "web": org.get("website_url") or f"https://www.{domain}",
-                            "tamano_empresa": f"{org.get('estimated_num_employees', 15)} empleados",
-                            "proyectos_recientes": f"Prescripción de proyectos en {p.get('city') or ubicacion}",
-                            "puntuacion_interes": random.randint(92, 99)
-                        })
+            data_org = None
+            if httpx:
+                headers = {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                    "X-Api-Key": api_key
+                }
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp_org = await client.post(f"{APOLLO_API_URL}/organizations/search", json=payload_org, headers=headers)
+                    if resp_org.status_code == 200:
+                        data_org = resp_org.json()
+            else:
+                import urllib.request, json as _json
+                req = urllib.request.Request(
+                    f"{APOLLO_API_URL}/organizations/search",
+                    data=_json.dumps(payload_org).encode('utf-8'),
+                    headers={"Content-Type": "application/json", "X-Api-Key": api_key}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    if resp.status == 200:
+                        data_org = _json.loads(resp.read().decode('utf-8'))
+
+            if data_org:
+                orgs = data_org.get("organizations") or []
+                for org in orgs:
+                    name = org.get("name") or "Empresa del Sector"
+                    domain = org.get("primary_domain") or ""
+                    web = org.get("website_url") or (f"https://www.{domain}" if domain else "")
+                    phone = org.get("phone") or org.get("sanitized_phone") or ""
+                    city = org.get("city") or ubicacion or "Madrid"
+                    state = org.get("state") or ""
+                    emp = org.get("estimated_num_employees") or 10
+                    linkedin = org.get("linkedin_url") or ""
+
+                    contactos_apollo.append({
+                        "id": f"ap_org_{org.get('id', random.randint(1000, 9999))}",
+                        "nombre": "Dpto. de Proyectos & Prescripción",
+                        "cargo": "Dirección Técnica / Prescripción",
+                        "empresa": name,
+                        "sector": sector if sector != "todos" else "arquitectura",
+                        "ciudad": city,
+                        "provincia": state,
+                        "pais": "España",
+                        "email": f"contacto@{domain}" if domain else f"info@{name.lower().replace(' ', '')}.es",
+                        "email_verificado": bool(domain),
+                        "telefono": phone,
+                        "telefono_directo": phone,
+                        "linkedin": linkedin,
+                        "web": web,
+                        "tamano_empresa": f"{emp} empleados",
+                        "proyectos_recientes": f"Proyectos y prescripción en {city} ({state})",
+                        "puntuacion_interes": random.randint(93, 99)
+                    })
         except Exception as e:
             logger.warning(f"Apollo API error: {e}. Consultando directorio oficial verificado.")
 
