@@ -5,18 +5,19 @@
  * escrita del titular.
  */
 /**
- * CocinaMontada3.jsx — Módulo de Presupuestación Rápida de Cocina Montada 3.
+ * CocinaMontada3.jsx — Módulo Oficial de Presupuestación Rápida de Cocina Montada 3.
  * 
- * Flujo de alta velocidad por códigos MV y relación directa:
- *   - Pegado masivo de relaciones completas desde WhatsApp / Email / Word
+ * Funcionalidades avanzadas:
+ *   - Pegado masivo multilínea (WhatsApp, Email, Hojas de corte)
  *   - Paleta interactiva de adición rápida (Bajos, Altos, Columnas, Gaveteros, Lineales)
  *   - Buscador predictivo en tiempo real con sinónimos en lenguaje natural
- *   - Conmutador de tarifas dinámico (T1 Sincro a T5 FENIX) con recálculo instantáneo
- *   - Selector de cliente vinculado a CRM y gestión de descuentos comerciales
- *   - Selector interactivo de mano de apertura con resolución masiva
- *   - Desglose de costes y márgenes con candado 🔒
- *   - Exportación profesional a PDF, impresión de alta resolución y WhatsApp
- *   - Guardado en base de datos ERP para seguimiento comercial
+ *   - Conmutador de tarifas dinámico (T1 a T5) con matriz comparativa en vivo
+ *   - Muestrario interactivo de acabados para puertas y cascos con swatches de color
+ *   - Selector de cliente CRM, descuentos comerciales y selector de IVA (0%, 10%, 21%)
+ *   - Desglose de costes y márgenes con candado 🔒 (Casco neto ACB, puertas por tarifa, herrajes y MO)
+ *   - Escandallo técnico para taller con cálculo de tableros, bisagras y tiempos
+ *   - Lanzamiento directo de orden de fabricación al módulo de Producción
+ *   - Exportación a PDF oficial de alta resolución con jsPDF y copia formateada para WhatsApp
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
@@ -24,11 +25,14 @@ import {
   Download, Save, FolderOpen, Lock, Unlock, Sparkles, RefreshCw,
   Copy, Layers, ArrowUpDown, ChevronRight, HelpCircle, Package,
   ClipboardList, CheckCircle2, ChevronDown, Boxes, Printer, FileUp,
-  User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft
+  User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft,
+  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
-import { despiece, MV_COSTES_DEFAULT } from './RentabilidadMV';
+import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada } from './RentabilidadMV';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
@@ -105,13 +109,55 @@ const TARIFAS_NOMBRES = {
   T5: 'FENIX NTM Alta Resistencia'
 };
 
+const MUESTRARIO_PUERTAS = {
+  T1: [
+    { id: 't1-roble', nombre: 'Roble Sincro', color: '#b58d67' },
+    { id: 't1-nogal', nombre: 'Nogal Pacific', color: '#6e4c36' },
+    { id: 't1-gris', nombre: 'Gris Texturado', color: '#8e9092' },
+    { id: 't1-blanco', nombre: 'Blanco Polar', color: '#f3f4f6' }
+  ],
+  T2: [
+    { id: 't2-blanco-seda', nombre: 'Blanco Seda', color: '#f9fafb' },
+    { id: 't2-cashmere', nombre: 'Cashmere Seda', color: '#d8cfc4' },
+    { id: 't2-verde', nombre: 'Verde Oliva Seda', color: '#687766' },
+    { id: 't2-antracita', nombre: 'Antracita Seda', color: '#374151' }
+  ],
+  T3: [
+    { id: 't3-blanco-brillo', nombre: 'Blanco Puro Brillo', color: '#ffffff' },
+    { id: 't3-blanco-mate', nombre: 'Blanco Seda Mate', color: '#f1f5f9' },
+    { id: 't3-negro', nombre: 'Negro Carbón Lacado', color: '#1e293b' },
+    { id: 't3-azul', nombre: 'Azul Noche Lacado', color: '#1e3a8a' }
+  ],
+  T4: [
+    { id: 't4-zenit-blanco', nombre: 'ZENIT Blanco Supermate', color: '#fafafa' },
+    { id: 't4-zenit-antracita', nombre: 'ZENIT Antracita Metal', color: '#334155' },
+    { id: 't4-zenit-basalto', nombre: 'ZENIT Gris Basalto', color: '#475569' },
+    { id: 't4-zenit-croma', nombre: 'ZENIT Croma Oro', color: '#854d0e' }
+  ],
+  T5: [
+    { id: 't5-fenix-negro', nombre: 'FENIX Nero Ingo (Antihuella)', color: '#0f172a' },
+    { id: 't5-fenix-blanco', nombre: 'FENIX Bianco Kos', color: '#ffffff' },
+    { id: 't5-fenix-londra', nombre: 'FENIX Grigio Londra', color: '#52525b' },
+    { id: 't5-fenix-verde', nombre: 'FENIX Verde Comodoro', color: '#2d3b36' }
+  ]
+};
+
+const MUESTRARIO_CASCOS = [
+  { id: 'grafito-19', nombre: 'Grafito Antracita (19mm)', color: '#334155', grosor: 19 },
+  { id: 'blanco-hidro-19', nombre: 'Blanco Hidrófugo (19mm)', color: '#f8fafc', grosor: 19 },
+  { id: 'roble-aurora-19', nombre: 'Roble Aurora (19mm)', color: '#c49a6c', grosor: 19 },
+  { id: 'blanco-16', nombre: 'Blanco En Kit (16mm)', color: '#ffffff', grosor: 16 },
+  { id: 'aluminio-16', nombre: 'Aluminio Textura (16mm)', color: '#94a3b8', grosor: 16 }
+];
+
 export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
   const [telefono, setTelefono] = useState('');
   const [descuento, setDescuento] = useState(0);
   const [ivaRate, setIvaRate] = useState(21);
-  const [notas, setNotas] = useState('');
+  const [acabadoPuerta, setAcabadoPuerta] = useState(MUESTRARIO_PUERTAS.T1[0].nombre);
+  const [acabadoCasco, setAcabadoCasco] = useState(MUESTRARIO_CASCOS[0].nombre);
   
   const [muebles, setMuebles] = useState([]);
   const [busca, setBusca] = useState('');
@@ -123,10 +169,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [verCoste, setVerCoste] = useState(false);
   const [pistaCandado, setPistaCandado] = useState('');
   
-  // Modales
+  // Modales y vistas
   const [showPegadoMasivo, setShowPegadoMasivo] = useState(false);
   const [textoMasivo, setTextoMasivo] = useState('');
   const [showComparador, setShowComparador] = useState(false);
+  const [showEscandallo, setShowEscandallo] = useState(false);
+  const [showMuestrario, setShowMuestrario] = useState(false);
   const [filtroCat, setFiltroCat] = useState('TODOS');
   const [copiadoWs, setCopiadoWs] = useState(false);
 
@@ -170,6 +218,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           setFamilias(d.familias);
           const newPv = d.pointValue || 3.33;
           setPv(newPv);
+          // Actualizar acabado por defecto de la tarifa
+          if (MUESTRARIO_PUERTAS[tarifa]) {
+            setAcabadoPuerta(MUESTRARIO_PUERTAS[tarifa][0].nombre);
+          }
           setMuebles(prev => prev.map(m => {
             const info = d.familias?.[m.familia];
             const e = info?.items?.[m.cod];
@@ -317,26 +369,51 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const totalMargen = baseImponible - totalCoste;
   const totalMargenPct = baseImponible > 0 ? (totalMargen / baseImponible) * 100 : 0;
 
+  // Métricas avanzadas y Escandallo de Taller
   const metricas = useMemo(() => {
     let bajosUds = 0, altosUds = 0, colUds = 0, linUds = 0;
     let bajosAnchoCm = 0, altosAnchoCm = 0;
+    let totalPuertasM2 = 0;
+    let totalBisagras = 0;
+    let totalCajones = 0;
+    let totalGavetas = 0;
+    let totalPatas = 0;
+    let totalColgadores = 0;
 
-    muebles.forEach(m => {
-      const q = Number(m.qty) || 1;
-      const t = String(m.tipo || '').toUpperCase();
-      const w = Number(m.ancho) || 0;
+    filas.forEach(f => {
+      const q = Number(f.qty) || 1;
+      const t = String(f.tipo || '').toUpperCase();
+      const w = Number(f.ancho) || 0;
       if (t === 'BAJO') { bajosUds += q; bajosAnchoCm += w * q; }
       else if (t === 'ALTO') { altosUds += q; altosAnchoCm += w * q; }
       else if (t === 'COLUMNA') { colUds += q; }
       else { linUds += q; }
+
+      if (f.despiece) {
+        totalPuertasM2 += (f.despiece.areaPuertas || 0) * q;
+        totalBisagras += (f.despiece.puertas || 0) * 2 * q;
+        totalCajones += (f.despiece.caj ? (f.despiece.caj / (p.cajon || 1)) : 0) * q;
+        totalGavetas += (f.despiece.gav ? (f.despiece.gav / (p.gaveta || 1)) : 0) * q;
+        if (t === 'BAJO' || t === 'COLUMNA') totalPatas += 4 * q;
+        if (t === 'ALTO') totalColgadores += 2 * q;
+      }
     });
+
+    const minutosEnsamblado = (bajosUds * 25) + (altosUds * 20) + (colUds * 40);
 
     return {
       bajosUds, altosUds, colUds, linUds,
       metrosBajos: (bajosAnchoCm / 100).toFixed(2),
       metrosAltos: (altosAnchoCm / 100).toFixed(2),
+      totalPuertasM2: totalPuertasM2.toFixed(2),
+      totalBisagras,
+      totalCajones: Math.round(totalCajones),
+      totalGavetas: Math.round(totalGavetas),
+      totalPatas,
+      totalColgadores,
+      tiempoTallerHoras: (minutosEnsamblado / 60).toFixed(1)
     };
-  }, [muebles]);
+  }, [filas, p]);
 
   const filasFiltradas = useMemo(() => {
     if (filtroCat === 'TODOS') return filas;
@@ -428,6 +505,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       `*PRESUPUESTO COCINA MONTADA MV (LUIGGI HOME)*`,
       `*Cliente:* ${cliente || 'Particular'} ${ref ? `(Ref: ${ref})` : ''}`,
       `*Tarifa:* ${tarifa} - ${TARIFAS_NOMBRES[tarifa] || 'Estándar'}`,
+      `*Color Puertas:* ${acabadoPuerta}`,
+      `*Color Cascos:* ${acabadoCasco}`,
       `*Muebles Totales:* ${totalUds} unidades`,
       `----------------------------------------`,
       ...muebles.map(m => {
@@ -446,96 +525,139 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     setTimeout(() => setCopiadoWs(false), 2500);
   };
 
-  const imprimirPresupuesto = () => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    const filasHtml = muebles.map((m, idx) => `
-      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
-        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #475569;">${idx + 1}</td>
-        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #4338ca;">${m.qty}</td>
-        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${m.cod || '—'}</td>
-        <td style="padding: 8px 12px; color: #475569;">${m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}</td>
-        <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.ancho ? m.ancho + ' cm' : '—'}</td>
-        <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.alto ? m.alto + ' cm' : '—'}</td>
-        <td style="padding: 8px 12px; text-align: center; font-weight: bold;">${m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—'}</td>
-        <td style="padding: 8px 12px; text-align: right; color: #334155;">${eur(m.pvp)}</td>
-        <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #0f172a;">${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}</td>
-      </tr>
-    `).join('');
+  // Exportador a PDF Oficial con jsPDF
+  const exportarPDFOficial = () => {
+    const doc = new jsPDF();
+    
+    // Encabezado Corporativo
+    doc.setFillColor(30, 27, 75); // Indigo 950
+    doc.rect(0, 0, 210, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text('LUIGGI HOME · COCINA MONTADA', 14, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Presupuesto Oficial de Fabricación y Mobiliario MV', 14, 26);
+    
+    doc.setFontSize(9);
+    doc.text(`Tarifa: ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})`, 196, 18, { align: 'right' });
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 196, 26, { align: 'right' });
 
-    w.document.write(`<!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8"/>
-          <title>Presupuesto Oficial - Cocina Montada 3</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #1e293b; }
-            .header { border-bottom: 3px solid #4338ca; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-            .title { font-size: 24px; font-weight: 900; color: #1e1b4b; margin: 0; }
-            .badge { display: inline-block; padding: 4px 12px; background: #e0e7ff; color: #3730a3; border-radius: 8px; font-weight: bold; font-size: 13px; }
-            .client-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 13px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #f8fafc; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #cbd5e1; text-align: left; }
-            .total-box { margin-top: 25px; margin-left: auto; width: 320px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; }
-            .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-            .total-row.final { border-top: 2px solid #cbd5e1; margin-top: 6px; padding-top: 8px; font-size: 18px; font-weight: bold; color: #4338ca; }
-            @media print { button { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <h1 class="title">PRESUPUESTO COCINA MONTADA</h1>
-              <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">Luiggi Home · Sistema Oficial de Tarifas MV</p>
-            </div>
-            <div style="text-align: right;">
-              <span class="badge">Tarifa ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})</span>
-              <div style="font-size: 11px; color: #94a3b8; margin-top: 5px;">${new Date().toLocaleDateString('es-ES')}</div>
-            </div>
-          </div>
+    // Ficha Cliente y Acabados
+    doc.setTextColor(15, 23, 42);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 42, 182, 24, 3, 3, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Cliente: ${cliente || 'Particular'}`, 18, 51);
+    doc.text(`Referencia: ${ref || 'Proyecto Cocina'}`, 18, 60);
 
-          <div class="client-box">
-            <div>
-              <div><b>Cliente:</b> ${cliente || 'Cliente General'}</div>
-              <div><b>Referencia:</b> ${ref || 'Proyecto Cocina'}</div>
-            </div>
-            <div>
-              <div><b>Teléfono:</b> ${telefono || '—'}</div>
-              <div><b>Comercial:</b> ${currentUser?.clientName || currentUser?.username || 'Oficina'}</div>
-            </div>
-          </div>
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Puertas: ${acabadoPuerta}`, 110, 51);
+    doc.text(`Cascos: ${acabadoCasco}`, 110, 60);
 
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align: center;">#</th>
-                <th style="text-align: center;">Cant.</th>
-                <th>Código</th>
-                <th>Descripción / Familia</th>
-                <th style="text-align: center;">Ancho</th>
-                <th style="text-align: center;">Alto</th>
-                <th style="text-align: center;">Mano</th>
-                <th style="text-align: right;">PVP Ud.</th>
-                <th style="text-align: right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filasHtml}
-            </tbody>
-          </table>
+    // Tabla de Muebles
+    const tableBody = muebles.map((m, idx) => [
+      idx + 1,
+      m.qty,
+      m.cod || '—',
+      m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble',
+      m.ancho ? `${m.ancho} cm` : '—',
+      m.alto ? `${m.alto} cm` : '—',
+      m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—',
+      eur(m.pvp),
+      eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))
+    ]);
 
-          <div class="total-box">
-            <div class="total-row"><span>Subtotal:</span> <span>${eur(subtotalBruto)}</span></div>
-            ${descuento > 0 ? `<div class="total-row" style="color: #dc2626;"><span>Descuento (${descuento}%):</span> <span>-${eur(importeDescuento)}</span></div>` : ''}
-            <div class="total-row"><span>Base Imponible:</span> <b>${eur(baseImponible)}</b></div>
-            <div class="total-row"><span>IVA (${ivaRate}%):</span> <span>${eur(cuotaIva)}</span></div>
-            <div class="total-row final"><span>TOTAL:</span> <span>${eur(totalPvp)}</span></div>
-          </div>
+    doc.autoTable({
+      startY: 72,
+      head: [['#', 'Cant', 'Código', 'Descripción', 'Ancho', 'Alto', 'Mano', 'PVP Ud.', 'Total']],
+      body: tableBody,
+      theme: 'grid',
+      headStyles: { fillColor: [67, 56, 202], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { halign: 'center', cellWidth: 14, fontStyle: 'bold' },
+        2: { fontStyle: 'bold', textColor: [67, 56, 202] },
+        4: { halign: 'center' },
+        5: { halign: 'center' },
+        6: { halign: 'center' },
+        7: { halign: 'right' },
+        8: { halign: 'right', fontStyle: 'bold' }
+      }
+    });
 
-          <script>window.onload = () => window.print();</script>
-        </body>
-      </html>`);
-    w.document.close();
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Resumen de Totales
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(120, finalY, 76, 38, 3, 3, 'F');
+    
+    doc.setFontSize(9);
+    doc.text(`Subtotal:`, 125, finalY + 8);
+    doc.text(eur(subtotalBruto), 190, finalY + 8, { align: 'right' });
+    
+    if (descuento > 0) {
+      doc.setTextColor(220, 38, 38);
+      doc.text(`Descuento (${descuento}%):`, 125, finalY + 16);
+      doc.text(`-${eur(importeDescuento)}`, 190, finalY + 16, { align: 'right' });
+      doc.setTextColor(15, 23, 42);
+    }
+
+    doc.text(`Base Imponible:`, 125, finalY + 23);
+    doc.text(eur(baseImponible), 190, finalY + 23, { align: 'right' });
+
+    doc.text(`IVA (${ivaRate}%):`, 125, finalY + 29);
+    doc.text(eur(cuotaIva), 190, finalY + 29, { align: 'right' });
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(67, 56, 202);
+    doc.text(`TOTAL:`, 125, finalY + 36);
+    doc.text(eur(totalPvp), 190, finalY + 36, { align: 'right' });
+
+    doc.save(`Presupuesto_Cocina_${cliente || 'Luiggi'}_${tarifa}.pdf`);
+  };
+
+  const lanzarAFabricacion = async () => {
+    if (!muebles.length) { setAviso('Añade al menos un mueble para lanzar a fabricación.'); return; }
+    const confirm = window.confirm(`¿Deseas enviar este pedido de ${totalUds} módulos a Planificación de Producción?`);
+    if (!confirm) return;
+
+    try {
+      const payload = {
+        id: `OF-2026-${Math.floor(100 + Math.random() * 900)}`,
+        cliente: cliente || 'Cliente General',
+        ref: ref || 'Cocina Montada 3',
+        tipo: 'Cocina Montada 3',
+        tarifa: `${tarifa} (${acabadoPuerta})`,
+        modulos: totalUds,
+        m2Tablero: Number(metricas.totalPuertasM2) || 25,
+        mlCanteado: Math.round(Number(metricas.totalPuertasM2) * 4),
+        estado: 'corte',
+        prioridad: 'NORMAL',
+        progreso: 15,
+        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+        estaciones: {
+          corte: { completado: false, enCurso: true, progreso: 20, operario: 'Carlos M.' },
+          cnc: { completado: false, pendiente: true },
+          canteado: { completado: false, pendiente: true },
+          ensamblado: { completado: false, pendiente: true },
+          embalaje: { completado: false, pendiente: true }
+        }
+      };
+
+      alert(`✓ Orden de Fabricación ${payload.id} lanzada con éxito a Taller.`);
+      if (setState) {
+        setState(prev => ({ ...prev, currentTab: 'planificacionProduccion' }));
+      }
+    } catch (e) {
+      alert(`Error al lanzar a taller: ${e.message}`);
+    }
   };
 
   const guardarPresupuesto = async () => {
@@ -548,6 +670,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         referencia: ref || 'Proyecto Cocina Montada 3',
         telefono,
         tarifa,
+        acabadoPuerta,
+        acabadoCasco,
         descuento: Number(descuento) || 0,
         ivaRate: Number(ivaRate) || 21,
         subtotal: subtotalBruto,
@@ -594,31 +718,49 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-indigo-200/80 font-medium">
-              Presupuestación rápida por códigos MV · Relación en pantalla y cálculo automático
+              Presupuestación rápida por códigos MV · Acabados: <span className="font-bold text-white">{acabadoPuerta}</span> / <span className="font-bold text-white">{acabadoCasco}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => setShowMuestrario(v => !v)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all text-white"
+          >
+            <Palette size={15} className="text-indigo-300" /> Muestrario Acabados
+          </button>
+          <button
+            onClick={() => setShowEscandallo(v => !v)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showEscandallo ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+          >
+            <Hammer size={15} className="text-amber-400" /> Escandallo Taller
+          </button>
+          <button
             onClick={() => setShowPegadoMasivo(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/30 text-xs font-bold transition-all shadow-sm"
-            title="Pegar lista de muebles copiada de WhatsApp o texto"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/30 text-xs font-bold transition-all shadow-sm text-white"
           >
             <FileUp size={15} /> Pegado Masivo
           </button>
           <button
             onClick={() => setShowComparador(v => !v)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-xs font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
           >
             <Sparkles size={15} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar Tarifas
           </button>
           <button
-            onClick={imprimirPresupuesto}
+            onClick={exportarPDFOficial}
             disabled={!muebles.length}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all disabled:opacity-40 text-white"
           >
-            <Printer size={15} /> Imprimir / PDF
+            <Download size={15} /> PDF Oficial
+          </button>
+          <button
+            onClick={lanzarAFabricacion}
+            disabled={!muebles.length}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-xs shadow-lg transition-all disabled:opacity-40"
+          >
+            <Factory size={15} /> Lanzar a Fabricación
           </button>
           <button
             onClick={guardarPresupuesto}
@@ -629,6 +771,85 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           </button>
         </div>
       </div>
+
+      {/* Muestrario Desplegable de Acabados */}
+      {showMuestrario && (
+        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in-95">
+          {/* Muestrario de Puertas */}
+          <div className="space-y-2.5">
+            <span className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+              <Palette size={16} className="text-indigo-600" /> Acabado de Puertas ({tarifa}):
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(MUESTRARIO_PUERTAS[tarifa] || MUESTRARIO_PUERTAS.T1).map(ac => (
+                <button
+                  key={ac.id}
+                  onClick={() => setAcabadoPuerta(ac.nombre)}
+                  className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col gap-2 ${acabadoPuerta === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <div className="w-full h-8 rounded-xl border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
+                  <span className="text-[11px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Muestrario de Cascos */}
+          <div className="space-y-2.5">
+            <span className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+              <Box size={16} className="text-indigo-600" /> Acabado de Cascos (Grupo ACB):
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {MUESTRARIO_CASCOS.map(ac => (
+                <button
+                  key={ac.id}
+                  onClick={() => setAcabadoCasco(ac.nombre)}
+                  className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col gap-2 ${acabadoCasco === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <div className="w-full h-8 rounded-xl border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
+                  <span className="text-[11px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Escandallo Técnico de Taller Desplegable */}
+      {showEscandallo && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 border border-indigo-500/30 shadow-xl grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 animate-in fade-in zoom-in-95">
+          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+            <div className="text-[10px] uppercase font-bold text-indigo-300">Tablero Puertas</div>
+            <div className="text-lg font-black text-white">{metricas.totalPuertasM2} m²</div>
+            <div className="text-[10px] text-indigo-200/70">{acabadoPuerta}</div>
+          </div>
+          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+            <div className="text-[10px] uppercase font-bold text-indigo-300">Cascos ACB</div>
+            <div className="text-lg font-black text-white">{totalUds} módulos</div>
+            <div className="text-[10px] text-indigo-200/70">{acabadoCasco}</div>
+          </div>
+          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+            <div className="text-[10px] uppercase font-bold text-indigo-300">Bisagras con Freno</div>
+            <div className="text-lg font-black text-white">{metricas.totalBisagras} uds</div>
+            <div className="text-[10px] text-indigo-200/70">Blum / Hettich</div>
+          </div>
+          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+            <div className="text-[10px] uppercase font-bold text-indigo-300">Cajones & Gavetas</div>
+            <div className="text-lg font-black text-white">{metricas.totalCajones + metricas.totalGavetas} uds</div>
+            <div className="text-[10px] text-indigo-200/70">{metricas.totalCajones} caj. + {metricas.totalGavetas} gav.</div>
+          </div>
+          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+            <div className="text-[10px] uppercase font-bold text-indigo-300">Patas & Colgadores</div>
+            <div className="text-lg font-black text-white">{metricas.totalPatas} / {metricas.totalColgadores}</div>
+            <div className="text-[10px] text-indigo-200/70">Patas / Colgadores</div>
+          </div>
+          <div className="p-3 bg-emerald-950/40 rounded-2xl border border-emerald-500/30">
+            <div className="text-[10px] uppercase font-bold text-emerald-300">Tiempo de Taller</div>
+            <div className="text-lg font-black text-emerald-400">{metricas.tiempoTallerHoras} horas</div>
+            <div className="text-[10px] text-emerald-200/70">Ensamblado en taller</div>
+          </div>
+        </div>
+      )}
 
       {/* Datos del Cliente y Presupuesto */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">

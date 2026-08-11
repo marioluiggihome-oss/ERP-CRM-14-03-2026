@@ -54,6 +54,7 @@ const Almacen = lazy(() => import('./components/Almacen')); // Existencias, rese
 const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de negocio de la fábrica (SOLO MASTER)
 const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // Landing comercial pública de Studio3K / RenderIA
 const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Presupuestador 3 (Relación y códigos MV directa)
+const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
 
 
 
@@ -1556,6 +1557,19 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Planificación de Producción de Fábrica */}
+                    {(state.currentUser?.canAccessFabrica === true || state.currentUser?.isAdmin || state.currentUser?.isMaster) && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'planificacionProduccion'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'planificacionProduccion' ? 'bg-indigo-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="planificacion-produccion-nav-btn"
+                        title="Planificación de Producción: Carga por estaciones, cuellos de botella y fechas de entrega"
+                      >
+                        <Boxes size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Planif. Prod.</span>
+                      </button>
+                    )}
+
                     {/* Agentes Diseñadores IA - sección Producción */}
                     {(state.currentUser?.canUseAgentesIA || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
                       <button
@@ -1731,6 +1745,13 @@ const App = () => {
                   state={state}
                   setState={setState}
                   logo={state.logo}
+                />
+              </ErrorBoundary>
+            )}
+            {state.currentTab === 'planificacionProduccion' && (
+              <ErrorBoundary>
+                <PlanificacionProduccion
+                  currentUser={state.currentUser}
                 />
               </ErrorBoundary>
             )}
