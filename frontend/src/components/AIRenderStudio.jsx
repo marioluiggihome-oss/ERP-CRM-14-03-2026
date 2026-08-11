@@ -2685,16 +2685,6 @@ export default function AIRenderStudio({ state, setState }) {
               {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
               <span className="hidden sm:inline">Guardar</span>
             </button>
-            <button 
-              onClick={() => {
-                if (setState) setState(p => ({ ...p, currentTab: 'landingStudio' }));
-                else window.open('/?tab=landingStudio', '_blank');
-              }}
-              title="Ver Landing Comercial y Showroom para Clientes (Studio3K)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 text-white rounded-lg font-black text-xs hover:from-amber-600 hover:to-indigo-700 shadow-sm"
-            >
-              <Sparkles size={13} className="text-amber-200" /> <span className="hidden md:inline">Landing Studio3K</span>
-            </button>
           </div>
           {/* Mode Toggle — compacto */}
           <div className="flex bg-slate-100 rounded-lg p-0.5">

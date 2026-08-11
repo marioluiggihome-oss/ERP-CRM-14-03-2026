@@ -806,13 +806,6 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             <Sparkles size={15} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar Tarifas
           </button>
           <button
-            onClick={() => setShowModalDtos(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold transition-all"
-            title="Configurar descuentos comerciales de compra para puertas (descuento 1 + descuento 2 en cascada)"
-          >
-            <Percent size={15} /> Dto. Puertas ({dtoPuertas1}%{dtoPuertas2 > 0 ? ` + ${dtoPuertas2}%` : ''})
-          </button>
-          <button
             onClick={exportarPDFOficial}
             disabled={!muebles.length}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all disabled:opacity-40 text-white"
