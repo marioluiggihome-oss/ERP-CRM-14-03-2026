@@ -2111,7 +2111,9 @@ function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePu
                   <th className="px-2 py-1 text-center">Alto mm</th>
                   <th className="px-2 py-1 text-center">Ancho mm</th>
                   <th className="px-2 py-1 text-center">Total puertas</th>
-                  <th className="px-2 py-1 text-center">Frente mixto</th>
+                  <th className="px-2 py-1 text-center">€/m²</th>
+                  <th className="px-2 py-1 text-right">Coste €</th>
+                  <th className="px-2 py-1 text-center">Nota</th>
                 </tr>
               </thead>
               <tbody>
@@ -2121,6 +2123,12 @@ function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePu
                   const alto = Number(ov.alto ?? pm.alto) || 0;
                   const ancho = Number(ov.ancho ?? pm.ancho) || 0;
                   const totalPuertas = (pm.n || 1) * (pm.uds || 1);
+                  // Coste: si hay importe fijo lo usa; si no, calcula por m²
+                  const pm2Linea = Number(ov.pm2) || 0;
+                  const costeFixo = Number(ov.costeTotal);
+                  const m2Linea = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * totalPuertas : 0;
+                  const costeCalc = pm2Linea > 0 && m2Linea > 0 ? Math.round(pm2Linea * m2Linea * 100) / 100 : 0;
+                  const costeLinea = !isNaN(costeFixo) && ov.costeTotal !== undefined && ov.costeTotal !== '' ? costeFixo : costeCalc;
                   return (
                     <tr key={i} className={`border-t border-slate-100 ${r._frenteMixto ? 'bg-amber-50' : ''}`}>
                       <td className="px-2 py-1 text-slate-400">{i + 1}</td>
@@ -2140,6 +2148,20 @@ function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePu
                       </td>
                       <td className="px-2 py-1 text-center font-bold text-indigo-700">{totalPuertas}</td>
                       <td className="px-2 py-1 text-center">
+                        <input type="number" placeholder="€/m²" value={ov.pm2 ?? ''}
+                          onChange={e => setMedidaMueble(i, 'pm2', e.target.value)}
+                          className="w-16 px-1 py-0.5 border border-green-200 rounded text-center text-xs focus:border-green-400 focus:outline-none" />
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        <input type="number" placeholder={costeCalc > 0 ? costeCalc.toFixed(2) : '0.00'}
+                          value={ov.costeTotal ?? ''}
+                          onChange={e => setMedidaMueble(i, 'costeTotal', e.target.value)}
+                          className="w-20 px-1 py-0.5 border border-emerald-200 rounded text-right text-xs focus:border-emerald-400 focus:outline-none font-mono" />
+                        {costeLinea > 0 && (ov.costeTotal === undefined || ov.costeTotal === '') && (
+                          <div className="text-[9px] text-green-700 font-bold">{costeLinea.toFixed(2)} €</div>
+                        )}
+                      </td>
+                      <td className="px-2 py-1 text-center">
                         {r._frenteMixto && (
                           <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-bold">Cajones/gavetas — revisar</span>
                         )}
@@ -2155,6 +2177,25 @@ function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePu
                   </td>
                   <td className="px-2 py-1.5 text-center text-sm font-black text-indigo-900">
                     {muebles.reduce((s, r) => s + (r._puertasMueble.n || 1) * (r._puertasMueble.uds || 1), 0)}
+                  </td>
+                  <td className="px-2 py-1.5 text-center text-xs text-slate-500">€/m²</td>
+                  <td className="px-2 py-1.5 text-right text-sm font-black text-emerald-800">
+                    {(() => {
+                      const total = muebles.reduce((s, r, i) => {
+                        const pm = r._puertasMueble;
+                        const ov = puertasMuebleEdit[i] || {};
+                        const alto = Number(ov.alto ?? pm.alto) || 0;
+                        const ancho = Number(ov.ancho ?? pm.ancho) || 0;
+                        const totalPuertas = (pm.n || 1) * (pm.uds || 1);
+                        const pm2Linea = Number(ov.pm2) || 0;
+                        const costeFixo = Number(ov.costeTotal);
+                        const m2Linea = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * totalPuertas : 0;
+                        const costeCalc = pm2Linea > 0 && m2Linea > 0 ? pm2Linea * m2Linea : 0;
+                        const costeLinea = !isNaN(costeFixo) && ov.costeTotal !== undefined && ov.costeTotal !== '' ? costeFixo : costeCalc;
+                        return s + costeLinea;
+                      }, 0);
+                      return total > 0 ? `${total.toFixed(2)} €` : '—';
+                    })()}
                   </td>
                   <td />
                 </tr>
