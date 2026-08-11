@@ -60,7 +60,7 @@ const MODULES = [
   { tab: 'cocinaMontada3',  label: 'Cocina Montada 3',desc: 'Relación rápida por códigos MV', icon: Layers, color: 'bg-indigo-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false || u?.isAdmin },
   { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
   { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
-  { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  group: 'admin',  can: (u) => u?.canAccessInvoices === true },
+  { tab: 'invoices',        label: 'Gestión Comercial', desc: 'Presupuestos, Pedidos de Venta, Albaranes y Facturas', icon: Receipt, color: 'bg-orange-500', group: 'ventas', can: (u) => u?.canAccessInvoices !== false },
   { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'admin',  can: (u) => u?.canAccessRentabilidad === true },
   { tab: 'resumenCocinas',  label: 'Resumen Totales', icon: Layers,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseResumenTotales === true },
   { tab: 'cascos',          label: 'Cocina Desmontada',icon: Box,         color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },

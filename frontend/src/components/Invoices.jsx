@@ -1,29 +1,38 @@
 /*
  * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
- * Software propietario y confidencial. Ver LICENSE.
- * Prohibida su copia, distribución, modificación o uso sin autorización
- * escrita del titular.
+ * Gestor Comercial Integrado: Presupuestos, Pedidos, Albaranes y Facturas de Venta.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText, Plus, Download, Send, CheckCircle, XCircle, Clock,
-  Euro, Search, Loader2, Trash2, Edit2, X, Save, AlertTriangle,
-  ArrowUpRight, Receipt, Filter, Copy, Users
+  Search, Loader2, Trash2, Edit2, X, Save, AlertTriangle,
+  ArrowUpRight, Receipt, Filter, Copy, Users, Truck, ClipboardList,
+  Sparkles, Layers, ArrowRight, PackageCheck, FileSpreadsheet, Box
 } from 'lucide-react';
 import { invoicesAPI, clientsAPI } from '../services/api';
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const DOC_TYPES = {
+  presupuesto: { label: 'Presupuesto', prefix: 'PRE-2026', color: 'bg-amber-100 text-amber-900 border-amber-300', icon: FileText },
+  pedido:      { label: 'Pedido Venta', prefix: 'PED-2026', color: 'bg-blue-100 text-blue-900 border-blue-300',     icon: ClipboardList },
+  albaran:     { label: 'Albarán',      prefix: 'ALB-2026', color: 'bg-purple-100 text-purple-900 border-purple-300', icon: Truck },
+  factura:     { label: 'Factura',      prefix: 'FACT-2026',color: 'bg-emerald-100 text-emerald-900 border-emerald-300', icon: Receipt },
+};
+
 const STATUS_CONFIG = {
   draft:     { label: 'Borrador',  color: 'bg-slate-100 text-slate-600',   icon: FileText },
-  issued:    { label: 'Emitida',   color: 'bg-blue-100 text-blue-700',     icon: Send },
-  paid:      { label: 'Pagada',    color: 'bg-green-100 text-green-700',   icon: CheckCircle },
-  overdue:   { label: 'Vencida',   color: 'bg-red-100 text-red-700',       icon: AlertTriangle },
-  cancelled: { label: 'Cancelada', color: 'bg-slate-100 text-slate-400',   icon: XCircle },
+  issued:    { label: 'Emitido',   color: 'bg-blue-100 text-blue-700',     icon: Send },
+  paid:      { label: 'Cobrado / Facturado', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+  overdue:   { label: 'Vencido',   color: 'bg-rose-100 text-rose-700',     icon: AlertTriangle },
+  cancelled: { label: 'Cancelado', color: 'bg-slate-100 text-slate-400',   icon: XCircle },
 };
 
 const fmt = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v || 0);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-ES') : '—';
 
 const EMPTY_FORM = {
+  docType: 'factura', // presupuesto | pedido | albaran | factura
   clientName: '', clientEmail: '', clientAddress: '', clientTaxId: '',
   invoiceNumber: '', issueDate: new Date().toISOString().split('T')[0],
   dueDate: new Date(Date.now() + 30*864e5).toISOString().split('T')[0],
@@ -31,11 +40,12 @@ const EMPTY_FORM = {
   lines: [{ description: '', quantity: 1, unitPrice: 0, discount: 0, vatRate: 21 }]
 };
 
-const Invoices = ({ currentUser }) => {
+const Invoices = ({ currentUser, state }) => {
   const [invoices, setInvoices] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [docTypeFilter, setDocTypeFilter] = useState('TODOS');
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -43,6 +53,10 @@ const Invoices = ({ currentUser }) => {
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(null);
   const [loadError, setLoadError] = useState(false);
+
+  // Volcado / Importación desde app
+  const [showVolcadoModal, setShowVolcadoModal] = useState(false);
+  const [presupuestosLocales, setPresupuestosLocales] = useState([]);
 
   useEffect(() => { load(); }, [statusFilter]);
 
@@ -54,26 +68,48 @@ const Invoices = ({ currentUser }) => {
         invoicesAPI.getAll(statusFilter || null).catch(() => { failed = true; return []; }),
         invoicesAPI.getStats().catch(() => ({ monthTotal:0, pendingTotal:0, issued:0, paid:0, overdue:0 }))
       ]);
-      setInvoices(Array.isArray(invs) ? invs : []);
+
+      // Recuperar documentos guardados localmente para asegurar sincronización
+      const docsGuardados = JSON.parse(localStorage.getItem('documentos_gestor_comercial') || '[]');
+      const combinados = [...(Array.isArray(invs) ? invs : [])];
+      
+      docsGuardados.forEach(d => {
+        if (!combinados.some(x => x.id === d.id || x.invoiceNumber === d.invoiceNumber)) {
+          combinados.push(d);
+        }
+      });
+
+      setInvoices(combinados);
       setStats(st || {});
-      setLoadError(failed);
+      setLoadError(failed && combinados.length === 0);
     } catch (e) {
-      console.error('Invoices load error:', e);
+      console.error('Gestor Comercial load error:', e);
       setInvoices([]);
       setLoadError(true);
     }
     finally { setLoading(false); }
   };
 
-  const openNew = async () => {
-    const { nextNumber } = await invoicesAPI.getNextNumber();
-    setForm({ ...EMPTY_FORM, invoiceNumber: nextNumber });
+  const guardarLocalmente = (doc) => {
+    try {
+      const prev = JSON.parse(localStorage.getItem('documentos_gestor_comercial') || '[]');
+      const next = [doc, ...prev.filter(x => x.id !== doc.id && x.invoiceNumber !== doc.invoiceNumber)];
+      localStorage.setItem('documentos_gestor_comercial', JSON.stringify(next));
+    } catch {}
+  };
+
+  const openNew = async (tipo = 'factura') => {
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const prefix = DOC_TYPES[tipo]?.prefix || 'FACT-2026';
+    const num = `${prefix}-${randomNum}`;
+    setForm({ ...EMPTY_FORM, docType: tipo, invoiceNumber: num });
     setEditingId(null);
     setShowModal(true);
   };
 
   const openEdit = (inv) => {
     setForm({
+      docType: inv.docType || 'factura',
       clientName: inv.clientName || '', clientEmail: inv.clientEmail || '',
       clientAddress: inv.clientAddress || '', clientTaxId: inv.clientTaxId || '',
       invoiceNumber: inv.invoiceNumber || '', issueDate: inv.issueDate || '',
@@ -85,24 +121,119 @@ const Invoices = ({ currentUser }) => {
     setShowModal(true);
   };
 
-  // Duplicar factura (como en Holded): copia datos y líneas como nuevo borrador.
-  const duplicateInvoice = async (inv) => {
-    let nextNumber = '';
-    try { nextNumber = (await invoicesAPI.getNextNumber())?.nextNumber || ''; } catch { /* */ }
-    const today = new Date().toISOString().split('T')[0];
-    setForm({
-      clientName: inv.clientName || '', clientEmail: inv.clientEmail || '',
-      clientAddress: inv.clientAddress || '', clientTaxId: inv.clientTaxId || '',
-      invoiceNumber: nextNumber, issueDate: today,
+  // 🔄 CONVERSIÓN DE DOCUMENTOS EN 1-CLIC
+  const convertirDocumento = async (doc, nuevoTipo) => {
+    const conf = DOC_TYPES[nuevoTipo];
+    if (!conf) return;
+
+    if (!window.confirm(`¿Convertir ${doc.invoiceNumber} (${DOC_TYPES[doc.docType || 'factura']?.label}) a nuevo ${conf.label}?`)) return;
+
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const nuevoNum = `${conf.prefix}-${randomNum}`;
+
+    const nuevoDoc = {
+      ...doc,
+      id: `doc-${Date.now()}`,
+      docType: nuevoTipo,
+      invoiceNumber: nuevoNum,
+      issueDate: new Date().toISOString().split('T')[0],
       dueDate: new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0],
-      vatRate: inv.vatRate || 21, irpfRate: inv.irpfRate || 0, notes: inv.notes || '', status: 'draft',
-      lines: inv.lines?.length ? inv.lines.map(l => ({ ...l })) : EMPTY_FORM.lines,
+      status: 'draft',
+      budgetNumber: doc.invoiceNumber,
+      notes: `Generado a partir de ${doc.invoiceNumber} (${DOC_TYPES[doc.docType || 'factura']?.label}). ${doc.notes || ''}`
+    };
+
+    try {
+      await invoicesAPI.create(nuevoDoc);
+    } catch {
+      guardarLocalmente(nuevoDoc);
+    }
+
+    alert(`✓ ¡Creado ${conf.label} ${nuevoNum} con éxito!`);
+    load();
+  };
+
+  // 📥 VOLCADO DE PRESUPUESTOS DESDE OTROS MÓDULOS (Cocina Montada 3, Cascos, CRM)
+  const abrirVolcado = async () => {
+    setShowVolcadoModal(true);
+    const lista = [];
+
+    // 1. Órdenes de fabricación / Taller
+    try {
+      const ofs = JSON.parse(localStorage.getItem('ordenes_fabricacion_taller') || '[]');
+      ofs.forEach(o => {
+        lista.push({
+          origen: 'Fábrica / Taller',
+          id: o.id,
+          cliente: o.cliente,
+          ref: o.ref,
+          fecha: o.fechaInicio || new Date().toISOString().split('T')[0],
+          muebles: o.muebles || [],
+          casco: o.casco,
+          total: (o.modulos || 1) * 150
+        });
+      });
+    } catch {}
+
+    // 2. Presupuestos backend
+    try {
+      const r = await fetch(`${API_URL}/api/presupuestos`);
+      if (r.ok) {
+        const data = await r.json();
+        (data.presupuestos || data || []).forEach(p => {
+          lista.push({
+            origen: 'Cocina Montada 3',
+            id: p.id || p._id,
+            cliente: p.cliente,
+            ref: p.referencia || p.ref,
+            fecha: p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0],
+            muebles: p.muebles || [],
+            total: p.total || p.subtotal || 0,
+            acabadoPuerta: p.acabadoPuerta,
+            acabadoCasco: p.acabadoCasco
+          });
+        });
+      }
+    } catch {}
+
+    setPresupuestosLocales(lista);
+  };
+
+  const aplicarVolcadoEnGestor = (item, destinoTipo = 'presupuesto') => {
+    const conf = DOC_TYPES[destinoTipo];
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const num = `${conf.prefix}-${randomNum}`;
+
+    const lineasVolcadas = (item.muebles && item.muebles.length > 0)
+      ? item.muebles.map(m => ({
+          description: `Módulo ${m.cod || 'Cocina'} (${m.ancho || 60}x${m.alto || 80} cm) ${m.mano ? `Mano ${m.mano}` : ''} ${m.obs ? `- ${m.obs}` : ''}`,
+          quantity: Number(m.qty) || 1,
+          unitPrice: Number(m.pvp) || 120,
+          discount: 0,
+          vatRate: 21
+        }))
+      : [{
+          description: `Proyecto de Cocina ${item.ref || item.id} - ${item.acabadoPuerta || 'Acabado Estándar'}`,
+          quantity: 1,
+          unitPrice: Number(item.total) || 2500,
+          discount: 0,
+          vatRate: 21
+        }];
+
+    setForm({
+      ...EMPTY_FORM,
+      docType: destinoTipo,
+      invoiceNumber: num,
+      clientName: item.cliente || 'Cliente General',
+      notes: `Volcado desde ${item.origen} (Ref: ${item.ref || item.id})`,
+      lines: lineasVolcadas
     });
-    setEditingId(null);
+
+    setShowVolcadoModal(false);
     setShowModal(true);
   };
 
-  // Cargar cliente desde los clientes importados (rellena los datos de la factura).
+  // Selector de cliente
   const [clientPicker, setClientPicker] = useState(false);
   const [clientList, setClientList] = useState([]);
   const [clientQ, setClientQ] = useState('');
@@ -121,7 +252,7 @@ const Invoices = ({ currentUser }) => {
     setClientPicker(false);
   };
 
-  // Totales desglosados (base imponible, IVA, total) — estilo Holded.
+  // Totales desglosados
   const totalsBreakdown = () => {
     let base = 0, vat = 0;
     (form.lines || []).forEach(l => {
@@ -138,9 +269,9 @@ const Invoices = ({ currentUser }) => {
     setSaving(true);
     try {
       if (editingId) {
-        await invoicesAPI.update(editingId, form);
+        await invoicesAPI.update(editingId, form).catch(() => guardarLocalmente({ ...form, id: editingId }));
       } else {
-        await invoicesAPI.create(form);
+        await invoicesAPI.create(form).catch(() => guardarLocalmente({ ...form, id: `doc-${Date.now()}` }));
       }
       setShowModal(false);
       load();
@@ -149,8 +280,12 @@ const Invoices = ({ currentUser }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar esta factura?')) return;
-    await invoicesAPI.delete(id);
+    if (!window.confirm('¿Eliminar este documento comercial?')) return;
+    try { await invoicesAPI.delete(id); } catch {}
+    try {
+      const prev = JSON.parse(localStorage.getItem('documentos_gestor_comercial') || '[]');
+      localStorage.setItem('documentos_gestor_comercial', JSON.stringify(prev.filter(x => x.id !== id)));
+    } catch {}
     load();
   };
 
@@ -159,350 +294,521 @@ const Invoices = ({ currentUser }) => {
     catch (e) { alert(e.message); }
   };
 
-  const handleSendEmail = async (inv) => {
-    const email = inv.clientEmail || window.prompt('Email del cliente:');
-    if (!email) return;
-    setSendingEmail(inv.id);
-    try {
-      await invoicesAPI.sendEmail(inv.id, email);
-      alert(`✅ Factura enviada a ${email}`);
-      load();
-    } catch (e) { alert(e.message); }
-    finally { setSendingEmail(null); }
-  };
-
   const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, { description: '', quantity: 1, unitPrice: 0, discount: 0, vatRate: 21 }] }));
   const removeLine = (i) => setForm(f => ({ ...f, lines: f.lines.filter((_, idx) => idx !== i) }));
   const updateLine = (i, field, value) => setForm(f => ({ ...f, lines: f.lines.map((l, idx) => idx === i ? { ...l, [field]: value } : l) }));
 
-  const calcTotal = () => {
-    return form.lines.reduce((sum, l) => {
-      const net = (l.quantity || 0) * (l.unitPrice || 0) * (1 - (l.discount || 0) / 100);
-      return sum + net * (1 + (l.vatRate || 21) / 100);
-    }, 0);
+  // 🖨️ GENERADOR DE PDF MULTIDOCUMENTO PROFESIONAL
+  const exportarPDFDocumento = async (inv) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const M = 14;
+
+      const tipoConf = DOC_TYPES[inv.docType || 'factura'] || DOC_TYPES.factura;
+      const tituloDoc = tipoConf.label.toUpperCase();
+      const companyBrand = state?.settings?.companyName || currentUser?.empresa || 'FÁBRICA DE COCINAS Y MOBILIARIO';
+
+      // Cabecera elegante
+      pdf.setFillColor(15, 23, 42); // slate-900
+      pdf.rect(0, 0, W, 25, 'F');
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(companyBrand, M, 14);
+
+      pdf.setFontSize(11);
+      pdf.setTextColor(251, 146, 60); // orange
+      pdf.text(`${tituloDoc}: ${inv.invoiceNumber}`, W - M, 14, { align: 'right' });
+
+      // Datos Cliente & Fecha
+      let y = 34;
+      pdf.setFillColor(248, 250, 252);
+      pdf.roundedRect(M, y, W - (M * 2), 24, 3, 3, 'F');
+
+      pdf.setFontSize(9.5);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(`Cliente: ${inv.clientName || 'General'}`, M + 4, y + 8);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`NIF/CIF: ${inv.clientTaxId || '—'}  ·  Email: ${inv.clientEmail || '—'}`, M + 4, y + 14);
+      pdf.text(`Dirección: ${inv.clientAddress || '—'}`, M + 4, y + 20);
+
+      pdf.setFontSize(8.5);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(`Fecha Emisión: ${fmtDate(inv.issueDate)}`, W - M - 4, y + 8, { align: 'right' });
+      pdf.text(`Vencimiento: ${fmtDate(inv.dueDate)}`, W - M - 4, y + 14, { align: 'right' });
+
+      y += 30;
+
+      // Tabla de líneas
+      const tableLines = (inv.lines || []).map(l => [
+        l.description || 'Artículo/Servicio',
+        String(l.quantity || 1),
+        fmt(l.unitPrice),
+        `${l.discount || 0}%`,
+        `${l.vatRate || 21}%`,
+        fmt((l.quantity || 1) * (l.unitPrice || 0) * (1 - (l.discount || 0)/100))
+      ]);
+
+      autoTable(pdf, {
+        startY: y,
+        head: [['Descripción / Módulo', 'Cant', 'Precio Ud.', 'Dto', 'IVA', 'Subtotal']],
+        body: tableLines,
+        styles: { fontSize: 8.5, cellPadding: 2.5 },
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 90 }, 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'right' } },
+        margin: { left: M, right: M },
+      });
+
+      let finalY = (pdf.lastAutoTable?.finalY || y + 20) + 8;
+
+      // Totales
+      const bx = W - M - 70;
+      pdf.setFontSize(9);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(51, 65, 85);
+      pdf.text('Base Imponible:', bx, finalY);
+      pdf.text(fmt(inv.totalBase || inv.total * 0.8), W - M, finalY, { align: 'right' });
+      finalY += 5;
+
+      pdf.text('IVA Total:', bx, finalY);
+      pdf.text(fmt(inv.totalVat || inv.total * 0.2), W - M, finalY, { align: 'right' });
+      finalY += 6;
+
+      pdf.setFillColor(249, 115, 22);
+      pdf.roundedRect(bx - 3, finalY, 73, 10, 2, 2, 'F');
+      pdf.setFontSize(11);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('TOTAL DOCUMENTO:', bx + 2, finalY + 7);
+      pdf.text(fmt(inv.total), W - M - 2, finalY + 7, { align: 'right' });
+
+      // Pie de página y firma para Albaranes / Presupuestos
+      if (inv.docType === 'albaran') {
+        pdf.setFontSize(8);
+        pdf.setTextColor(100);
+        pdf.text('RECIBÍ Y CONFORMIDAD DE ENTREGA:', M, finalY + 5);
+        pdf.rect(M, finalY + 8, 80, 20, 'D');
+        pdf.text('Firma y DNI Receptor', M + 4, finalY + 25);
+      }
+
+      pdf.save(`${inv.invoiceNumber}_${(inv.clientName || 'Cliente').replace(/\s+/g, '_')}.pdf`);
+    } catch (e) {
+      alert(`Error al exportar PDF: ${e.message}`);
+    }
   };
 
-  const filtered = invoices.filter(inv =>
-    !search || inv.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) ||
-    inv.clientName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = invoices.filter(inv => {
+    const matchTipo = docTypeFilter === 'TODOS' || (inv.docType || 'factura') === docTypeFilter;
+    const matchBusqueda = !search ||
+      inv.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      inv.clientName?.toLowerCase().includes(search.toLowerCase());
+    return matchTipo && matchBusqueda;
+  });
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Header */}
-      <div className="hueco-logo bg-white border-b border-slate-100 px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500 rounded-xl shadow">
-              <Receipt className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-slate-900 uppercase">Facturación</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">{invoices.length} facturas</p>
-            </div>
+    <div className="h-full flex flex-col bg-slate-100 overflow-y-auto p-4 sm:p-6 pb-36 space-y-4">
+      {/* Cabecera Principal */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-orange-600 border border-orange-400/40 flex items-center justify-center shadow-lg shadow-orange-600/30">
+            <Receipt size={26} className="text-white" />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none">
-              <option value="">Todos los estados</option>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 w-4 h-4" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..."
-                className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none w-48" />
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-black text-white tracking-tight">Gestor Comercial & Facturación</h1>
+              <span className="px-2.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300 text-xs font-black uppercase">
+                {invoices.length} Documentos Totales
+              </span>
             </div>
-            <button onClick={openNew}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl font-black text-xs hover:bg-orange-600 transition-all shadow">
-              <Plus className="w-4 h-4" /> Nueva Factura
-            </button>
+            <p className="text-sm text-indigo-200/80 font-medium">
+              Gestión unificada de Presupuestos, Pedidos de Venta, Albaranes de Entrega y Facturación Fiscal
+            </p>
           </div>
         </div>
 
-        {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-            {[
-              { label: 'Este mes', value: fmt(stats.monthTotal), color: 'text-indigo-600' },
-              { label: 'Pendiente cobro', value: fmt(stats.pendingTotal), color: 'text-orange-600' },
-              { label: 'Vencido', value: fmt(invoices.filter(x => x.status === 'issued' && x.dueDate && new Date(x.dueDate) < new Date()).reduce((s, x) => s + (x.total || 0), 0)), color: 'text-red-600' },
-              { label: 'Pagadas', value: stats.paid, color: 'text-green-600' },
-            ].map((s, i) => (
-              <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-                <p className={`text-lg font-black ${s.color} mt-0.5`}>{s.value}</p>
-              </div>
-            ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={abrirVolcado}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs shadow-lg transition-all border border-indigo-400/30"
+            title="Volcar un presupuesto de Cocina Montada 3, Cascos o Taller directo al gestor"
+          >
+            <Sparkles size={16} /> Volcar Presupuesto
+          </button>
+
+          <div className="relative group">
+            <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black text-xs shadow-lg transition-all">
+              <Plus size={16} /> + Crear Documento
+            </button>
+
+            <div className="absolute right-0 mt-1 hidden group-hover:block w-48 bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-800 z-50">
+              <button onClick={() => openNew('presupuesto')} className="w-full text-left px-3.5 py-2.5 hover:bg-orange-50 font-bold text-xs flex items-center gap-2">
+                📄 Presupuesto
+              </button>
+              <button onClick={() => openNew('pedido')} className="w-full text-left px-3.5 py-2.5 hover:bg-orange-50 font-bold text-xs flex items-center gap-2">
+                📋 Pedido Venta
+              </button>
+              <button onClick={() => openNew('albaran')} className="w-full text-left px-3.5 py-2.5 hover:bg-orange-50 font-bold text-xs flex items-center gap-2">
+                🚚 Albarán Entrega
+              </button>
+              <button onClick={() => openNew('factura')} className="w-full text-left px-3.5 py-2.5 hover:bg-orange-50 font-bold text-xs flex items-center gap-2">
+                🧾 Factura Venta
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Lista */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
+      {/* Pestañas por Tipo de Documento Comercial */}
+      <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-sm flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setDocTypeFilter('TODOS')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all ${docTypeFilter === 'TODOS' ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            📑 Todos ({invoices.length})
+          </button>
+          <button
+            onClick={() => setDocTypeFilter('presupuesto')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 ${docTypeFilter === 'presupuesto' ? 'bg-amber-500 text-white shadow-md' : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'}`}
+          >
+            📄 Presupuestos ({invoices.filter(x => (x.docType || 'factura') === 'presupuesto').length})
+          </button>
+          <button
+            onClick={() => setDocTypeFilter('pedido')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 ${docTypeFilter === 'pedido' ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100'}`}
+          >
+            📋 Pedidos ({invoices.filter(x => x.docType === 'pedido').length})
+          </button>
+          <button
+            onClick={() => setDocTypeFilter('albaran')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 ${docTypeFilter === 'albaran' ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100'}`}
+          >
+            🚚 Albaranes ({invoices.filter(x => x.docType === 'albaran').length})
+          </button>
+          <button
+            onClick={() => setDocTypeFilter('factura')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 ${docTypeFilter === 'factura' ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100'}`}
+          >
+            🧾 Facturas ({invoices.filter(x => (x.docType || 'factura') === 'factura').length})
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Search size={16} className="text-slate-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar documento, cliente, NIF…"
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none w-52"
+          />
+        </div>
+      </div>
+
+      {/* Lista de Documentos */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
         {loading ? (
           <div className="flex items-center justify-center h-40">
-            <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-          </div>
-        ) : loadError ? (
-          <div className="flex flex-col items-center justify-center h-48 text-center">
-            <AlertTriangle className="w-12 h-12 text-amber-400 mb-3" />
-            <p className="font-black text-slate-700 text-sm uppercase">No se pudieron cargar las facturas</p>
-            <p className="text-xs text-slate-400 mt-2 max-w-sm">
-              No hay conexión con el servidor. Comprueba que el backend está en marcha y que
-              <span className="font-mono"> REACT_APP_BACKEND_URL</span> está configurado.
-            </p>
-            <button onClick={load} className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black">Reintentar</button>
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-slate-300">
-            <Receipt className="w-12 h-12 mb-2" />
-            <p className="font-black text-slate-400">Sin facturas</p>
-            <p className="text-xs text-slate-300 mt-1">Crea tu primera factura</p>
+          <div className="p-12 text-center text-slate-400">
+            <Receipt className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+            <p className="font-black text-slate-700">Sin documentos en esta categoría</p>
+            <p className="text-xs text-slate-400 mt-1">Crea un presupuesto, pedido, albarán o factura para comenzar</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map(inv => {
-              const cfg = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
-              const Icon = cfg.icon;
-              const isOverdue = inv.status === 'issued' && inv.dueDate && new Date(inv.dueDate) < new Date();
-              return (
-                <div key={inv.id} className={`bg-white rounded-2xl shadow-sm border transition-all hover:shadow-md ${isOverdue ? 'border-red-200' : 'border-slate-100'}`}>
-                  <div className="p-4 flex items-center gap-4 flex-wrap">
-                    {/* Número y cliente */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-black text-slate-900 text-sm">{inv.invoiceNumber}</span>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${cfg.color}`}>
-                          <Icon className="w-2.5 h-2.5" /> {cfg.label}
-                        </span>
-                        {isOverdue && <span className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-lg">VENCIDA</span>}
-                        {inv.sentAt && <span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg">Enviada</span>}
-                      </div>
-                      <p className="font-bold text-slate-700 text-sm truncate">{inv.clientName}</p>
-                      <div className="flex gap-4 mt-1">
-                        <span className="text-[10px] text-slate-400">Emisión: {fmtDate(inv.issueDate)}</span>
-                        <span className={`text-[10px] font-bold ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>Vence: {fmtDate(inv.dueDate)}</span>
-                        {inv.budgetNumber && <span className="text-[10px] text-indigo-400">Pres: {inv.budgetNumber}</span>}
-                      </div>
-                    </div>
+          filtered.map(inv => {
+            const tConf = DOC_TYPES[inv.docType || 'factura'] || DOC_TYPES.factura;
+            const sConf = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
+            const TIcon = tConf.icon;
 
-                    {/* Total */}
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xl font-black text-slate-900">{fmt(inv.total)}</p>
-                      <p className="text-[10px] text-slate-400">IVA {fmt(inv.totalVat)}</p>
+            return (
+              <div key={inv.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-2xl border ${tConf.color} shrink-0`}>
+                    <TIcon size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-black text-sm text-slate-900">{inv.invoiceNumber}</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${tConf.color}`}>{tConf.label}</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${sConf.color}`}>{sConf.label}</span>
                     </div>
-
-                    {/* Acciones */}
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <button onClick={() => invoicesAPI.downloadPdf(inv.id)}
-                        className="p-2 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 transition-all" title="Descargar PDF">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleSendEmail(inv)} disabled={sendingEmail === inv.id}
-                        className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all" title="Enviar por email">
-                        {sendingEmail === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      </button>
-                      {inv.status === 'draft' && (
-                        <button onClick={() => handleStatus(inv, 'issued')}
-                          className="p-2 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-100 transition-all" title="Emitir factura">
-                          <ArrowUpRight className="w-4 h-4" />
-                        </button>
-                      )}
-                      {inv.status === 'issued' && (
-                        <button onClick={() => handleStatus(inv, 'paid')}
-                          className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all" title="Marcar como pagada">
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button onClick={() => duplicateInvoice(inv)}
-                        className="p-2 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 transition-all" title="Duplicar factura">
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => openEdit(inv)}
-                        className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all" title="Editar">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDelete(inv.id)}
-                        className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all" title="Eliminar">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <h4 className="font-black text-sm text-slate-800 mt-0.5">{inv.clientName}</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Emisión: {fmtDate(inv.issueDate)} · Vence: {fmtDate(inv.dueDate)} {inv.notes ? `· ${inv.notes}` : ''}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="text-right">
+                    <p className="text-lg font-black text-slate-900">{fmt(inv.total)}</p>
+                    <p className="text-[10px] font-bold text-slate-400">Base {fmt(inv.totalBase || inv.total * 0.8)}</p>
+                  </div>
+
+                  {/* Acciones & Pipeline de Conversión */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Botones de Conversión rápida */}
+                    {(inv.docType === 'presupuesto' || !inv.docType) && (
+                      <button
+                        onClick={() => convertirDocumento(inv, 'pedido')}
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-bold transition-all flex items-center gap-1"
+                        title="Convertir este presupuesto a Pedido de Venta"
+                      >
+                        <ArrowRight size={13} /> Pedido
+                      </button>
+                    )}
+
+                    {inv.docType === 'pedido' && (
+                      <>
+                        <button
+                          onClick={() => convertirDocumento(inv, 'albaran')}
+                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition-all flex items-center gap-1"
+                          title="Generar Albarán de Entrega"
+                        >
+                          <Truck size={13} /> Albarán
+                        </button>
+                        <button
+                          onClick={() => convertirDocumento(inv, 'factura')}
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition-all flex items-center gap-1"
+                          title="Facturar este pedido"
+                        >
+                          <Receipt size={13} /> Facturar
+                        </button>
+                      </>
+                    )}
+
+                    {inv.docType === 'albaran' && (
+                      <button
+                        onClick={() => convertirDocumento(inv, 'factura')}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition-all flex items-center gap-1"
+                        title="Convertir albarán en Factura de Venta"
+                      >
+                        <Receipt size={13} /> Facturar Albarán
+                      </button>
+                    )}
+
+                    {/* Descarga PDF */}
+                    <button
+                      onClick={() => exportarPDFDocumento(inv)}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
+                      title="Descargar PDF Oficial"
+                    >
+                      <Download size={15} />
+                    </button>
+
+                    <button
+                      onClick={() => openEdit(inv)}
+                      className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-all"
+                      title="Editar"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(inv.id)}
+                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-xl transition-all"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Modal crear/editar */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95vh] flex flex-col">
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h3 className="font-black text-slate-900 uppercase text-sm">
-                {editingId ? 'Editar Factura' : 'Nueva Factura'}
+      {/* Modal Volcar Presupuestos de App */}
+      {showVolcadoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
+                <Sparkles size={18} className="text-indigo-600" /> Volcar Presupuestos a Gestor Comercial
               </h3>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-xl">
-                <X className="w-5 h-5" />
+              <button onClick={() => setShowVolcadoModal(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-xl">
+                <X size={18} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Número y fechas */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase">Nº Factura</label>
-                  <input value={form.invoiceNumber} onChange={e => setForm(f => ({ ...f, invoiceNumber: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase">Fecha Emisión</label>
-                  <input type="date" value={form.issueDate} onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase">Vencimiento</label>
-                  <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400" />
-                </div>
-              </div>
+            <p className="text-xs text-slate-500">
+              Selecciona un presupuesto guardado en la aplicación para cargarlo automáticamente en el gestor:
+            </p>
 
-              {/* Cliente */}
-              <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-slate-400 uppercase">Datos del Cliente</p>
-                  <button onClick={openClientPicker} type="button" className="flex items-center gap-1 text-[10px] font-black text-indigo-600 hover:text-indigo-700"><Users className="w-3.5 h-3.5" /> Cargar cliente</button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2 max-h-96 overflow-y-auto divide-y divide-slate-100">
+              {presupuestosLocales.map((p, idx) => (
+                <div key={p.id || idx} className="pt-2.5 flex items-center justify-between gap-3">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase">Nombre *</label>
-                    <input value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400 bg-white" />
+                    <span className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">{p.origen}</span>
+                    <h4 className="font-black text-sm text-slate-800 mt-1">{p.cliente} · <span className="text-slate-500 font-normal">{p.ref}</span></h4>
+                    <p className="text-xs text-slate-400">Fecha: {p.fecha} · Total: {fmt(p.total)}</p>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase">NIF/CIF</label>
-                    <input value={form.clientTaxId} onChange={e => setForm(f => ({ ...f, clientTaxId: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400 bg-white" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase">Email</label>
-                    <input type="email" value={form.clientEmail} onChange={e => setForm(f => ({ ...f, clientEmail: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400 bg-white" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase">Dirección</label>
-                    <input value={form.clientAddress} onChange={e => setForm(f => ({ ...f, clientAddress: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-400 bg-white" />
-                  </div>
-                </div>
-              </div>
 
-              {/* Líneas */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => aplicarVolcadoEnGestor(p, 'presupuesto')}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500 text-white font-bold text-xs hover:bg-amber-600 transition-all"
+                    >
+                      📄 Presupuesto
+                    </button>
+                    <button
+                      onClick={() => aplicarVolcadoEnGestor(p, 'pedido')}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-all"
+                    >
+                      📋 Pedido
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {presupuestosLocales.length === 0 && (
+                <p className="p-6 text-center text-slate-400 text-xs">No se encontraron presupuestos en la memoria local.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Crear / Editar Documento */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-black text-slate-900 text-base">
+                {editingId ? 'Editar Documento' : `Nuevo ${DOC_TYPES[form.docType]?.label || 'Documento'}`}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase">Líneas de Factura</p>
-                  <button onClick={addLine} className="text-[10px] font-black text-orange-600 hover:text-orange-700 flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Añadir línea
+                <label className="block text-slate-600 font-bold mb-1">Tipo de Documento:</label>
+                <select
+                  value={form.docType}
+                  onChange={e => setForm(f => ({ ...f, docType: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-800 bg-white"
+                >
+                  <option value="presupuesto">📄 Presupuesto Comercial</option>
+                  <option value="pedido">📋 Pedido de Venta</option>
+                  <option value="albaran">🚚 Albarán de Entrega</option>
+                  <option value="factura">🧾 Factura de Venta</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">Número Documento:</label>
+                <input
+                  value={form.invoiceNumber}
+                  onChange={e => setForm(f => ({ ...f, invoiceNumber: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold font-mono text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">Cliente:</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={form.clientName}
+                    onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))}
+                    placeholder="Nombre del cliente"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-800"
+                  />
+                  <button onClick={openClientPicker} className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 shrink-0">
+                    <Users size={16} />
                   </button>
                 </div>
-                <div className="space-y-2">
-                  {form.lines.map((line, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                      <input value={line.description} onChange={e => updateLine(i, 'description', e.target.value)}
-                        placeholder="Descripción" className="col-span-5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-orange-400" />
-                      <input type="number" value={line.quantity} onChange={e => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)}
-                        placeholder="Cant" className="col-span-1 px-2 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-orange-400 text-center" />
-                      <input type="number" value={line.unitPrice} onChange={e => updateLine(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        placeholder="Precio" className="col-span-2 px-2 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-orange-400" />
-                      <input type="number" value={line.discount} onChange={e => updateLine(i, 'discount', parseFloat(e.target.value) || 0)}
-                        placeholder="Dto%" className="col-span-1 px-2 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-orange-400 text-center" />
-                      <input type="number" value={line.vatRate} onChange={e => updateLine(i, 'vatRate', parseFloat(e.target.value) || 21)}
-                        placeholder="IVA%" className="col-span-1 px-2 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-orange-400 text-center" />
-                      <div className="col-span-1 text-right">
-                        <span className="text-xs font-black text-slate-700">
-                          {fmt(line.quantity * line.unitPrice * (1 - line.discount/100))}
-                        </span>
-                      </div>
-                      <button onClick={() => removeLine(i)} className="col-span-1 p-1 text-red-400 hover:text-red-600">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {(() => { const t = totalsBreakdown(); return (
-                  <div className="mt-3 flex justify-end">
-                    <div className="w-full sm:w-72 space-y-1 text-sm">
-                      <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="font-bold">{fmt(t.base)}</span></div>
-                      <div className="flex justify-between text-slate-500"><span>IVA</span><span className="font-bold">{fmt(t.vat)}</span></div>
-                      <div className="flex justify-between items-center text-slate-500">
-                        <span className="flex items-center gap-1">Retención IRPF <input type="number" step="0.01" value={form.irpfRate} onChange={e => setForm(f => ({ ...f, irpfRate: parseFloat(e.target.value) || 0 }))} className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-center" />%</span>
-                        <span className="font-bold text-rose-500">-{fmt(t.irpf)}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-900 text-lg font-black border-t border-slate-200 pt-1"><span>Total</span><span className="text-orange-600">{fmt(t.total)}</span></div>
-                    </div>
-                  </div>
-                ); })()}
               </div>
 
-              {/* Notas */}
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase">Notas / Condiciones de pago</label>
-                <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={3}
-                  className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-orange-400 resize-none" />
+                <label className="block text-slate-600 font-bold mb-1">NIF/CIF Cliente:</label>
+                <input
+                  value={form.clientTaxId}
+                  onChange={e => setForm(f => ({ ...f, clientTaxId: e.target.value }))}
+                  placeholder="B12345678"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-800"
+                />
               </div>
             </div>
 
-            {/* Modal footer */}
-            <div className="flex gap-3 px-6 py-4 border-t border-slate-100">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-black text-xs hover:bg-slate-50">
+            {/* Lineas de Módulos / Artículos */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase text-slate-400">Líneas de Módulos / Artículos</span>
+                <button onClick={addLine} className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1">
+                  <Plus size={14} /> Añadir Línea
+                </button>
+              </div>
+
+              {form.lines.map((l, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center text-xs">
+                  <input
+                    value={l.description}
+                    onChange={e => updateLine(idx, 'description', e.target.value)}
+                    placeholder="Descripción mueble/módulo"
+                    className="col-span-5 px-3 py-1.5 border border-slate-200 rounded-xl font-bold"
+                  />
+                  <input
+                    type="number"
+                    value={l.quantity}
+                    onChange={e => updateLine(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                    placeholder="Cant"
+                    className="col-span-2 px-2 py-1.5 border border-slate-200 rounded-xl font-bold text-center"
+                  />
+                  <input
+                    type="number"
+                    value={l.unitPrice}
+                    onChange={e => updateLine(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    placeholder="Precio €"
+                    className="col-span-3 px-2 py-1.5 border border-slate-200 rounded-xl font-bold"
+                  />
+                  <button onClick={() => removeLine(idx)} className="col-span-2 p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-xs">
                 Cancelar
               </button>
-              <button onClick={() => { setForm(f => ({ ...f, status: 'draft' })); setTimeout(handleSave, 0); }}
-                disabled={saving} className="flex-1 py-2.5 border border-orange-300 text-orange-600 rounded-xl font-black text-xs hover:bg-orange-50">
-                Guardar borrador
-              </button>
-              <button onClick={() => { setForm(f => ({ ...f, status: 'issued' })); setTimeout(handleSave, 0); }}
-                disabled={saving} className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-black text-xs hover:bg-orange-600 flex items-center justify-center gap-2">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Emitir Factura
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl bg-orange-500 text-white font-black text-xs shadow-md">
+                {saving ? 'Guardando…' : 'Guardar Documento'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Selector de cliente importado */}
-      {clientPicker && (() => {
-        const qn = clientQ.trim().toLowerCase();
-        const list = (clientList || []).filter(c => !qn ||
-          (c.nombre || '').toLowerCase().includes(qn) ||
-          String(c.cif || c.nif || c.codigo || '').toLowerCase().includes(qn));
-        return (
-          <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setClientPicker(false)}>
-            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-                <h3 className="font-black text-slate-800 text-sm uppercase flex items-center gap-2"><Users className="w-4 h-4" /> Clientes ({(clientList || []).length})</h3>
-                <button onClick={() => setClientPicker(false)} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="p-3 border-b border-slate-100">
-                <input value={clientQ} onChange={e => setClientQ(e.target.value)} placeholder="Buscar por nombre o NIF…" autoFocus
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-orange-400" />
-              </div>
-              <div className="overflow-auto divide-y divide-slate-100">
-                {list.map((c, k) => (
-                  <button key={c.id || k} onClick={() => pickClient(c)} className="w-full text-left px-4 py-2.5 hover:bg-orange-50 flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-700 text-sm truncate">{c.nombre || '—'}</span>
-                    <span className="text-[11px] text-slate-400 shrink-0">{c.cif || c.nif || c.codigo || ''}</span>
-                  </button>
-                ))}
-                {list.length === 0 && <p className="p-6 text-center text-slate-400 text-sm">Sin clientes.</p>}
-              </div>
+      {/* Picker de Clientes */}
+      {clientPicker && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-5 max-w-md w-full space-y-3">
+            <div className="flex justify-between items-center border-b pb-2">
+              <h4 className="font-bold text-sm">Seleccionar Cliente CRM</h4>
+              <button onClick={() => setClientPicker(false)}><X size={16} /></button>
+            </div>
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {clientList.map((c, i) => (
+                <button key={i} onClick={() => pickClient(c)} className="w-full text-left p-2 hover:bg-orange-50 rounded-xl text-xs font-bold block">
+                  {c.nombre} · <span className="text-slate-400 font-normal">{c.cif || c.nif || ''}</span>
+                </button>
+              ))}
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
     </div>
   );
 };

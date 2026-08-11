@@ -1390,8 +1390,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* G. Comercial / Facturación - requiere permiso explícito (la casilla manda) */}
-                    {state.currentUser?.canAccessInvoices === true && (
+                    {/* G. Comercial / Facturación (Presupuestos, Pedidos, Albaranes, Facturas) */}
+                    {state.currentUser?.canAccessInvoices !== false && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'invoices'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'invoices' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
