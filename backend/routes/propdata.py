@@ -49,18 +49,29 @@ def _strip_json_blocks(text: str) -> str:
     return re.sub(r"```[\s\S]*?```", "", text or "").strip()
 
 
-SEARCH_PROMPT = """Actúa como un experto analista inmobiliario en España.
-Busca información ACTUAL en Google sobre "obra nueva" y promociones inmobiliarias en {location}{portal}.
-Extrae una lista estructurada de promociones con DATOS DE CONTACTO Y FECHAS REALES.
-Para cada promoción: nombre, promotor/constructora, teléfono, dirección física, URL real (si la encuentras; NO inventes enlaces), fecha de inicio de obras, fecha prevista de entrega, tipo de vivienda, ubicación/barrio, precio desde y una breve descripción.
+SEARCH_PROMPT = """Actúa como un experto analista en prospección inmobiliaria de obra nueva en España.
+Busca información REAL Y ACTUAL en Google sobre promociones inmobiliarias de "obra nueva" en {location}{portal}.
 
-Devuelve un bloque de código JSON con esta estructura exacta:
+INSTRUCCIONES CRÍTICAS DE BÚSQUEDA Y EXTRACCIÓN:
+1. Realiza búsquedas activas sobre promociones en comercialización o construcción en {location}.
+2. Para CADA promoción localizada, investiga los datos de contacto y detalles comerciales reales:
+   - Nombre oficial del residencial / promoción.
+   - Promotora, gestora o comercializadora responsable (ej: Neinor, Aedas Homes, Culmia, Metrovacesa, Libra Gestión, Kronos, etc.).
+   - Teléfono oficial de información / caseta de ventas (busca activamente el número de contacto del promotor o comercializadora en su web o fichas).
+   - Dirección física completa o calle/zona donde se ubica la obra.
+   - URL real y directa de la promoción o ficha del portal (ej: https://... NO inventes enlaces).
+   - Precio de partida ("Desde XXX.XXX €").
+   - Fechas estimadas (inicio de obras / fecha prevista de entrega).
+   - Tipo de vivienda (Pisos, Chalets, Unifamiliares, etc.).
+   - Breve descripción del proyecto (número de viviendas, calidades, etc.).
+
+Devuelve UNICAMENTE un bloque de código JSON con esta estructura exacta:
 ```json
 [
   {{"name":"","promoter":"","phone":"","address":"","url":"","startDate":"","deliveryDate":"","type":"Piso","location":"","priceStart":"","description":""}}
 ]
 ```
-Después del JSON, añade un breve resumen del mercado en esa zona."""
+Después del bloque JSON, añade un breve informe resumido de la situación de la obra nueva en esa zona."""
 
 IMAGE_PROMPT = """Analiza esta captura de un portal inmobiliario e identifica las promociones de obra nueva listadas.
 Para cada tarjeta/elemento extrae: nombre, promotor, teléfono, fechas de inicio/entrega, tipo de vivienda, ubicación, precio y una breve descripción.

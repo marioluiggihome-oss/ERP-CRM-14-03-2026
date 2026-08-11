@@ -789,6 +789,49 @@ async def buscar_prospectos_apollo(
             vistos.add(clave)
             unicos.append(p)
 
+    # Si hay pocos resultados y se ha indicado una ubicación específica o término de búsqueda,
+    # realizar una prospección activa en tiempo real usando Gemini Search (Grounding)
+    if len(unicos) < 3 and (termino or (ubicacion and ubicacion not in ("España", "Toda España"))):
+        try:
+            from services.llm_vision import search_with_gemini, is_vision_available
+            if is_vision_available():
+                prompt_b2b = f"""Actúa como un experto en prospección comercial B2B de arquitectura y construcción en España.
+Busca empresas, estudios de arquitectura, promotoras inmobiliarias o constructoras REALES Y ACTIVAS en {ubicacion} {termino} {sector if sector != 'todos' else ''}.
+Para cada empresa real encontrada, extrae sus datos corporativos:
+- nombre del contacto o departamento técnico/compras
+- cargo del contacto
+- empresa (nombre comercial/fiscal real)
+- ciudad / provincia
+- email de contacto comercial/oficina
+- teléfono oficial de atención (teléfono fijo o directo)
+- sitio web oficial
+- descripción de proyectos o actividad reciente
+
+Devuelve UNICAMENTE un JSON:
+```json
+[
+  {{"id":"gem_1","nombre":"","cargo":"","empresa":"","sector":"{sector if sector != 'todos' else 'arquitectura'}","ciudad":"{ubicacion}","provincia":"{ubicacion}","pais":"España","email":"","email_verificado":true,"telefono":"","telefono_directo":"","web":"","tamano_empresa":"10-50 empleados","proyectos_recientes":"","puntuacion_interes":95}}
+]
+```"""
+                text_ia, _, _ = await search_with_gemini(prompt_b2b)
+                import re as _re, json as _json
+                m = _re.search(r"```json\s*([\s\S]*?)```", text_ia) or _re.search(r"```\s*([\s\S]*?)```", text_ia)
+                raw = m.group(1) if m else text_ia
+                try:
+                    ia_prospectos = _json.loads(raw.strip())
+                    if isinstance(ia_prospectos, list):
+                        for idx, item_p in enumerate(ia_prospectos):
+                            if isinstance(item_p, dict) and item_p.get("empresa"):
+                                item_p["id"] = item_p.get("id") or f"gem_{idx}_{random.randint(1000, 9999)}"
+                                clave = item_p.get("empresa").lower()
+                                if clave not in vistos:
+                                    vistos.add(clave)
+                                    unicos.append(item_p)
+                except Exception as ex_json:
+                    logger.warning(f"Error parseando resultados IA Apollo: {ex_json}")
+        except Exception as e_ia:
+            logger.warning(f"Gemini fallback error en Apollo: {e_ia}")
+
     # Paginación
     inicio = (pagina - 1) * limite
     fin = inicio + limite

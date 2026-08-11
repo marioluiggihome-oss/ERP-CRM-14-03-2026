@@ -79,6 +79,45 @@ const FichaObra = ({ d, estado, onEstado, mapUrl, onVolver }) => {
     </div>
   );
 
+  const imprimirFicha = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html><head><title>Ficha · ${d.name || 'Promoción'}</title><style>
+      body { font-family: system-ui, -apple-system, sans-serif; color: #0f172a; padding: 32px; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+      .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+      h1 { color: #1e1b4b; font-size: 24px; margin: 0 0 4px 0; font-weight: 900; }
+      .promoter { color: #475569; font-weight: 700; font-size: 14px; }
+      .badge { padding: 4px 10px; background: #e0e7ff; color: #3730a3; border-radius: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+      .item { border: 1px solid #f1f5f9; background: #f8fafc; padding: 12px; border-radius: 8px; }
+      .label { text-transform: uppercase; font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.5px; margin-bottom: 4px; }
+      .value { font-size: 14px; color: #0f172a; font-weight: 700; word-break: break-word; }
+      .full { grid-column: span 2; }
+      .footer { margin-top: 30px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+      <div class="header">
+        <div>
+          <h1>${d.name || 'Promoción de Obra Nueva'}</h1>
+          <div class="promoter">${d.promoter || 'Promotor sin identificar'}</div>
+        </div>
+        <span class="badge">${d.type || 'Viviendas'}</span>
+      </div>
+      <div class="grid">
+        <div class="item"><div class="label">Zona / Municipio</div><div class="value">${d.location || '—'}</div></div>
+        <div class="item"><div class="label">Dirección / Ubicación</div><div class="value">${d.address || '—'}</div></div>
+        <div class="item"><div class="label">Teléfono de contacto</div><div class="value">${d.phone || '—'}</div></div>
+        <div class="item"><div class="label">Precio de partida</div><div class="value">${d.priceStart || '—'}</div></div>
+        <div class="item full"><div class="label">Fechas estimadas (Inicio → Entrega)</div><div class="value">${(d.startDate || d.deliveryDate) ? `${d.startDate || '—'} → ${d.deliveryDate || '—'}` : '—'}</div></div>
+        <div class="item full"><div class="label">Descripción de la promoción</div><div class="value">${d.description || '—'}</div></div>
+        ${safeUrl(d.url) ? `<div class="item full"><div class="label">Web de la promoción</div><div class="value">${safeUrl(d.url)}</div></div>` : ''}
+      </div>
+      <div class="footer">Informe de prospección comercial de obra nueva · Luiggi Home ERP</div>
+      <script>window.onload = function() { window.print(); };</script>
+    </body></html>`);
+    w.document.close();
+  };
+
   return (
     <div className="absolute inset-0 z-30 bg-sky-50 overflow-y-auto p-4 sm:p-6 pb-24">
       {/* La vuelta, arriba del todo y pegada: es lo primero que se busca. */}
@@ -88,6 +127,9 @@ const FichaObra = ({ d, estado, onEstado, mapUrl, onVolver }) => {
           <ArrowLeft size={16} /> Volver al informe
         </button>
         <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">El informe sigue abierto detrás</span>
+        <button onClick={imprimirFicha} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200">
+          <Printer size={15} /> Imprimir ficha
+        </button>
         <button onClick={onVolver} title="Cerrar (Esc)" className="ml-auto p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"><X size={18} /></button>
       </div>
 
@@ -139,6 +181,9 @@ const FichaObra = ({ d, estado, onEstado, mapUrl, onVolver }) => {
           </button>
           <button onClick={copiar} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Copy size={15} /> {copiado ? 'Copiado' : 'Copiar datos'}
+          </button>
+          <button onClick={imprimirFicha} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200">
+            <Printer size={15} /> Imprimir ficha
           </button>
           <div className="ml-auto flex items-center gap-2">
             <a href={mapUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
