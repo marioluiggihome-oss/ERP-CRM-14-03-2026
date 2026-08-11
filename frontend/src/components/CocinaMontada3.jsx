@@ -177,6 +177,23 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [showMuestrario, setShowMuestrario] = useState(false);
   const [filtroCat, setFiltroCat] = useState('TODOS');
   const [copiadoWs, setCopiadoWs] = useState(false);
+  const [showModalDtos, setShowModalDtos] = useState(false);
+  
+  // Descuentos comerciales de compra en fábrica de puertas (Descuento 1 + Descuento 2 en cascada)
+  const [dtoPuertas1, setDtoPuertas1] = useState(() => {
+    try { return parseFloat(localStorage.getItem('dto_puertas_1') || localStorage.getItem('dto_puertas') || '50'); } catch { return 50; }
+  });
+  const [dtoPuertas2, setDtoPuertas2] = useState(() => {
+    try { return parseFloat(localStorage.getItem('dto_puertas_2') || '0'); } catch { return 0; }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dto_puertas_1', String(dtoPuertas1));
+      localStorage.setItem('dto_puertas_2', String(dtoPuertas2));
+      localStorage.setItem('dto_puertas', String(dtoPuertas1));
+    } catch { /* noop */ }
+  }, [dtoPuertas1, dtoPuertas2]);
 
   const p = useMemo(() => {
     try { 
@@ -186,6 +203,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       return MV_COSTES_DEFAULT; 
     }
   }, []);
+
+  const paramsCostes = useMemo(() => ({
+    ...p,
+    dtoPuertas1,
+    dtoPuertas2,
+  }), [p, dtoPuertas1, dtoPuertas2]);
 
   const [familias, setFamilias] = useState(null);
   const [pv, setPv] = useState(3.33);
@@ -353,7 +376,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
 
   const filas = muebles.map(m => {
-    const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa, pv) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
+    const desp = m.encontrado ? costeDetalladoDe(m, paramsCostes, tarifa, pv) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
     const coste = desp.costeTotal || 0;
     const pvp = Number(m.pvp) || 0;
     const margen = pvp - coste;
@@ -757,6 +780,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
           >
             <Sparkles size={15} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar Tarifas
+          </button>
+          <button
+            onClick={() => setShowModalDtos(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold transition-all"
+            title="Configurar descuentos comerciales de compra para puertas (descuento 1 + descuento 2 en cascada)"
+          >
+            <Percent size={15} /> Dto. Puertas ({dtoPuertas1}%{dtoPuertas2 > 0 ? ` + ${dtoPuertas2}%` : ''})
           </button>
           <button
             onClick={exportarPDFOficial}
@@ -1327,6 +1357,78 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md disabled:opacity-50 flex items-center gap-2"
               >
                 {buscando ? <Loader size={15} className="animate-spin" /> : <Plus size={15} />} Volcar Muebles a la Lista
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Descuentos Comerciales de Puertas en Cascada */}
+      {showModalDtos && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-500/10 text-amber-600 rounded-xl border border-amber-500/20">
+                  <Percent size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Descuentos de Compra en Puertas</h3>
+                  <p className="text-[11px] text-slate-500">Ajusta el descuento comercial sobre la tarifa oficial MV</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModalDtos(false)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Descuento Principal 1 (%):
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={dtoPuertas1}
+                  onChange={e => setDtoPuertas1(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800 bg-white focus:border-indigo-500 outline-none"
+                  placeholder="50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Descuento en Cascada 2 (%) <span className="text-slate-400 font-normal">(Opcional)</span>:
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={dtoPuertas2}
+                  onChange={e => setDtoPuertas2(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800 bg-white focus:border-indigo-500 outline-none"
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-between font-bold text-slate-800">
+                <span>Multiplicador Neto Total:</span>
+                <span className="font-mono text-indigo-700 font-black">
+                  {Math.round((1 - (1 - dtoPuertas1/100) * (1 - dtoPuertas2/100)) * 1000) / 10}% de descuento neto
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowModalDtos(false)}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md flex items-center gap-2"
+              >
+                <Check size={14} /> Aplicar a Todas las Puertas
               </button>
             </div>
           </div>

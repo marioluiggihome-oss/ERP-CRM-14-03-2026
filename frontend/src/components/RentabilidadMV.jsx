@@ -337,11 +337,13 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   
   // Cálculo de Puntos Oficiales de Puertas según la Matriz MV
   const pvPuntos = pvCustom || 3.33; // Valor punto oficial
-  const dtoPuertas = (p && p.dtoPuertas != null) ? Number(p.dtoPuertas) : getDescuentoPuertas();
+  const dto1 = (p && p.dtoPuertas1 != null) ? Number(p.dtoPuertas1) : ((p && p.dtoPuertas != null) ? Number(p.dtoPuertas) : getDescuentoPuertas());
+  const dto2 = (p && p.dtoPuertas2 != null) ? Number(p.dtoPuertas2) : 0;
+  const factorDto = (1 - dto1 / 100) * (1 - dto2 / 100);
   const puntosPuertas = desgloseFrentes.puntosTotales;
 
   const pvpPuertas = Math.round(puntosPuertas * pvPuntos * 100) / 100;
-  const costePuertas = Math.round(pvpPuertas * (1 - dtoPuertas / 100) * 100) / 100;
+  const costePuertas = Math.round(pvpPuertas * factorDto * 100) / 100;
 
   const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : (altura === '70' ? 713 : 790));
   const areaP = (puertas > 0 || cajones > 0 || gavetas > 0) ? (w / 1000) * (altoFrente / 1000) : 0;
