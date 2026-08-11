@@ -636,6 +636,21 @@ export default function PlanificacionProduccion({ currentUser }) {
                       {p.cliente} · <span className="text-slate-600 font-medium">{p.ref}</span>
                       {esCompleto && <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black uppercase">✨ Material Listo</span>}
                       {esRetrasado && <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white border border-rose-400 text-[10px] font-black uppercase animate-pulse">🚨 Recepción Retrasada</span>}
+
+                      {/* Insignias de Control Auditor de Cobro 50% / 50% */}
+                      {p.status === 'paid' ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase shadow-sm">
+                          ✅ 100% COBRADO · LIBRE PARA EXPEDICIÓN
+                        </span>
+                      ) : (p.senialPagada || p.status === 'partially_paid') ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black uppercase shadow-sm">
+                          🛑 RETENIDO EN EXPEDICIÓN (Pendiente 50% Entrega)
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-rose-700 text-white text-[10px] font-black uppercase shadow-sm animate-pulse">
+                          🔒 BLOQUEADO EN TALLER (Falta Señal 50%)
+                        </span>
+                      )}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
                       <span className="font-bold text-indigo-600">{p.tipo}</span>
