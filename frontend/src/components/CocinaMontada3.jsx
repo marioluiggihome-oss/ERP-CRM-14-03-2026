@@ -705,7 +705,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   });
 
   return (
-    <div className="h-full flex flex-col bg-slate-100 overflow-y-auto p-3 sm:p-6 pb-24 space-y-4">
+    <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-3 sm:p-6 pb-36 space-y-4">
       
       {/* Cabecera Principal */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
