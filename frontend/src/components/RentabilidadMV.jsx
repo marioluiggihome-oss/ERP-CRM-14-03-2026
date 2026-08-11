@@ -34,90 +34,89 @@ export const getFactorDesmontada = () => {
   }
 };
 
-// Tarifas de coste y PVP de puertas por m² según la gama/tarifa (T1 a T5) de Cocina Desmontada
-export const PUERTAS_TARIFAS_M2 = {
-  T1: { costeM2: 26.0, pvpM2: 42.0, nombre: 'Sincro / Melamina Texturada' },
-  T2: { costeM2: 38.0, pvpM2: 64.0, nombre: 'Estratificado Mate / Seda' },
-  T3: { costeM2: 52.0, pvpM2: 86.0, nombre: 'Lacado Seda / Brillo' },
-  T4: { costeM2: 68.0, pvpM2: 110.0, nombre: 'ZENIT Supermate Antihuella' },
-  T5: { costeM2: 85.0, pvpM2: 138.0, nombre: 'FENIX NTM Alta Resistencia' },
-};
-
-// Coste y PVP del casco ACB: precio neto de catálogo ACB × factor de Cocina Desmontada (Master)
-export const cascoACB = (tipoAcb, ancho, alto, factor) => {
-  const f = factor != null ? factor : getFactorDesmontada();
-  const pool = CASCOS.filter(c => c.tipo === tipoAcb && precioColor(c) != null);
-  const p19 = pool.filter(c => c.grosor === 19);
-  const use = p19.length ? p19 : pool;
-  if (!use.length) return { coste: 0, pvpDesmontada: 0, med: '' };
-  let best = use[0], bd = Infinity;
-  for (const c of use) {
-    const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
-    if (d < bd) { bd = d; best = c; }
+// Matriz Oficial de Puntos de Puertas MV por Tarifa (T1 a T5)
+export const PUERTAS_MATRIZ_MV = {
+  T1: {
+    '14': { 'P25': 6, 'P30': 7, 'P35': 7, 'P40': 8, 'P45': 8, 'P50': 9, 'P60': 10 },
+    '28': { 'P25': 8, 'P30': 8, 'P35': 9, 'P40': 9, 'P45': 10, 'P50': 10, 'P60': 11 },
+    '40': { 'P25': 9, 'P30': 9, 'P35': 10, 'P40': 10, 'P45': 11, 'P50': 11, 'P60': 12 },
+    '56': { 'P25': 9, 'P30': 10, 'P35': 10, 'P40': 11, 'P45': 11, 'P50': 12, 'P60': 13 },
+    '70': { 'P25': 10, 'P30': 11, 'P35': 12, 'P40': 13, 'P45': 13, 'P50': 14, 'P60': 16 },
+    '90': { 'P25': 13, 'P30': 14, 'P35': 15, 'P40': 15, 'P45': 16, 'P50': 17, 'P60': 19 },
+    '127': { 'P30': 16, 'P35': 17, 'P40': 19, 'P45': 19, 'P50': 20, 'P60': 22 },
+    '147': { 'P30': 19, 'P35': 20, 'P40': 21, 'P45': 22, 'P50': 23, 'P60': 26 }
+  },
+  T2: {
+    '14': { 'P25': 15, 'P30': 15, 'P35': 16, 'P40': 17, 'P45': 18, 'P50': 19, 'P60': 21 },
+    '28': { 'P25': 20, 'P30': 20, 'P35': 22, 'P40': 23, 'P45': 25, 'P50': 26, 'P60': 29 },
+    '70': { 'P25': 28, 'P30': 28, 'P35': 30, 'P40': 32, 'P45': 35, 'P50': 37, 'P60': 43 },
+    '90': { 'P25': 34, 'P30': 34, 'P35': 36, 'P40': 39, 'P45': 43, 'P50': 45, 'P60': 52 },
+    '127': { 'P30': 41, 'P35': 49, 'P40': 51, 'P45': 54, 'P50': 67, 'P60': 68 },
+    '147': { 'P30': 47, 'P35': 54, 'P40': 55, 'P45': 58, 'P50': 60, 'P60': 75 }
+  },
+  T3: {
+    '14': { 'P25': 9, 'P30': 9, 'P35': 10, 'P40': 10, 'P45': 11, 'P50': 12, 'P60': 13 },
+    '28': { 'P25': 12, 'P30': 12, 'P35': 13, 'P40': 14, 'P45': 15, 'P50': 16, 'P60': 18 },
+    '70': { 'P25': 15, 'P30': 16, 'P35': 17, 'P40': 19, 'P45': 19, 'P50': 21, 'P60': 25 },
+    '90': { 'P25': 19, 'P30': 20, 'P35': 22, 'P40': 23, 'P45': 25, 'P50': 26, 'P60': 29 },
+    '127': { 'P30': 25, 'P35': 28, 'P40': 29, 'P45': 32, 'P50': 34, 'P60': 38 },
+    '147': { 'P30': 29, 'P35': 32, 'P40': 34, 'P45': 36, 'P50': 39, 'P60': 44 }
+  },
+  T4: {
+    '14': { 'P25': 11, 'P30': 12, 'P35': 13, 'P40': 14, 'P45': 15, 'P50': 16, 'P60': 18 },
+    '28': { 'P25': 14, 'P30': 15, 'P35': 16, 'P40': 17, 'P45': 19, 'P50': 20, 'P60': 23 },
+    '70': { 'P25': 18, 'P30': 19, 'P35': 21, 'P40': 22, 'P45': 25, 'P50': 27, 'P60': 32 },
+    '90': { 'P25': 21, 'P30': 24, 'P35': 27, 'P40': 30, 'P45': 32, 'P50': 35, 'P60': 40 },
+    '127': { 'P30': 33, 'P35': 37, 'P40': 41, 'P45': 46, 'P50': 49, 'P60': 55 },
+    '147': { 'P30': 42, 'P35': 46, 'P40': 50, 'P45': 52, 'P50': 55, 'P60': 62 }
+  },
+  T5: {
+    '14': { 'P25': 14, 'P30': 15, 'P35': 16, 'P40': 17, 'P45': 19, 'P50': 20, 'P60': 23 },
+    '28': { 'P25': 18, 'P30': 19, 'P35': 21, 'P40': 23, 'P45': 25, 'P50': 27, 'P60': 31 },
+    '70': { 'P25': 24, 'P30': 26, 'P35': 27, 'P40': 29, 'P45': 31, 'P50': 34, 'P60': 40 },
+    '90': { 'P25': 31, 'P30': 32, 'P35': 34, 'P40': 37, 'P45': 39, 'P50': 41, 'P60': 48 },
+    '127': { 'P30': 42, 'P35': 46, 'P40': 50, 'P45': 54, 'P50': 57, 'P60': 65 },
+    '147': { 'P30': 46, 'P35': 49, 'P40': 54, 'P45': 59, 'P50': 62, 'P60': 69 }
   }
-  const precioNeto = precioColor(best) || 0;
-  return { 
-    coste: Math.round(precioNeto * 100) / 100, 
-    pvpDesmontada: Math.round(precioNeto * f * 100) / 100, 
-    med: `${best.ancho}x${best.alto}` 
-  };
 };
 
-// Reglas de descomposición por familia MV (Fase 2). Cada regla dice: tipo de casco
-// ACB, altura, si lleva patas/colgadores, cuántas puertas (dio=según D/I), cajones,
-// gavetas, baldas. 'dio' = 1 si el código lleva D/I, 2 si no.
-const RULES = {
-  BAJO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 'dio', baldas: 1 },
-  BAJO_FREGADERO: { casco: 'Bajo Fregadero', alto: 800, patas: 1, puertas: 'dio' },
-  BAJO_RINCON_CIEGO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1 },
-  BAJO_RINCON_ESCUADRA: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 2 },
-  BAJO_HORNO: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajFn: c => /BHC|BHZ/.test(c) ? 1 : 0, gavFn: c => /BHG/.test(c) ? 1 : 0 },
-  BAJO_TERMINAL: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertasFn: c => /BTP/.test(c) ? 1 : 0, baldas: 1 },
-  BAJO_PUERTA_CAJON: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 'dio', cajones: 1 },
-  BAJO_5_CAJONES: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 5 },
-  BAJO_3CAJ_1GAV: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 3, gavetas: 1 },
-  BAJO_2GAV_1CAJ: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 1, gavetas: 2 },
-  BAJO_2CAJ_1GAV_1FRENTE: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, cajones: 2, gavetas: 1 },
-  BAJO_2GAV_1FRENTE: { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 0, gavetas: 2 },
-  ALTO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio', baldasSel: true },
-  ALTO_DECORATIVO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 0, baldasSel: true },
-  ALTO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio', vitrina: true },
-  ALTO_ESCURREPLATOS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
-  ALTO_MICROONDAS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
-  ALTO_CAMPANA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
-  ALTO_CALENTADOR: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
-  ALTO_CALDERA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
-  ALTO_SOBREFRIGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 'dio' },
-  ALTO_TERMINAL: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
-  ALTO_RINCON_CIEGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
-  ALTO_RINCON_ESCUADRA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
-  ALTO_RINCON_CHAFLAN: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
-  ALTO_ABATIBLE: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
-  ALTO_COMBINADO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
-  ALTO_COMBINADO_PLUS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
-  ALTO_COMBINADO_PLUS_J: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
-  ALTILLO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
-  ALTILLO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1, vitrina: true },
-  COLUMNA_DESPENSERO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2, baldas: 4 },
-  COLUMNA_FRIGO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
-  COLUMNA_HORNO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
-  COLUMNA_HORNO_MICRO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
-  MEDIACOLUMNA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', baldas: 2 },
-  MEDIA_PUERTA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1 },
-  MEDIACOLUMNA_HORNO: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1 },
-  MEDIACOLUMNA_VITRINA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', vitrina: true },
-  MEDIACOL_VITRINA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1, vitrina: true },
+export const getPuntosPuertaMV = (altoCm, anchoCm, tariff = 'T1') => {
+  const tMat = PUERTAS_MATRIZ_MV[tariff] || PUERTAS_MATRIZ_MV.T1;
+  let hKey = '70';
+  if (altoCm <= 20) hKey = '14';
+  else if (altoCm <= 35) hKey = '28';
+  else if (altoCm <= 48) hKey = '40';
+  else if (altoCm <= 60) hKey = '56';
+  else if (altoCm <= 78) hKey = '70';
+  else if (altoCm <= 100) hKey = '90';
+  else if (altoCm <= 135) hKey = '127';
+  else hKey = '147';
+
+  const row = tMat[hKey] || tMat['70'];
+  const anchosDisp = [25, 30, 35, 40, 45, 50, 60];
+  let bestW = 60, bestDiff = Infinity;
+  for (const w of anchosDisp) {
+    const diff = Math.abs(w - anchoCm);
+    if (diff < bestDiff) { bestDiff = diff; bestW = w; }
+  }
+  const wKey = `P${bestW}`;
+  return row[wKey] || (bestW >= 60 ? (row['P60'] || 16) : (row['P30'] || 11));
 };
-const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
 
-// Ancho (mm) del prefijo numérico del código.
-const anchoDe = (cod) => { const m = (cod || '').match(/(\d{2,3})/); return m ? parseInt(m[1], 10) * 10 : 600; };
-
-// Costes de componentes por defecto (editables, compartidos vía localStorage 'mv_costes').
-export const MV_COSTES_DEFAULT = { doorM2: 26, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
+export const getDescuentoPuertas = () => {
+  try {
+    const rawVal = localStorage.getItem('dto_puertas');
+    if (rawVal != null) return parseFloat(rawVal) || 50;
+    const st = JSON.parse(localStorage.getItem('app_state') || '{}');
+    if (st?.discountPuertas != null) return parseFloat(st.discountPuertas) || 50;
+    return 50;
+  } catch {
+    return 50;
+  }
+};
 
 // Descompone un código MV según la regla de su familia y tarifa activa.
-export const despiece = (item, p, tariff = 'T1') => {
+export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   const cod = item.cod, altura = item.altura, familia = item.familia;
   const R = RULES[familia] || RULE_GENERICA;
   const dio = /D\/I/.test(cod);
@@ -127,7 +126,7 @@ export const despiece = (item, p, tariff = 'T1') => {
   const factorDesmontada = getFactorDesmontada();
   const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada);
   
-  // Puertas
+  // Puertas y frentes
   let puertas = 0;
   if (R.puertasFn) puertas = R.puertasFn(cod);
   else if (R.puertas === 'dio') puertas = dio ? 1 : 2;
@@ -136,15 +135,44 @@ export const despiece = (item, p, tariff = 'T1') => {
   const gavetas = (R.gavFn ? R.gavFn(cod) : (R.gavetas || 0));
   const baldas = R.baldasSel ? (altura === '90' ? 2 : 1) : (R.baldas || 0);
   
-  // Puerta: superficie × coste/m² según la tarifa de acabado (+30% si es vitrina, por cristal/perfil)
-  const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : 713);
-  const areaP = puertas > 0 ? (w / 1000) * (altoFrente / 1000) : 0;
-  const tarifaInfo = PUERTAS_TARIFAS_M2[tariff] || PUERTAS_TARIFAS_M2.T1;
-  const doorCosteRate = (Number(p.doorM2) || tarifaInfo.costeM2) * (R.vitrina ? 1.3 : 1);
-  const doorPvpRate = tarifaInfo.pvpM2 * (R.vitrina ? 1.3 : 1);
+  // Cálculo de Puntos Oficiales de Puertas según la Matriz MV
+  const pvPuntos = pvCustom || 3.33; // Valor punto oficial
+  const dtoPuertas = (p && p.dtoPuertas != null) ? Number(p.dtoPuertas) : getDescuentoPuertas();
   
-  const costePuertas = Math.round(areaP * doorCosteRate * 100) / 100;
-  const pvpPuertas = Math.round(areaP * doorPvpRate * 100) / 100;
+  let puntosPuertas = 0;
+  const anchoPuertaUnit = puertas > 1 ? Math.round(w / puertas / 10) : Math.round(w / 10);
+  const altoPuertaCm = R.altoCol ? (altura === '220' ? 147 : 127) : (R.altoSel ? (altura === '90' ? 90 : 70) : 70);
+
+  if (puertas > 0) {
+    if (R.altoCol) {
+      // Columnas: puerta alta (127/147) + puerta baja (70)
+      const ptsAlta = getPuntosPuertaMV(altura === '220' ? 147 : 127, anchoPuertaUnit, tariff);
+      const ptsBaja = getPuntosPuertaMV(70, anchoPuertaUnit, tariff);
+      puntosPuertas = ptsAlta + ptsBaja;
+    } else {
+      const ptsUnit = getPuntosPuertaMV(altoPuertaCm, anchoPuertaUnit, tariff);
+      puntosPuertas = ptsUnit * puertas;
+    }
+  }
+
+  // Frentes de cajón y gavetas si no llevan puertas completas
+  if (cajones > 0 && puertas === 0) {
+    const ptsCaj = getPuntosPuertaMV(14, Math.round(w / 10), tariff);
+    puntosPuertas += ptsCaj * cajones;
+  }
+  if (gavetas > 0 && puertas === 0) {
+    const ptsGav = getPuntosPuertaMV(28, Math.round(w / 10), tariff);
+    puntosPuertas += ptsGav * gavetas;
+  }
+
+  if (R.vitrina) puntosPuertas = Math.round(puntosPuertas * 1.3);
+
+  const pvpPuertas = Math.round(puntosPuertas * pvPuntos * 100) / 100;
+  const costePuertas = Math.round(pvpPuertas * (1 - dtoPuertas / 100) * 100) / 100;
+
+  const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : 713);
+  const areaP = (puertas > 0 || cajones > 0 || gavetas > 0) ? (w / 1000) * (altoFrente / 1000) : 0;
+
   const costeHerrajes = Math.round((puertas * 2 * (Number(p.bisagra) || 0)
     + (R.patas ? (Number(p.pata4) || 0) : 0)
     + (R.colg ? 2 * (Number(p.colgador) || 0) : 0)
@@ -160,6 +188,8 @@ export const despiece = (item, p, tariff = 'T1') => {
     cascoPvp: cc.pvpDesmontada,
     puerta: costePuertas,
     puertaPvp: pvpPuertas,
+    puntosPuertas,
+    dtoPuertas,
     puertas,
     areaPuertas: Math.round(areaP * 100) / 100,
     bisagras: puertas * 2 * (Number(p.bisagra) || 0),

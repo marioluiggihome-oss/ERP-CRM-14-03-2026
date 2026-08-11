@@ -58,8 +58,8 @@ const pvpDeItem = (val, pv) => {
   return null;
 };
 
-const costeDetalladoDe = (m, p, tarifa) => {
-  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa);
+const costeDetalladoDe = (m, p, tarifa, pvVal) => {
+  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal);
 };
 
 const PALETA_RAPIDA = [
@@ -350,7 +350,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
 
   const filas = muebles.map(m => {
-    const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
+    const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa, pv) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
     const coste = desp.costeTotal || 0;
     const pvp = Number(m.pvp) || 0;
     const margen = pvp - coste;
@@ -1203,7 +1203,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </td>
                       )}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Puertas: ${m.despiece?.areaPuertas || 0} m² (${tarifa})`}>
+                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Puertas: ${m.despiece?.puntosPuertas || 0} pts MV (${eur(m.despiece?.puertaPvp)}) | Coste con dto (${m.despiece?.dtoPuertas || 50}%): ${eur(m.despiece?.puerta)}`}>
                           {eur(m.despiece?.puerta)}
                         </td>
                       )}
