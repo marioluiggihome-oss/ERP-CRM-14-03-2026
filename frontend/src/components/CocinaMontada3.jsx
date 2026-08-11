@@ -1143,23 +1143,36 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
       {/* Comparador de Tarifas Desplegable */}
       {showComparador && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-amber-500/10 border border-amber-200 rounded-3xl p-4 flex items-center justify-between gap-4 overflow-x-auto shadow-sm">
-          <div className="flex items-center gap-2 shrink-0">
-            <Sparkles size={18} className="text-amber-600" />
-            <span className="font-black text-xs text-slate-900 uppercase tracking-wide">Presupuesto en otras Tarifas:</span>
+        <div className="bg-gradient-to-r from-amber-50 via-indigo-50 to-amber-50 border border-amber-200 rounded-3xl p-4 shadow-sm space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-amber-600 shrink-0" />
+              <span className="font-black text-xs text-slate-900 uppercase tracking-wide">Ver presupuesto en otra tarifa:</span>
+            </div>
+            {/* AVISO IMPORTANTE: el catálogo MV NO es lineal. T4 (ZENIT/POLILAMINADO) tiene
+                muchos artículos más baratos que T2 o T3. Los precios son EXACTOS al cambiar de tarifa. */}
+            <span className="text-[10px] text-amber-700 font-semibold bg-amber-100 border border-amber-300 rounded-lg px-2 py-0.5">
+              ⚠️ El catálogo MV no sigue orden de precio T1→T21. Pulsa cada tarifa para ver el precio real.
+            </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             {comparativaTarifas.map(ct => (
               <button
                 key={ct.tarifa}
                 onClick={() => setTarifa(ct.tarifa)}
-                className={`px-4 py-2 rounded-2xl border text-left transition-all ${ct.activa ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'}`}
+                title={TARIFAS_NOMBRES[ct.tarifa] || ct.tarifa}
+                className={`px-3 py-1.5 rounded-xl border text-left transition-all ${
+                  ct.activa
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                }`}
               >
-                <div className="text-[10px] font-black uppercase opacity-80">{ct.tarifa} - {ct.nombre.split('/')[0]}</div>
-                <div className="text-sm font-black">{eur(ct.total)}</div>
+                <div className="text-[10px] font-black uppercase">{ct.tarifa}</div>
+                <div className="text-[9px] text-current opacity-70 truncate max-w-[80px]">{(TARIFAS_NOMBRES[ct.tarifa] || '').split('/')[0]}</div>
               </button>
             ))}
           </div>
+          <p className="text-[9px] text-slate-400 font-medium">Haz clic en cualquier tarifa para recalcular el presupuesto completo con los precios oficiales de esa tarifa.</p>
         </div>
       )}
 
