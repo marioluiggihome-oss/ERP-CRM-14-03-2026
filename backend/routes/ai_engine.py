@@ -1127,9 +1127,10 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
     try:
         import base64 as _b64x, io as _iox
         from PIL import Image as _PILImg
-        _m = _re.match(r"^data:image/[^;]+;base64,(.*)$", img, _re.DOTALL)
-        _raw = _m.group(1) if _m else img
-        _im = _PILImg.open(_iox.BytesIO(_b64x.b64decode(_raw))).convert("RGB")
+        _m = _re.match(r"^data:[^;]+;base64,(.*)$", img.strip(), _re.DOTALL)
+        _raw = (_m.group(1) if _m else img).strip()
+        _raw_clean = _re.sub(r"\s+", "", _raw)
+        _im = _PILImg.open(_iox.BytesIO(_b64x.b64decode(_raw_clean))).convert("RGB")
         if _im.width > 1600:
             _h = round(_im.height * 1600 / _im.width)
             _im = _im.resize((1600, _h), _PILImg.LANCZOS)

@@ -911,69 +911,55 @@ export default function AIRenderStudio({ state, setState }) {
 
   const assetSrc = (path) => {
     if (!path) return path;
-    if (typeof path === 'string' && path.startsWith('/api/ai-engine/asset')) {
+    if (typeof path === 'string' && (path.startsWith('data:') || path.startsWith('blob:'))) return path;
+    if (typeof path === 'string' && path.startsWith('/api/')) {
       const token = getToken() || '';
-      return `${API_URL}${path}&t=${encodeURIComponent(token)}`;
-    }
-    // Fotos guardadas del proyecto (pueden venir de Google Drive): se sirven por
-    // el propio ERP, con sesión. El token va en la URL porque una etiqueta <img>
-    // no puede mandar cabeceras.
-    if (typeof path === 'string' && path.startsWith('/api/ai-engine/designs/')) {
-      const token = getToken() || '';
-      return `${API_URL}${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(token)}`;
+      const base = API_URL ? API_URL.replace(/\/$/, '') : '';
+      const full = `${base}${path}`;
+      if (token && !/[?&]t=/.test(full)) {
+        return `${full}${full.includes('?') ? '&' : '?'}t=${encodeURIComponent(token)}`;
+      }
+      return full;
     }
     return path;
   };
 
-  // ¿Estos bytes son una imagen? Se mira la FIRMA del fichero, que es lo único
-  // que no miente: el `Content-Type` lo pone quien sirve el fichero y puede
-  // llegar mal, pero un PNG siempre empieza por «\x89PNG».
   const pareceUnaImagen = async (blob) => {
     if (!blob || blob.size < 12) return false;
-    // El tipo declarado, si es de imagen, ya vale: no hace falta leer nada.
     if ((blob.type || '').startsWith('image/')) return true;
     try {
-      const b = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+      const b = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
       const es = (pos, ...bytes) => bytes.every((v, i) => b[pos + i] === v);
-      return (
+      if (
         es(0, 0x89, 0x50, 0x4E, 0x47) ||                    // PNG
         es(0, 0xFF, 0xD8, 0xFF) ||                          // JPEG
         es(0, 0x47, 0x49, 0x46, 0x38) ||                    // GIF
         es(0, 0x42, 0x4D) ||                                // BMP
         (es(0, 0x52, 0x49, 0x46, 0x46) && es(8, 0x57, 0x45, 0x42, 0x50))  // WEBP
-      );
+      ) return true;
+
+      const headerStr = new TextDecoder().decode(b).toLowerCase();
+      if (headerStr.includes('<html') || headerStr.includes('<!doc') || headerStr.includes('{"') || headerStr.includes('{"error')) {
+        return false;
+      }
+      return blob.size > 500;
     } catch {
       return false;
     }
   };
 
-  // Descarga la imagen del render (o de una miniatura) como dataURL, para
-  // guardar/PDF. Sirve tanto para dataURL directas como para el proxy con token.
   const imageToDataUrl = async (path) => {
     if (!path) return null;
     if (typeof path === 'string' && path.startsWith('data:')) return path;
-    const resp = await fetch(assetSrc(path));
-    // Sin esta comprobación, un 401 o un 500 del proxy se convertía IGUALMENTE
-    // en un data-URL — pero con el JSON del error dentro. Eso viajaba como si
-    // fuera la imagen y reventaba mucho más tarde, en la llamada de visión, con
-    // un "Unable to process input image" de Google que no dice nada de lo que
-    // pasó de verdad. El error hay que darlo aquí, que es donde ocurre.
+    const url = assetSrc(path);
+    const token = getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const resp = await fetch(url, { headers });
     if (!resp.ok) {
       throw new Error(`No se pudo descargar la imagen del render (${resp.status}).`);
     }
     const blob = await resp.blob();
-    // SE MIRAN LOS BYTES, NO EL `Content-Type`.
-    //
-    // Antes bastaba con que el tipo declarado empezara por `image/`, y eso
-    // rechazaba renders PERFECTAMENTE BUENOS: la foto se sirve desde Drive con
-    // el mime que Drive diga, y cuando llega flojo (`application/octet-stream`,
-    // o vacío) el navegador la pinta igual en el <img> —por eso se veía en
-    // pantalla— pero esta comprobación la tiraba con un «vuelve a generar el
-    // render» que no arreglaba nada, porque el render ya estaba bien.
-    //
-    // La comprobación sigue haciendo su trabajo: un JSON de error, que es lo
-    // que originalmente se colaba como si fuera la imagen, tampoco tiene firma
-    // de imagen y sigue cayendo aquí.
     if (!(await pareceUnaImagen(blob))) {
       throw new Error('Lo descargado no es una imagen; vuelve a generar el render.');
     }
