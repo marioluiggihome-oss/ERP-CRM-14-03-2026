@@ -1657,3 +1657,91 @@ async def capture_public_lead(data: dict):
     await db.crm_opportunities.insert_one(opp_doc)
     return {"success": True, "lead_id": lead_id}
 
+
+# ─── COPIA DE SEGURIDAD Y VACIADO SEGURO DEL CRM (PROTEGIENDO EL DIGITALIZADOR) ───
+
+@router.get("/api/crm/export-backup")
+async def export_crm_backup(current_user: dict = Depends(jwt_get_current_user)):
+    """Exporta una copia de seguridad JSON exclusiva de los datos del CRM."""
+    db = _get_db()
+    contacts = await db.contacts.find({}, {"_id": 0}).to_list(10000)
+    crm_contacts = await db.crm_contacts.find({}, {"_id": 0}).to_list(10000)
+    opps = await db.opportunities.find({}, {"_id": 0}).to_list(10000)
+    crm_opps = await db.crm_opportunities.find({}, {"_id": 0}).to_list(10000)
+    events = await db.calendar_events.find({}, {"_id": 0}).to_list(10000)
+    acts = await db.activities.find({}, {"_id": 0}).to_list(10000)
+
+    backup_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "exportedBy": current_user.get("clientName") or current_user.get("username"),
+        "contacts": contacts + crm_contacts,
+        "opportunities": opps + crm_opps,
+        "calendar_events": events,
+        "activities": acts
+    }
+
+    from fastapi.responses import JSONResponse
+    filename = f"crm_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    return JSONResponse(
+        content=backup_data,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.post("/api/crm/purge-safe")
+async def purge_crm_data_safe(current_user: dict = Depends(jwt_get_current_user)):
+    """Vaciado limpio de datos del CRM previa copia de seguridad automática.
+    PROTEGE STRICTAMENTE el Digitalizador y el resto de módulos de la app."""
+    if not (current_user.get("isAdmin") or current_user.get("canAccessMaster")):
+        raise HTTPException(status_code=403, detail="Solo los administradores pueden ejecutar el vaciado de datos.")
+
+    db = _get_db()
+
+    # 1. Copia de Seguridad Automática previa en disco
+    backup_dir = "backups"
+    os.makedirs(backup_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = os.path.join(backup_dir, f"backup_crm_antes_vaciado_{ts}.json")
+
+    contacts = await db.contacts.find({}, {"_id": 0}).to_list(10000)
+    crm_contacts = await db.crm_contacts.find({}, {"_id": 0}).to_list(10000)
+    opps = await db.opportunities.find({}, {"_id": 0}).to_list(10000)
+    crm_opps = await db.crm_opportunities.find({}, {"_id": 0}).to_list(10000)
+    events = await db.calendar_events.find({}, {"_id": 0}).to_list(10000)
+    acts = await db.activities.find({}, {"_id": 0}).to_list(10000)
+
+    backup_content = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "purgedBy": current_user.get("clientName") or current_user.get("username"),
+        "contacts": contacts + crm_contacts,
+        "opportunities": opps + crm_opps,
+        "calendar_events": events,
+        "activities": acts
+    }
+
+    with open(backup_file, "w", encoding="utf-8") as f:
+        json.dump(backup_content, f, ensure_ascii=False, indent=2)
+
+    # 2. Vaciado SELECTIVO exclusivo de colecciones CRM (SIN TOCAR DIGITALIZADOR)
+    del_c1 = await db.contacts.delete_many({})
+    del_c2 = await db.crm_contacts.delete_many({})
+    del_o1 = await db.opportunities.delete_many({})
+    del_o2 = await db.crm_opportunities.delete_many({})
+    del_ev = await db.calendar_events.delete_many({})
+    del_ac = await db.activities.delete_many({})
+
+    logger.info(f"✅ CRM vaciado limpiamente por {current_user.get('username')}. Backup guardado en {backup_file}.")
+
+    return {
+        "success": True,
+        "backupFile": backup_file,
+        "deletedSummary": {
+            "contactos": del_c1.deleted_count + del_c2.deleted_count,
+            "oportunidades": del_o1.deleted_count + del_o2.deleted_count,
+            "eventos": del_ev.deleted_count,
+            "actividades": del_ac.deleted_count
+        },
+        "digitalizadorProtegido": True,
+        "message": "CRM vaciado con éxito previa copia de seguridad en servidor. El Digitalizador permanece 100% intacto."
+    }
+

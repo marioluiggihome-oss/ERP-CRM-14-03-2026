@@ -124,6 +124,60 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
     a.click(); URL.revokeObjectURL(url);
   };
 
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+  // 💾 DESCARGAR BACKUP CRM EN JSON
+  const descargarBackupCRM = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const r = await fetch(`${API_URL}/api/crm/export-backup`, {
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      });
+      if (!r.ok) throw new Error('Error al descargar backup CRM');
+      const blob = await r.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_crm_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    } catch (e) {
+      alert(`Error al exportar backup: ${e.message}`);
+    }
+  };
+
+  // 🧹 VACIADO SEGURO DE DATOS CRM (PROTEGIENDO EL DIGITALIZADOR)
+  const ejecutarVaciadoSeguroCRM = async () => {
+    const ok = window.confirm(
+      "⚠️ VACIADO SEGURO DE DATOS DEL CRM\n\n" +
+      "1. Se creará PRIMERO una copia de seguridad automática en el servidor.\n" +
+      "2. Se vaciarán los contactos, oportunidades y agendas del CRM.\n" +
+      "3. 🔒 EL DIGITALIZADOR Y SUS PLANTILLAS PERMANECEN 100% INTACTOS.\n\n" +
+      "¿Deseas guardar la copia y proceder con el vaciado del CRM?"
+    );
+    if (!ok) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const r = await fetch(`${API_URL}/api/crm/purge-safe`, {
+        method: 'POST',
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      });
+      if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'Error en el servidor'); }
+      const res = await r.json();
+
+      // Limpiar claves locales del CRM
+      localStorage.removeItem('crm_deals');
+      localStorage.removeItem('crm_contacts');
+      localStorage.removeItem('crm_companies');
+      localStorage.removeItem('crm_activities');
+
+      alert(`✓ ¡Vaciado del CRM completado!\n\n- Copia guardada en: ${res.backupFile}\n- ${res.message}`);
+      loadDashboard();
+    } catch (e) {
+      alert(`Error durante el vaciado seguro: ${e.message}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
@@ -136,17 +190,32 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
     <div className="h-full overflow-auto bg-slate-50">
       {/* Hero header */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-900 to-purple-900 px-4 sm:px-6 pt-5 pb-10">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-1 flex-wrap gap-3">
           <div>
             <h1 className="text-white text-xl sm:text-2xl font-black">Panel CRM</h1>
             <p className="text-indigo-300 text-xs mt-0.5">
               Resumen del día · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
-          <button onClick={exportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow transition-all">
-            <Download size={14} /> Exportar Excel
-          </button>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={descargarBackupCRM}
+              className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow transition-all border border-indigo-400/30"
+              title="Descargar copia de seguridad exclusiva de los datos del CRM en JSON">
+              <Download size={14} /> Backup CRM (JSON)
+            </button>
+            <button onClick={exportExcel}
+              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition-all">
+              <Download size={14} /> Exportar Excel
+            </button>
+            {(currentUser?.isAdmin || currentUser?.canAccessMaster) && (
+              <button onClick={ejecutarVaciadoSeguroCRM}
+                className="flex items-center gap-2 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow transition-all"
+                title="Vaciado seguro del CRM previa copia de seguridad en servidor (Protege Digitalizador)">
+                🧹 Vaciado Seguro CRM
+              </button>
+            )}
+          </div>
         </div>
 
         {/* KPIs superiores */}
