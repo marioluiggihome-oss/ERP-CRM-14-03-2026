@@ -2256,6 +2256,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <div>
                           <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1.5">🏭 Producción / Fábrica</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer bg-indigo-100 px-2 py-1.5 rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-300">
+                              <input
+                                type="checkbox"
+                                checked={userForm.canAccessPlanificacion !== false}
+                                onChange={(e) => setUserForm({...userForm, canAccessPlanificacion: e.target.checked})}
+                                className="w-4 h-4 rounded accent-indigo-600"
+                              />
+                              <span className="text-xs font-black text-indigo-900">Producción y Almacén</span>
+                            </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
                               <input
                                 type="checkbox"
@@ -2557,11 +2566,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-blue-600" />
                               <span className="text-xs font-bold text-slate-700">Archivo</span>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
-                              <input type="checkbox" checked={userForm.canAccessInvoices === true}
+                            <label className="flex items-center gap-2 cursor-pointer bg-orange-100 px-2 py-1.5 rounded-lg hover:bg-orange-200 transition-colors border border-orange-300">
+                              <input type="checkbox" checked={userForm.canAccessInvoices !== false}
                                 onChange={(e) => setUserForm({...userForm, canAccessInvoices: e.target.checked})}
                                 className="w-4 h-4 rounded accent-orange-600" />
-                              <span className="text-xs font-bold text-slate-700">G. Comercial</span>
+                              <span className="text-xs font-black text-orange-900">Gestión Comercial</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input type="checkbox" checked={userForm.canAccessRentabilidad === true}
