@@ -360,8 +360,14 @@ const Cascos = ({ state, setState }) => {
   useEffect(() => {
     const cabs = state?.cascosPendingCabinets;
     if (!cabs || !cabs.length) return;
-    const famOf = (t) => {
-      const s = norm(t);
+    // famOf: detecta la familia del mueble usando tipo, familia Y descripcion
+    // porque el campo tipo solo llega como 'BAJO'/'ALTO'/'COLUMNA' (genérico)
+    // mientras que familia y descripcion tienen el tipo específico (BAJO_FREGADERO, etc.)
+    const famOf = (det) => {
+      // Aceptar tanto un string (tipo) como un objeto mueble completo
+      const t = typeof det === 'string' ? det : (det?.tipo || '');
+      const extra = typeof det === 'object' ? `${det?.familia || ''} ${det?.descripcion || ''}` : '';
+      const s = norm(t + ' ' + extra);
       if (/alto|altillo|sobre\s*encimera|sobre\s*columna|cubretermo|escurre|campana|vitrina/.test(s)) return 'alto';
       if (/columna|semicolumna/.test(s)) return 'columna';
       // Tipos específicos de bajo — deben emparejarse con su casco exacto
@@ -371,14 +377,14 @@ const Cascos = ({ state, setState }) => {
     };
     const pool = CASCOS.filter(m => (m.gama || 'kit') === gama && String(m.grosor) === String(grosorActivo) && m.precios[colorActivo] != null);
     const lines = cabs.map((det, idx) => {
-      const fam = famOf(det.tipo);
+      const fam = famOf(det);
       // Mapear familia del mueble al tipo de casco exacto
       const tipoCascoExacto = fam === 'bajo_fregadero' ? 'Bajo Fregadero'
         : fam === 'bajo_horno' ? 'Bajo Horno'
         : null;
       let cand = tipoCascoExacto
         ? pool.filter(m => m.tipo === tipoCascoExacto)
-        : pool.filter(m => famOf(m.tipo) === fam);
+        : pool.filter(m => famOf(m) === fam);
       // Si no hay cascos del tipo exacto, caer al tipo genérico de la familia
       if (!cand.length && tipoCascoExacto) cand = pool.filter(m => famOf(m.tipo) === 'bajo');
       if (!cand.length) cand = pool;
