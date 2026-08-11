@@ -125,7 +125,8 @@ export default function PlanificacionProduccion({ currentUser }) {
       const actual = p[campo] || 'pendiente';
       let siguiente = 'pedido';
       if (actual === 'pendiente') siguiente = 'pedido';
-      else if (actual === 'pedido') siguiente = 'recibido';
+      else if (actual === 'pedido') siguiente = 'stock';
+      else if (actual === 'stock') siguiente = 'recibido';
       else if (actual === 'recibido') siguiente = 'pendiente';
       return { ...p, [campo]: siguiente };
     }));
@@ -140,27 +141,33 @@ export default function PlanificacionProduccion({ currentUser }) {
   const hoyStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const metricasAlmacen = useMemo(() => {
-    let cascosP = 0, cascosR = 0;
-    let puertasP = 0, puertasR = 0;
-    let herrajesP = 0, herrajesR = 0;
-    let accP = 0, accR = 0;
+    let cascosP = 0, cascosS = 0, cascosR = 0;
+    let puertasP = 0, puertasS = 0, puertasR = 0;
+    let herrajesP = 0, herrajesS = 0, herrajesR = 0;
+    let accP = 0, accS = 0, accR = 0;
     let listos = 0;
     let retrasados = 0;
 
+    const estaDisp = (st) => st === 'stock' || st === 'recibido';
+
     pedidos.forEach(p => {
       if (p.cascosEstado === 'pedido') cascosP++;
+      if (p.cascosEstado === 'stock') cascosS++;
       if (p.cascosEstado === 'recibido') cascosR++;
 
       if (p.puertasEstado === 'pedido') puertasP++;
+      if (p.puertasEstado === 'stock') puertasS++;
       if (p.puertasEstado === 'recibido') puertasR++;
 
       if (p.herrajesEstado === 'pedido') herrajesP++;
+      if (p.herrajesEstado === 'stock') herrajesS++;
       if (p.herrajesEstado === 'recibido') herrajesR++;
 
       if (p.accesoriosEstado === 'pedido') accP++;
+      if (p.accesoriosEstado === 'stock') accS++;
       if (p.accesoriosEstado === 'recibido') accR++;
 
-      const esComp = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+      const esComp = estaDisp(p.cascosEstado) && estaDisp(p.puertasEstado) && estaDisp(p.herrajesEstado) && estaDisp(p.accesoriosEstado);
       if (esComp) {
         listos++;
       } else if (p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr) {
@@ -168,24 +175,35 @@ export default function PlanificacionProduccion({ currentUser }) {
       }
     });
 
-    return { cascosP, cascosR, puertasP, puertasR, herrajesP, herrajesR, accP, accR, listos, retrasados };
+    return { 
+      cascosP, cascosS, cascosR, 
+      puertasP, puertasS, puertasR, 
+      herrajesP, herrajesS, herrajesR, 
+      accP, accS, accR, 
+      listos, retrasados 
+    };
   }, [pedidos, hoyStr]);
 
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter(p => {
       const orig = p.origen || (p.id.includes('EXT') ? 'EXTERNO' : 'INTERNO');
       const matchOrigen = filtroOrigen === 'TODOS' || orig === filtroOrigen;
-      const esComp = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+      const estaDisp = (st) => st === 'stock' || st === 'recibido';
+      const esComp = estaDisp(p.cascosEstado) && estaDisp(p.puertasEstado) && estaDisp(p.herrajesEstado) && estaDisp(p.accesoriosEstado);
       const esRetrasado = p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr && !esComp;
       
       let matchMaterial = true;
       if (filtroEstadoMaterial === 'CASCOS_PEDIDOS') matchMaterial = p.cascosEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'CASCOS_STOCK') matchMaterial = p.cascosEstado === 'stock';
       else if (filtroEstadoMaterial === 'CASCOS_RECIBIDOS') matchMaterial = p.cascosEstado === 'recibido';
       else if (filtroEstadoMaterial === 'PUERTAS_PEDIDAS') matchMaterial = p.puertasEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'PUERTAS_STOCK') matchMaterial = p.puertasEstado === 'stock';
       else if (filtroEstadoMaterial === 'PUERTAS_RECIBIDAS') matchMaterial = p.puertasEstado === 'recibido';
       else if (filtroEstadoMaterial === 'HERRAJES_PEDIDOS') matchMaterial = p.herrajesEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'HERRAJES_STOCK') matchMaterial = p.herrajesEstado === 'stock';
       else if (filtroEstadoMaterial === 'HERRAJES_RECIBIDOS') matchMaterial = p.herrajesEstado === 'recibido';
       else if (filtroEstadoMaterial === 'ACCESORIOS_PEDIDOS') matchMaterial = p.accesoriosEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'ACCESORIOS_STOCK') matchMaterial = p.accesoriosEstado === 'stock';
       else if (filtroEstadoMaterial === 'ACCESORIOS_RECIBIDOS') matchMaterial = p.accesoriosEstado === 'recibido';
       else if (filtroEstadoMaterial === 'COMPLETO') matchMaterial = esComp;
       else if (filtroEstadoMaterial === 'RETRASADOS') matchMaterial = esRetrasado;
@@ -200,6 +218,106 @@ export default function PlanificacionProduccion({ currentUser }) {
     });
   }, [pedidos, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda, hoyStr]);
 
+  const generarEtiquetasPedidoPDF = async (pedido) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const companyBrand = 'FÁBRICA DE COCINAS';
+      
+      // Configuración de hoja de pegatinas (2 columnas x 4 filas por página)
+      const labelWidth = 90;
+      const labelHeight = 60;
+      const marginX = 12;
+      const marginY = 12;
+      const gapX = 6;
+      const gapY = 6;
+
+      const modulosLista = (pedido.muebles && pedido.muebles.length > 0)
+        ? pedido.muebles
+        : Array.from({ length: pedido.modulos || 6 }).map((_, i) => ({ cod: `MÓDULO-${i+1}`, qty: 1 }));
+
+      let col = 0;
+      let row = 0;
+
+      modulosLista.forEach((m, idx) => {
+        if (idx > 0 && col === 0 && row === 0) {
+          pdf.addPage();
+        }
+
+        const x = marginX + col * (labelWidth + gapX);
+        const y = marginY + row * (labelHeight + gapY);
+
+        // Marco de etiqueta
+        pdf.setDrawColor(203, 213, 225);
+        pdf.setLineWidth(0.4);
+        pdf.roundedRect(x, y, labelWidth, labelHeight, 3, 3, 'D');
+
+        // Franja superior de marca y OF
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(x, y, labelWidth, 12, 3, 3, 'F');
+        pdf.rect(x, y + 9, labelWidth, 3, 'F');
+
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(companyBrand.slice(0, 22), x + 4, y + 8);
+        pdf.setFontSize(9);
+        pdf.text(pedido.id, x + labelWidth - 4, y + 8, { align: 'right' });
+
+        // Cliente y Referencia
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(30, 41, 59);
+        pdf.text(`Cliente: ${(pedido.cliente || 'General').slice(0, 26)}`, x + 4, y + 18);
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(`Ref: ${(pedido.ref || 'Sin referencia').slice(0, 28)}`, x + 4, y + 23);
+
+        // Módulo / Pieza
+        pdf.setFillColor(241, 245, 249);
+        pdf.roundedRect(x + 4, y + 26, labelWidth - 8, 14, 2, 2, 'F');
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(79, 70, 229);
+        pdf.text(`CÓD: ${m.cod || 'PIEZA'}`, x + 8, y + 35);
+        pdf.setFontSize(9);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text(`Cant: ${m.qty || 1} ud`, x + labelWidth - 8, y + 35, { align: 'right' });
+
+        // Detalles Casco & Origen
+        pdf.setFontSize(7.5);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(51, 65, 85);
+        pdf.text(`Casco: ${(pedido.casco || 'Grafito 19mm').slice(0, 28)}`, x + 4, y + 45);
+        
+        pdf.setFontSize(7);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(`Origen: ${pedido.origen === 'EXTERNO' ? 'Proveedor Fuera' : 'Taller Propio'}`, x + 4, y + 50);
+        pdf.text(`Est. Recepción: ${pedido.fechaEstRecepcion || '-'}`, x + labelWidth - 4, y + 50, { align: 'right' });
+
+        // Código de barras
+        pdf.setFillColor(30, 41, 59);
+        pdf.rect(x + 4, y + 53, labelWidth - 8, 3, 'F');
+
+        // Avanzar posición grid 2x4
+        col++;
+        if (col >= 2) {
+          col = 0;
+          row++;
+          if (row >= 4) {
+            row = 0;
+          }
+        }
+      });
+
+      pdf.save(`Etiquetas_${pedido.id}_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (e) {
+      alert(`Error generando etiquetas: ${e.message}`);
+    }
+  };
+
   const exportarInformePDF = async () => {
     try {
       const { jsPDF } = await import('jspdf');
@@ -213,11 +331,10 @@ export default function PlanificacionProduccion({ currentUser }) {
       pdf.setFillColor(15, 23, 42);
       pdf.rect(0, 0, W, 22, 'F');
       
-      const companyBrand = state?.settings?.companyName || currentUser?.empresa || 'CONTROL DE ALMACÉN Y FÁBRICA DE COCINAS';
       pdf.setFontSize(13);
       pdf.setFont(undefined, 'bold');
       pdf.setTextColor(255, 255, 255);
-      pdf.text(`${companyBrand.toUpperCase()} · INFORME GENERAL DE ALMACÉN Y FÁBRICA`, M, 14);
+      pdf.text('INFORME GENERAL DE ALMACÉN, RECEPCIÓN Y FÁBRICA', M, 14);
 
       pdf.setFontSize(8.5);
       pdf.setFont(undefined, 'normal');
@@ -347,7 +464,7 @@ export default function PlanificacionProduccion({ currentUser }) {
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cascos</p>
             <p className="text-xs font-black text-slate-800">
-              <span className="text-amber-600">{metricasAlmacen.cascosP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.cascosR} Rec</span>
+              <span className="text-amber-600">{metricasAlmacen.cascosP} Ped</span> · <span className="text-blue-600">{metricasAlmacen.cascosS} Stock</span> · <span className="text-emerald-600">{metricasAlmacen.cascosR} Rec</span>
             </p>
           </div>
         </div>
@@ -357,7 +474,7 @@ export default function PlanificacionProduccion({ currentUser }) {
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Puertas</p>
             <p className="text-xs font-black text-slate-800">
-              <span className="text-amber-600">{metricasAlmacen.puertasP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.puertasR} Rec</span>
+              <span className="text-amber-600">{metricasAlmacen.puertasP} Ped</span> · <span className="text-blue-600">{metricasAlmacen.puertasS} Stock</span> · <span className="text-emerald-600">{metricasAlmacen.puertasR} Rec</span>
             </p>
           </div>
         </div>
@@ -367,7 +484,7 @@ export default function PlanificacionProduccion({ currentUser }) {
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Herrajes</p>
             <p className="text-xs font-black text-slate-800">
-              <span className="text-amber-600">{metricasAlmacen.herrajesP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.herrajesR} Rec</span>
+              <span className="text-amber-600">{metricasAlmacen.herrajesP} Ped</span> · <span className="text-blue-600">{metricasAlmacen.herrajesS} Stock</span> · <span className="text-emerald-600">{metricasAlmacen.herrajesR} Rec</span>
             </p>
           </div>
         </div>
@@ -377,7 +494,7 @@ export default function PlanificacionProduccion({ currentUser }) {
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Accesorios (Zócalos, Gola)</p>
             <p className="text-xs font-black text-slate-800">
-              <span className="text-amber-600">{metricasAlmacen.accP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.accR} Rec</span>
+              <span className="text-amber-600">{metricasAlmacen.accP} Ped</span> · <span className="text-blue-600">{metricasAlmacen.accS} Stock</span> · <span className="text-emerald-600">{metricasAlmacen.accR} Rec</span>
             </p>
           </div>
         </div>
@@ -414,14 +531,18 @@ export default function PlanificacionProduccion({ currentUser }) {
               <option value="TODOS">Todos los Estados</option>
               <option value="RETRASADOS">🚨 Recepción Retrasada ({metricasAlmacen.retrasados})</option>
               <option value="CASCOS_PEDIDOS">📦 Cascos Pedidos</option>
+              <option value="CASCOS_STOCK">📦 Cascos En Stock</option>
               <option value="CASCOS_RECIBIDOS">✅ Cascos Recibidos</option>
               <option value="PUERTAS_PEDIDAS">🚪 Puertas Pedidas</option>
+              <option value="PUERTAS_STOCK">🚪 Puertas En Stock</option>
               <option value="PUERTAS_RECIBIDAS">✅ Puertas Recibidas</option>
               <option value="HERRAJES_PEDIDOS">🔩 Herrajes Pedidos</option>
+              <option value="HERRAJES_STOCK">🔩 Herrajes En Stock</option>
               <option value="HERRAJES_RECIBIDOS">✅ Herrajes Recibidos</option>
               <option value="ACCESORIOS_PEDIDOS">⚙️ Accesorios Pedidos</option>
+              <option value="ACCESORIOS_STOCK">⚙️ Accesorios En Stock</option>
               <option value="ACCESORIOS_RECIBIDOS">✅ Accesorios Recibidos</option>
-              <option value="COMPLETO">✨ Material 100% Recibido</option>
+              <option value="COMPLETO">✨ Material 100% Disponible</option>
             </select>
           </div>
 
@@ -444,7 +565,7 @@ export default function PlanificacionProduccion({ currentUser }) {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
         <div className="px-6 py-4 bg-slate-50/70 flex items-center justify-between text-xs font-black uppercase text-slate-400">
           <span>Órdenes de Fabricación ({pedidosFiltrados.length})</span>
-          <span>Estado de Recepción (Hacer Clic para Cambiar Estado)</span>
+          <span>Estado de Recepción (Clic para cambiar: Sin Pedir ➔ Pedido ➔ En Stock ➔ Recibido)</span>
         </div>
 
         {pedidosFiltrados.map(p => {
@@ -452,8 +573,23 @@ export default function PlanificacionProduccion({ currentUser }) {
           const pEst = p.puertasEstado || 'pendiente';
           const hEst = p.herrajesEstado || 'pendiente';
           const aEst = p.accesoriosEstado || 'pendiente';
-          const esCompleto = cEst === 'recibido' && pEst === 'recibido' && hEst === 'recibido' && aEst === 'recibido';
+          const estaDisp = (st) => st === 'stock' || st === 'recibido';
+          const esCompleto = estaDisp(cEst) && estaDisp(pEst) && estaDisp(hEst) && estaDisp(aEst);
           const esRetrasado = p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr && !esCompleto;
+
+          const getBadgeStyle = (st) => {
+            if (st === 'recibido') return 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200';
+            if (st === 'stock') return 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200';
+            if (st === 'pedido') return 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200';
+            return 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+          };
+
+          const getBadgeText = (st, pluralFem = false) => {
+            if (st === 'recibido') return pluralFem ? '✅ Recibidas' : '✅ Recibidos';
+            if (st === 'stock') return '📦 En Stock';
+            if (st === 'pedido') return pluralFem ? '⏳ Pedidas' : '⏳ Pedidos';
+            return '⚪ Sin Pedir';
+          };
 
           return (
             <div key={p.id} className={`p-5 transition-colors space-y-3 ${esRetrasado ? 'bg-rose-50/60 hover:bg-rose-50 border-l-4 border-l-rose-600' : esCompleto ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'hover:bg-slate-50/80'}`}>
@@ -465,7 +601,7 @@ export default function PlanificacionProduccion({ currentUser }) {
                   <div>
                     <h4 className="font-black text-sm text-slate-900 flex items-center gap-2 flex-wrap">
                       {p.cliente} · <span className="text-slate-600 font-medium">{p.ref}</span>
-                      {esCompleto && <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black uppercase">✨ Material 100% Recibido</span>}
+                      {esCompleto && <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black uppercase">✨ Material Listo</span>}
                       {esRetrasado && <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white border border-rose-400 text-[10px] font-black uppercase animate-pulse">🚨 Recepción Retrasada</span>}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
@@ -485,6 +621,15 @@ export default function PlanificacionProduccion({ currentUser }) {
                 </div>
 
                 <div className="flex items-center gap-4 flex-wrap">
+                  {/* Generador de Etiquetas */}
+                  <button
+                    onClick={() => generarEtiquetasPedidoPDF(p)}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-all font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                    title="Generar hoja de etiquetas adhesivas para marcar cada módulo/caja"
+                  >
+                    🏷️ Etiquetas PDF
+                  </button>
+
                   {/* Fecha Estimada de Recepción de Material */}
                   <div className="text-right text-xs bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl flex items-center gap-2">
                     <Clock size={14} className="text-indigo-600 shrink-0" />
@@ -525,64 +670,48 @@ export default function PlanificacionProduccion({ currentUser }) {
                 {/* 1. CASCOS */}
                 <button
                   onClick={() => toggleEstadoPieza(p.id, 'cascosEstado')}
-                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
-                    cEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
-                    cEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
-                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                  title="Haz clic para cambiar estado de Cascos"
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${getBadgeStyle(cEst)}`}
+                  title="Clic para cambiar: Sin Pedir ➔ Pedido ➔ En Stock ➔ Recibido"
                 >
                   <span className="flex items-center gap-1.5">📦 <b>Cascos:</b></span>
                   <span className="font-black uppercase text-[10px]">
-                    {cEst === 'recibido' ? '✅ Recibidos' : cEst === 'pedido' ? '⏳ Pedidos' : '⚪ Sin Pedir'}
+                    {getBadgeText(cEst)}
                   </span>
                 </button>
 
                 {/* 2. PUERTAS */}
                 <button
                   onClick={() => toggleEstadoPieza(p.id, 'puertasEstado')}
-                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
-                    pEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
-                    pEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
-                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                  title="Haz clic para cambiar estado de Puertas"
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${getBadgeStyle(pEst)}`}
+                  title="Clic para cambiar: Sin Pedir ➔ Pedida ➔ En Stock ➔ Recibida"
                 >
                   <span className="flex items-center gap-1.5">🚪 <b>Puertas:</b></span>
                   <span className="font-black uppercase text-[10px]">
-                    {pEst === 'recibido' ? '✅ Recibidas' : pEst === 'pedido' ? '⏳ Pedidas' : '⚪ Sin Pedir'}
+                    {getBadgeText(pEst, true)}
                   </span>
                 </button>
 
                 {/* 3. HERRAJES */}
                 <button
                   onClick={() => toggleEstadoPieza(p.id, 'herrajesEstado')}
-                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
-                    hEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
-                    hEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
-                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                  title="Haz clic para cambiar estado de Herrajes"
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${getBadgeStyle(hEst)}`}
+                  title="Clic para cambiar: Sin Pedir ➔ Pedido ➔ En Stock ➔ Recibido"
                 >
                   <span className="flex items-center gap-1.5">🔩 <b>Herrajes:</b></span>
                   <span className="font-black uppercase text-[10px]">
-                    {hEst === 'recibido' ? '✅ Recibidos' : hEst === 'pedido' ? '⏳ Pedidos' : '⚪ Sin Pedir'}
+                    {getBadgeText(hEst)}
                   </span>
                 </button>
 
                 {/* 4. ACCESORIOS (Zócalos, Gola, Grapas) */}
                 <button
-                  onClick={() => toggleEstadoPieza(p.id, 'accesorioEstado')}
-                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
-                    aEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
-                    aEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
-                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                  title="Haz clic para cambiar estado de Accesorios (Zócalos, Gola, Grapas)"
+                  onClick={() => toggleEstadoPieza(p.id, 'accesoriosEstado')}
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${getBadgeStyle(aEst)}`}
+                  title="Clic para cambiar: Sin Pedir ➔ Pedido ➔ En Stock ➔ Recibido"
                 >
                   <span className="flex items-center gap-1.5">⚙️ <b>Accesorios:</b></span>
                   <span className="font-black uppercase text-[10px]">
-                    {aEst === 'recibido' ? '✅ Recibidos' : aEst === 'pedido' ? '⏳ Pedidos' : '⚪ Sin Pedir'}
+                    {getBadgeText(aEst)}
                   </span>
                 </button>
               </div>
