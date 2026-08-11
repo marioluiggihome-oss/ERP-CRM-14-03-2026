@@ -1480,18 +1480,7 @@ const App = () => {
                     
                     {/* Render 3D Studio — APARCADO: integrado en 3D Estudio */}
                     {/* Kitchen 3D Designer — APARCADO: integrado en 3D Estudio */}
-                    {/* 3D Estudio — Módulo unificado con Manus API (render, plano, ficha, presentación) */}
-                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'estudioCocinas'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-amber-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="estudio-3d-nav-btn"
-                        title="Estudio 3D: Renders, Planos 2D, Fichas Técnicas y Presentaciones"
-                      >
-                        <ChefHat size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Estudio 3D</span>
-                      </button>
-                    )}
+                    {/* 3D Estudio — APARCADO */}
                     
 
 

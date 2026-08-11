@@ -762,69 +762,79 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-3 sm:p-6 pb-36 space-y-4">
       
       {/* Cabecera Principal */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 border border-indigo-400/40 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-            <Layers size={26} className="text-white" />
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl px-4 py-3 sm:px-5 sm:py-3.5 shadow-xl border border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 border border-indigo-400/40 flex items-center justify-center shadow-md shadow-indigo-600/30 shrink-0">
+            <Layers size={18} className="text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Cocina Montada 3</h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-xs font-black uppercase">
-                Tarifa {tarifa}
-              </span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-black text-white tracking-tight">Cocina Montada 3</h1>
+              <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[10px] font-black uppercase">Tarifa {tarifa}</span>
             </div>
-            <p className="text-xs sm:text-sm text-indigo-200/80 font-medium">
-              Presupuestación rápida por códigos MV · Acabados: <span className="font-bold text-white">{acabadoPuerta}</span> / <span className="font-bold text-white">{acabadoCasco}</span>
+            <p className="text-[10px] text-indigo-200/70 font-medium leading-tight">
+              {acabadoPuerta} / {acabadoCasco}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Botonera Central: herramientas secundarias */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => setShowMuestrario(v => !v)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all text-white"
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showMuestrario ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
+            title="Muestrario de acabados de puertas y cascos"
           >
-            <Palette size={15} className="text-indigo-300" /> Muestrario Acabados
+            <Palette size={13} className="text-indigo-300" /> Acabados
           </button>
           <button
             onClick={() => setShowEscandallo(v => !v)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showEscandallo ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showEscandallo ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
+            title="Escandallo técnico de taller"
           >
-            <Hammer size={15} className="text-amber-400" /> Escandallo Taller
+            <Hammer size={13} className="text-amber-400" /> Escandallo
           </button>
           <button
             onClick={() => setShowPegadoMasivo(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/30 text-xs font-bold transition-all shadow-sm text-white"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600/50 hover:bg-indigo-600 border border-indigo-400/30 text-[11px] font-bold transition-all text-white"
+            title="Pegar lista completa de muebles de WhatsApp, email o Word"
           >
-            <FileUp size={15} /> Pegado Masivo
+            <FileUp size={13} /> Pegado Masivo
           </button>
           <button
             onClick={() => setShowComparador(v => !v)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
+            title="Comparar presupuesto en todas las tarifas T1-T5"
           >
-            <Sparkles size={15} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar Tarifas
+            <Sparkles size={13} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar
           </button>
           <button
             onClick={exportarPDFOficial}
             disabled={!muebles.length}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all disabled:opacity-40 text-white"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 text-[11px] font-bold transition-all disabled:opacity-40 text-white"
+            title="Exportar PDF oficial del presupuesto"
           >
-            <Download size={15} /> PDF Oficial
+            <Download size={13} /> PDF
           </button>
+        </div>
+
+        {/* CTAs Primarios */}
+        <div className="flex items-center gap-1.5">
           <button
             onClick={lanzarAFabricacion}
             disabled={!muebles.length}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-xs shadow-lg transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-[11px] shadow-md transition-all disabled:opacity-40"
+            title="Crear orden de fabricación en taller"
           >
-            <Factory size={15} /> Lanzar a Fabricación
+            <Factory size={13} /> Fabricar
           </button>
           <button
             onClick={guardarPresupuesto}
             disabled={!muebles.length || guardando}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black shadow-md transition-all disabled:opacity-40"
+            title="Guardar presupuesto en el sistema"
           >
-            {guardando ? <Loader size={15} className="animate-spin" /> : <Save size={15} />} Guardar
+            {guardando ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Guardar
           </button>
         </div>
       </div>

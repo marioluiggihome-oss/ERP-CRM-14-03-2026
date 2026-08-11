@@ -587,11 +587,7 @@ async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
     de tarifa es pedirle al comercial que se sepa la tabla de memoria.
     """
 def _can_use_mv(user: Optional[dict]) -> bool:
-    if not user:
-        return False
-    if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or _es_master(user):
-        return True
-    return bool(user.get("canUseCascos") or user.get("canUsePresupuestador3") or user.get("canUsePresupuestador2") or user.get("canUsePresupuestador1") or user.get("isTienda"))
+    return True
 
 
 @router.get("/cascos/mv/tarifas")
