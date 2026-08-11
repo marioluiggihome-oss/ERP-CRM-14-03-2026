@@ -79,6 +79,7 @@ const MODULES = [
   { tab: 'digitalizador',   label: 'Digitalizador',   icon: ScanLine,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseDigitalizador && !u?.isTienda },
 
   // Producción
+  { tab: 'planificacionProduccion', label: 'Producción y Almacén', desc: 'Control de almacén, etiquetas PDF y recepción de material', icon: Factory, color: 'bg-indigo-600', group: 'produccion', can: (u) => u?.canAccessPlanificacion !== false && !u?.isTienda },
   { tab: 'fabrica',         label: 'Fábrica',         icon: Factory,      color: 'bg-emerald-600', group: 'produccion', can: (u) => u?.canAccessFabrica === true },
   { tab: 'montajes',        label: 'Montajes',        icon: Wrench,       color: 'bg-orange-600',  group: 'produccion', can: (u, s) => s?.montajesEnabled && (u?.canAccessMontajes || u?.isMontador) },
   { tab: 'luiggifloor',     label: 'Floor',    icon: Layers,       color: 'bg-amber-500',   group: 'produccion', can: (u) => u?.canAccessFloor === true },

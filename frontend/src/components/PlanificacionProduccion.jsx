@@ -135,7 +135,19 @@ export default function PlanificacionProduccion({ currentUser }) {
   const [filtroOrigen, setFiltroOrigen] = useState('TODOS');
   const [filtroEstadoMaterial, setFiltroEstadoMaterial] = useState('TODOS');
   const [filtroPrioridad, setFiltroPrioridad] = useState('TODOS');
+  const [filtroUsuario, setFiltroUsuario] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
+
+  // Lista única de usuarios / creadores / comerciales presentes en los pedidos
+  const listaUsuarios = useMemo(() => {
+    const nombres = new Set();
+    pedidos.forEach(p => {
+      if (p.createdByName) nombres.add(p.createdByName);
+      if (p.usuario) nombres.add(p.usuario);
+      if (p.vendedor) nombres.add(p.vendedor);
+    });
+    return Array.from(nombres).filter(Boolean);
+  }, [pedidos]);
 
   // Métricas del almacén en vivo
   const hoyStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -191,6 +203,12 @@ export default function PlanificacionProduccion({ currentUser }) {
       const estaDisp = (st) => st === 'stock' || st === 'recibido';
       const esComp = estaDisp(p.cascosEstado) && estaDisp(p.puertasEstado) && estaDisp(p.herrajesEstado) && estaDisp(p.accesoriosEstado);
       const esRetrasado = p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr && !esComp;
+
+      const matchUser = filtroUsuario === 'TODOS' ||
+        p.createdByName === filtroUsuario ||
+        p.usuario === filtroUsuario ||
+        p.vendedor === filtroUsuario ||
+        (filtroUsuario === 'MIS_PEDIDOS' && (p.userId === currentUser?.id || p.createdByName === currentUser?.clientName || p.createdByName === currentUser?.username));
       
       let matchMaterial = true;
       if (filtroEstadoMaterial === 'CASCOS_PEDIDOS') matchMaterial = p.cascosEstado === 'pedido';
@@ -214,9 +232,9 @@ export default function PlanificacionProduccion({ currentUser }) {
         p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
         (p.casco && p.casco.toLowerCase().includes(busqueda.toLowerCase())) ||
         p.ref.toLowerCase().includes(busqueda.toLowerCase());
-      return matchOrigen && matchMaterial && matchPrioridad && matchBusqueda;
+      return matchUser && matchOrigen && matchMaterial && matchPrioridad && matchBusqueda;
     });
-  }, [pedidos, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda, hoyStr]);
+  }, [pedidos, filtroUsuario, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda, hoyStr, currentUser]);
 
   const generarEtiquetasPedidoPDF = async (pedido) => {
     try {
@@ -521,6 +539,21 @@ export default function PlanificacionProduccion({ currentUser }) {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-slate-400 uppercase text-[10px]">Usuario / Responsable:</span>
+            <select
+              value={filtroUsuario}
+              onChange={e => setFiltroUsuario(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
+            >
+              <option value="TODOS">Todos los Usuarios</option>
+              <option value="MIS_PEDIDOS">👤 Mis Pedidos ({currentUser?.clientName || currentUser?.username || 'Mi Usuario'})</option>
+              {listaUsuarios.map(u => (
+                <option key={u} value={u}>👤 {u}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-slate-400 uppercase text-[10px]">Estado Material:</span>
             <select
