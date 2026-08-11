@@ -121,12 +121,47 @@ const Invoices = ({ currentUser, state }) => {
     setShowModal(true);
   };
 
-  // 🔄 CONVERSIÓN DE DOCUMENTOS EN 1-CLIC
+  // 💳 COBRO DE SEÑAL DEL 50% Y CONFIRMACIÓN DE PEDIDO
+  const cobrarSenial50 = async (doc) => {
+    const senial = (doc.total || 0) * 0.5;
+    if (!window.confirm(`¿Registrar cobro de la Señal del 50% (${fmt(senial)}) y confirmar como Pedido de Venta?`)) return;
+
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const nuevoNum = `PED-2026-${randomNum}`;
+
+    const docActualizado = {
+      ...doc,
+      docType: 'pedido',
+      invoiceNumber: nuevoNum,
+      status: 'partially_paid',
+      senialPagada: true,
+      senialImporte: senial,
+      pendienteImporte: senial,
+      notes: `Señal del 50% (${fmt(senial)}) cobrada el ${new Date().toLocaleDateString('es-ES')}. Pedido Confirmado. ${doc.notes || ''}`
+    };
+
+    try { await invoicesAPI.update(doc.id, docActualizado); } catch { guardarLocalmente(docActualizado); }
+    alert(`✓ ¡Señal 50% (${fmt(senial)}) registrada y Pedido ${nuevoNum} Confirmado!`);
+    load();
+  };
+
+  // 🔄 CONVERSIÓN DE DOCUMENTOS EN 1-CLIC CON REGLA 50% / 50%
   const convertirDocumento = async (doc, nuevoTipo) => {
     const conf = DOC_TYPES[nuevoTipo];
     if (!conf) return;
 
-    if (!window.confirm(`¿Convertir ${doc.invoiceNumber} (${DOC_TYPES[doc.docType || 'factura']?.label}) a nuevo ${conf.label}?`)) return;
+    // Regla estricta: El 50% restante DEBE abonarse antes de entregar el material (Albarán)
+    let pagadoAlbaran = doc.status === 'paid';
+    if (nuevoTipo === 'albaran' && !pagadoAlbaran) {
+      const rest = (doc.total || 0) * 0.5;
+      const ok = window.confirm(
+        `⚠️ REGLA DE ENTREGA: El 50% restante (${fmt(rest)}) debe abonarse antes de entregar el material.\n\n¿Registrar ahora el pago del 50% restante (${fmt(rest)}) y autorizar la salida del Albarán de Entrega?`
+      );
+      if (!ok) return;
+      pagadoAlbaran = true;
+    } else {
+      if (!window.confirm(`¿Convertir ${doc.invoiceNumber} (${DOC_TYPES[doc.docType || 'factura']?.label}) a nuevo ${conf.label}?`)) return;
+    }
 
     const randomNum = Math.floor(100 + Math.random() * 900);
     const nuevoNum = `${conf.prefix}-${randomNum}`;
@@ -138,9 +173,9 @@ const Invoices = ({ currentUser, state }) => {
       invoiceNumber: nuevoNum,
       issueDate: new Date().toISOString().split('T')[0],
       dueDate: new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0],
-      status: 'draft',
+      status: pagadoAlbaran ? 'paid' : (doc.status || 'draft'),
       budgetNumber: doc.invoiceNumber,
-      notes: `Generado a partir de ${doc.invoiceNumber} (${DOC_TYPES[doc.docType || 'factura']?.label}). ${doc.notes || ''}`
+      notes: `Generado a partir de ${doc.invoiceNumber} (${DOC_TYPES[doc.docType || 'factura']?.label}). 50% señal + 50% restante previo a la entrega. ${doc.notes || ''}`
     };
 
     try {
@@ -149,7 +184,7 @@ const Invoices = ({ currentUser, state }) => {
       guardarLocalmente(nuevoDoc);
     }
 
-    alert(`✓ ¡Creado ${conf.label} ${nuevoNum} con éxito!`);
+    alert(`✓ ¡Creado ${conf.label} ${nuevoNum} con éxito!${nuevoTipo === 'albaran' ? ' (100% Abonado y Autorizado para entrega)' : ''}`);
     load();
   };
 
@@ -389,13 +424,24 @@ const Invoices = ({ currentUser, state }) => {
       pdf.text('TOTAL DOCUMENTO:', bx + 2, finalY + 7);
       pdf.text(fmt(inv.total), W - M - 2, finalY + 7, { align: 'right' });
 
+      // Condición comercial de pago: 50% Señal + 50% Entrega
+      finalY += 12;
+      pdf.setFontSize(8.5);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(30, 41, 59);
+      pdf.text('CONDICIONES Y FORMA DE PAGO COMERCIAL:', M, finalY);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(`1. Señal inicial del 50% a la confirmación del pedido: ${fmt((inv.total || 0) * 0.5)}`, M, finalY + 4.5);
+      pdf.text(`2. 50% restante a la entrega de mercancía / finalización de instalación: ${fmt((inv.total || 0) * 0.5)}`, M, finalY + 9);
+
       // Pie de página y firma para Albaranes / Presupuestos
       if (inv.docType === 'albaran') {
         pdf.setFontSize(8);
         pdf.setTextColor(100);
-        pdf.text('RECIBÍ Y CONFORMIDAD DE ENTREGA:', M, finalY + 5);
-        pdf.rect(M, finalY + 8, 80, 20, 'D');
-        pdf.text('Firma y DNI Receptor', M + 4, finalY + 25);
+        pdf.text('RECIBÍ Y CONFORMIDAD DE ENTREGA:', M, finalY + 16);
+        pdf.rect(M, finalY + 19, 80, 20, 'D');
+        pdf.text('Firma y DNI Receptor', M + 4, finalY + 36);
       }
 
       pdf.save(`${inv.invoiceNumber}_${(inv.clientName || 'Cliente').replace(/\s+/g, '_')}.pdf`);
@@ -546,7 +592,11 @@ const Invoices = ({ currentUser, state }) => {
                       {/* Badge de Estado de Pago Destacado */}
                       {estaPagado ? (
                         <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-600 text-white flex items-center gap-1 shadow-sm">
-                          <CheckCircle size={12} /> 💳 PAGADO / COBRADO
+                          <CheckCircle size={12} /> 💳 100% PAGADO / LIQUIDADO
+                        </span>
+                      ) : (inv.status === 'partially_paid' || inv.senialPagada) ? (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-blue-600 text-white flex items-center gap-1 shadow-sm">
+                          <CheckCircle size={12} /> 💳 SEÑAL 50% COBRADA ({fmt((inv.total || 0) * 0.5)})
                         </span>
                       ) : estaVencido ? (
                         <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
@@ -554,7 +604,7 @@ const Invoices = ({ currentUser, state }) => {
                         </span>
                       ) : (
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${sConf.color}`}>
-                          ⏳ PENDIENTE DE PAGO
+                          ⏳ PENDIENTE SEÑAL 50%
                         </span>
                       )}
                     </div>
@@ -568,12 +618,27 @@ const Invoices = ({ currentUser, state }) => {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="text-right">
                     <p className="text-lg font-black text-slate-900">{fmt(inv.total)}</p>
-                    <p className="text-[10px] font-bold text-slate-400">Base {fmt(inv.totalBase || inv.total * 0.8)}</p>
+                    <p className="text-[10px] font-bold text-slate-400">
+                      {(inv.status === 'partially_paid' || inv.senialPagada)
+                        ? `Pendiente (50%): ${fmt((inv.total || 0) * 0.5)}`
+                        : `Base ${fmt(inv.totalBase || inv.total * 0.8)}`}
+                    </p>
                   </div>
 
                   {/* Acciones & Pipeline de Conversión */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Botón directo de 1 clic para Cambiar Estado de Pago */}
+                    {/* Botón para Cobrar Señal 50% y Confirmar Pedido en Presupuestos */}
+                    {(inv.docType === 'presupuesto' || !inv.docType) && !inv.senialPagada && (
+                      <button
+                        onClick={() => cobrarSenial50(inv)}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-md transition-all flex items-center gap-1.5"
+                        title="Registrar cobro de la señal del 50% y confirmar automáticamente como Pedido de Venta"
+                      >
+                        <CheckCircle size={13} /> 💳 Cobrar 50% Señal ({fmt((inv.total || 0) * 0.5)}) ➔ Confirmar Pedido
+                      </button>
+                    )}
+
+                    {/* Botón directo de 1 clic para Cambiar Estado de Pago Total */}
                     {estaPagado ? (
                       <button
                         onClick={() => handleStatus(inv, 'issued')}
@@ -586,9 +651,9 @@ const Invoices = ({ currentUser, state }) => {
                       <button
                         onClick={() => handleStatus(inv, 'paid')}
                         className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition-all flex items-center gap-1"
-                        title="Marcar este pedido/factura como PAGADO"
+                        title="Marcar este pedido/factura como 100% PAGADO"
                       >
-                        <CheckCircle size={13} /> 💳 Marcar Pagado
+                        <CheckCircle size={13} /> 💳 Liquidar 100%
                       </button>
                     )}
                     {/* Botones de Conversión rápida */}
