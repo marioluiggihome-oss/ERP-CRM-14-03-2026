@@ -22,7 +22,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Factory, Calendar, Clock, AlertTriangle, CheckCircle2, 
   ChevronRight, Filter, Search, Plus, Play, Pause, Layers,
-  Boxes, TrendingUp, Users, ArrowUpRight, ShieldCheck, RefreshCw
+  Boxes, TrendingUp, Users, ArrowUpRight, ShieldCheck, RefreshCw, Download
 } from 'lucide-react';
 import { getToken } from '../services/api';
 
@@ -200,6 +200,90 @@ export default function PlanificacionProduccion({ currentUser }) {
     });
   }, [pedidos, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda, hoyStr]);
 
+  const exportarInformePDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const M = 14;
+
+      // Franja superior de cabecera
+      pdf.setFillColor(15, 23, 42);
+      pdf.rect(0, 0, W, 22, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('LUIGGI HOME · CONTROL DE ALMACÉN, RECEPCIÓN Y FÁBRICA', M, 14);
+
+      pdf.setFontSize(8.5);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(203, 213, 225);
+      pdf.text(`Fecha del Informe: ${new Date().toLocaleDateString('es-ES')}  ·  ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`, W - M, 14, { align: 'right' });
+
+      // Resumen de Métricas de Almacén
+      let y = 28;
+      pdf.setFillColor(241, 245, 249);
+      pdf.roundedRect(M, y, W - (M * 2), 14, 2, 2, 'F');
+
+      pdf.setFontSize(8.5);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(30, 41, 59);
+      
+      const colW = (W - (M * 2)) / 5;
+      pdf.text(`Cascos: ${metricasAlmacen.cascosP} Pedidos / ${metricasAlmacen.cascosR} Recibidos`, M + 4, y + 9);
+      pdf.text(`Puertas: ${metricasAlmacen.puertasP} Pedidas / ${metricasAlmacen.puertasR} Recibidas`, M + 4 + colW, y + 9);
+      pdf.text(`Herrajes: ${metricasAlmacen.herrajesP} Pedidos / ${metricasAlmacen.herrajesR} Recibidos`, M + 4 + (colW * 2), y + 9);
+      pdf.text(`Accesorios: ${metricasAlmacen.accP} Pedidos / ${metricasAlmacen.accR} Recibidos`, M + 4 + (colW * 3), y + 9);
+      
+      pdf.setTextColor(16, 185, 129);
+      pdf.text(`✨ Completo: ${metricasAlmacen.listos}/${pedidos.length} Listo para Entrega`, M + 4 + (colW * 4), y + 9);
+
+      y += 18;
+
+      // Tabla de Órdenes
+      const tableData = pedidosFiltrados.map(p => {
+        const cEst = p.cascosEstado === 'recibido' ? 'Recibido' : p.cascosEstado === 'pedido' ? 'Pedido' : 'Sin Pedir';
+        const pEst = p.puertasEstado === 'recibido' ? 'Recibida' : p.puertasEstado === 'pedido' ? 'Pedida' : 'Sin Pedir';
+        const hEst = p.herrajesEstado === 'recibido' ? 'Recibido' : p.herrajesEstado === 'pedido' ? 'Pedido' : 'Sin Pedir';
+        const aEst = p.accesoriosEstado === 'recibido' ? 'Recibido' : p.accesoriosEstado === 'pedido' ? 'Pedido' : 'Sin Pedir';
+        const orig = (p.origen === 'EXTERNO' || p.id.includes('EXT')) ? 'Ext. (Fuera)' : 'Int. (Taller)';
+        const esComp = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+        const esRetrasado = p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr && !esComp;
+
+        return [
+          p.id + (esRetrasado ? ' [RETRASO]' : ''),
+          p.cliente || 'General',
+          p.ref || 'Sin ref.',
+          p.casco || 'Grafito 19mm',
+          orig,
+          p.fechaEstRecepcion || '-',
+          p.fechaEntrega || '-',
+          cEst,
+          pEst,
+          hEst,
+          aEst
+        ];
+      });
+
+      autoTable(pdf, {
+        startY: y,
+        head: [['Código OF', 'Cliente', 'Referencia', 'Acabado Casco', 'Origen', 'Est. Recepción', 'Entrega Prev.', 'Cascos', 'Puertas', 'Herrajes', 'Accesorios']],
+        body: tableData,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: M, right: M },
+      });
+
+      pdf.save(`Informe_Almacen_Fabricacion_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (e) {
+      alert(`Error generando informe PDF: ${e.message}`);
+    }
+  };
+
   return (
     <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-4 sm:p-6 pb-36 space-y-5">
       
@@ -222,7 +306,14 @@ export default function PlanificacionProduccion({ currentUser }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={exportarInformePDF}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs shadow-lg transition-all border border-emerald-400/30"
+            title="Descargar informe completo en PDF"
+          >
+            <Download size={16} /> Resumen PDF
+          </button>
           <div className="px-4 py-2 rounded-2xl bg-white/10 border border-white/10 text-xs font-bold flex items-center gap-2">
             <Calendar size={15} className="text-indigo-300" />
             <span>Semana Actual ({new Date().toLocaleDateString('es-ES')})</span>
