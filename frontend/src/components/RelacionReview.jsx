@@ -176,8 +176,9 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           setPv(newPv);
           setTodasTarifasData(prev => ({ ...prev, [tarifa]: { familias: d.familias, pv: newPv } }));
           setMuebles(prev => prev.map(m => {
+            const baseCod = String(m.cod || '').replace(/(D\/I|D|I)$/i, '');
             const info = d.familias?.[m.familia];
-            const e = info?.items?.[m.cod];
+            const e = info?.items?.[m.cod] || info?.items?.[baseCod];
             if (e == null) return m;
             let pvp = m.pvp;
             if (Array.isArray(e)) {

@@ -145,43 +145,33 @@ export default function PlanificacionProduccion({ currentUser }) {
     } catch (e) { console.error('Error guardando OFs:', e); }
   }, [pedidos]);
 
-  const [filtroEstado, setFiltroEstado] = useState('TODOS');
+  const isAdmin = currentUser?.isAdmin === true || currentUser?.isGerente === true || currentUser?.canAccessMaster === true || currentUser?.role === 'admin';
+
+  const eliminarOrden = (id) => {
+    if (!window.confirm(`¿Seguro que deseas eliminar la Orden de Fabricación ${id}? Esta acción no se puede deshacer.`)) return;
+    setPedidos(prev => {
+      const next = prev.filter(x => x.id !== id);
+      try { localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const [filtroOrigen, setFiltroOrigen] = useState('TODOS');
   const [filtroPrioridad, setFiltroPrioridad] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
-  const [estacionSeleccionada, setEstacionSeleccionada] = useState(null);
-
-  // Métricas de capacidad en vivo
-  const ocupacionEstaciones = useMemo(() => {
-    return ESTACIONES.map(est => {
-      let cargaActual = 0;
-      pedidos.forEach(p => {
-        if (p.estado !== 'entregado') {
-          if (est.id === 'corte') cargaActual += p.m2Tablero;
-          else if (est.id === 'canteado') cargaActual += p.mlCanteado;
-          else cargaActual += p.modulos;
-        }
-      });
-      const porcentaje = Math.min(100, Math.round((cargaActual / est.capacidadMax) * 100));
-      return {
-        ...est,
-        cargaActual: Math.round(cargaActual * 10) / 10,
-        porcentaje,
-        sobrecarga: porcentaje > 85
-      };
-    });
-  }, [pedidos]);
 
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter(p => {
-      const matchEstado = filtroEstado === 'TODOS' || p.estado === filtroEstado;
+      const orig = p.origen || (p.id.includes('EXT') ? 'EXTERNO' : 'INTERNO');
+      const matchOrigen = filtroOrigen === 'TODOS' || orig === filtroOrigen;
       const matchPrioridad = filtroPrioridad === 'TODOS' || p.prioridad === filtroPrioridad;
       const matchBusqueda = !busqueda.trim() || 
         p.id.toLowerCase().includes(busqueda.toLowerCase()) ||
         p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
+        (p.casco && p.casco.toLowerCase().includes(busqueda.toLowerCase())) ||
         p.ref.toLowerCase().includes(busqueda.toLowerCase());
-      return matchEstado && matchPrioridad && matchBusqueda;
+      return matchOrigen && matchPrioridad && matchBusqueda;
     });
-  }, [pedidos, filtroEstado, filtroPrioridad, busqueda]);
+  }, [pedidos, filtroOrigen, filtroPrioridad, busqueda]);
 
   const avanzarEstacion = (idPedido) => {
     setPedidos(prev => prev.map(p => {
@@ -229,13 +219,13 @@ export default function PlanificacionProduccion({ currentUser }) {
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-white tracking-tight">Planificación de Producción</h1>
+              <h1 className="text-2xl font-black text-white tracking-tight">Planificación de Fabricación de Cascos</h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase">
-                Capacidad Taller 85%
+                {pedidos.length} Órdenes Activas
               </span>
             </div>
             <p className="text-sm text-indigo-200/80 font-medium">
-              Control de carga por estaciones, flujo de órdenes de fabricación y fechas de entrega
+              Control de órdenes de fabricación por casco por defecto y fechas de entrega
             </p>
           </div>
         </div>
@@ -243,43 +233,9 @@ export default function PlanificacionProduccion({ currentUser }) {
         <div className="flex items-center gap-2">
           <div className="px-4 py-2 rounded-2xl bg-white/10 border border-white/10 text-xs font-bold flex items-center gap-2">
             <Calendar size={15} className="text-indigo-300" />
-            <span>Semana Actual (11 Ago - 18 Ago)</span>
+            <span>Semana Actual ({new Date().toLocaleDateString('es-ES')})</span>
           </div>
         </div>
-      </div>
-
-      {/* Monitor de Carga por Estaciones */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
-        {ocupacionEstaciones.map(est => (
-          <div 
-            key={est.id}
-            className={`bg-white rounded-3xl p-4 border transition-all shadow-sm ${est.sobrecarga ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200'}`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xl">{est.icon}</span>
-              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                est.porcentaje > 85 ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                est.porcentaje > 65 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                'bg-emerald-100 text-emerald-800 border border-emerald-300'
-              }`}>
-                {est.porcentaje}% Ocupación
-              </span>
-            </div>
-            <h3 className="text-xs font-black text-slate-800 leading-tight mb-1">{est.nombre}</h3>
-            <p className="text-[11px] text-slate-500 font-medium">
-              Carga: <b className="text-slate-800">{est.cargaActual}</b> / {est.capacidadMax} {est.unidad}
-            </p>
-            {/* Barra de Progreso */}
-            <div className="w-full bg-slate-100 rounded-full h-2 mt-2.5 overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${
-                  est.porcentaje > 85 ? 'bg-rose-600' : est.porcentaje > 65 ? 'bg-amber-500' : 'bg-indigo-600'
-                }`}
-                style={{ width: `${est.porcentaje}%` }}
-              />
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Filtros y Buscador de Órdenes */}
@@ -289,27 +245,22 @@ export default function PlanificacionProduccion({ currentUser }) {
           <input
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar por código OF, cliente o referencia…"
+            placeholder="Buscar por código OF, cliente, casco o referencia…"
             className="w-full bg-transparent font-medium outline-none text-slate-800"
           />
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-400 uppercase text-[10px]">Estado:</span>
+            <span className="font-bold text-slate-400 uppercase text-[10px]">Origen Fabricación:</span>
             <select
-              value={filtroEstado}
-              onChange={e => setFiltroEstado(e.target.value)}
+              value={filtroOrigen}
+              onChange={e => setFiltroOrigen(e.target.value)}
               className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
             >
-              <option value="TODOS">Todos los Estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="corte">En Corte</option>
-              <option value="mecanizado">En Mecanizado CNC</option>
-              <option value="canteado">En Canteado</option>
-              <option value="ensamblado">En Ensamblado</option>
-              <option value="embalaje">En Embalaje</option>
-              <option value="listo">Listo / Terminado</option>
+              <option value="TODOS">Todas las Órdenes</option>
+              <option value="INTERNO">🏠 Taller Propio (Interno)</option>
+              <option value="EXTERNO">🚚 Proveedor Externo (Fuera)</option>
             </select>
           </div>
 
@@ -329,15 +280,15 @@ export default function PlanificacionProduccion({ currentUser }) {
         </div>
       </div>
 
-      {/* Lista de Órdenes de Fabricación con Flujo Visual */}
+      {/* Lista de Órdenes de Fabricación */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
         <div className="px-6 py-4 bg-slate-50/70 flex items-center justify-between text-xs font-black uppercase text-slate-400">
           <span>Órdenes de Fabricación en Curso ({pedidosFiltrados.length})</span>
-          <span>Flujo de Estaciones de Taller</span>
+          <span>Acciones y Borrado (Admin)</span>
         </div>
 
         {pedidosFiltrados.map(p => (
-          <div key={p.id} className="p-5 hover:bg-slate-50/80 transition-colors space-y-4">
+          <div key={p.id} className="p-5 hover:bg-slate-50/80 transition-colors space-y-3">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <div className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
@@ -345,12 +296,20 @@ export default function PlanificacionProduccion({ currentUser }) {
                 </div>
                 <div>
                   <h4 className="font-black text-sm text-slate-900">{p.cliente} · <span className="text-slate-600 font-medium">{p.ref}</span></h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
                     <span className="font-bold text-indigo-600">{p.tipo}</span>
                     <span>•</span>
                     <span className="font-semibold text-slate-700">{p.tarifa}</span>
                     <span>•</span>
-                    <span>{p.modulos} módulos ({p.m2Tablero} m² tablero)</span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded-md font-bold text-slate-800">Casco: {p.casco || 'Grafito Antracita (19mm)'}</span>
+                    <span>•</span>
+                    <span className={`px-2 py-0.5 rounded-md font-black text-xs border ${
+                      (p.origen === 'EXTERNO' || p.id.includes('EXT')) ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-blue-100 text-blue-900 border-blue-300'
+                    }`}>
+                      {(p.origen === 'EXTERNO' || p.id.includes('EXT')) ? '🚚 Proveedor Fuera' : '🏠 Taller Propio'}
+                    </span>
+                    <span>•</span>
+                    <span>{p.modulos} módulos</span>
                   </div>
                 </div>
               </div>
@@ -369,12 +328,15 @@ export default function PlanificacionProduccion({ currentUser }) {
                   <div className="font-black text-slate-800">{p.fechaEntrega}</div>
                 </div>
 
-                <button
-                  onClick={() => avanzarEstacion(p.id)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
-                >
-                  <Play size={13} fill="currentColor" /> Avanzar Estación
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => eliminarOrden(p.id)}
+                    className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 border border-rose-200 transition-all"
+                    title="Eliminar Orden de Fabricación (Solo Administrador)"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </div>
             </div>
 

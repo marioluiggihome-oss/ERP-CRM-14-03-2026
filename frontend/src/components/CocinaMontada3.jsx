@@ -247,8 +247,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             setAcabadoPuerta(MUESTRARIO_PUERTAS[tarifa][0].nombre);
           }
           setMuebles(prev => prev.map(m => {
+            const baseCod = String(m.cod || '').replace(/(D\/I|D|I)$/i, '');
             const info = d.familias?.[m.familia];
-            const e = info?.items?.[m.cod];
+            const e = info?.items?.[m.cod] || info?.items?.[baseCod];
             if (e == null) return m;
             let pvp = m.pvp;
             if (Array.isArray(e)) {
@@ -672,32 +673,37 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
   const lanzarAFabricacion = async () => {
     if (!muebles.length) { setAviso('Añade al menos un mueble para lanzar a fabricación.'); return; }
-    const confirm = window.confirm(`¿Deseas enviar este pedido de ${totalUds} módulos a Planificación de Producción?`);
-    if (!confirm) return;
+    
+    const esInterno = window.confirm(
+      `¿Dónde se fabricará este pedido de ${totalUds} módulos? (Casco: ${acabadoCasco || 'Grafito Antracita (19mm)'})\n\n` +
+      `• Pulsa ACEPTAR para: 🏠 Fabricación Interna (Taller Propio)\n` +
+      `• Pulsa CANCELAR para: 🚚 Fabricación Externa (Proveedor / Fuera)`
+    );
+
+    const origen = esInterno ? 'INTERNO' : 'EXTERNO';
+    const prefijo = esInterno ? 'OF-INT' : 'OF-EXT';
+    const tagOrigen = esInterno ? '🏠 Taller Propio (Interno)' : '🚚 Proveedor Externo (Fuera)';
 
     try {
       const payload = {
-        id: `OF-2026-${Math.floor(100 + Math.random() * 900)}`,
+        id: `${prefijo}-2026-${Math.floor(100 + Math.random() * 900)}`,
         cliente: cliente || 'Cliente General',
         ref: ref || 'Cocina Montada 3',
         tipo: 'Cocina Montada 3',
         tarifa: `${tarifa} (${acabadoPuerta})`,
+        casco: acabadoCasco || 'Grafito Antracita (19mm)',
+        origen: origen,
+        tagOrigen: tagOrigen,
         modulos: totalUds,
         m2Tablero: Number(metricas.totalPuertasM2) || 25,
         mlCanteado: Math.round(Number(metricas.totalPuertasM2) * 4),
-        estado: 'corte',
+        estado: 'pendiente',
         prioridad: 'NORMAL',
-        progreso: 15,
-        observaciones: observacionesGenerales,
+        progreso: 10,
+        observaciones: observacionesGenerales ? `${observacionesGenerales} | Casco: ${acabadoCasco} | ${tagOrigen}` : `Casco: ${acabadoCasco} | ${tagOrigen}`,
         fechaInicio: new Date().toISOString().split('T')[0],
         fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
-        estaciones: {
-          corte: { completado: false, enCurso: true, progreso: 20, operario: 'Carlos M.' },
-          cnc: { completado: false, pendiente: true },
-          canteado: { completado: false, pendiente: true },
-          ensamblado: { completado: false, pendiente: true },
-          embalaje: { completado: false, pendiente: true }
-        }
+        muebles: muebles.map(m => ({ cod: m.cod, qty: m.qty, ancho: m.ancho, alto: m.alto, mano: m.mano, obs: m.obs })),
       };
 
       // Persistir orden en el almacén de producción
@@ -707,12 +713,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify(actualizadas));
       } catch (e) { console.error('Error guardando OF:', e); }
 
-      alert(`✓ Orden de Fabricación ${payload.id} lanzada con éxito a Taller.`);
+      alert(`✓ Orden de Fabricación ${payload.id} [${tagOrigen}] lanzada con éxito.`);
       if (setState) {
         setState(prev => ({ ...prev, currentTab: 'planificacionProduccion' }));
       }
     } catch (e) {
-      alert(`Error al lanzar a taller: ${e.message}`);
+      alert(`Error al lanzar a fabricación: ${e.message}`);
     }
   };
 
