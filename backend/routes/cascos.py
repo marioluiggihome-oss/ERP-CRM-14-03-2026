@@ -631,7 +631,12 @@ async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
 @router.get("/cascos/mv/tarifa")
 async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(get_current_user)):
     """Devuelve la tarifa MV pedida (por defecto T1) con sus códigos y puntos, y el
-    valor de punto. Para el módulo de Rentabilidad Tarifa MV."""
+    valor de punto. Para el módulo de Rentabilidad Tarifa MV.
+
+    Incluye alias BFC* (Bajo Fregadero Con chapa protectora) para todos los tamaños
+    de BAJO_FREGADERO que tienen precio dual [normal, chapa]. BFC* devuelve el precio
+    de chapa (índice 1) como valor simple para facilitar el uso comercial.
+    """
     if not _can_use_mv(current_user):
         raise HTTPException(status_code=403, detail="Sin permiso para ver la tarifa MV.")
     try:
@@ -642,11 +647,32 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
     tfs = data.get("tariffs", {})
     if tariff not in tfs:
         raise HTTPException(status_code=404, detail=f"Tarifa {tariff} no encontrada.")
+
+    import copy as _copy
+    familias = _copy.deepcopy(tfs[tariff])
+
+    # Inyectar familia BFC (alias chapa) a partir de BAJO_FREGADERO dual.
+    # Cada BF* con precio [normal, chapa] genera un código BFC* con el precio de chapa.
+    bf_fam = familias.get("BAJO_FREGADERO", {})
+    if bf_fam.get("type") == "dual" and bf_fam.get("cols") == ["normal", "chapa"]:
+        bfc_items = {}
+        for cod, val in bf_fam.get("items", {}).items():
+            if isinstance(val, list) and len(val) >= 2:
+                # BF45D/I → BFC45D/I, BF60 → BFC60, etc.
+                bfc_cod = "BFC" + cod[2:]  # quitar "BF" y poner "BFC"
+                bfc_items[bfc_cod] = val[1]  # precio de chapa como valor simple
+        if bfc_items:
+            familias["BAJO_FREGADERO_CHAPA"] = {
+                "type": "single",
+                "desc": "Bajo Fregadero con Chapa de Protección (BFC)",
+                "items": bfc_items,
+            }
+
     return {
         "success": True,
         "tariff": tariff,
         "pointValue": data.get("_meta", {}).get("pointValue", 3.33),
-        "familias": tfs[tariff],
+        "familias": familias,
     }
 
 

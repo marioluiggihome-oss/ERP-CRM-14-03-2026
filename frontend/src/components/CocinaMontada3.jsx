@@ -103,11 +103,27 @@ const PALETA_RAPIDA = [
 ];
 
 const TARIFAS_NOMBRES = {
-  T1: 'Sincro / Melamina Texturada (Base)',
-  T2: 'Estratificado Mate / Seda',
-  T3: 'Lacado Seda / Brillo',
-  T4: 'ZENIT Supermate Antihuella',
-  T5: 'FENIX NTM Alta Resistencia'
+  T1:  'Sincro / Melamina Texturada (Base)',
+  T2:  'Estratificado Mate / Laminado Color',
+  T3:  'Lacado Seda / Brillo',
+  T4:  'ZENIT Supermate Antihuella',
+  T5:  'FENIX NTM Alta Resistencia',
+  T6:  'Policromado / Vitrina Aluminio',
+  T7:  'Policromado Plus / Madera Natural',
+  T8:  'Lacado Antibacteriano / Premium',
+  T9:  'Madera Maciza / Chapa Natural',
+  T10: 'Madera Textura / Grabado Relieve',
+  T11: 'Alta Gama Mate Extreme',
+  T12: 'Madera Exótica / Derbi',
+  T13: 'Laminado Especial / Acabado Técnico',
+  T14: 'Superpremium Lacado Ultramate',
+  T15: 'Laca Efecto Tela / Textil',
+  T16: 'Marbella Lacado Porcelana',
+  T17: 'Efecto Cemento / Microcemento',
+  T18: 'Lacado Metalizado / Brillo Extremo',
+  T19: 'Serie Exclusiva Premium A',
+  T20: 'Serie Exclusiva Premium B',
+  T21: 'Colección Élite / Alta Costura',
 };
 
 const MUESTRARIO_PUERTAS = {
@@ -579,17 +595,26 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   };
 
   const comparativaTarifas = useMemo(() => {
-    const multTarifas = { T1: 1.0, T2: 1.15, T3: 1.28, T4: 1.42, T5: 1.60 };
-    return ['T1', 'T2', 'T3', 'T4', 'T5'].map(t => {
-      const totalEst = baseImponible * (multTarifas[t] / multTarifas[tarifa || 'T1']);
+    // Usar las tarifas disponibles del API; si no han cargado aún, fallback a T1-T5
+    const listaTarifas = tarifas.length > 0
+      ? tarifas.map(t => t.tarifa)
+      : ['T1', 'T2', 'T3', 'T4', 'T5'];
+    // Índice de la tarifa actual para calcular estimaciones relativas
+    const iActual = Math.max(0, listaTarifas.indexOf(tarifa || 'T1'));
+    return listaTarifas.map((t, i) => {
+      // Estimación por interpolación lineal desde la tarifa actual
+      // (los precios del JSON son los reales; aquí solo se usan para comparativa visual)
+      const ratio = iActual === 0 ? 1 + i * 0.12 : (i / iActual);
+      const totalEst = iActual === 0 ? baseImponible * ratio
+        : baseImponible * ((i + 1) / (iActual + 1));
       return {
         tarifa: t,
         nombre: TARIFAS_NOMBRES[t] || t,
         total: totalEst,
-        activa: t === tarifa
+        activa: t === tarifa,
       };
     });
-  }, [baseImponible, tarifa]);
+  }, [baseImponible, tarifa, tarifas]);
 
   const copiarParaWhatsApp = () => {
     const lineas = [
@@ -1145,20 +1170,37 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         <div className="p-5 border-b border-slate-100 space-y-3">
           {/* Selector de Tarifa y Métricas */}
           <div className="flex items-center justify-between gap-4 flex-wrap text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">Tarifa:</span>
-              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-                {['T1', 'T2', 'T3', 'T4', 'T5'].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setTarifa(t)}
-                    className={`px-3 py-1 rounded-lg font-black text-xs transition-all ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <span className="text-xs text-slate-500 font-semibold italic hidden sm:inline">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider shrink-0">Tarifa:</span>
+              {/* Selector dinámico de tarifa — usa las 21 tarifas del API */}
+              {tarifas.length > 0 ? (
+                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl flex-wrap max-w-xl overflow-x-auto">
+                  {tarifas.map(({ tarifa: t }) => (
+                    <button
+                      key={t}
+                      onClick={() => setTarifa(t)}
+                      title={TARIFAS_NOMBRES[t] || t}
+                      className={`px-2.5 py-1 rounded-lg font-black text-[10px] transition-all shrink-0 ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                  {['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12','T13','T14','T15','T16','T17','T18','T19','T20','T21'].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setTarifa(t)}
+                      title={TARIFAS_NOMBRES[t] || t}
+                      className={`px-2.5 py-1 rounded-lg font-black text-[10px] transition-all shrink-0 ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <span className="text-xs text-slate-500 font-semibold italic hidden lg:inline">
                 ({TARIFAS_NOMBRES[tarifa] || 'Acabado estándar'})
               </span>
             </div>
