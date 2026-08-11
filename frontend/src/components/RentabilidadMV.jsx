@@ -122,70 +122,79 @@ export const getDesglosePuertasDetallado = (cod, familia, w, altura, altoMm, R =
   const dio = /D\/I/.test(c);
   const wCm = Math.round(w / 10);
   const frentes = [];
+  const hBajo = (altura === '70' || altoMm === 700) ? 70 : 80;
 
   // 1. BAJOS DE CAJONES Y GAVETAS
   if (f === 'BAJO_5_CAJONES' || /^BC\d+/.test(c)) {
+    const hCaj = hBajo === 80 ? 16 : 14;
     for (let i = 0; i < 5; i++) {
-      frentes.push({ h: 14, w: wCm, desc: `Cajón ${i + 1} (14x${wCm})` });
+      frentes.push({ h: hCaj, w: wCm, desc: `Cajón ${i + 1} (${hCaj}x${wCm})` });
     }
   } else if (f === 'BAJO_3CAJ_1GAV' || /^BCG\d+/.test(c)) {
+    const hCaj = 14;
+    const hGav = hBajo === 80 ? 35 : 28;
     for (let i = 0; i < 3; i++) {
-      frentes.push({ h: 14, w: wCm, desc: `Cajón ${i + 1} (14x${wCm})` });
+      frentes.push({ h: hCaj, w: wCm, desc: `Cajón ${i + 1} (${hCaj}x${wCm})` });
     }
-    frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+    frentes.push({ h: hGav, w: wCm, desc: `Gaveta inferior (${hGav}x${wCm})` });
   } else if (f === 'BAJO_2GAV_1CAJ' || /^BGC\d+/.test(c)) {
-    frentes.push({ h: 14, w: wCm, desc: `Cajón superior (14x${wCm})` });
-    frentes.push({ h: 28, w: wCm, desc: `Gaveta media (28x${wCm})` });
-    frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+    const hCaj = 14;
+    const hGav = hBajo === 80 ? 33 : 28;
+    frentes.push({ h: hCaj, w: wCm, desc: `Cajón superior (${hCaj}x${wCm})` });
+    frentes.push({ h: hGav, w: wCm, desc: `Gaveta media (${hGav}x${wCm})` });
+    frentes.push({ h: hGav, w: wCm, desc: `Gaveta inferior (${hGav}x${wCm})` });
   } else if (f === 'BAJO_2CAJ_1GAV_1FRENTE' || /^BCGF\d+/.test(c)) {
+    const hGav = hBajo === 80 ? 35 : 28;
     frentes.push({ h: 14, w: wCm, desc: `Cajón 1 (14x${wCm})` });
     frentes.push({ h: 14, w: wCm, desc: `Cajón 2 (14x${wCm})` });
-    frentes.push({ h: 28, w: wCm, desc: `Gaveta cacerolero (28x${wCm})` });
+    frentes.push({ h: hGav, w: wCm, desc: `Gaveta cacerolero (${hGav}x${wCm})` });
   } else if (f === 'BAJO_2GAV_1FRENTE' || /^BGF\d+/.test(c)) {
-    frentes.push({ h: 28, w: wCm, desc: `Gaveta superior (28x${wCm})` });
-    frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+    const hGav = hBajo === 80 ? 35 : 28;
+    frentes.push({ h: hGav, w: wCm, desc: `Gaveta superior (${hGav}x${wCm})` });
+    frentes.push({ h: hGav, w: wCm, desc: `Gaveta inferior (${hGav}x${wCm})` });
   } else if (f === 'BAJO_PUERTA_CAJON' || /^BPC\d+/.test(c)) {
+    const hPuer = hBajo === 80 ? 60 : 56;
     frentes.push({ h: 14, w: wCm, desc: `Frente cajón (14x${wCm})` });
-    frentes.push({ h: 56, w: wCm, desc: `Puerta inferior (56x${wCm})` });
+    frentes.push({ h: hPuer, w: wCm, desc: `Puerta inferior (${hPuer}x${wCm})` });
   } else if (f === 'BAJO_HORNO' || /^BH/.test(c)) {
     if (/BHC|BHZ/.test(c)) {
       frentes.push({ h: 14, w: 60, desc: 'Frente cajón inferior (14x60)' });
     } else if (/BHG/.test(c)) {
-      frentes.push({ h: 28, w: 60, desc: 'Frente gaveta inferior (28x60)' });
+      frentes.push({ h: hBajo === 80 ? 35 : 28, w: 60, desc: `Frente gaveta inferior (${hBajo === 80 ? 35 : 28}x60)` });
     }
   } else if (f === 'BAJO_RINCON_ESCUADRA' || /^BRI|^BRU/.test(c)) {
-    frentes.push({ h: 70, w: 30, desc: 'Puerta escuadra 1 (70x30)' });
-    frentes.push({ h: 70, w: 30, desc: 'Puerta escuadra 2 (70x30)' });
+    frentes.push({ h: hBajo, w: 30, desc: `Puerta escuadra 1 (${hBajo}x30)` });
+    frentes.push({ h: hBajo, w: 30, desc: `Puerta escuadra 2 (${hBajo}x30)` });
   } else if (f === 'BAJO_RINCON_CIEGO' || /^BR\d+/.test(c)) {
     const wPuerta = Math.max(40, wCm - 50);
-    frentes.push({ h: 70, w: wPuerta, desc: `Puerta rincón ciego (70x${wPuerta})` });
+    frentes.push({ h: hBajo, w: wPuerta, desc: `Puerta rincón ciego (${hBajo}x${wPuerta})` });
   } else if (f.startsWith('BAJO') || /^B\d+|^BF\d+/.test(c)) {
-    // Bajos y Fregaderos estándar
+    // Bajos y Fregaderos estándar (h=80 por defecto, o h=70)
     const numP = (wCm >= 70 && !dio) ? 2 : 1;
     const wUnit = numP > 1 ? Math.round(wCm / numP) : wCm;
     for (let i = 0; i < numP; i++) {
-      frentes.push({ h: 70, w: wUnit, desc: numP > 1 ? `Puerta ${i + 1} (70x${wUnit})` : `Puerta bajo (70x${wUnit})` });
+      frentes.push({ h: hBajo, w: wUnit, desc: numP > 1 ? `Puerta ${i + 1} (${hBajo}x${wUnit})` : `Puerta bajo (${hBajo}x${wUnit})` });
     }
   } 
   // 2. COLUMNAS
   else if (f === 'COLUMNA_DESPENSERO' || /^CD\d+/.test(c)) {
     const hAlta = (altura === '220' || altoMm >= 2150) ? 147 : 127;
     frentes.push({ h: hAlta, w: wCm, desc: `Puerta superior despensa (${hAlta}x${wCm})` });
-    frentes.push({ h: 70, w: wCm, desc: `Puerta inferior despensa (70x${wCm})` });
+    frentes.push({ h: hBajo === 80 ? 80 : 70, w: wCm, desc: `Puerta inferior despensa (${hBajo === 80 ? 80 : 70}x${wCm})` });
   } else if (f === 'COLUMNA_FRIGO' || /^CF\d+/.test(c)) {
     frentes.push({ h: 127, w: 60, desc: 'Puerta superior frigo (127x60)' });
-    frentes.push({ h: 70, w: 60, desc: 'Puerta inferior congelador (70x60)' });
+    frentes.push({ h: hBajo === 80 ? 80 : 70, w: 60, desc: `Puerta inferior congelador (${hBajo === 80 ? 80 : 70}x60)` });
   } else if (f === 'COLUMNA_HORNO' || /^CH\d+/.test(c)) {
     const hSup = (altura === '220' || altoMm >= 2150) ? 90 : 70;
     frentes.push({ h: hSup, w: 60, desc: `Puerta superior horno (${hSup}x60)` });
-    frentes.push({ h: 70, w: 60, desc: 'Puerta/Gaveta inferior (70x60)' });
+    frentes.push({ h: hBajo === 80 ? 80 : 70, w: 60, desc: `Puerta/Gaveta inferior (${hBajo === 80 ? 80 : 70}x60)` });
   } else if (f === 'COLUMNA_HORNO_MICRO' || /^CHM\d+/.test(c)) {
     const hSup = (altura === '220' || altoMm >= 2150) ? 56 : 40;
     frentes.push({ h: hSup, w: 60, desc: `Puerta superior (${hSup}x60)` });
-    frentes.push({ h: 70, w: 60, desc: 'Puerta/Gaveta inferior (70x60)' });
+    frentes.push({ h: hBajo === 80 ? 80 : 70, w: 60, desc: `Puerta/Gaveta inferior (${hBajo === 80 ? 80 : 70}x60)` });
   } else if (f.startsWith('MEDIACOLUMNA') || f.startsWith('MEDIA_') || /^M\d+|^MPG\d+|^MPH\d+|^MV\d+/.test(c)) {
     if (f === 'MEDIA_PUERTA_GAVETA' || /^MPG/.test(c)) {
-      frentes.push({ h: 70, w: wCm, desc: `Puerta semicolumna (70x${wCm})` });
+      frentes.push({ h: hBajo === 80 ? 80 : 70, w: wCm, desc: `Puerta semicolumna (${hBajo === 80 ? 80 : 70}x${wCm})` });
       frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
     } else {
       frentes.push({ h: 127, w: wCm, desc: `Puerta semicolumna (127x${wCm})` });
@@ -242,7 +251,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   const dio = /D\/I/.test(cod);
   const w = anchoDe(cod);
   const wCasco = w < 300 ? 300 : w;
-  const altoMm = R.altoSel ? (altura === '90' ? 900 : 700) : (R.altoCol ? (altura === '220' ? 2200 : 2000) : (R.alto || 800));
+  const altoMm = R.altoSel ? (altura === '90' ? 900 : 700) : (R.altoCol ? (altura === '220' ? 2200 : 2000) : (altura === '70' ? 700 : (R.alto || 800)));
   const factorDesmontada = getFactorDesmontada();
   const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada);
   
@@ -261,7 +270,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   const pvpPuertas = Math.round(puntosPuertas * pvPuntos * 100) / 100;
   const costePuertas = Math.round(pvpPuertas * (1 - dtoPuertas / 100) * 100) / 100;
 
-  const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : 713);
+  const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : (altura === '70' ? 713 : 790));
   const areaP = (puertas > 0 || cajones > 0 || gavetas > 0) ? (w / 1000) * (altoFrente / 1000) : 0;
 
   const costeHerrajes = Math.round((puertas * 2 * (Number(p.bisagra) || 0)

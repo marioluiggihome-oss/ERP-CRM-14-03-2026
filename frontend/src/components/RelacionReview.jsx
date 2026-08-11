@@ -214,8 +214,11 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     return hits.slice(0, 40);
   }, [busca, catalogo]);
 
-  const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [200, 220] };
+  const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [200, 220], bajo: [80, 70] };
   const alturasDe = (m) => {
+    const fam = String(m.familia || '').toUpperCase();
+    const tipo = String(m.tipo || '').toUpperCase();
+    if (fam.startsWith('BAJO') || tipo === 'BAJO') return [80, 70];
     const t = familias?.[m.familia]?.type;
     return OPCIONES_ALTURA[t] || null;
   };
