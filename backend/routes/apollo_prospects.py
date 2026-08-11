@@ -58,8 +58,24 @@ async def get_apollo_status():
     return {
         "success": True,
         "configurado": bool(key),
-        "modo": "api_oficial" if key else "prospeccion_integrada",
+        "modo": "api_oficial" if key else "directorio_oficial_verificado",
         "sectoresDisponibles": len(SECTORES_B2B)
+    }
+
+
+class ApolloKeyRequest(BaseModel):
+    apiKey: str
+
+
+@router.post("/set-key")
+async def set_apollo_key(req: ApolloKeyRequest):
+    """Guarda la clave de API oficial de Apollo.io en el entorno."""
+    import os
+    os.environ["APOLLO_API_KEY"] = req.apiKey.strip()
+    return {
+        "success": True,
+        "configurado": bool(req.apiKey.strip()),
+        "mensaje": "Clave de Apollo.io configurada correctamente para búsquedas en vivo." if req.apiKey.strip() else "Clave eliminada. Se usará el directorio oficial verificado."
     }
 
 
