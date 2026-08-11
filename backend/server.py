@@ -4,7 +4,7 @@
 # escrita del titular.
 from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks, Request, Depends, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, PlainTextResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
@@ -306,6 +306,34 @@ api_router.include_router(products_router)
 api_router.include_router(projects_router)
 api_router.include_router(apollo_prospects_router)
 app.include_router(public_crm_router)
+
+# Rutas estaticas directas para evitar 404 de crawlers y navegadores
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    return "User-agent: *\nDisallow: /\n"
+
+@app.get("/sitemap.xml", response_class=PlainTextResponse)
+async def sitemap_xml():
+    return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+
+@app.get("/favicon.ico")
+async def favicon_ico():
+    fav = Path(__file__).parent.parent / "frontend" / "public" / "favicon.ico"
+    if fav.exists():
+        return FileResponse(str(fav), media_type="image/x-icon")
+    return PlainTextResponse("")
+
+@app.get("/favicon.png")
+@app.get("/apple-touch-icon.png")
+@app.get("/apple-touch-icon-precomposed.png")
+async def apple_touch_icon():
+    icon = Path(__file__).parent.parent / "frontend" / "public" / "apple-touch-icon.png"
+    if not icon.exists():
+        icon = Path(__file__).parent.parent / "frontend" / "public" / "favicon.png"
+    if icon.exists():
+        return FileResponse(str(icon), media_type="image/png")
+    return PlainTextResponse("")
+
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
