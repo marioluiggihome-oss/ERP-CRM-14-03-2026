@@ -47,21 +47,33 @@ def _load_index(tariff: str = "T1"):
 
 def _find_code(idx, letters, width, mano):
     letters = letters.upper()
-    for c in (f"{letters}{width}D/I", (f"{letters}{width}{mano}" if mano else None), f"{letters}{width}"):
-        if c and c in idx:
-            return c
-    for k in idx:
-        if re.match(rf"^{re.escape(letters)}{width}(D/I|D|I)?$", k):
-            return k
-    # La variante puede ir DESPUÉS del ancho: se escribe "ASFA 60x30" y en la
-    # tarifa es "ASF60A". Se prueba moviendo las últimas letras detrás del ancho,
-    # pero SOLO se acepta si el código resultante existe: no se inventa nada.
-    for corte in (1, 2):
-        if len(letters) > corte:
-            base, sufijo = letters[:-corte], letters[-corte:]
-            for c in (f"{base}{width}{sufijo}", f"{base}{width}{sufijo}D/I"):
-                if c in idx:
-                    return c
+    # Alias habituales de códigos
+    alias_letters = [letters]
+    if letters == "COL":
+        alias_letters.extend(["CD", "CH", "CF"])
+    elif letters == "ASC" and str(width) == "90":
+        alias_letters.extend(["ASCE"])
+    elif letters == "ASC":
+        alias_letters.extend(["ASCE"])
+    elif letters == "GAV" or letters == "BG":
+        alias_letters.extend(["BGF", "BGC", "BCG"])
+    elif letters == "CAJ" or letters == "BC":
+        alias_letters.extend(["BC", "BCG", "BGC"])
+
+    for l_cand in alias_letters:
+        for c in (f"{l_cand}{width}D/I", (f"{l_cand}{width}{mano}" if mano else None), f"{l_cand}{width}"):
+            if c and c in idx:
+                return c
+        for k in idx:
+            if re.match(rf"^{re.escape(l_cand)}{width}(D/I|D|I)?$", k):
+                return k
+        # Variantes con sufijo
+        for corte in (1, 2):
+            if len(l_cand) > corte:
+                base, sufijo = l_cand[:-corte], l_cand[-corte:]
+                for c in (f"{base}{width}{sufijo}", f"{base}{width}{sufijo}D/I"):
+                    if c in idx:
+                        return c
     return None
 
 
@@ -157,14 +169,43 @@ def _puerta_suelta(idx, pv, tok, contexto):
     }
 
 
-def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
-    """Parsea un bloque de texto con la notación de relación.
+_SINONIMOS = [
+    (r"\b(columna\s+horno\s*[\+\/]?\s*micro|columna\s+horno\s+microondas)\b", "chm"),
+    (r"\b(columna\s+horno)\b", "ch"),
+    (r"\b(columna\s+frigo|columna\s+integrable)\b", "cf"),
+    (r"\b(columna\s+despensero|despensero)\b", "cd"),
+    (r"\b(columna)\b", "cd"),
+    (r"\b(bajo\s+fregadero|fregadero)\b", "bf"),
+    (r"\b(bajo\s+horno|placa\s+horno)\b", "bh"),
+    (r"\b(bajo\s+placa|placa)\b", "b"),
+    (r"\b(alto\s+campana|campana)\b", "asc"),
+    (r"\b(alto\s+abatible|abatible)\b", "aa"),
+    (r"\b(alto\s+vitrina|vitrina)\b", "av"),
+    (r"\b(alto\s+escurreplatos|escurreplatos)\b", "ae"),
+    (r"\b(alto\s+rincon|alto\s+rincón)\b", "ar"),
+    (r"\b(bajo\s+rincon\s+escuadra|rincon\s+escuadra)\b", "bri"),
+    (r"\b(bajo\s+rincon|bajo\s+rincón|rinconero|rincón|rincon)\b", "br"),
+    (r"\b(bajo\s+cajones|cajonero|3\s+cajones|3\s+caj)\b", "bcg"),
+    (r"\b(bajo\s+gavetas|gavetero|2\s+gavetas|2\s+gav)\b", "bgf"),
+    (r"\b(bajo)\b", "b"),
+    (r"\b(alto)\b", "a"),
+    (r"\b(costado\s+bajo)\b", "ccb"),
+    (r"\b(costado\s+alto)\b", "cca"),
+    (r"\b(costado\s+columna)\b", "ccc"),
+    (r"\b(zocalo|zócalo)\b", "zoc"),
+    (r"\b(copete)\b", "cop"),
+    (r"\b(cornisa)\b", "cor"),
+]
 
-    Devuelve {muebles, noLeidas}. `noLeidas` son los trozos escritos que NO se
-    han sabido interpretar, con una sugerencia cuando hay un código parecido en
-    la tarifa. Antes se descartaban sin decir nada y el total salía corto sin
-    que nadie se enterara.
-    """
+def _normalizar_texto_relacion(t: str) -> str:
+    res = t.lower()
+    for pat, rep in _SINONIMOS:
+        res = re.sub(pat, rep, res)
+    return res
+
+
+def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
+    """Parsea un bloque de texto con la notación de relación o lenguaje natural."""
     idx, pv = _load_index(tariff)
     out = []
     no_leidas = []
@@ -192,6 +233,9 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
             else:
                 qty = 1
                 rest = tok.strip()
+
+            # Normalizar sinónimos habituales de lenguaje natural (ej: "fregadero 60" -> "bf60")
+            rest = _normalizar_texto_relacion(rest)
 
             # Caso 1: Código directo exacto en catálogo (ej: ASC60D/I, B60D/I, COL60)
             rest_upper = rest.upper()
@@ -249,10 +293,17 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
                     "sugerencia": sug,
                 })
             tipo = _tipo_de(letters)
-            # Regla de fábrica: los BAJOS se fabrican SIEMPRE a altura 80 cm. Si no se
-            # ha indicado altura para un bajo, se asume 80 (no hay otras alturas de bajo).
-            if tipo == "BAJO" and not alto:
-                alto = 80
+            # Reglas de altura estándar de fábrica cuando no viene especificada:
+            # - BAJOS: 80 cm
+            # - ALTOS: 90 cm (estándar Luiggi Home)
+            # - COLUMNAS: 200 cm
+            if not alto:
+                if tipo == "BAJO":
+                    alto = 80
+                elif tipo == "ALTO":
+                    alto = 90
+                elif tipo == "COLUMNA":
+                    alto = 200
             pts = _puntos(entry, alto)
             out.append({
                 "qty": qty,

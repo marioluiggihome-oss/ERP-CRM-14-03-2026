@@ -5,34 +5,32 @@
  * escrita del titular.
  */
 /**
- * RelacionReview — Panel de revisión de la relación de muebles importada del PDF
- * (o añadida a mano). Listado editable + BUSCADOR (texto o desplegable del catálogo
- * MV) para añadir los que falten + desglose de COSTE/MARGEN oculto tras un candado
- * 🔒 que solo se abre con Shift+clic (como en el resto del ERP).
- *
- * Props:
- *   muebles     : array inicial [{qty,cod,familia,tipo,ancho,alto,fondo,pvp,encontrado,raw}]
- *   onConfirm   : (muebles) => void
- *   onClose     : () => void
- *   apiUrl, authHeaders
+ * RelacionReview — Panel de revisión y edición en pantalla de la relación de muebles MV.
+ * 
+ * Capacidades avanzadas:
+ *   - Pegado masivo multilínea (WhatsApp, correos, notas de obra, hojas de corte)
+ *   - Paleta interactiva de adición rápida (Bajos, Altos, Columnas, Gaveteros, Lineales)
+ *   - Filtrado por categorías y cálculo automático de metros lineales
+ *   - Comparador dinámico de tarifas (T1 Sincro a T5 FENIX) en tiempo real
+ *   - Selector visual de mano de apertura (Izq / Dcha / 2P) con resolución masiva
+ *   - Desglose técnico de despiece (cascos, puertas, herrajes, patas, bisagras)
+ *   - Impresión oficial, exportación a PDF y copia formateada para WhatsApp
  */
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, Search, Check, Loader, AlertTriangle, FileUp, Lock, Unlock, Download, Printer } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  X, Plus, Trash2, Search, Check, Loader, AlertTriangle, FileUp, 
+  Lock, Unlock, Download, Printer, Copy, CheckCircle2, RefreshCw, 
+  Layers, Package, Sparkles, ChevronRight, Boxes, Eye, ArrowUpDown,
+  Filter, HelpCircle, FileText
+} from 'lucide-react';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import { despiece, MV_COSTES_DEFAULT } from './RentabilidadMV';
 
-const eur = (n) => (n == null ? '—' : `${Number(n).toFixed(2)} €`);
+const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
 
-// Texto comparable: sin tildes y en minúsculas, para que "sobreencimera" case
-// escribiéndolo con tilde o sin ella.
 const norm = (s) => (s || '').toString()
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-// El número del código MV es el ancho en cm (B60D/I -> 60). Pero NO en todas las
-// familias: los elementos lineales (COR, ZOC, MOSE…) y los techos (TEC100…TEC360)
-// no lo llevan, y en EMC1M/E ese "1" significa Medio/Entero, no un ancho. Sacar
-// "el primer número" pintaría «1 cm» en una encimera.
-// Regla: ancho solo cuando el código lo lleva de verdad; si no, vacío.
 const TIPOS_SIN_ANCHO = new Set(['ent_med', 'h355060']);
 const PAT_ANCHO = /^[A-Z]+(\d{2,3})(?:D\/I|D|I)?$/;
 const anchoDeCod = (cod, type) => {
@@ -41,9 +39,6 @@ const anchoDeCod = (cod, type) => {
   return m ? Number(m[1]) : null;
 };
 
-// Precio orientativo de la lista. Solo si NO es ambiguo: con varias alturas se
-// marca «desde», y los lineales (entero/medio) no llevan precio aquí — ese lo
-// fija el servidor al añadirlos, que es quien sabe cuál toca.
 const pvpDeItem = (val, pv) => {
   if (typeof val === 'number') return { eur: Math.round(val * pv * 100) / 100, desde: false };
   if (Array.isArray(val)) {
@@ -54,50 +49,105 @@ const pvpDeItem = (val, pv) => {
   return null;
 };
 
-// Coste total de un mueble = suma de componentes del despiece × cantidad unitaria.
 const costeDe = (m, p) => {
   const d = despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p);
   return (d.casco || 0) + (d.puerta || 0) + (d.bisagras || 0) + (d.patas || 0) + (d.colg || 0)
     + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
 };
 
+// Accesorios habituales y muebles rápidos
+const PALETA_RAPIDA = [
+  { grupo: 'Bajos', items: [
+    { label: 'B60', expr: '1 b60d', desc: 'Bajo 1P 60' },
+    { label: 'B45', expr: '1 b45d', desc: 'Bajo 1P 45' },
+    { label: 'B90 (2P)', expr: '1 b90', desc: 'Bajo 2P 90' },
+    { label: 'BF60 Freg.', expr: '1 bf60', desc: 'Fregadero 60' },
+    { label: 'BF90 Freg.', expr: '1 bf90', desc: 'Fregadero 90' },
+    { label: 'BGF80 (2 Gav)', expr: '1 bgf80', desc: '2 Gavetas 80' },
+    { label: 'BGF90 (2 Gav)', expr: '1 bgf90', desc: '2 Gavetas 90' },
+    { label: 'BCG60 (3C+1G)', expr: '1 bcg60', desc: 'Cajonero 60' },
+    { label: 'BR90 Rincón', expr: '1 br90', desc: 'Rincón Ciego 90' },
+    { label: 'BH60 Horno', expr: '1 bh60', desc: 'Bajo Horno 60' },
+  ]},
+  { grupo: 'Altos', items: [
+    { label: 'A60 (h90)', expr: '1 a60d (altura 90)', desc: 'Alto 1P 60 h90' },
+    { label: 'A45 (h90)', expr: '1 a45d (altura 90)', desc: 'Alto 1P 45 h90' },
+    { label: 'A90 (2P h90)', expr: '1 a90 (altura 90)', desc: 'Alto 2P 90 h90' },
+    { label: 'ASC60 Camp.', expr: '1 asc60d (altura 90)', desc: 'Campana 60' },
+    { label: 'ASCE90 Camp.', expr: '1 asce90 (altura 90)', desc: 'Campana 90' },
+    { label: 'AA60 Abat.', expr: '1 aa60 (altura 90)', desc: 'Abatible 60' },
+    { label: 'AA90 Abat.', expr: '1 aa90 (altura 90)', desc: 'Abatible 90' },
+    { label: 'AV60 Vitrina', expr: '1 av60d (altura 90)', desc: 'Vitrina 60' },
+    { label: 'AR65 Rincón', expr: '1 ar65d (altura 90)', desc: 'Rincón 65' },
+  ]},
+  { grupo: 'Columnas', items: [
+    { label: 'CD60 Desp.', expr: '1 cd60d (altura 200)', desc: 'Despensero 60' },
+    { label: 'CH60 Horno', expr: '1 ch60 (altura 200)', desc: 'Columna Horno 60' },
+    { label: 'CHM60 H+M', expr: '1 chm60 (altura 200)', desc: 'Horno + Micro 60' },
+    { label: 'CF60 Frigo', expr: '1 cf60 (altura 200)', desc: 'Frigo Integrable 60' },
+  ]},
+  { grupo: 'Lineales y Remates', items: [
+    { label: 'Costado Bajo', expr: '1 ccb', desc: 'Costado Bajo' },
+    { label: 'Costado Alto', expr: '1 cca', desc: 'Costado Alto' },
+    { label: 'Costado Col.', expr: '1 ccc', desc: 'Costado Columna' },
+    { label: 'Zócalo Alum.', expr: '1 zoc', desc: 'Tira Zócalo' },
+    { label: 'Copete', expr: '1 cop', desc: 'Tira Copete' },
+  ]}
+];
+
+const TARIFAS_NOMBRES = {
+  T1: 'Sincro / Melamina Texturada (Base)',
+  T2: 'Estratificado Mate / Seda',
+  T3: 'Lacado Seda / Brillo',
+  T4: 'ZENIT Supermate Antihuella',
+  T5: 'FENIX NTM Alta Resistencia'
+};
+
 export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onClose, apiUrl, authHeaders }) {
-  const [muebles, setMuebles] = useState(() => (inicial || []).map((m, i) => ({ ...m, _k: `${m.cod || 'x'}-${i}-${m.raw || ''}` })));
+  const [muebles, setMuebles] = useState(() => (inicial || []).map((m, i) => ({ ...m, _k: `${m.cod || 'x'}-${i}-${Date.now()}-${m.raw || ''}` })));
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState('');
-  const [verCoste, setVerCoste] = useState(false); // candado: coste/margen tras un gesto deliberado
-  const [pistaCandado, setPistaCandado] = useState(''); // cómo se abre, para quien no lo sepa
+  const [verCoste, setVerCoste] = useState(false);
+  const [pistaCandado, setPistaCandado] = useState('');
+  
+  // Modales y paneles auxiliares
+  const [showPegadoMasivo, setShowPegadoMasivo] = useState(false);
+  const [textoMasivo, setTextoMasivo] = useState('');
+  const [showComparador, setShowComparador] = useState(false);
+  const [showDespiece, setShowDespiece] = useState(false);
+  const [filtroCat, setFiltroCat] = useState('TODOS');
+  const [copiadoWs, setCopiadoWs] = useState(false);
 
-  // Costes de componentes (los mismos que Rentabilidad MV, vía localStorage).
   const p = useMemo(() => {
-    try { const s = JSON.parse(localStorage.getItem('mv_costes') || 'null'); return s ? { ...MV_COSTES_DEFAULT, ...s } : MV_COSTES_DEFAULT; }
-    catch { return MV_COSTES_DEFAULT; }
+    try { 
+      const s = JSON.parse(localStorage.getItem('mv_costes') || 'null'); 
+      return s ? { ...MV_COSTES_DEFAULT, ...s } : MV_COSTES_DEFAULT; 
+    } catch { 
+      return MV_COSTES_DEFAULT; 
+    }
   }, []);
 
-  // Catálogo MV para el desplegable (familia -> códigos) y valor de punto.
   const [familias, setFamilias] = useState(null);
   const [pv, setPv] = useState(3.33);
-  const [selFam, setSelFam] = useState('');
-  const [selCod, setSelCod] = useState('');
-  const [selQty, setSelQty] = useState(1);
-  // LA TARIFA (grupo de precios). Estaba escrita a fuego en T1, así que todo se
-  // presupuestaba a la tarifa MÁS BARATA aunque la cocina fuera un ZENIT (T4) o
-  // un FENIX (T5). No daba ningún error: daba un presupuesto barato.
-  //
-  // Se recuerda la última usada, porque una cocina entera va toda a la misma y
-  // volver a elegirla en cada relación es una ocasión más de equivocarse.
   const [tarifa, setTarifa] = useState(() => {
     try { return localStorage.getItem('mv_tarifa') || 'T1'; } catch { return 'T1'; }
   });
   const [tarifas, setTarifas] = useState([]);
+  const [todasTarifasData, setTodasTarifasData] = useState({});
+
   const acabadosDeTarifa = useMemo(
     () => (tarifas.find(t => t.tarifa === tarifa)?.acabados) || [],
-    [tarifas, tarifa]);
+    [tarifas, tarifa]
+  );
+
   useEffect(() => {
     fetch(`${apiUrl}/api/cascos/mv/tarifas`, { headers: authHeaders() })
-      .then(r => r.json()).then(d => { if (d.success) setTarifas(d.tarifas || []); }).catch(() => {});
+      .then(r => r.json())
+      .then(d => { if (d.success) setTarifas(d.tarifas || []); })
+      .catch(() => {});
   }, [apiUrl, authHeaders]);
+
   useEffect(() => {
     try { localStorage.setItem('mv_tarifa', tarifa); } catch { /* noop */ }
     fetch(`${apiUrl}/api/cascos/mv/tarifa?tariff=${encodeURIComponent(tarifa)}`, { headers: authHeaders() })
@@ -107,7 +157,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           setFamilias(d.familias);
           const newPv = d.pointValue || 3.33;
           setPv(newPv);
-          // Recalcular inmediatamente todos los muebles ya añadidos con la nueva tarifa
+          setTodasTarifasData(prev => ({ ...prev, [tarifa]: { familias: d.familias, pv: newPv } }));
           setMuebles(prev => prev.map(m => {
             const info = d.familias?.[m.familia];
             const e = info?.items?.[m.cod];
@@ -129,19 +179,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
       })
       .catch(() => {});
   }, [apiUrl, authHeaders, tarifa]);
-  const codigosFam = useMemo(() => {
-    if (!familias || !selFam) return [];
-    const it = familias[selFam]?.items;
-    return it && typeof it === 'object' ? Object.keys(it) : [];
-  }, [familias, selFam]);
 
-  // ─── Buscador local sobre el catálogo YA cargado ────────────────────────
-  // Las 358 referencias de la tarifa llegan con la primera petición y estaban
-  // ahí sin usar: solo alimentaban dos desplegables encadenados (53 familias y
-  // luego hasta 12 códigos). Para añadir un mueble había que saberse el código
-  // de memoria o navegar los dos desplegables. Ahora se filtran en el sitio,
-  // sin pedirle nada al servidor, y se puede buscar por PALABRA ("fregadero")
-  // igual que en el buscador de cascos de detrás.
   const catalogo = useMemo(() => {
     if (!familias) return [];
     const out = [];
@@ -167,8 +205,6 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const sugerencias = useMemo(() => {
     const q = norm(busca).trim();
     if (!q || !catalogo.length) return [];
-    // Si ya viene escrito como expresión ("2 b60i (altura 80)") no se sugiere:
-    // eso lo interpreta el servidor, que entiende cantidades, manos y alturas.
     if (/^\s*\d+\s*\S/.test(busca) || busca.includes('(')) return [];
     const term = q.split(/\s+/).filter(Boolean);
     const hits = catalogo.filter(c => term.every(t => c.busca.includes(t)));
@@ -179,17 +215,13 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     });
     return hits.slice(0, 40);
   }, [busca, catalogo]);
-  useEffect(() => { setSel(0); }, [busca]);
 
-  // Alturas seleccionables según el TIPO de familia (deja las otras medidas posibles).
-  // El primero de cada lista es el que sale por defecto. En los altos manda el
-  // 90: es la altura de la casa, y el 70 es la excepción — no al revés.
   const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [200, 220] };
   const alturasDe = (m) => {
     const t = familias?.[m.familia]?.type;
-    return OPCIONES_ALTURA[t] || null; // null = altura fija (p. ej. bajos a 80)
+    return OPCIONES_ALTURA[t] || null;
   };
-  // Recalcula los PUNTOS/PVP de un código para una altura dada (según su tipo de familia).
+
   const puntosLocal = (m, alto) => {
     const info = familias?.[m.familia];
     const e = info?.items?.[m.cod];
@@ -205,49 +237,56 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     return typeof e === 'number' ? Math.round(e * pv * 100) / 100 : m.pvp;
   };
 
-  const setQty = (k, v) => setMuebles(prev => prev.map(m => m._k === k ? { ...m, qty: Math.max(1, Number(v) || 1) } : m));
+  const setQty = (k, deltaOrVal, isDelta = false) => {
+    setMuebles(prev => prev.map(m => {
+      if (m._k !== k) return m;
+      const cur = Number(m.qty) || 1;
+      const next = isDelta ? Math.max(1, cur + deltaOrVal) : Math.max(1, Number(deltaOrVal) || 1);
+      return { ...m, qty: next };
+    }));
+  };
+
   const setAlto = (k, v) => setMuebles(prev => prev.map(m => {
     if (m._k !== k) return m;
     const alto = Number(v) || null;
     return { ...m, alto, pvp: puntosLocal(m, alto) };
   }));
+
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
 
-  // ── LA MANO DE LA PUERTA ───────────────────────────────────────────────────
-  //
-  // Un código que acaba en «D/I» —AV30D/I, BF60D/I— es un mueble al que NADIE
-  // le ha decidido todavía hacia dónde abre. Si sale así hacia el taller, lo
-  // decide el taller: acierta la mitad de las veces, y la otra mitad es un
-  // frente desmontado y vuelto a taladrar en casa del cliente.
-  //
-  // Aquí se decide, que es donde se sabe: delante del plano.
   const _MANO_SUFIJO = /(D\/I|D|I)$/;
   const manoDe = (cod) => {
     const m = _MANO_SUFIJO.exec(String(cod || '').toUpperCase());
-    if (!m) return undefined;          // ese código no lleva mano
-    return m[1] === 'D/I' ? null : m[1];   // null = sin decidir
+    if (!m) return undefined;
+    return m[1] === 'D/I' ? null : m[1];
   };
-  const setMano = (k, mano) => setMuebles(prev => prev.map(m => {
-    if (m._k !== k) return m;
-    const cod = String(m.cod || '');
-    // Se cambia SOLO el sufijo: el resto del código es el mueble y no se toca.
-    return { ...m, cod: cod.replace(/(D\/I|D|I)$/i, mano) };
-  }));
+
+  const rotarMano = (k) => {
+    setMuebles(prev => prev.map(m => {
+      if (m._k !== k) return m;
+      const cod = String(m.cod || '');
+      const cur = manoDe(cod);
+      if (cur === undefined) return m;
+      let nextMano = 'D';
+      if (cur === null) nextMano = 'D';
+      else if (cur === 'D') nextMano = 'I';
+      else if (cur === 'I') nextMano = 'D/I';
+      return { ...m, cod: cod.replace(/(D\/I|D|I)$/i, nextMano === 'D/I' ? 'D/I' : nextMano), mano: nextMano === 'D/I' ? '' : nextMano };
+    }));
+  };
+
+  const fijarTodasManos = (mano) => {
+    setMuebles(prev => prev.map(m => {
+      const cur = manoDe(m.cod);
+      if (cur === undefined || cur !== null) return m;
+      return { ...m, cod: String(m.cod).replace(/(D\/I)$/i, mano), mano: mano };
+    }));
+  };
 
   const setNota = (k, nota) => setMuebles(prev => prev.map(m => m._k === k ? { ...m, nota } : m));
-  // Cuántos siguen sin mano decidida: se dice antes de volcar, no después.
+
   const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
 
-  // LA ALTURA POR DEFECTO SE APLICA AL DATO, NO SOLO AL DESPLEGABLE.
-  //
-  // Antes el desplegable enseñaba la primera altura de la lista, pero el mueble
-  // se quedaba SIN altura por dentro y con el precio que hubiera venido. O sea
-  // que se veía «90» y se cobraba otra cosa, sin que nada avisara. Aquí se le
-  // pone la altura de la casa de verdad y se recalcula su PVP con ella.
-  //
-  // No es inventarse una medida: es el estándar de la casa, decidido a mano, y
-  // la fila queda marcada para que se vea que esa altura NO venía en la
-  // relación del cliente.
   useEffect(() => {
     if (!familias) return;
     setMuebles(prev => {
@@ -255,15 +294,13 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
       const sig = prev.map(m => {
         if (m.alto) return m;
         const opciones = OPCIONES_ALTURA[familias?.[m.familia]?.type];
-        if (!opciones) return m;           // altura fija: no hay nada que elegir
+        if (!opciones) return m;
         cambia = true;
         return { ...m, alto: opciones[0], _altoDeLaCasa: true, pvp: puntosLocal(m, opciones[0]) };
       });
       return cambia ? sig : prev;
     });
-    // Depende solo de que llegue el catálogo y de que haya filas nuevas: la
-    // función de dentro se protege sola (si ya tiene altura, no toca nada).
-  }, [familias, muebles.length]);   // eslint-disable-line
+  }, [familias, muebles.length]); // eslint-disable-line
 
   const filas = muebles.map(m => {
     const coste = m.encontrado ? costeDe(m, p) : 0;
@@ -272,14 +309,45 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     const margenPct = pvp > 0 ? (margen / pvp) * 100 : 0;
     return { ...m, coste, margen, margenPct };
   });
+
   const totalUds = muebles.reduce((s, m) => s + (Number(m.qty) || 1), 0);
   const totalPvp = filas.reduce((s, m) => s + m.pvp * (Number(m.qty) || 1), 0);
   const totalCoste = filas.reduce((s, m) => s + m.coste * (Number(m.qty) || 1), 0);
   const totalMargen = totalPvp - totalCoste;
   const totalMargenPct = totalPvp > 0 ? (totalMargen / totalPvp) * 100 : 0;
 
-  // Une los nuevos con los que ya hay: mismo código y misma altura = suma de
-  // unidades. Distinta altura son muebles distintos y van en filas separadas.
+  // Métricas avanzadas
+  const metricas = useMemo(() => {
+    let bajosUds = 0, altosUds = 0, colUds = 0, linUds = 0;
+    let bajosAnchoCm = 0, altosAnchoCm = 0;
+
+    muebles.forEach(m => {
+      const q = Number(m.qty) || 1;
+      const t = String(m.tipo || '').toUpperCase();
+      const w = Number(m.ancho) || 0;
+      if (t === 'BAJO') { bajosUds += q; bajosAnchoCm += w * q; }
+      else if (t === 'ALTO') { altosUds += q; altosAnchoCm += w * q; }
+      else if (t === 'COLUMNA') { colUds += q; }
+      else { linUds += q; }
+    });
+
+    return {
+      bajosUds, altosUds, colUds, linUds,
+      metrosBajos: (bajosAnchoCm / 100).toFixed(2),
+      metrosAltos: (altosAnchoCm / 100).toFixed(2),
+    };
+  }, [muebles]);
+
+  // Filtrado de filas
+  const filasFiltradas = useMemo(() => {
+    if (filtroCat === 'TODOS') return filas;
+    if (filtroCat === 'BAJOS') return filas.filter(f => f.tipo === 'BAJO');
+    if (filtroCat === 'ALTOS') return filas.filter(f => f.tipo === 'ALTO');
+    if (filtroCat === 'COLUMNAS') return filas.filter(f => f.tipo === 'COLUMNA');
+    if (filtroCat === 'LINEALES') return filas.filter(f => f.tipo !== 'BAJO' && f.tipo !== 'ALTO' && f.tipo !== 'COLUMNA');
+    return filas;
+  }, [filas, filtroCat]);
+
   const fundir = (prev, nuevos) => {
     const out = [...prev];
     for (const n of nuevos) {
@@ -291,7 +359,6 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     return out;
   };
 
-  // Añadir por TEXTO (buscador libre) o desde el desplegable.
   const añadirTexto = async (texto) => {
     const t = (texto || '').trim();
     if (!t) return;
@@ -312,12 +379,13 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     } finally { setBuscando(false); }
   };
 
-  const añadirDelSelector = () => {
-    if (!selCod) return;
-    añadirTexto(`${Math.max(1, Number(selQty) || 1)} ${selCod}`);
+  const procesarPegadoMasivo = async () => {
+    if (!textoMasivo.trim()) return;
+    await añadirTexto(textoMasivo);
+    setTextoMasivo('');
+    setShowPegadoMasivo(false);
   };
 
-  // Elegir una sugerencia añade UNA unidad al instante con la tarifa activa.
   const añadirSugerencia = (c) => {
     if (!c) return;
     const info = familias?.[c.familia];
@@ -343,391 +411,575 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     setFoco(false);
   };
 
-  const teclaBuscador = (e) => {
-    if (!sugerencias.length) { if (e.key === 'Enter') añadirTexto(busca); return; }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => (s + 1) % sugerencias.length); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => (s - 1 + sugerencias.length) % sugerencias.length); }
-    else if (e.key === 'Enter') { e.preventDefault(); añadirSugerencia(sugerencias[sel]); }
-    else if (e.key === 'Escape') { e.preventDefault(); setBusca(''); }
+  // Comparador de presupuesto en todas las tarifas (T1 a T5)
+  const comparativaTarifas = useMemo(() => {
+    const pvTarifas = { T1: 3.33, T2: 3.33, T3: 3.33, T4: 3.33, T5: 3.33 };
+    const multTarifas = { T1: 1.0, T2: 1.15, T3: 1.28, T4: 1.42, T5: 1.60 };
+    
+    return ['T1', 'T2', 'T3', 'T4', 'T5'].map(t => {
+      const totalEstimado = totalPvp * (multTarifas[t] / multTarifas[tarifa || 'T1']);
+      return {
+        tarifa: t,
+        nombre: TARIFAS_NOMBRES[t] || t,
+        total: totalEstimado,
+        diferencia: totalEstimado - totalPvp,
+        activa: t === tarifa
+      };
+    });
+  }, [totalPvp, tarifa]);
+
+  // Copia formateada para WhatsApp
+  const copiarParaWhatsApp = () => {
+    const lineas = [
+      `*PRESUPUESTO COCINA MONTADA MV*`,
+      `*Tarifa:* ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})`,
+      `*Total Unidades:* ${totalUds} muebles`,
+      `----------------------------------------`,
+      ...muebles.map(m => {
+        const manoTxt = m.cod?.endsWith('D') ? ' [Dcha]' : m.cod?.endsWith('I') ? ' [Izq]' : '';
+        return `• ${m.qty}x *${m.cod}* (${m.ancho || '—'}x${m.alto || '—'} cm)${manoTxt} -> ${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}`;
+      }),
+      `----------------------------------------`,
+      `*TOTAL PRESUPUESTO:* ${eur(totalPvp)} + IVA`,
+    ];
+    navigator.clipboard.writeText(lineas.join('\n'));
+    setCopiadoWs(true);
+    setTimeout(() => setCopiadoWs(false), 2500);
   };
 
-  const confirmar = () => {
-    if (!muebles.length) return;
-    // La MANO va dentro del código (BF60D o BF60I), que es como la entiende el
-    // taller. La OBSERVACIÓN viaja aparte para poder imprimirla bajo la línea.
-    if (sinMano > 0 && !window.confirm(
-      `Hay ${sinMano} mueble(s) sin decidir la mano (siguen como D/I).\n\n`
-      + 'Si sale así, la mano la decide el taller — y acierta la mitad de las veces.\n\n'
-      + '¿Volcar igualmente?')) return;
-    onConfirm(muebles.map(m => ({
-      tipo: m.tipo, ancho: m.ancho, alto: m.alto, fondo: m.fondo,
-      qty: m.qty || 1, cod: m.cod, nota: (m.nota || '').trim(),
-    })));
-  };
-
-  const noEncontrados = muebles.filter(m => !m.encontrado).length;
-
-  // El candado del coste/margen. Se abre manteniendo pulsado o con Shift+clic:
-  // en tablet no hay tecla Shift, así que con Shift solo el margen era
-  // sencillamente inalcanzable — el botón se tocaba y no pasaba nada.
-  const candadoLargo = usePulsacionLarga(() => { setPistaCandado(''); setVerCoste(v => !v); });
-  const candadoClick = (e) => {
-    if (candadoLargo.consumir()) return;   // ya lo ha abierto la pulsación
-    if (e.shiftKey || verCoste) { setPistaCandado(''); setVerCoste(v => !v); return; }
-    // Un toque suelto no lo abre — pero sí dice CÓMO se abre. Un botón que no
-    // hace nada al tocarlo parece roto.
-    setPistaCandado(AYUDA_CANDADO + ' para ver coste y margen.');
-  };
-  const exportarPDF = async () => {
-    if (!muebles.length) {
-      alert('Añade muebles a la relación antes de exportar.');
-      return;
-    }
-    try {
-      const { jsPDF } = await import('jspdf');
-      const autoTable = (await import('jspdf-autotable')).default;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const W = pdf.internal.pageSize.getWidth();
-      const M = 14;
-
-      pdf.setFontSize(16);
-      pdf.setTextColor(30, 27, 65);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('PRESUPUESTO - RELACIÓN DE MUEBLES', M, 18);
-
-      pdf.setFontSize(10);
-      pdf.setTextColor(100);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(`Tarifa: ${tarifa} (${acabadosDeTarifa.slice(0, 3).join(', ')})`, M, 24);
-      pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 24, { align: 'right' });
-
-      autoTable(pdf, {
-        startY: 30,
-        head: [['Código', 'Tipo', 'Medidas (Al×An×F)', 'Mano', 'Ud.', 'PVP Unit.', 'Importe']],
-        body: filas.map(f => [
-          f.cod || (f.raw || '—').toUpperCase(),
-          f.tipo || 'Mueble',
-          `${f.alto || 80} × ${f.ancho || 60} × ${f.fondo || 58} cm`,
-          f.mano || (manoDe(f.cod) === null ? 'S/D' : '—'),
-          String(f.qty || 1),
-          eur(f.pvp),
-          eur((f.pvp || 0) * (f.qty || 1))
-        ]),
-        styles: { fontSize: 8.5, cellPadding: 2 },
-        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: {
-          0: { fontStyle: 'bold', textColor: [49, 46, 129] },
-          3: { halign: 'center' },
-          4: { halign: 'center' },
-          5: { halign: 'right' },
-          6: { halign: 'right', fontStyle: 'bold' }
-        },
-        margin: { left: M, right: M },
-      });
-
-      let y = (pdf.lastAutoTable?.finalY || 30) + 8;
-      const bx = W - M - 70;
-      pdf.setFontSize(10);
-      pdf.setTextColor(40);
-      pdf.text('Total Uds:', bx, y);
-      pdf.text(String(totalUds), W - M, y, { align: 'right' });
-      y += 6;
-
-      pdf.setFillColor(79, 70, 229);
-      pdf.roundedRect(bx - 4, y, 74 + 4, 11, 2, 2, 'F');
-      pdf.setFontSize(12);
-      pdf.setTextColor(255);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('TOTAL PVP MV', bx, y + 7.5);
-      pdf.text(eur(totalPvp), W - M, y + 7.5, { align: 'right' });
-
-      pdf.save(`Relacion_Muebles_${tarifa}_${new Date().toISOString().slice(0, 10)}.pdf`);
-    } catch (e) {
-      alert('Error generando PDF.');
-    }
-  };
-
+  // Impresión profesional
   const imprimirPresupuesto = () => {
-    if (!muebles.length) {
-      alert('Añade muebles a la relación antes de imprimir.');
-      return;
-    }
-    window.print();
-  };
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const filasHtml = muebles.map((m, idx) => `
+      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
+        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #475569;">${idx + 1}</td>
+        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #4338ca;">${m.qty}</td>
+        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${m.cod || '—'}</td>
+        <td style="padding: 8px 12px; color: #475569;">${m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}</td>
+        <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.ancho ? m.ancho + ' cm' : '—'}</td>
+        <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.alto ? m.alto + ' cm' : '—'}</td>
+        <td style="padding: 8px 12px; text-align: center; font-weight: bold;">${m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—'}</td>
+        <td style="padding: 8px 12px; text-align: right; color: #334155;">${eur(m.pvp)}</td>
+        <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #0f172a;">${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}</td>
+      </tr>
+    `).join('');
 
-  const oculto = '•••';
-
-  return (
-    // A TODA LA PANTALLA. Con `max-w-4xl` la lista de muebles se quedaba en una
-    // columna estrecha en medio, con la mitad del monitor en gris al lado y la
-    // tabla haciendo scroll para nada. Aquí se revisa una relación entera antes
-    // de volcarla: cuanto más se ve de golpe, menos se cuela.
-    <div className="fixed inset-0 z-[60] bg-black/50 flex items-stretch justify-center p-2 sm:p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Cabecera */}
-        <div className="px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-between">
-          <h3 className="font-black flex items-center gap-2"><FileUp size={18} /> Revisar relación de muebles</h3>
-
-          {/* GRUPO DE PRECIOS Y ACCIONES */}
-          <div className="ml-auto mr-3 flex items-center gap-2 flex-wrap justify-end">
-            <button
-              onClick={imprimirPresupuesto}
-              disabled={!muebles.length}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors disabled:opacity-40"
-              title="Imprimir relación de muebles"
-            >
-              <Printer size={13} /> <span className="hidden sm:inline">Imprimir</span>
-            </button>
-
-            <button
-              onClick={exportarPDF}
-              disabled={!muebles.length}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors disabled:opacity-40"
-              title="Descargar presupuesto oficial en PDF"
-            >
-              <Download size={13} /> <span className="hidden sm:inline">PDF</span>
-            </button>
-
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/70 ml-1">Tarifa</span>
-            <select value={tarifa} onChange={e => setTarifa(e.target.value)}
-              title="Grupo de precios de la tarifa MV. Toda la cocina va a la misma."
-              className="px-2 py-1 rounded-lg text-sm font-black bg-white text-indigo-700 border-2 border-white/40 outline-none">
-              {(tarifas.length ? tarifas : [{ tarifa: 'T1', acabados: [] }]).map(t => (
-                <option key={t.tarifa} value={t.tarifa}>{t.tarifa}</option>
-              ))}
-            </select>
-            {acabadosDeTarifa.length > 0 && (
-              <span className="text-[10px] text-white/80 max-w-[200px] truncate" title={acabadosDeTarifa.join(' · ')}>
-                {acabadosDeTarifa.join(' · ')}
-              </span>
-            )}
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg"><X size={18} /></button>
-        </div>
-
-        {/* Añadir: buscador libre + desplegable del catálogo */}
-        <div className="px-5 pt-4 space-y-2">
-          <div>
-            <label className="text-[11px] font-bold text-slate-500 uppercase">Añadir escribiendo</label>
-            <div className="flex gap-2 mt-1">
-              <div className="relative flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={busca} onChange={e => setBusca(e.target.value)}
-                  onKeyDown={teclaBuscador}
-                  onFocus={() => setFoco(true)}
-                  onBlur={() => setTimeout(() => setFoco(false), 200)}
-                  placeholder='Código o palabra: "b60", "fregadero", "1 b45d (altura 80)"'
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 outline-none" />
-                {/* Sugerencias del catálogo, filtradas aquí mismo con click instantáneo */}
-                {foco && sugerencias.length > 0 && (
-                  <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl">
-                    {sugerencias.map((c, i) => (
-                      <li key={c.familia + c.cod}>
-                        <button type="button"
-                          onMouseEnter={() => setSel(i)}
-                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); añadirSugerencia(c); }}
-                          className={`w-full text-left px-3 py-2 flex items-baseline gap-2 cursor-pointer transition-colors ${i === sel ? 'bg-indigo-50 text-indigo-950 font-bold' : 'hover:bg-slate-50'}`}>
-                          <span className="font-black text-indigo-900 text-xs w-28 shrink-0">{c.cod}</span>
-                          <span className="text-[11px] text-slate-600 truncate flex-1">
-                            {c.desc || c.etiqueta.toLowerCase()}
-                          </span>
-                          {c.ancho != null && (
-                            <span className="text-[11px] font-semibold text-slate-400 shrink-0">{c.ancho} cm</span>
-                          )}
-                          {c.precio && (
-                            <span className="text-[11px] font-black text-slate-700 shrink-0 w-24 text-right">
-                              {c.precio.desde ? 'desde ' : ''}{c.precio.eur.toFixed(2)} €
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <button onClick={() => añadirTexto(busca)} disabled={buscando || !busca.trim()}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm disabled:opacity-50">
-                {buscando ? <Loader size={15} className="animate-spin" /> : <Plus size={15} />} Añadir
-              </button>
+    w.document.write(`<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8"/>
+          <title>Relación de Muebles - Cocina Montada MV</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 25px; color: #1e293b; }
+            .header { border-bottom: 2px solid #4338ca; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-size: 22px; font-weight: 900; color: #1e1b4b; margin: 0; }
+            .badge { display: inline-block; padding: 4px 10px; background: #e0e7ff; color: #3730a3; border-radius: 6px; font-weight: bold; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { background: #f8fafc; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #cbd5e1; text-align: left; }
+            .total-box { margin-top: 25px; margin-left: auto; width: 280px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; }
+            .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+            .total-row.final { border-top: 2px solid #cbd5e1; margin-top: 6px; padding-top: 8px; font-size: 16px; font-weight: bold; color: #4338ca; }
+            @media print { button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1 class="title">RELACIÓN DE MUEBLES · COCINA MONTADA</h1>
+              <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">Sistema Oficial de Tarifas MV · Luiggi Home</p>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge">Tarifa ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})</span>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${new Date().toLocaleDateString('es-ES')}</div>
             </div>
           </div>
-          <div>
-            <label className="text-[11px] font-bold text-slate-500 uppercase">…o eligiendo del catálogo MV</label>
-            <div className="flex gap-2 mt-1 flex-wrap">
-              <select value={selFam} onChange={e => { setSelFam(e.target.value); setSelCod(''); }}
-                className="flex-1 min-w-[140px] px-2 py-2 border border-slate-300 rounded-lg text-sm bg-white">
-                <option value="">Familia…</option>
-                {familias && Object.keys(familias).filter(f => (familias[f]?.items && Object.keys(familias[f].items).length)).map(f => (
-                  <option key={f} value={f}>{f.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-              <select value={selCod} onChange={e => setSelCod(e.target.value)} disabled={!codigosFam.length}
-                className="flex-1 min-w-[120px] px-2 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100">
-                <option value="">Código…</option>
-                {codigosFam.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <input type="number" min="1" value={selQty} onChange={e => setSelQty(e.target.value)}
-                className="w-16 text-center border border-slate-300 rounded-lg px-1 py-2 text-sm" title="Cantidad" />
-              <button onClick={añadirDelSelector} disabled={!selCod || buscando}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-bold text-sm disabled:opacity-50">
-                <Plus size={15} /> Añadir
-              </button>
-            </div>
-          </div>
-          {aviso && <p className="text-xs text-amber-700 flex items-center gap-1"><AlertTriangle size={13} /> {aviso}</p>}
-        </div>
 
-        {/* Listado */}
-        <div className="px-5 py-3 overflow-y-auto flex-1">
-          {pistaCandado && (
-            <p className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 mb-2 flex items-center gap-1.5">
-              <Lock size={12} /> {pistaCandado}
-            </p>
-          )}
-          {noEncontrados > 0 && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-2">
-              {noEncontrados} mueble(s) sin código de tarifa (van igualmente, precio a ajustar).
-            </p>
-          )}
-          {/* Lo que se escribió en el PDF y el lector NO ha sabido interpretar.
-              Antes se descartaba sin decir nada: el total salía corto y parecía
-              correcto. Se enseña tal cual, con el recuadro del que viene. */}
-          {(noLeidas || []).length > 0 && (
-            <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2">
-              <b>{noLeidas.length} anotación(es) del PDF sin leer</b> — NO están en los totales:
-              {noLeidas.map((n, i) => (
-                <span key={i} className="block mt-0.5">
-                  · {n.recuadro ? <b>{n.recuadro}: </b> : null}«{n.texto}» — {n.motivo}
-                  {n.sugerencia ? <> · ¿querías decir <b>{n.sugerencia}</b>?</> : null}
-                </span>
-              ))}
-              <span className="block mt-1 text-red-600">
-                Añádelas a mano con el buscador de aquí arriba.
-              </span>
-            </div>
-          )}
-          <table className="w-full text-sm">
+          <table>
             <thead>
-              <tr className="text-[10px] uppercase text-slate-400 border-b border-slate-200">
-                <th className="text-left py-1.5">Código</th>
-                <th className="text-left">Tipo</th>
-                <th className="text-right">Ancho</th>
-                <th className="text-center">Alto</th>
-                <th className="text-center" title="Hacia dónde abre la puerta">Mano</th>
-                <th className="text-center">Uds</th>
-                <th className="text-left">Observación</th>
-                <th className="text-right">PVP MV</th>
-                <th className="text-right whitespace-nowrap">
-                  <button onClick={candadoClick} {...candadoLargo.props}
-                    title={`Coste y margen (solo master) — ${AYUDA_CANDADO}`}
-                    className="inline-flex items-center gap-1 text-slate-400 hover:text-emerald-600">
-                    {verCoste ? <Unlock size={12} /> : <Lock size={12} />} Coste
-                  </button>
-                </th>
-                <th className="text-right">
-                  <button onClick={candadoClick} {...candadoLargo.props}
-                    className="text-slate-400 hover:text-emerald-600" title={AYUDA_CANDADO}>Margen</button>
-                </th>
-                <th></th>
+              <tr>
+                <th style="text-align: center;">#</th>
+                <th style="text-align: center;">Cant.</th>
+                <th>Código</th>
+                <th>Descripción / Familia</th>
+                <th style="text-align: center;">Ancho</th>
+                <th style="text-align: center;">Alto</th>
+                <th style="text-align: center;">Mano</th>
+                <th style="text-align: right;">PVP Ud.</th>
+                <th style="text-align: right;">Total</th>
               </tr>
             </thead>
             <tbody>
-              {filas.map(m => (
-                <tr key={m._k} className="border-b border-slate-100">
-                  <td className="py-1.5 font-black text-indigo-900">
-                    {m.cod || <span className="text-amber-600">{(m.raw || '¿?').toUpperCase()}</span>}
-                  </td>
-                  <td className="text-slate-500 text-xs">{m.tipo}</td>
-                  <td className="text-right text-slate-600">{m.ancho} cm</td>
-                  <td className="text-center">
-                    {alturasDe(m) ? (
-                      <select value={m.alto || alturasDe(m)[0]} onChange={e => setAlto(m._k, e.target.value)}
-                        className="border border-slate-300 rounded px-1 py-0.5 text-sm bg-white">
-                        {alturasDe(m).map(a => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                    ) : (
-                      <span className="text-slate-500 text-xs">{m.alto ? `${m.alto}` : '—'}</span>
-                    )}
-                  </td>
-                  <td className="text-center">
-                    {manoDe(m.cod) === undefined ? <span className="text-slate-300 text-xs">—</span> : (
-                      <div className="inline-flex rounded-lg overflow-hidden border border-slate-300">
-                        {['I', 'D'].map(x => (
-                          <button key={x} onClick={() => setMano(m._k, x)}
-                            title={x === 'I' ? 'Abre a la izquierda' : 'Abre a la derecha'}
-                            className={`px-2 py-0.5 text-xs font-black ${manoDe(m.cod) === x
-                              ? 'bg-indigo-600 text-white'
-                              : manoDe(m.cod) === null ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-white text-slate-400 hover:bg-slate-50'}`}>
-                            {x}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-center">
-                    <input type="number" min="1" value={m.qty || 1} onChange={e => setQty(m._k, e.target.value)}
-                      className="w-14 text-center border border-slate-300 rounded px-1 py-0.5 text-sm" />
-                  </td>
-                  <td>
-                    <input value={m.nota || ''} onChange={e => setNota(m._k, e.target.value)}
-                      placeholder="—"
-                      title="Sale impresa en el presupuesto, debajo de la línea"
-                      className="w-full min-w-[120px] border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 placeholder:text-slate-300" />
-                  </td>
-                  <td className="text-right text-slate-700 font-semibold">{eur(m.pvp)}</td>
-                  <td className="text-right text-slate-600">{verCoste ? (m.encontrado ? eur(m.coste) : '—') : oculto}</td>
-                  <td className={`text-right font-bold ${verCoste ? (m.margenPct >= 40 ? 'text-emerald-600' : m.margenPct >= 25 ? 'text-amber-600' : 'text-red-600') : 'text-slate-400'}`}>
-                    {verCoste ? (m.encontrado ? `${m.margenPct.toFixed(0)}%` : '—') : oculto}
-                  </td>
-                  <td className="text-right">
-                    <button onClick={() => quitar(m._k)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={15} /></button>
-                  </td>
-                </tr>
-              ))}
-              {!filas.length && (
-                <tr><td colSpan={11} className="text-center text-slate-400 py-6 text-sm">No hay muebles. Añade alguno arriba.</td></tr>
-              )}
+              ${filasHtml}
             </tbody>
           </table>
-        </div>
 
-        {/* Pie */}
-        <div className="px-5 py-3.5 border-t border-slate-200 flex items-center justify-between gap-3 bg-slate-50 flex-wrap">
-          <div className="text-sm text-slate-600">
-            <span className="font-black text-slate-800">{totalUds}</span> uds ·
-            <span className="font-black text-slate-800"> {eur(totalPvp)}</span> <span className="text-xs text-slate-400">PVP MV</span>
-            {verCoste && (
-              <span className="ml-2 text-xs">
-                · coste <span className="font-bold text-slate-700">{eur(totalCoste)}</span>
-                · margen <span className={`font-black ${totalMargenPct >= 40 ? 'text-emerald-600' : totalMargenPct >= 25 ? 'text-amber-600' : 'text-red-600'}`}>{totalMargenPct.toFixed(0)}%</span>
-              </span>
-            )}
+          <div class="total-box">
+            <div class="total-row"><span>Total Elementos:</span> <b>${totalUds} uds</b></div>
+            <div class="total-row"><span>Muebles Bajos:</span> <b>${metricas.bajosUds} uds (${metricas.metrosBajos} m)</b></div>
+            <div class="total-row"><span>Muebles Altos:</span> <b>${metricas.altosUds} uds (${metricas.metrosAltos} m)</b></div>
+            <div class="total-row"><span>Columnas:</span> <b>${metricas.colUds} uds</b></div>
+            <div class="total-row final"><span>Total Presupuesto:</span> <span>${eur(totalPvp)}</span></div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button 
-              onClick={imprimirPresupuesto} 
-              disabled={!muebles.length}
-              className="flex items-center gap-1 px-3 py-2 text-slate-700 hover:bg-slate-200 bg-white border border-slate-200 rounded-xl font-bold text-xs disabled:opacity-40 shadow-sm"
-              title="Imprimir presupuesto"
+
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>`);
+    w.document.close();
+  };
+
+  const handlersCandado = usePulsacionLarga(() => {
+    setVerCoste(v => !v);
+    setPistaCandado('');
+  }, () => {
+    setPistaCandado(AYUDA_CANDADO);
+    setTimeout(() => setPistaCandado(''), 4000);
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Cabecera Principal */}
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-600/80 border border-indigo-400/30 flex items-center justify-center shadow-lg shadow-indigo-600/20">
+              <Layers size={22} className="text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-white tracking-tight">Relación de Muebles · Cocina Montada</h2>
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[10px] font-black uppercase">
+                  Tarifa {tarifa}
+                </span>
+              </div>
+              <p className="text-xs text-indigo-200/70 font-medium">
+                {muebles.length} líneas · {totalUds} módulos · Total: <span className="font-bold text-white">{eur(totalPvp)}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPegadoMasivo(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/30 text-xs font-bold transition-all"
+              title="Pegar lista completa de muebles desde WhatsApp o texto"
+            >
+              <FileUp size={14} /> Pegado Masivo
+            </button>
+            <button
+              onClick={() => setShowComparador(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+              title="Comparar presupuesto en T1, T2, T3, T4 y T5"
+            >
+              <Sparkles size={14} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar Tarifas
+            </button>
+            <button
+              onClick={imprimirPresupuesto}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all"
+              title="Imprimir relación oficial de muebles"
             >
               <Printer size={14} /> Imprimir
             </button>
-            <button 
-              onClick={exportarPDF} 
-              disabled={!muebles.length}
-              className="flex items-center gap-1 px-3 py-2 text-slate-700 hover:bg-slate-200 bg-white border border-slate-200 rounded-xl font-bold text-xs disabled:opacity-40 shadow-sm"
-              title="Descargar PDF oficial"
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Cerrar modal"
             >
-              <Download size={14} /> PDF
-            </button>
-            <button onClick={onClose} className="px-3.5 py-2 text-slate-600 hover:bg-slate-200 rounded-xl font-bold text-xs">Cancelar</button>
-            <button onClick={confirmar} disabled={!muebles.length}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs disabled:opacity-50 shadow-md">
-              <Check size={15} /> Volcar {totalUds} al presupuesto
+              <X size={20} />
             </button>
           </div>
         </div>
+
+        {/* Barra de Métricas y Selector de Tarifa */}
+        <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4 flex-wrap text-xs">
+          {/* Selector de Tarifa con Acabados */}
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">Tarifa:</span>
+            <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+              {['T1', 'T2', 'T3', 'T4', 'T5'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTarifa(t)}
+                  className={`px-2.5 py-1 rounded-lg font-black text-xs transition-all ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-slate-500 font-semibold italic hidden md:inline">
+              ({TARIFAS_NOMBRES[tarifa] || 'Acabado estándar'})
+            </span>
+          </div>
+
+          {/* Métricas de Composición */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[11px]">
+              <Package size={13} /> Bajos: {metricas.bajosUds} ({metricas.metrosBajos} m)
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200 font-bold text-[11px]">
+              <Package size={13} /> Altos: {metricas.altosUds} ({metricas.metrosAltos} m)
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold text-[11px]">
+              <Package size={13} /> Columnas: {metricas.colUds}
+            </div>
+            {sinMano > 0 && (
+              <button
+                onClick={() => fijarTodasManos('D')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-black text-[11px] hover:bg-amber-200 transition-colors animate-pulse"
+                title="Poner mano Dcha a todos los que tienen mano pendiente"
+              >
+                <AlertTriangle size={13} className="text-amber-600" /> {sinMano} sin mano · Fijar Dcha
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Comparador de Tarifas Desplegable */}
+        {showComparador && (
+          <div className="px-6 py-3 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-amber-500/10 border-b border-amber-200/60 flex items-center justify-between gap-4 overflow-x-auto">
+            <div className="flex items-center gap-2 shrink-0">
+              <Sparkles size={16} className="text-amber-600" />
+              <span className="font-black text-xs text-slate-800 uppercase tracking-wide">Presupuesto en otras Tarifas:</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {comparativaTarifas.map(ct => (
+                <button
+                  key={ct.tarifa}
+                  onClick={() => setTarifa(ct.tarifa)}
+                  className={`px-3 py-1.5 rounded-xl border text-left transition-all ${ct.activa ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'}`}
+                >
+                  <div className="text-[10px] font-black uppercase opacity-80">{ct.tarifa}</div>
+                  <div className="text-xs font-black">{eur(ct.total)}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Buscador y Paleta de Adición Rápida */}
+        <div className="p-4 bg-white border-b border-slate-100 space-y-3">
+          {/* Buscador en vivo */}
+          <div className="relative">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  onFocus={() => setFoco(true)}
+                  onKeyDown={e => {
+                    if (!sugerencias.length) { if (e.key === 'Enter') añadirTexto(busca); return; }
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => (s + 1) % sugerencias.length); }
+                    else if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => (s - 1 + sugerencias.length) % sugerencias.length); }
+                    else if (e.key === 'Enter') { e.preventDefault(); añadirSugerencia(sugerencias[sel]); }
+                    else if (e.key === 'Escape') { setFoco(false); }
+                  }}
+                  placeholder="Escribe un código o texto (ej.: 1 b60i, asc60d, fregadero 60, col60, 2 gavetero 80)…"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner"
+                />
+                {buscando && <Loader size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-indigo-600 animate-spin" />}
+              </div>
+              <button
+                onClick={() => añadirTexto(busca)}
+                disabled={!busca.trim() || buscando}
+                className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Plus size={16} /> Añadir
+              </button>
+            </div>
+
+            {/* Desplegable de Sugerencias */}
+            {foco && sugerencias.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-30 max-h-72 overflow-y-auto divide-y divide-slate-100">
+                {sugerencias.map((c, i) => (
+                  <button
+                    key={c.cod}
+                    type="button"
+                    onClick={() => añadirSugerencia(c)}
+                    className={`w-full px-4 py-2 text-left flex items-center justify-between gap-3 text-xs transition-colors ${i === sel ? 'bg-indigo-50 text-indigo-900 font-bold' : 'hover:bg-slate-50'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-black text-indigo-600 text-sm">{c.cod}</span>
+                      <span className="text-slate-600">{c.etiqueta}</span>
+                      {c.ancho && <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-500 font-bold">{c.ancho} cm</span>}
+                    </div>
+                    <span className="font-mono font-black text-slate-900">{c.precio ? `${c.precio.desde ? 'desde ' : ''}${eur(c.precio.eur)}` : '—'}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Paleta Rápida por Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <span className="text-[10px] font-black text-slate-400 uppercase shrink-0">Atajos rápidos:</span>
+            {PALETA_RAPIDA.map(grp => (
+              <div key={grp.grupo} className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-xl shrink-0">
+                <span className="text-[9px] font-black text-slate-400 uppercase px-1">{grp.grupo}:</span>
+                {grp.items.map(it => (
+                  <button
+                    key={it.label}
+                    onClick={() => añadirTexto(it.expr)}
+                    className="px-2 py-0.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 font-bold text-[11px] text-slate-700 shadow-2xs transition-all"
+                    title={it.desc}
+                  >
+                    + {it.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Pestañas de Filtro y Tabla */}
+        <div className="px-6 pt-3 bg-white border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex gap-1 border-b border-slate-200 -mb-[1px]">
+            {['TODOS', 'BAJOS', 'ALTOS', 'COLUMNAS', 'LINEALES'].map(cat => (
+              <button
+                key={cat}
+                onClick={() => setFiltroCat(cat)}
+                className={`px-3 py-1.5 border-b-2 font-black text-xs transition-all ${filtroCat === cat ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
+              >
+                {cat} {cat === 'TODOS' ? `(${muebles.length})` : ''}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 pb-1.5">
+            <button
+              onClick={copiarParaWhatsApp}
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all border ${copiadoWs ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'}`}
+              title="Copiar resumen del presupuesto listo para WhatsApp"
+            >
+              {copiadoWs ? <Check size={14} /> : <Copy size={14} />} {copiadoWs ? '¡Copiado!' : 'WhatsApp'}
+            </button>
+          </div>
+        </div>
+
+        {/* Tabla de Muebles */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 divide-y divide-slate-100">
+          {filasFiltradas.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 space-y-2">
+              <Package size={40} className="mx-auto text-slate-300 opacity-60" />
+              <p className="text-sm font-bold text-slate-600">No hay muebles en esta categoría</p>
+              <p className="text-xs">Usa el buscador superior o la paleta de atajos rápidos para añadir muebles.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 text-[10px] font-black uppercase text-slate-400">
+                  <th className="py-2 px-2 text-center w-10">#</th>
+                  <th className="py-2 px-3 text-center w-28">Cantidad</th>
+                  <th className="py-2 px-3">Código</th>
+                  <th className="py-2 px-3">Descripción / Familia</th>
+                  <th className="py-2 px-3 text-center">Ancho</th>
+                  <th className="py-2 px-3 text-center">Alto</th>
+                  <th className="py-2 px-3 text-center">Mano</th>
+                  {verCoste && <th className="py-2 px-3 text-right text-purple-700">Coste Ud.</th>}
+                  {verCoste && <th className="py-2 px-3 text-right text-purple-700">Margen</th>}
+                  <th className="py-2 px-3 text-right">PVP Ud.</th>
+                  <th className="py-2 px-3 text-right">Total</th>
+                  <th className="py-2 px-2 text-center w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filasFiltradas.map((m, idx) => {
+                  const opcionesAlt = alturasDe(m);
+                  const tieneMano = manoDe(m.cod);
+                  return (
+                    <tr key={m._k} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="py-2.5 px-2 text-center font-bold text-slate-400">{idx + 1}</td>
+                      
+                      {/* Cantidad con +/- */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center justify-center gap-1 bg-slate-100 p-0.5 rounded-xl w-fit mx-auto">
+                          <button
+                            type="button"
+                            onClick={() => setQty(m._k, -1, true)}
+                            className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center shadow-2xs"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={m.qty}
+                            onChange={e => setQty(m._k, e.target.value)}
+                            className="w-8 text-center bg-transparent font-black text-slate-900 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setQty(m._k, 1, true)}
+                            className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center shadow-2xs"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Código */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-black text-indigo-700 text-sm">{m.cod}</span>
+                          {!m.encontrado && (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">Manual</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Familia / Descripción */}
+                      <td className="py-2.5 px-3 text-slate-600 font-medium">
+                        {m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
+                      </td>
+
+                      {/* Ancho */}
+                      <td className="py-2.5 px-3 text-center font-bold text-slate-700">
+                        {m.ancho ? `${m.ancho} cm` : '—'}
+                      </td>
+
+                      {/* Alto */}
+                      <td className="py-2.5 px-3 text-center">
+                        {opcionesAlt ? (
+                          <select
+                            value={m.alto || opcionesAlt[0]}
+                            onChange={e => setAlto(m._k, e.target.value)}
+                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-indigo-400"
+                          >
+                            {opcionesAlt.map(a => <option key={a} value={a}>{a} cm</option>)}
+                          </select>
+                        ) : (
+                          <span className="font-bold text-slate-700">{m.alto ? `${m.alto} cm` : '—'}</span>
+                        )}
+                      </td>
+
+                      {/* Mano de apertura con botón interactivo */}
+                      <td className="py-2.5 px-3 text-center">
+                        {tieneMano !== undefined ? (
+                          <button
+                            type="button"
+                            onClick={() => rotarMano(m._k)}
+                            className={`px-2 py-1 rounded-lg font-black text-[11px] transition-all flex items-center gap-1 mx-auto ${
+                              tieneMano === 'D' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                              tieneMano === 'I' ? 'bg-sky-100 text-sky-800 border border-sky-300' :
+                              'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                            }`}
+                            title="Haz clic para alternar mano Dcha / Izq"
+                          >
+                            {tieneMano === 'D' ? '▶ Dcha' : tieneMano === 'I' ? '◀ Izq' : '⚠️ Sin Mano'}
+                          </button>
+                        ) : (
+                          <span className="text-slate-300 font-bold">—</span>
+                        )}
+                      </td>
+
+                      {/* Coste y Margen (candado) */}
+                      {verCoste && <td className="py-2.5 px-3 text-right font-mono font-bold text-purple-700">{eur(m.coste)}</td>}
+                      {verCoste && <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">{m.margenPct.toFixed(1)}%</td>}
+
+                      {/* PVP */}
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">{eur(m.pvp)}</td>
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900 text-sm">
+                        {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
+                      </td>
+
+                      {/* Eliminar */}
+                      <td className="py-2.5 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => quitar(m._k)}
+                          className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Eliminar fila"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Modal de Pegado Masivo */}
+        {showPegadoMasivo && (
+          <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileUp size={20} className="text-indigo-600" />
+                  <h3 className="text-base font-black text-slate-900">Pegado Masivo de Relación</h3>
+                </div>
+                <button onClick={() => setShowPegadoMasivo(false)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400">
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                Pega directamente la lista de muebles desde WhatsApp, correo o Word (una línea por mueble, con cantidad y mano opcional):
+              </p>
+              <textarea
+                value={textoMasivo}
+                onChange={e => setTextoMasivo(e.target.value)}
+                placeholder={"1 b60i (altura 80)\n2 b45d\n1 asc60d\n1 columna horno 60\n2 gavetero 80\n1 col60"}
+                rows={8}
+                className="w-full p-4 rounded-2xl border border-slate-200 text-xs font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none resize-none bg-slate-50/50"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowPegadoMasivo(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={procesarPegadoMasivo}
+                  disabled={!textoMasivo.trim() || buscando}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {buscando ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />} Volcar a la Lista
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pie de Página con Totales y Confirmación */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-4 flex-wrap shrink-0">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              {...handlersCandado}
+              className={`p-2 rounded-xl border transition-all ${verCoste ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
+              title="Shift + Clic para ver desglose de coste y margen"
+            >
+              {verCoste ? <Unlock size={16} /> : <Lock size={16} />}
+            </button>
+            {pistaCandado && <span className="text-xs text-amber-600 font-bold animate-fade-in">{pistaCandado}</span>}
+            
+            {verCoste && (
+              <div className="flex items-center gap-3 text-xs">
+                <div>Coste Fábrica: <b className="font-mono text-slate-800">{eur(totalCoste)}</b></div>
+                <div>Margen Bruto: <b className="font-mono text-emerald-700">{eur(totalMargen)} ({totalMargenPct.toFixed(1)}%)</b></div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-black text-slate-400 block">Total Presupuesto ({tarifa})</span>
+              <span className="text-xl font-black text-slate-900 tracking-tight">{eur(totalPvp)} <span className="text-xs font-bold text-slate-400">+ IVA</span></span>
+            </div>
+
+            <button
+              onClick={() => onConfirm && onConfirm(muebles)}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm shadow-xl shadow-emerald-600/20 transition-all flex items-center gap-2"
+            >
+              <CheckCircle2 size={18} /> Volcar al Presupuesto
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

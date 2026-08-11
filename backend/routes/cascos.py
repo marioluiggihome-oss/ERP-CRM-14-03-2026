@@ -586,8 +586,28 @@ async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
     dice «esta cocina es una T4», dice «esta cocina es ZENIT». Elegir por número
     de tarifa es pedirle al comercial que se sepa la tabla de memoria.
     """
-    if not _es_master(current_user):
-        raise HTTPException(status_code=403, detail="Solo el master puede ver las tarifas MV.")
+def _can_use_mv(user: Optional[dict]) -> bool:
+    if not user:
+        return False
+    if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or _es_master(user):
+        return True
+    return bool(user.get("canUseCascos") or user.get("canUsePresupuestador3") or user.get("canUsePresupuestador2") or user.get("canUsePresupuestador1") or user.get("isTienda"))
+
+
+@router.get("/cascos/mv/tarifas")
+async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
+    """Las tarifas MV disponibles, CADA UNA CON SUS ACABADOS.
+
+    Hasta ahora la pantalla pedía siempre T1, escrito a fuego: se presupuestaba
+    todo a la tarifa más barata aunque la cocina fuera un ZENIT (T4) o un FENIX
+    (T5). No daba ningún error — daba un presupuesto barato.
+
+    Se devuelven los acabados porque es lo que se sabe al presupuestar: nadie
+    dice «esta cocina es una T4», dice «esta cocina es ZENIT». Elegir por número
+    de tarifa es pedirle al comercial que se sepa la tabla de memoria.
+    """
+    if not _can_use_mv(current_user):
+        raise HTTPException(status_code=403, detail="Sin permiso para consultar tarifas MV.")
     try:
         with open(_MV_PATH, "r", encoding="utf-8") as f:
             data = _mvjson.load(f)
@@ -615,9 +635,9 @@ async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
 @router.get("/cascos/mv/tarifa")
 async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(get_current_user)):
     """Devuelve la tarifa MV pedida (por defecto T1) con sus códigos y puntos, y el
-    valor de punto. Para el módulo de Rentabilidad Tarifa MV (solo master)."""
-    if not _es_master(current_user):
-        raise HTTPException(status_code=403, detail="Solo el master puede ver la tarifa MV.")
+    valor de punto. Para el módulo de Rentabilidad Tarifa MV."""
+    if not _can_use_mv(current_user):
+        raise HTTPException(status_code=403, detail="Sin permiso para ver la tarifa MV.")
     try:
         with open(_MV_PATH, "r", encoding="utf-8") as f:
             data = _mvjson.load(f)
@@ -694,8 +714,8 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
     y devuelve los muebles emparejados con la tarifa MV (código canónico, tipo,
     ancho, alto, puntos y PVP). Pensado para VOLCAR al Presupuestador / Cocina
     Desmontada sin necesidad de un dibujo. Solo master."""
-    if not _es_master(current_user):
-        raise HTTPException(status_code=403, detail="Solo el master puede importar relaciones MV.")
+    if not _can_use_mv(current_user):
+        raise HTTPException(status_code=403, detail="Sin permiso para importar o analizar relaciones MV.")
     import base64 as _b64, re as _re
     tariff = (payload or {}).get("tariff") or "T1"
     texto = (payload or {}).get("texto")
