@@ -121,27 +121,80 @@ const Invoices = ({ currentUser, state }) => {
     setShowModal(true);
   };
 
-  // 💳 COBRO DE SEÑAL DEL 50% Y CONFIRMACIÓN DE PEDIDO
-  const cobrarSenial50 = async (doc) => {
-    const senial = (doc.total || 0) * 0.5;
-    if (!window.confirm(`¿Registrar cobro de la Señal del 50% (${fmt(senial)}) y confirmar como Pedido de Venta?`)) return;
+  // 🔒 VERIFICACIÓN DE PERMISOS: Solo Admin o el Usuario Asignado pueden validar o modificar cobros
+  const puedeRegistrarPago = (doc) => {
+    if (!currentUser) return true;
+    if (currentUser.isAdmin || currentUser.isGerente || currentUser.canAuthorizePermissions || currentUser.isMaster) return true;
+    const asignado = doc.createdByName || doc.vendedor || doc.usuario || '';
+    const miNombre = currentUser.clientName || currentUser.username || currentUser.email || '';
+    const esAsignado = doc.userId === currentUser.id || (asignado && miNombre && asignado.toLowerCase() === miNombre.toLowerCase());
+    return esAsignado;
+  };
 
+  // Modal para adjuntar comprobante de pago
+  const [modalPago, setModalPago] = useState(null); // { doc, tipo: 'senial' | 'total', importe: number }
+  const [metodoPago, setMetodoPago] = useState('Transferencia Bancaria');
+  const [comprobanteAdjunto, setComprobanteAdjunto] = useState(null); // { name, type, data }
+  const [verComprobanteModal, setVerComprobanteModal] = useState(null);
+
+  const abrirModalPago = (doc, tipo = 'senial') => {
+    if (!puedeRegistrarPago(doc)) {
+      alert(`⚠️ No tienes permisos para registrar pagos en este documento.\n\nSolo un Administrador o el usuario asignado (${doc.createdByName || doc.vendedor || 'Responsable'}) pueden validar cobros.`);
+      return;
+    }
+    const importe = tipo === 'senial' ? (doc.total || 0) * 0.5 : (doc.senialPagada ? (doc.total || 0) * 0.5 : doc.total);
+    setModalPago({ doc, tipo, importe });
+    setMetodoPago('Transferencia Bancaria');
+    setComprobanteAdjunto(null);
+  };
+
+  const handleComprobanteFile = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setComprobanteAdjunto({
+        name: file.name,
+        type: file.type,
+        data: e.target.result
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmarCobroConComprobante = async () => {
+    if (!modalPago) return;
+    const { doc, tipo, importe } = modalPago;
+    const esSenial = tipo === 'senial';
     const randomNum = Math.floor(100 + Math.random() * 900);
-    const nuevoNum = `PED-2026-${randomNum}`;
+    const nuevoNum = esSenial ? `PED-2026-${randomNum}` : doc.invoiceNumber;
+
+    const fechaCobro = new Date().toLocaleDateString('es-ES');
+    const usuarioCobro = currentUser?.clientName || currentUser?.username || 'Usuario';
+
+    const registroComprobante = comprobanteAdjunto ? {
+      name: comprobanteAdjunto.name,
+      type: comprobanteAdjunto.type,
+      data: comprobanteAdjunto.data,
+      fecha: fechaCobro,
+      usuario: usuarioCobro,
+      metodo: metodoPago,
+      importe: importe
+    } : (doc.comprobantePago || null);
 
     const docActualizado = {
       ...doc,
-      docType: 'pedido',
+      docType: esSenial ? 'pedido' : doc.docType,
       invoiceNumber: nuevoNum,
-      status: 'partially_paid',
+      status: esSenial ? 'partially_paid' : 'paid',
       senialPagada: true,
-      senialImporte: senial,
-      pendienteImporte: senial,
-      notes: `Señal del 50% (${fmt(senial)}) cobrada el ${new Date().toLocaleDateString('es-ES')}. Pedido Confirmado. ${doc.notes || ''}`
+      senialImporte: esSenial ? importe : (doc.senialImporte || (doc.total * 0.5)),
+      comprobantePago: registroComprobante,
+      notes: `${esSenial ? 'Señal 50%' : '100% Liquidado'} (${fmt(importe)}) registrado por ${usuarioCobro} vía ${metodoPago} el ${fechaCobro}. ${doc.notes || ''}`
     };
 
     try { await invoicesAPI.update(doc.id, docActualizado); } catch { guardarLocalmente(docActualizado); }
-    alert(`✓ ¡Señal 50% (${fmt(senial)}) registrada y Pedido ${nuevoNum} Confirmado!`);
+    alert(`✓ ¡${esSenial ? 'Señal 50%' : 'Pago 100%'} (${fmt(importe)}) registrado con comprobante adjunto!`);
+    setModalPago(null);
     load();
   };
 
@@ -627,12 +680,23 @@ const Invoices = ({ currentUser, state }) => {
 
                   {/* Acciones & Pipeline de Conversión */}
                   <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Botón para ver comprobante de pago archivado */}
+                    {inv.comprobantePago && (
+                      <button
+                        onClick={() => setVerComprobanteModal(inv.comprobantePago)}
+                        className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all flex items-center gap-1"
+                        title="Ver comprobante de pago / pantallazo archivado"
+                      >
+                        📎 Comprobante
+                      </button>
+                    )}
+
                     {/* Botón para Cobrar Señal 50% y Confirmar Pedido en Presupuestos */}
                     {(inv.docType === 'presupuesto' || !inv.docType) && !inv.senialPagada && (
                       <button
-                        onClick={() => cobrarSenial50(inv)}
+                        onClick={() => abrirModalPago(inv, 'senial')}
                         className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-md transition-all flex items-center gap-1.5"
-                        title="Registrar cobro de la señal del 50% y confirmar automáticamente como Pedido de Venta"
+                        title="Registrar cobro de la señal del 50% con comprobante y confirmar automáticamente como Pedido de Venta"
                       >
                         <CheckCircle size={13} /> 💳 Cobrar 50% Señal ({fmt((inv.total || 0) * 0.5)}) ➔ Confirmar Pedido
                       </button>
@@ -641,7 +705,13 @@ const Invoices = ({ currentUser, state }) => {
                     {/* Botón directo de 1 clic para Cambiar Estado de Pago Total */}
                     {estaPagado ? (
                       <button
-                        onClick={() => handleStatus(inv, 'issued')}
+                        onClick={() => {
+                          if (!puedeRegistrarPago(inv)) {
+                            alert(`⚠️ Solo el Administrador o el usuario asignado (${inv.createdByName || 'Responsable'}) pueden modificar estados de pago.`);
+                            return;
+                          }
+                          handleStatus(inv, 'issued');
+                        }}
                         className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1"
                         title="Marcar este pedido/factura como pendiente de cobro"
                       >
@@ -649,9 +719,9 @@ const Invoices = ({ currentUser, state }) => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleStatus(inv, 'paid')}
+                        onClick={() => abrirModalPago(inv, 'total')}
                         className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition-all flex items-center gap-1"
-                        title="Marcar este pedido/factura como 100% PAGADO"
+                        title="Marcar este pedido/factura como 100% PAGADO adjuntando comprobante"
                       >
                         <CheckCircle size={13} /> 💳 Liquidar 100%
                       </button>
@@ -906,6 +976,101 @@ const Invoices = ({ currentUser, state }) => {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Registrar Cobro y Adjuntar Comprobante (PDF / Pantallazo) */}
+      {modalPago && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-lg w-full space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
+                <CheckCircle className="text-emerald-600" size={20} /> Registrar Cobro & Adjuntar Comprobante
+              </h3>
+              <button onClick={() => setModalPago(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-xs font-bold text-emerald-900 flex justify-between items-center">
+              <span>Documento: {modalPago.doc.invoiceNumber}</span>
+              <span className="font-mono text-base font-black text-emerald-700">{fmt(modalPago.importe)}</span>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Método de Pago:</label>
+                <select
+                  value={metodoPago}
+                  onChange={e => setMetodoPago(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-800 bg-white"
+                >
+                  <option value="Transferencia Bancaria">🏦 Transferencia Bancaria</option>
+                  <option value="Tarjeta de Crédito / TPV">💳 Tarjeta de Crédito / TPV</option>
+                  <option value="Efectivo / Contado">💶 Efectivo / Contado</option>
+                  <option value="Financiación">📑 Financiación / Recibo</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Adjuntar Comprobante (PDF o Pantallazo de Pago):
+                </label>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={e => handleComprobanteFile(e.target.files?.[0])}
+                  className="w-full text-xs font-semibold file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
+                />
+                {comprobanteAdjunto && (
+                  <p className="mt-1.5 text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                    ✓ Archivo listo: {comprobanteAdjunto.name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button onClick={() => setModalPago(null)} className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs">
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarCobroConComprobante}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md flex items-center gap-2"
+              >
+                <CheckCircle size={15} /> Confirmar & Archivar Cobro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Visualizador de Comprobante Archivado */}
+      {verComprobanteModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setVerComprobanteModal(null)}>
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-black text-slate-900 text-base">Comprobante de Pago Archivado</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Registrado por {verComprobanteModal.usuario} el {verComprobanteModal.fecha} vía {verComprobanteModal.metodo} ({fmt(verComprobanteModal.importe)})
+                </p>
+              </div>
+              <button onClick={() => setVerComprobanteModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+
+            {verComprobanteModal.data ? (
+              verComprobanteModal.type?.includes('image') || verComprobanteModal.data.startsWith('data:image') ? (
+                <img src={verComprobanteModal.data} alt="Comprobante" className="w-full rounded-2xl border border-slate-200 max-h-96 object-contain" />
+              ) : (
+                <iframe src={verComprobanteModal.data} title="Comprobante PDF" className="w-full h-96 rounded-2xl border border-slate-200" />
+              )
+            ) : (
+              <p className="text-center text-slate-400 py-8 text-xs font-bold">Comprobante validado electrónicamente sin archivo adjunto.</p>
+            )}
           </div>
         </div>
       )}
