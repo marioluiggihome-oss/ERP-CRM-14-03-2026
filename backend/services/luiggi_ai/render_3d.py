@@ -917,11 +917,25 @@ class Render3DService:
                 "engine": self.config.brand_name,
             }
 
-        # Con modelos de imagen que editan a partir de referencias, un prompt CORTO
-        # y centrado en "reproduce estas imágenes" funciona mucho mejor que un texto
-        # largo de dirección de arte (ese texto compite con las imágenes y el modelo
-        # acaba inventando una cocina genérica). Por eso aquí NO usamos build_render_
-        # prompt ni _expand_brief: solo referencias + acabados pedidos.
+        # Si la referencia incluye croquis a mano, ejecutar transcripción Vision OCR preliminar
+        sketch_transcription_block = ""
+        if hay_croquis:
+            transcriptions = []
+            for img_info in images:
+                if self._parece_dibujo_a_mano(img_info["data"]):
+                    t_txt = await self._transcribe_sketch_with_vision(img_info["data"], img_info.get("mime", "image/png"))
+                    if t_txt:
+                        transcriptions.append(t_txt)
+            if transcriptions:
+                sketch_transcription_block = (
+                    "\n\nEXACT TECHNICAL OCR BREAKDOWN READ FROM THE HANDWRITTEN SKETCH (MANDATORY):\n"
+                    + "\n---\n".join(transcriptions) + "\n\n"
+                    "CRITICAL MANDATORY RULES FROM SKETCH OCR:\n"
+                    "- IF OCR SPECIFIES 2 TALL COLUMNS SIDE-BY-SIDE (e.g. 1x Refrigerator 60cm + 1x Freezer 60cm), RENDER EXACTLY 2 FULL-HEIGHT TALL COLUMNS SIDE-BY-SIDE ON THAT WALL END. DO NOT MERGE THEM INTO ONE COLUMN!\n"
+                    "- IF HANDWRITTEN TEXT WRITTEN ON PAPER SPECIFIES FINISHES (e.g. 'Blanco Mate', 'granito Nacional'), RENDER DOORS IN MATTE WHITE AND COUNTERTOP IN NATIONAL GRANITE.\n"
+                    "- KEEP EXACT SEQUENCE OF OVEN, DRAWERS, SINK AND EXTRAÍBLE AS EXTRACTED ABOVE.\n"
+                )
+
         brief_txt = (description or "").strip()
         refs_block = "\n".join(ref_lines)
         task_prompt = (
@@ -929,10 +943,8 @@ class Render3DService:
             "as a single photorealistic interior photograph. This is a FAITHFUL re-render of the "
             "references, NOT a new design — copy what the images show.\n"
             + refs_block + "\n"
+            + sketch_transcription_block
             # Si lo que manda la geometría es un DIBUJO A MANO, hay que decirlo.
-            # Sin esto el modelo puede tomar el trazo a lápiz por el acabado, o
-            # "mejorar" una distribución que le parece tosca por estar dibujada
-            # a mano: es el croquis del cliente, no un borrador a pulir.
             + ("\nIMPORTANT: the drawing(s) above are HAND-DRAWN by the designer (pencil or pen "
                "on paper, possibly with handwritten dimensions). They are a TECHNICAL SPECIFICATION, "
                "not a style reference. Read the geometry from them and build it exactly: do NOT "
@@ -960,10 +972,6 @@ class Render3DService:
         prompt = task_prompt
         parsed_params["hasReference"] = True
         parsed_params["referenceCount"] = len(images)
-        # OJO: esto llamaba DIRECTAMENTE a Gemini estandar y se saltaba el motor
-        # elegido en pantalla (IA 1/2/3/4). Al enrutar el boton principal por
-        # aqui cuando hay plano, el usuario creia seguir en su motor y no lo
-        # estaba. Va por el mismo repartidor que el resto de renders.
         return await self._render_dispatch(
             task_prompt, prompt, parsed_params,
             provider=provider, reference_images=images,
@@ -998,17 +1006,19 @@ class Render3DService:
 
     async def _transcribe_sketch_with_vision(self, raw_b64: str, mime: str = "image/png") -> str:
         """Lee el croquis manuscrito con Gemini Vision y extrae de forma
-        estructurada los módulos, cotas, frigorífico, hornos y divisiones de puertas."""
+        estructurada los módulos, cotas, frigorífico, hornos, columnas y acabados manuscritos."""
         try:
             from services.llm_vision import analyze_image_with_gemini
             prompt = (
                 "Analyze this hand-drawn technical kitchen blueprint / elevation drawing with extreme precision.\n"
-                "Read every handwritten note, label (e.g. 'Micro', 'Horno', 'Frigo', 'Frijo', 'Combi', 'Placa', 'Freg', '70', '60', '30') and division line.\n"
-                "List the EXACT composition in English as a concise numbered technical specification:\n"
-                "1. BASE CABINETS (left to right with widths, drawer lines and appliances like sink, cooktop, dishwasher).\n"
-                "2. WALL CABINETS (upper units, lighting and hood).\n"
-                "3. TALL COLUMNS (left to right): explicitly identify the Oven+Microwave tower, the Refrigerator Combi unit, and the Pantry cupboard with its exact door count (e.g. 4 doors if cross lines are drawn).\n"
-                "Keep it strictly factual and concise."
+                "Read every handwritten label, dimension number, and finish text written on the paper.\n"
+                "Extract the EXACT specification in English:\n"
+                "1. FINISHES & MATERIALS: read any handwritten text written on paper (e.g. 'Blanco Mate' -> Matte white doors/fronts, 'encimera granito Nacional' -> National granite countertop, 'Luxe', 'Zenit').\n"
+                "2. TALL COLUMNS COUNT AND TYPES: Count how many full-height tall columns are drawn side-by-side (e.g. '2 SEPARATE TALL COLUMNS: 1x Refrigerator column 60cm + 1x Freezer/Congelador column 60cm'). Explicitly state if there are 2 separate tall columns or 1 single column. DO NOT MERGE multiple tall columns into one!\n"
+                "3. BASE CABINET SEQUENCE (left to right / around walls): list each module with label (e.g. 'Horno', '2 gavetas', 'Ex/Extraíble', 'Fregadero', 'Frigo', 'Congelador') and width in cm/mm.\n"
+                "4. WALL CABINETS & HOOD: describe upper cabinets, open shelves, and wall hood placement.\n"
+                "5. CORNER & LAYOUT SHAPE: L-shaped, U-shaped, or linear, including corner module dimensions (e.g. 93x93 cm).\n"
+                "Be strictly factual, clear, and concise."
             )
             raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
             res = await analyze_image_with_gemini(raw, prompt, model="gemini-2.5-flash", image_mime=mime or "image/jpeg")
