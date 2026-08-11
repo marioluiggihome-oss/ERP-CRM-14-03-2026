@@ -268,25 +268,28 @@ const _valorar = (c, colorPedido, elegido = false, punto = PUNTO_POR_DEFECTO) =>
 const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
   const o = ov || {};
   const colorKey = o.color || colorProyecto || COLOR_CASCO_DEFECTO;
+  const grosorTarget = o.grosor || GROSOR_DE_COLOR[colorKey] || 19;
 
-  // 1) Si el master ha elegido un casco CONCRETO en esta línea, manda ese. No
-  //    se vuelve a adivinar nada: lo eligió una persona mirando la línea.
+  // 1) Si se eligió un casco CONCRETO a mano, verificar que tenga precio en el color activo.
   if (o.cascoId) {
     const elegido = _casco_por_id(o.cascoId);
-    if (elegido) return _valorar(elegido, colorKey, true, punto);
+    if (elegido && elegido.precios && elegido.precios[colorKey] != null) {
+      return _valorar(elegido, colorKey, true, punto);
+    }
   }
 
-  const grosor = o.grosor || 19;
-  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo, grosor);
+  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo, grosorTarget);
   if (!tipoAcb) return null;
   const { ancho, alto, fondo } = _medidas_mm(it);
-  // Sin ancho no se empareja: el ancho es LO QUE MANDA en el precio del casco.
-  // Elegir "el más parecido" sin conocerlo es poner un precio a dedo.
   if (ancho == null) return null;
-  let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosor && c.precios && c.precios[colorKey] != null);
-  if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosor && _precio_color(c) != null);
+
+  // 2) Buscar el casco equivalente en el tipo, grosor y color activo
+  let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosorTarget && c.precios && c.precios[colorKey] != null);
+  if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.precios && c.precios[colorKey] != null);
+  if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosorTarget && _precio_color(c) != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
   if (!pool.length) return null;
+
   let best = pool[0], bd = Infinity;
   for (const c of pool) {
     const d = Math.abs((c.ancho || 0) - ancho) * 3
