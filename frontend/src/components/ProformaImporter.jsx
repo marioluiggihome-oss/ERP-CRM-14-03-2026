@@ -359,33 +359,24 @@ const COLUMNAS = [
   { clave: 'borrar',  etiqueta: '',                  ancho: 34,  fijo: true },
   { clave: 'pedir',   etiqueta: 'Pedir',             ancho: 46,  titulo: 'Marcar para incluir en el pedido' },
   { clave: 'n',       etiqueta: '#',                 ancho: 36 },
-  { clave: 'cod',     etiqueta: 'Código',            ancho: 140 },
-  { clave: 'desc',    etiqueta: 'Descripción',       ancho: 320 },
+  { clave: 'cod',     etiqueta: 'Código',            ancho: 130 },
+  { clave: 'desc',    etiqueta: 'Descripción',       ancho: 300 },
   { clave: 'uds',     etiqueta: 'Uds',               ancho: 52,  titulo: 'Unidades de la línea: multiplican casco, herraje, mano de obra y puertas' , alinea: 'center' },
-  { clave: 'casco',   etiqueta: 'Casco ACB (equiv.)', ancho: 250 },
-  { clave: 'pcg',     etiqueta: 'P/C/G',             ancho: 62,  titulo: 'Puertas / cajones / gavetas' , alinea: 'center' },
+  { clave: 'casco',   etiqueta: 'Casco ACB (equiv.)', ancho: 240 },
+  { clave: 'pcg',     etiqueta: 'P/C/G',             ancho: 58,  titulo: 'Puertas / cajones / gavetas' , alinea: 'center' },
   { clave: 'alvic',   etiqueta: 'Val. Alvic',        ancho: 92,  dinero: true , alinea: 'right' },
   { clave: 'tarifa',  etiqueta: 'Tarifa ACB',        ancho: 92,  dinero: true , alinea: 'right' },
-  { clave: 'cascoE',  etiqueta: 'Casco coste',       ancho: 96,  dinero: true , alinea: 'right' },
-  { clave: 'herraje', etiqueta: 'Herraje',           ancho: 92,  dinero: true , alinea: 'right' },
-  { clave: 'mat',     etiqueta: 'Coste mat.',        ancho: 96,  dinero: true , alinea: 'right' },
-  { clave: 'mo',      etiqueta: 'Mano obra',         ancho: 92,  dinero: true , alinea: 'right' },
+  { clave: 'cascoE',  etiqueta: 'Casco Neto',        ancho: 96,  dinero: true , alinea: 'right', titulo: 'Coste neto del casco ACB' },
+  { clave: 'herraje', etiqueta: 'Herrajes',          ancho: 88,  dinero: true , alinea: 'right' },
+  { clave: 'mat',     etiqueta: 'Coste Mat.',        ancho: 96,  dinero: true , alinea: 'right' },
+  { clave: 'mo',      etiqueta: 'Mano Obra',         ancho: 92,  dinero: true , alinea: 'right' },
   { clave: 'puertas', etiqueta: 'Puertas',           ancho: 92,  dinero: true , alinea: 'right' },
-  { clave: 'total',   etiqueta: 'Total línea',       ancho: 104, dinero: true , alinea: 'right' },
+  { clave: 'total',   etiqueta: 'Total Línea',       ancho: 104, dinero: true , alinea: 'right' },
   { clave: 'destino', etiqueta: 'Pedido a',          ancho: 112 },
 ];
 
-// LAS COLUMNAS DEL DESGLOSE DE COSTE.
-//
-// Catorce columnas no caben en una pantalla, ni siquiera al 100 %: hay que
-// arrastrar a un lado y a otro y se pierde de vista la línea que se está
-// mirando. Pero quitarlas del todo tampoco vale, que son las que explican de
-// dónde sale el coste.
-//
-// Estas cuatro son el DESGLOSE —de dónde sale el coste del casco— y se pueden
-// plegar. Lo que queda es lo que hay que ver para trabajar: qué es, cuántos,
-// qué casco le toca, cuánto cuesta y a quién se le pide.
-const COLUMNAS_DESGLOSE = ['alvic', 'tarifa', 'cascoE', 'herraje'];
+// Columnas opcionales que se pliegan con 'Ver desglose'
+const COLUMNAS_DESGLOSE = ['alvic', 'tarifa', 'mat'];
 
 // Plegada, la columna Código enseña seis caracteres; desplegada tiene dentro un
 // campo para escribirlo. Son dos anchos distintos y no se puede tener uno solo.
@@ -1459,6 +1450,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                       onCod={(v) => setItems(prev => prev.map((x, i) => i === r._origIdx ? { ...x, cod: v } : x))}
                       colorProyecto={p.colorCasco}
                       mostrarCodigo={mostrarCodigo}
+                      verDesglose={verDesglose}
                     />
                   ))}
                 </tbody>
@@ -1588,7 +1580,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
 }
 
 // ── Fila de mueble con selector inline de casco/color/grosor ─────────────────
-function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto, mostrarCodigo, punto }) {
+function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLinea, onMo, puertaLinea, onPuerta, onPedir, onDestino, onDescripcion, onCod, colorProyecto, mostrarCodigo, punto, verDesglose }) {
   const [editando, setEditando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const tipoActual = override.tipo || (r._acb ? r._acb.tipo : '');
@@ -1756,17 +1748,15 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
         )}
       </td>
       <td className="px-2 py-1.5 text-center">{r.puertas}/{r.cajones}/{r.gavetas}</td>
-      {/* Dinero de la línea. Con el candado echado no se pinta ninguna de estas
-          celdas: tienen que caer a la vez que sus cabeceras o la tabla se
-          descuadra (una fila con más <td> que <th>). */}
+      {/* Dinero de la línea perfectamente sincronizado con las cabeceras */}
       {!ocultarImportes && <>
-        <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>
-        <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>
-        <td className="px-2 py-1.5 text-right whitespace-nowrap">{eur(r._casco)}</td>
-        <td className="px-2 py-1.5 text-right whitespace-nowrap" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
+        {verDesglose && <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>}
+        {verDesglose && <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>}
+        <td className="px-2 py-1.5 text-right font-bold text-slate-800 whitespace-nowrap" title="Coste neto del casco ACB">{eur(r._casco)}</td>
+        <td className="px-2 py-1.5 text-right whitespace-nowrap text-slate-600" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
           {r._herraje ? eur(r._herraje) : '—'}
         </td>
-        <td className="px-2 py-1.5 text-right text-slate-600 whitespace-nowrap">{eur(r._mat)}</td>
+        {verDesglose && <td className="px-2 py-1.5 text-right text-slate-600 whitespace-nowrap">{eur(r._mat)}</td>}
         {/* Mano de obra de ESTA linea: vacia = la general del mueble. */}
         <td className="px-2 py-1.5 text-right">
           <input
