@@ -147,8 +147,13 @@ const MUESTRARIO_CASCOS = [
   { id: 'grafito-19', nombre: 'Grafito Antracita (19mm)', color: '#334155', grosor: 19 },
   { id: 'blanco-hidro-19', nombre: 'Blanco Hidrófugo (19mm)', color: '#f8fafc', grosor: 19 },
   { id: 'roble-aurora-19', nombre: 'Roble Aurora (19mm)', color: '#c49a6c', grosor: 19 },
+  { id: 'spike-19', nombre: 'Spike (19mm)', color: '#57534e', grosor: 19 },
+  { id: 'stone-19', nombre: 'Stone (19mm)', color: '#78716c', grosor: 19 },
   { id: 'blanco-16', nombre: 'Blanco En Kit (16mm)', color: '#ffffff', grosor: 16 },
-  { id: 'aluminio-16', nombre: 'Aluminio Textura (16mm)', color: '#94a3b8', grosor: 16 }
+  { id: 'aluminio-16', nombre: 'Aluminio Textura (16mm)', color: '#94a3b8', grosor: 16 },
+  { id: 'roble-natural-16', nombre: 'Roble Natural (16mm)', color: '#a16207', grosor: 16 },
+  { id: 'olmo-18', nombre: 'Olmo (18mm)', color: '#713f12', grosor: 18 },
+  { id: 'esp-blanco-16', nombre: 'Especial Blanco (16mm)', color: '#f1f5f9', grosor: 16 }
 ];
 
 export default function CocinaMontada3({ currentUser, state, setState, logo }) {
@@ -820,98 +825,98 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   });
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-3 sm:p-6 pb-36 space-y-4">
+    <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-2 sm:p-3 pb-36 space-y-2">
       
-      {/* Cabecera Principal */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl px-4 py-3 sm:px-5 sm:py-3.5 shadow-xl border border-slate-800 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 border border-indigo-400/40 flex items-center justify-center shadow-md shadow-indigo-600/30 shrink-0">
-            <Layers size={18} className="text-white" />
+      {/* Cabecera Principal Compacta */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl px-3 py-2 shadow-lg border border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 border border-indigo-400/40 flex items-center justify-center shadow-sm shrink-0">
+            <Layers size={15} className="text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black text-white tracking-tight">Cocina Montada 3</h1>
-              <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[10px] font-black uppercase">Tarifa {tarifa}</span>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm font-black text-white tracking-tight">Cocina Montada 3</h1>
+              <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[9px] font-black uppercase">Tarifa {tarifa}</span>
             </div>
-            <p className="text-[10px] text-indigo-200/70 font-medium leading-tight">
+            <p className="text-[9px] text-indigo-200/70 font-medium leading-none">
               {acabadoPuerta} / {acabadoCasco}
             </p>
           </div>
         </div>
 
         {/* Botonera Central: herramientas secundarias */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             onClick={() => setShowMuestrario(v => !v)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showMuestrario ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showMuestrario ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Muestrario de acabados de puertas y cascos"
           >
-            <Palette size={13} className="text-indigo-300" /> Acabados
+            <Palette size={12} className="text-indigo-300" /> Acabados
           </button>
           <button
             onClick={() => setShowEscandallo(v => !v)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showEscandallo ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showEscandallo ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Escandallo técnico de taller"
           >
-            <Hammer size={13} className="text-amber-400" /> Escandallo
+            <Hammer size={12} className="text-amber-400" /> Escandallo
           </button>
-          {/* Desplegable IMPORTAR (Relación en pantalla, Desde plantilla PDF, Desde presupuesto Alvic PDF, Descargar plantilla) */}
+          {/* Desplegable IMPORTAR */}
           <div className="relative">
             <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
             <input ref={alvicInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarAlvic(e.target.files?.[0])} />
             <button
               onClick={() => setMenuImportar(v => !v)}
               title="Importar muebles: en pantalla, desde la plantilla PDF o desde un presupuesto Alvic"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-[11px] border border-white/10 transition-all"
+              className="flex items-center gap-1 px-2 py-1 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-[10px] border border-white/10 transition-all"
             >
-              {importandoRel ? <Loader size={13} className="animate-spin" /> : <FileUp size={13} />} Importar
-              <ChevronDown size={13} className={menuImportar ? 'rotate-180 transition-transform' : 'transition-transform'} />
+              {importandoRel ? <Loader size={12} className="animate-spin" /> : <FileUp size={12} />} Importar
+              <ChevronDown size={11} className={menuImportar ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
             {menuImportar && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMenuImportar(false)} />
-                <div className="absolute right-0 mt-1.5 z-50 w-80 bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-700 animate-in fade-in zoom-in-95">
+                <div className="absolute right-0 mt-1.5 z-50 w-72 bg-white rounded-xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-700 animate-in fade-in zoom-in-95">
                   <button
                     onClick={() => { setMenuImportar(false); setShowPegadoMasivo(true); }}
-                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
                   >
-                    <List size={18} className="text-indigo-600 mt-0.5 shrink-0" />
+                    <List size={16} className="text-indigo-600 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Relación en pantalla</span>
-                      <span className="block text-[10px] text-slate-500 font-medium">Montar los muebles a mano o desde texto</span>
+                      <span className="block text-[9px] text-slate-500 font-medium">Montar los muebles a mano o desde texto</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => { setMenuImportar(false); relacionInputRef.current?.click(); }}
-                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
                   >
-                    <Sparkles size={18} className="text-amber-500 mt-0.5 shrink-0" />
+                    <Sparkles size={16} className="text-amber-500 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Desde plantilla (PDF nomenclaturas)</span>
-                      <span className="block text-[10px] text-slate-500 font-medium">Sube la plantilla rellenada con los códigos MV</span>
+                      <span className="block text-[9px] text-slate-500 font-medium">Sube la plantilla rellenada con los códigos MV</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => { setMenuImportar(false); alvicInputRef.current?.click(); }}
-                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
                   >
-                    <Package size={18} className="text-cyan-600 mt-0.5 shrink-0" />
+                    <Package size={16} className="text-cyan-600 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Desde presupuesto Alvic (PDF)</span>
-                      <span className="block text-[10px] text-slate-500 font-medium">Proforma Alvic → equivalencia de muebles y cascos</span>
+                      <span className="block text-[9px] text-slate-500 font-medium">Proforma Alvic → equivalencia de muebles y cascos</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => { setMenuImportar(false); descargarPlantillaEnBlanco(); }}
-                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 transition-colors"
                   >
-                    <Download size={18} className="text-emerald-600 mt-0.5 shrink-0" />
+                    <Download size={16} className="text-emerald-600 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Descargar plantilla en blanco</span>
-                      <span className="block text-[10px] text-slate-500 font-medium">PDF rellenable con las 58 familias</span>
+                      <span className="block text-[9px] text-slate-500 font-medium">PDF rellenable con las 58 familias</span>
                     </div>
                   </button>
                 </div>
@@ -920,78 +925,78 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           </div>
           <button
             onClick={() => setShowComparador(v => !v)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Comparar presupuesto en todas las tarifas T1-T5"
           >
-            <Sparkles size={13} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar
+            <Sparkles size={12} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar
           </button>
           <button
             onClick={exportarPDFOficial}
             disabled={!muebles.length}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/8 hover:bg-white/15 border border-white/10 text-[11px] font-bold transition-all disabled:opacity-40 text-white"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[10px] font-bold transition-all disabled:opacity-40 text-white"
             title="Exportar PDF oficial del presupuesto"
           >
-            <Download size={13} /> PDF
+            <Download size={12} /> PDF
           </button>
         </div>
 
         {/* CTAs Primarios */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={lanzarAFabricacion}
             disabled={!muebles.length}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-[11px] shadow-md transition-all disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-[10px] shadow-sm transition-all disabled:opacity-40"
             title="Crear orden de fabricación en taller"
           >
-            <Factory size={13} /> Fabricar
+            <Factory size={12} /> Fabricar
           </button>
           <button
             onClick={guardarPresupuesto}
             disabled={!muebles.length || guardando}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black shadow-md transition-all disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black shadow-sm transition-all disabled:opacity-40"
             title="Guardar presupuesto en el sistema"
           >
-            {guardando ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Guardar
+            {guardando ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Guardar
           </button>
         </div>
       </div>
 
       {/* Muestrario Desplegable de Acabados */}
       {showMuestrario && (
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in-95">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in zoom-in-95">
           {/* Muestrario de Puertas */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              <Palette size={16} className="text-indigo-600" /> Acabado de Puertas ({tarifa}):
+          <div className="space-y-2">
+            <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+              <Palette size={14} className="text-indigo-600" /> Acabado de Puertas ({tarifa}):
             </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {(MUESTRARIO_PUERTAS[tarifa] || MUESTRARIO_PUERTAS.T1).map(ac => (
                 <button
                   key={ac.id}
                   onClick={() => setAcabadoPuerta(ac.nombre)}
-                  className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col gap-2 ${acabadoPuerta === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}
+                  className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${acabadoPuerta === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-300' : 'border-slate-200 hover:border-slate-300'}`}
                 >
-                  <div className="w-full h-8 rounded-xl border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
-                  <span className="text-[11px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
+                  <div className="w-full h-6 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
+                  <span className="text-[10px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Muestrario de Cascos */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              <Box size={16} className="text-indigo-600" /> Acabado de Cascos (Grupo ACB):
+          {/* Muestrario de Cascos ACB */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+              <Box size={14} className="text-indigo-600" /> Acabado de Cascos (Grupo ACB completo):
             </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
               {MUESTRARIO_CASCOS.map(ac => (
                 <button
                   key={ac.id}
                   onClick={() => setAcabadoCasco(ac.nombre)}
-                  className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col gap-2 ${acabadoCasco === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}
+                  className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${acabadoCasco === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-300' : 'border-slate-200 hover:border-slate-300'}`}
                 >
-                  <div className="w-full h-8 rounded-xl border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
-                  <span className="text-[11px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
+                  <div className="w-full h-6 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
+                  <span className="text-[10px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
                 </button>
               ))}
             </div>
@@ -1001,109 +1006,104 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
       {/* Escandallo Técnico de Taller Desplegable */}
       {showEscandallo && (
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 border border-indigo-500/30 shadow-xl grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 animate-in fade-in zoom-in-95">
-          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-            <div className="text-[10px] uppercase font-bold text-indigo-300">Tablero Puertas</div>
-            <div className="text-lg font-black text-white">{metricas.totalPuertasM2} m²</div>
-            <div className="text-[10px] text-indigo-200/70">{acabadoPuerta}</div>
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 border border-indigo-500/30 shadow-lg grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 animate-in fade-in zoom-in-95">
+          <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+            <div className="text-[9px] uppercase font-bold text-indigo-300">Tablero Puertas</div>
+            <div className="text-base font-black text-white">{metricas.totalPuertasM2} m²</div>
+            <div className="text-[9px] text-indigo-200/70">{acabadoPuerta}</div>
           </div>
-          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-            <div className="text-[10px] uppercase font-bold text-indigo-300">Cascos ACB</div>
-            <div className="text-lg font-black text-white">{totalUds} módulos</div>
-            <div className="text-[10px] text-indigo-200/70">{acabadoCasco}</div>
+          <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+            <div className="text-[9px] uppercase font-bold text-indigo-300">Cascos ACB</div>
+            <div className="text-base font-black text-white">{totalUds} módulos</div>
+            <div className="text-[9px] text-indigo-200/70">{acabadoCasco}</div>
           </div>
-          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-            <div className="text-[10px] uppercase font-bold text-indigo-300">Bisagras con Freno</div>
-            <div className="text-lg font-black text-white">{metricas.totalBisagras} uds</div>
-            <div className="text-[10px] text-indigo-200/70">Blum / Hettich</div>
+          <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+            <div className="text-[9px] uppercase font-bold text-indigo-300">Bisagras con Freno</div>
+            <div className="text-base font-black text-white">{metricas.totalBisagras} uds</div>
+            <div className="text-[9px] text-indigo-200/70">Blum / Hettich</div>
           </div>
-          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-            <div className="text-[10px] uppercase font-bold text-indigo-300">Cajones & Gavetas</div>
-            <div className="text-lg font-black text-white">{metricas.totalCajones + metricas.totalGavetas} uds</div>
-            <div className="text-[10px] text-indigo-200/70">{metricas.totalCajones} caj. + {metricas.totalGavetas} gav.</div>
+          <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+            <div className="text-[9px] uppercase font-bold text-indigo-300">Cajones & Gavetas</div>
+            <div className="text-base font-black text-white">{metricas.totalCajones + metricas.totalGavetas} uds</div>
+            <div className="text-[9px] text-indigo-200/70">{metricas.totalCajones} caj. + {metricas.totalGavetas} gav.</div>
           </div>
-          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-            <div className="text-[10px] uppercase font-bold text-indigo-300">Patas & Colgadores</div>
-            <div className="text-lg font-black text-white">{metricas.totalPatas} / {metricas.totalColgadores}</div>
-            <div className="text-[10px] text-indigo-200/70">Patas / Colgadores</div>
+          <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+            <div className="text-[9px] uppercase font-bold text-indigo-300">Patas & Colgadores</div>
+            <div className="text-base font-black text-white">{metricas.totalPatas} / {metricas.totalColgadores}</div>
+            <div className="text-[9px] text-indigo-200/70">Patas / Colgadores</div>
           </div>
-          <div className="p-3 bg-emerald-950/40 rounded-2xl border border-emerald-500/30">
-            <div className="text-[10px] uppercase font-bold text-emerald-300">Tiempo de Taller</div>
-            <div className="text-lg font-black text-emerald-400">{metricas.tiempoTallerHoras} horas</div>
-            <div className="text-[10px] text-emerald-200/70">Ensamblado en taller</div>
+          <div className="p-2.5 bg-emerald-950/40 rounded-xl border border-emerald-500/30">
+            <div className="text-[9px] uppercase font-bold text-emerald-300">Tiempo de Taller</div>
+            <div className="text-base font-black text-emerald-400">{metricas.tiempoTallerHoras} horas</div>
+            <div className="text-[9px] text-emerald-200/70">Ensamblado en taller</div>
           </div>
         </div>
       )}
 
-      {/* Datos del Cliente y Presupuesto */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div>
-          <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Cliente / Titular</label>
-          <div className="relative">
-            <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Datos del Cliente y Presupuesto ULTRA COMPACTOS (1 sola fila) */}
+      <div className="bg-white rounded-2xl p-2 px-3 border border-slate-200 shadow-sm flex items-center gap-2 flex-wrap text-xs">
+        <div className="flex-1 min-w-[150px]">
+          <div className="relative flex items-center">
+            <User size={13} className="absolute left-2.5 text-slate-400" />
             <input
               value={cliente}
               onChange={e => setCliente(e.target.value)}
-              placeholder="Nombre del cliente o tienda…"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
+              placeholder="Cliente / Titular…"
+              className="w-full pl-7 pr-2 py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500"
             />
           </div>
         </div>
 
-        <div>
-          <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Referencia / Obra</label>
-          <div className="relative">
-            <Tag size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="flex-1 min-w-[150px]">
+          <div className="relative flex items-center">
+            <Tag size={13} className="absolute left-2.5 text-slate-400" />
             <input
               value={ref}
               onChange={e => setRef(e.target.value)}
-              placeholder="Ref. Cocina Paseo Canalejas…"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
+              placeholder="Referencia / Obra…"
+              className="w-full pl-7 pr-2 py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500"
             />
           </div>
         </div>
 
-        <div>
-          <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Descuento Comercial (%)</label>
-          <div className="relative">
-            <Percent size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="w-28">
+          <div className="relative flex items-center">
+            <Percent size={13} className="absolute left-2.5 text-slate-400" />
             <input
               type="number"
               min="0"
               max="100"
               value={descuento}
               onChange={e => setDescuento(e.target.value)}
-              placeholder="0%"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
+              placeholder="Desc %"
+              className="w-full pl-7 pr-2 py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500"
             />
           </div>
         </div>
 
-        <div>
-          <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Tipo de IVA</label>
-          <div className="relative">
-            <Receipt size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="w-32">
+          <div className="relative flex items-center">
+            <Receipt size={13} className="absolute left-2.5 text-slate-400" />
             <select
               value={ivaRate}
               onChange={e => setIvaRate(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
+              className="w-full pl-7 pr-1 py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500 bg-white"
             >
-              <option value="21">21% (General)</option>
-              <option value="10">10% (Reformas)</option>
-              <option value="0">0% (Exento / Exportación)</option>
+              <option value="21">21% IVA</option>
+              <option value="10">10% IVA</option>
+              <option value="0">0% Exento</option>
             </select>
           </div>
         </div>
 
-        <div className="sm:col-span-2 md:col-span-3 lg:col-span-1">
-          <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Observaciones Generales</label>
-          <div className="relative">
-            <FileText size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="flex-[2] min-w-[200px]">
+          <div className="relative flex items-center">
+            <FileText size={13} className="absolute left-2.5 text-slate-400" />
             <input
               value={observacionesGenerales}
               onChange={e => setObservacionesGenerales(e.target.value)}
-              placeholder="Notas de montaje/taller…"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
+              placeholder="Observaciones generales (notas taller/montaje)…"
+              className="w-full pl-7 pr-2 py-1 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-500"
             />
           </div>
         </div>
