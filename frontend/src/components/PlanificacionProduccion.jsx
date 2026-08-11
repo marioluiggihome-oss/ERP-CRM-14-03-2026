@@ -213,10 +213,11 @@ export default function PlanificacionProduccion({ currentUser }) {
       pdf.setFillColor(15, 23, 42);
       pdf.rect(0, 0, W, 22, 'F');
       
-      pdf.setFontSize(14);
+      const companyBrand = state?.settings?.companyName || currentUser?.empresa || 'CONTROL DE ALMACÉN Y FÁBRICA DE COCINAS';
+      pdf.setFontSize(13);
       pdf.setFont(undefined, 'bold');
       pdf.setTextColor(255, 255, 255);
-      pdf.text('LUIGGI HOME · CONTROL DE ALMACÉN, RECEPCIÓN Y FÁBRICA', M, 14);
+      pdf.text(`${companyBrand.toUpperCase()} · INFORME GENERAL DE ALMACÉN Y FÁBRICA`, M, 14);
 
       pdf.setFontSize(8.5);
       pdf.setFont(undefined, 'normal');

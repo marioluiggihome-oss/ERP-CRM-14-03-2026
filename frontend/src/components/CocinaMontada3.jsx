@@ -534,7 +534,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
   const copiarParaWhatsApp = () => {
     const lineas = [
-      `*PRESUPUESTO COCINA MONTADA MV (LUIGGI HOME)*`,
+      `*PRESUPUESTO COCINA MONTADA MV*`,
       `*Cliente:* ${cliente || 'Particular'} ${ref ? `(Ref: ${ref})` : ''}`,
       `*Tarifa:* ${tarifa} - ${TARIFAS_NOMBRES[tarifa] || 'Estándar'}`,
       `*Color Puertas:* ${acabadoPuerta}`,
@@ -668,7 +668,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.text(`TOTAL:`, 125, finalY + 36);
     doc.text(eur(totalPvp), 190, finalY + 36, { align: 'right' });
 
-    doc.save(`Presupuesto_Cocina_${cliente || 'Luiggi'}_${tarifa}.pdf`);
+    doc.save(`Presupuesto_Cocina_${cliente || 'Cliente'}_${tarifa}.pdf`);
   };
 
   const lanzarAFabricacion = async () => {
