@@ -40,9 +40,9 @@ const FEATURES = [
 
 const PLANS = [
   { name: "Taller", price: "79", anual: "790", desc: "Para el taller que empieza a ordenarse", credits: "10 renders IA/mes",
-    features: ["Presupuestos ilimitados", "Hasta 3 usuarios", "10 renders IA/mes", "Gestión de clientes", "Facturación básica", "Soporte por email"], highlight: false },
+    features: ["Presupuestos ilimitados", "1 usuario incluido", "10 renders IA/mes", "Gestión de clientes", "Facturación básica", "Soporte por email"], highlight: false },
   { name: "Ebanista", price: "179", anual: "1.790", desc: "Para talleres en crecimiento", credits: "40 renders IA/mes",
-    features: ["Todo lo de Taller", "Hasta 10 usuarios", "40 renders IA/mes", "Control de rentabilidad", "Cascos, puertas y herraje", "Soporte prioritario"], highlight: true },
+    features: ["Todo lo de Taller", "Hasta 10 usuarios", "Usuarios adicionales: +99€/mes", "40 renders IA/mes", "Control de rentabilidad", "Cascos, puertas y herraje", "Soporte prioritario"], highlight: true },
   { name: "Maestría", price: "349", anual: "3.490", desc: "Para empresas con varios talleres", credits: "120 renders IA/mes",
     features: ["Todo lo de Ebanista", "Usuarios ilimitados", "120 renders IA/mes", "Multi-sede y delegaciones", "Tu marca y tu dominio", "Gestor de cuenta dedicado"], highlight: false },
 ];
@@ -339,6 +339,40 @@ function Pricing({ onEnter }) {
                 {p.features.map((f) => <li key={f}><CheckCircle2 size={15} /> {f}</li>)}
               </ul>
               <a href="#acceso" onClick={enter} className={p.highlight ? "btn-solid price-btn" : "btn-outline price-btn"}>Acceder al programa</a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const RENDER_PACKS = [
+  { renders: 10, price: 15 },
+  { renders: 30, price: 39 },
+  { renders: 100, price: 99 },
+];
+
+function RenderPacks() {
+  return (
+    <section className="sec sec-espresso" id="recargas" style={{ paddingTop: '2rem', paddingBottom: '3rem' }}>
+      <div className="wrap">
+        <div className="sec-head" data-reveal style={{ marginBottom: '1.5rem' }}>
+          <Cota light>RECARGAS DE RENDERS</Cota>
+          <h2 className="sec-h2" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>
+            ¿Necesitas más renders <span className="accent">este mes</span>?
+          </h2>
+          <p className="sec-lead">Añade un pack en cualquier momento, sin cambiar de plan.</p>
+        </div>
+        <div className="price-grid" data-reveal>
+          {RENDER_PACKS.map((pack) => (
+            <div key={pack.renders} className="price" style={{ textAlign: 'center' }}>
+              <div className="price-amt">
+                <span className="price-num mono">{pack.renders}</span>
+                <span className="price-per"> renders</span>
+              </div>
+              <div className="price-credits" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#C4622D' }}>{pack.price}€ <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#888' }}>+ IVA</span></div>
+              <a href="#acceso" className="btn-outline price-btn" style={{ marginTop: '1rem' }}>Solicitar pack</a>
             </div>
           ))}
         </div>
@@ -688,6 +722,7 @@ export default function CarpinterosLanding({ onEnter, embedded = false }) {
       <Features />
       <AISection />
       <Pricing onEnter={onEnter} />
+      <RenderPacks />
       <Testimonials />
       <FAQ />
       <CTASection onEnter={onEnter} />
