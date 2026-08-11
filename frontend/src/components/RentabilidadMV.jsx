@@ -41,8 +41,22 @@ const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo
 const precioColor = (c, colorId) => { 
   if (!c || !c.precios) return null; 
   if (colorId && c.precios[colorId] != null) return c.precios[colorId];
-  for (const k of COLOR_PRIO) if (c.precios[k] != null) return c.precios[k]; 
   return null; 
+};
+
+// Factor de margen de Cocina Desmontada configurado en Sección Master -> Márgenes
+export const getFactorDesmontada = () => {
+  try {
+    const rawVal = localStorage.getItem('pointValueDesmontada');
+    if (rawVal != null) return Math.max(1.0, parseFloat(rawVal) || 1.30);
+    const st = JSON.parse(localStorage.getItem('app_state') || '{}');
+    if (st?.pointValueDesmontada != null) return Math.max(1.0, parseFloat(st.pointValueDesmontada) || 1.30);
+    const set = JSON.parse(localStorage.getItem('settings') || '{}');
+    if (set?.cascosPointValue != null) return Math.max(1.0, parseFloat(set.cascosPointValue) || 1.30);
+    return 1.30;
+  } catch {
+    return 1.30;
+  }
 };
 
 // Coste y PVP del casco ACB: precio neto de catálogo ACB × factor de Cocina Desmontada (Master)
