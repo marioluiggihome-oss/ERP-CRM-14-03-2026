@@ -19,18 +19,48 @@ const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDig
 const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike'];
 const precioColor = (c) => { if (!c || !c.precios) return null; for (const k of COLOR_PRIO) if (c.precios[k] != null) return c.precios[k]; return null; };
 
-// Coste del casco ACB: precio base × 2 (valor punto) × −50% × −28% (= base × 0,72).
-const cascoACB = (tipoAcb, ancho, alto) => {
+// Factor de margen de Cocina Desmontada configurado en Sección Master -> Márgenes
+export const getFactorDesmontada = () => {
+  try {
+    const rawVal = localStorage.getItem('pointValueDesmontada');
+    if (rawVal != null) return Math.max(1.0, parseFloat(rawVal) || 1.30);
+    const st = JSON.parse(localStorage.getItem('app_state') || '{}');
+    if (st?.pointValueDesmontada != null) return Math.max(1.0, parseFloat(st.pointValueDesmontada) || 1.30);
+    const set = JSON.parse(localStorage.getItem('settings') || '{}');
+    if (set?.cascosPointValue != null) return Math.max(1.0, parseFloat(set.cascosPointValue) || 1.30);
+    return 1.30;
+  } catch {
+    return 1.30;
+  }
+};
+
+// Tarifas de coste y PVP de puertas por m² según la gama/tarifa (T1 a T5) de Cocina Desmontada
+export const PUERTAS_TARIFAS_M2 = {
+  T1: { costeM2: 26.0, pvpM2: 42.0, nombre: 'Sincro / Melamina Texturada' },
+  T2: { costeM2: 38.0, pvpM2: 64.0, nombre: 'Estratificado Mate / Seda' },
+  T3: { costeM2: 52.0, pvpM2: 86.0, nombre: 'Lacado Seda / Brillo' },
+  T4: { costeM2: 68.0, pvpM2: 110.0, nombre: 'ZENIT Supermate Antihuella' },
+  T5: { costeM2: 85.0, pvpM2: 138.0, nombre: 'FENIX NTM Alta Resistencia' },
+};
+
+// Coste y PVP del casco ACB: precio neto de catálogo ACB × factor de Cocina Desmontada (Master)
+export const cascoACB = (tipoAcb, ancho, alto, factor) => {
+  const f = factor != null ? factor : getFactorDesmontada();
   const pool = CASCOS.filter(c => c.tipo === tipoAcb && precioColor(c) != null);
   const p19 = pool.filter(c => c.grosor === 19);
   const use = p19.length ? p19 : pool;
-  if (!use.length) return { coste: 0, med: '' };
+  if (!use.length) return { coste: 0, pvpDesmontada: 0, med: '' };
   let best = use[0], bd = Infinity;
   for (const c of use) {
     const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
     if (d < bd) { bd = d; best = c; }
   }
-  return { coste: (precioColor(best) || 0) * 2 * 0.5 * 0.72, med: `${best.ancho}x${best.alto}` };
+  const precioNeto = precioColor(best) || 0;
+  return { 
+    coste: Math.round(precioNeto * 100) / 100, 
+    pvpDesmontada: Math.round(precioNeto * f * 100) / 100, 
+    med: `${best.ancho}x${best.alto}` 
+  };
 };
 
 // Reglas de descomposición por familia MV (Fase 2). Cada regla dice: tipo de casco
@@ -84,17 +114,19 @@ const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1
 const anchoDe = (cod) => { const m = (cod || '').match(/(\d{2,3})/); return m ? parseInt(m[1], 10) * 10 : 600; };
 
 // Costes de componentes por defecto (editables, compartidos vía localStorage 'mv_costes').
-export const MV_COSTES_DEFAULT = { doorM2: 30, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
+export const MV_COSTES_DEFAULT = { doorM2: 26, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
 
-// Descompone un código MV según la regla de su familia.
-export const despiece = (item, p) => {
+// Descompone un código MV según la regla de su familia y tarifa activa.
+export const despiece = (item, p, tariff = 'T1') => {
   const cod = item.cod, altura = item.altura, familia = item.familia;
   const R = RULES[familia] || RULE_GENERICA;
   const dio = /D\/I/.test(cod);
   const w = anchoDe(cod);
   const wCasco = w < 300 ? 300 : w;
   const altoMm = R.altoSel ? (altura === '90' ? 900 : 700) : (R.altoCol ? (altura === '220' ? 2200 : 2000) : (R.alto || 800));
-  const cc = cascoACB(R.casco, wCasco, altoMm);
+  const factorDesmontada = getFactorDesmontada();
+  const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada);
+  
   // Puertas
   let puertas = 0;
   if (R.puertasFn) puertas = R.puertasFn(cod);
@@ -103,20 +135,43 @@ export const despiece = (item, p) => {
   const cajones = (R.cajFn ? R.cajFn(cod) : (R.cajones || 0));
   const gavetas = (R.gavFn ? R.gavFn(cod) : (R.gavetas || 0));
   const baldas = R.baldasSel ? (altura === '90' ? 2 : 1) : (R.baldas || 0);
-  // Puerta: superficie × €/m² (+30% si es vitrina, por cristal/perfil)
+  
+  // Puerta: superficie × coste/m² según la tarifa de acabado (+30% si es vitrina, por cristal/perfil)
   const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : 713);
   const areaP = puertas > 0 ? (w / 1000) * (altoFrente / 1000) : 0;
-  const doorRate = (Number(p.doorM2) || 0) * (R.vitrina ? 1.3 : 1);
+  const tarifaInfo = PUERTAS_TARIFAS_M2[tariff] || PUERTAS_TARIFAS_M2.T1;
+  const doorCosteRate = (Number(p.doorM2) || tarifaInfo.costeM2) * (R.vitrina ? 1.3 : 1);
+  const doorPvpRate = tarifaInfo.pvpM2 * (R.vitrina ? 1.3 : 1);
+  
+  const costePuertas = Math.round(areaP * doorCosteRate * 100) / 100;
+  const pvpPuertas = Math.round(areaP * doorPvpRate * 100) / 100;
+  const costeHerrajes = Math.round((puertas * 2 * (Number(p.bisagra) || 0)
+    + (R.patas ? (Number(p.pata4) || 0) : 0)
+    + (R.colg ? 2 * (Number(p.colgador) || 0) : 0)
+    + (cajones * (Number(p.cajon) || 0))
+    + (gavetas * (Number(p.gaveta) || 0))
+    + (baldas * 4 * (Number(p.soporte) || 0))) * 100) / 100;
+  const costeMo = Number(p.mano) || 0;
+  const costeTotal = Math.round((cc.coste + costePuertas + costeHerrajes + costeMo) * 100) / 100;
+
   return {
     fam: familia, med: cc.med, inc: w < 300 ? 'inc. corte' : '',
     casco: cc.coste,
-    puerta: areaP * doorRate, puertas,
+    cascoPvp: cc.pvpDesmontada,
+    puerta: costePuertas,
+    puertaPvp: pvpPuertas,
+    puertas,
+    areaPuertas: Math.round(areaP * 100) / 100,
     bisagras: puertas * 2 * (Number(p.bisagra) || 0),
     patas: R.patas ? (Number(p.pata4) || 0) : 0,
     colg: R.colg ? 2 * (Number(p.colgador) || 0) : 0,
-    caj: cajones * (Number(p.cajon) || 0), gav: gavetas * (Number(p.gaveta) || 0),
+    caj: cajones * (Number(p.cajon) || 0), 
+    gav: gavetas * (Number(p.gaveta) || 0),
     soportes: baldas * 4 * (Number(p.soporte) || 0),
-    mo: Number(p.mano) || 0, generica: R.generica || false,
+    mo: costeMo,
+    costeTotal,
+    factorDesmontada,
+    generica: R.generica || false,
   };
 };
 

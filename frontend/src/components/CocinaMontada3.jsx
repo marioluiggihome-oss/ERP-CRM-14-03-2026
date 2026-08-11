@@ -54,10 +54,8 @@ const pvpDeItem = (val, pv) => {
   return null;
 };
 
-const costeDe = (m, p) => {
-  const d = despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p);
-  return (d.casco || 0) + (d.puerta || 0) + (d.bisagras || 0) + (d.patas || 0) + (d.colg || 0)
-    + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
+const costeDetalladoDe = (m, p, tarifa) => {
+  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa);
 };
 
 const PALETA_RAPIDA = [
@@ -300,11 +298,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
 
   const filas = muebles.map(m => {
-    const coste = m.encontrado ? costeDe(m, p) : 0;
+    const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
+    const coste = desp.costeTotal || 0;
     const pvp = Number(m.pvp) || 0;
     const margen = pvp - coste;
     const margenPct = pvp > 0 ? (margen / pvp) * 100 : 0;
-    return { ...m, coste, margen, margenPct };
+    return { ...m, despiece: desp, coste, margen, margenPct };
   });
 
   const totalUds = muebles.reduce((s, m) => s + (Number(m.qty) || 1), 0);
@@ -878,8 +877,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <th className="py-2.5 px-3 text-center">Ancho</th>
                   <th className="py-2.5 px-3 text-center">Alto</th>
                   <th className="py-2.5 px-3 text-center">Mano</th>
-                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700">Coste Ud.</th>}
-                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700">Margen</th>}
+                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700" title="Coste Neto de Casco ACB">Casco Neto (ACB)</th>}
+                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700" title={`Coste de Puertas según Tarifa ${tarifa}`}>Puertas ({tarifa})</th>}
+                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700">Coste Total</th>}
+                  {verCoste && <th className="py-2.5 px-3 text-right text-emerald-700">Margen</th>}
                   <th className="py-2.5 px-3 text-right">PVP Ud.</th>
                   <th className="py-2.5 px-3 text-right">Total</th>
                   <th className="py-2.5 px-2 text-center w-10"></th>
@@ -975,8 +976,26 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       </td>
 
                       {/* Coste y Margen (candado) */}
-                      {verCoste && <td className="py-3 px-3 text-right font-mono font-bold text-purple-700">{eur(m.coste)}</td>}
-                      {verCoste && <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600">{m.margenPct.toFixed(1)}%</td>}
+                      {verCoste && (
+                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Neto ACB: ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
+                          {eur(m.despiece?.casco)}
+                        </td>
+                      )}
+                      {verCoste && (
+                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Puertas: ${m.despiece?.areaPuertas || 0} m² (${tarifa})`}>
+                          {eur(m.despiece?.puerta)}
+                        </td>
+                      )}
+                      {verCoste && (
+                        <td className="py-3 px-3 text-right font-mono text-purple-900 font-black">
+                          {eur(m.coste)}
+                        </td>
+                      )}
+                      {verCoste && (
+                        <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600">
+                          {eur(m.margen)} <span className="text-[10px] text-emerald-500">({m.margenPct.toFixed(1)}%)</span>
+                        </td>
+                      )}
 
                       {/* PVP */}
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-700">{eur(m.pvp)}</td>
