@@ -126,7 +126,25 @@ const PEDIDOS_DEMO = [
 ];
 
 export default function PlanificacionProduccion({ currentUser }) {
-  const [pedidos, setPedidos] = useState(PEDIDOS_DEMO);
+  const [pedidos, setPedidos] = useState(() => {
+    try {
+      const guardados = JSON.parse(localStorage.getItem('ordenes_fabricacion_taller') || '[]');
+      if (guardados && guardados.length > 0) {
+        const idsGuardados = new Set(guardados.map(g => g.id));
+        return [...guardados, ...PEDIDOS_DEMO.filter(d => !idsGuardados.has(d.id))];
+      }
+      return PEDIDOS_DEMO;
+    } catch {
+      return PEDIDOS_DEMO;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify(pedidos));
+    } catch (e) { console.error('Error guardando OFs:', e); }
+  }, [pedidos]);
+
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [filtroPrioridad, setFiltroPrioridad] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');

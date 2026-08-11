@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check } from 'lucide-react';
+import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check, Factory } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
@@ -893,6 +893,41 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
     }]);
   };
 
+  const lanzarATaller = () => {
+    if (!calc.rows.length) { alert('No hay líneas para fabricar.'); return; }
+    const confirm = window.confirm(`¿Deseas lanzar la Orden de Fabricación para esta proforma (${calc.nMuebles} muebles)?`);
+    if (!confirm) return;
+    try {
+      const payload = {
+        id: `OF-2026-${Math.floor(100 + Math.random() * 900)}`,
+        cliente: nombreProyecto || 'Cliente Proforma',
+        ref: 'Cocina Desmontada / Proforma',
+        tipo: 'Cocina Desmontada',
+        tarifa: `Cascos ACB (${p.colorCasco || 'Grafito 19'})`,
+        modulos: calc.nMuebles || calc.rows.length,
+        m2Tablero: Math.round(calc.totPuertas * 0.45 * 10) / 10 || 20,
+        mlCanteado: Math.round(calc.totPuertas * 2.2 * 10) / 10 || 40,
+        estado: 'corte',
+        prioridad: 'NORMAL',
+        progreso: 15,
+        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+        estaciones: {
+          corte: { completado: false, enCurso: true, progreso: 25, operario: 'Carlos M.' },
+          cnc: { completado: false, pendiente: true },
+          canteado: { completado: false, pendiente: true },
+          ensamblado: { completado: false, pendiente: true },
+          embalaje: { completado: false, pendiente: true }
+        }
+      };
+      const guardadas = JSON.parse(localStorage.getItem('ordenes_fabricacion_taller') || '[]');
+      localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify([payload, ...guardadas]));
+      alert(`✓ Orden de Fabricación ${payload.id} enviada con éxito a Planificación de Producción.`);
+    } catch (e) {
+      alert(`Error al lanzar orden: ${e.message}`);
+    }
+  };
+
   // ── Pedidos a proveedor en PDF ──────────────────────────────────────────────
   // Un PDF por proveedor, solo con las lineas marcadas. Los HERRAJES son la
   // excepcion: no son lineas de la proforma sino piezas que salen de cada
@@ -1379,6 +1414,11 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
               <button onClick={anadirLinea}
                 className={`${Object.keys(anchos).length > 0 ? '' : 'ml-auto'} px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40`}>
                 + Añadir línea
+              </button>
+              <button onClick={lanzarATaller}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-700 hover:bg-indigo-600 text-white flex items-center gap-1 shadow-sm"
+                title="Lanzar orden de trabajo a Planificación de Producción">
+                <Factory size={12} /> Lanzar a Taller
               </button>
             </div>
 

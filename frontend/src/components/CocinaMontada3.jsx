@@ -654,6 +654,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         }
       };
 
+      // Persistir orden en el almacén de producción
+      try {
+        const guardadas = JSON.parse(localStorage.getItem('ordenes_fabricacion_taller') || '[]');
+        const actualizadas = [payload, ...guardadas.filter(x => x.id !== payload.id)];
+        localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify(actualizadas));
+      } catch (e) { console.error('Error guardando OF:', e); }
+
       alert(`✓ Orden de Fabricación ${payload.id} lanzada con éxito a Taller.`);
       if (setState) {
         setState(prev => ({ ...prev, currentTab: 'planificacionProduccion' }));

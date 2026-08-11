@@ -272,7 +272,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 overflow-y-auto">
+    <div className="absolute inset-0 overflow-y-auto bg-slate-50 pb-28">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-md shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
