@@ -115,6 +115,126 @@ export const getDescuentoPuertas = () => {
   }
 };
 
+// Desglose exhaustivo de frentes y puertas por cada familia MV
+export const getDesglosePuertasDetallado = (cod, familia, w, altura, altoMm, R = {}, tariff = 'T1') => {
+  const c = (cod || '').toUpperCase();
+  const f = (familia || '').toUpperCase();
+  const dio = /D\/I/.test(c);
+  const wCm = Math.round(w / 10);
+  const frentes = [];
+
+  // 1. BAJOS DE CAJONES Y GAVETAS
+  if (f === 'BAJO_5_CAJONES' || /^BC\d+/.test(c)) {
+    for (let i = 0; i < 5; i++) {
+      frentes.push({ h: 14, w: wCm, desc: `Cajón ${i + 1} (14x${wCm})` });
+    }
+  } else if (f === 'BAJO_3CAJ_1GAV' || /^BCG\d+/.test(c)) {
+    for (let i = 0; i < 3; i++) {
+      frentes.push({ h: 14, w: wCm, desc: `Cajón ${i + 1} (14x${wCm})` });
+    }
+    frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+  } else if (f === 'BAJO_2GAV_1CAJ' || /^BGC\d+/.test(c)) {
+    frentes.push({ h: 14, w: wCm, desc: `Cajón superior (14x${wCm})` });
+    frentes.push({ h: 28, w: wCm, desc: `Gaveta media (28x${wCm})` });
+    frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+  } else if (f === 'BAJO_2CAJ_1GAV_1FRENTE' || /^BCGF\d+/.test(c)) {
+    frentes.push({ h: 14, w: wCm, desc: `Cajón 1 (14x${wCm})` });
+    frentes.push({ h: 14, w: wCm, desc: `Cajón 2 (14x${wCm})` });
+    frentes.push({ h: 28, w: wCm, desc: `Gaveta cacerolero (28x${wCm})` });
+  } else if (f === 'BAJO_2GAV_1FRENTE' || /^BGF\d+/.test(c)) {
+    frentes.push({ h: 28, w: wCm, desc: `Gaveta superior (28x${wCm})` });
+    frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+  } else if (f === 'BAJO_PUERTA_CAJON' || /^BPC\d+/.test(c)) {
+    frentes.push({ h: 14, w: wCm, desc: `Frente cajón (14x${wCm})` });
+    frentes.push({ h: 56, w: wCm, desc: `Puerta inferior (56x${wCm})` });
+  } else if (f === 'BAJO_HORNO' || /^BH/.test(c)) {
+    if (/BHC|BHZ/.test(c)) {
+      frentes.push({ h: 14, w: 60, desc: 'Frente cajón inferior (14x60)' });
+    } else if (/BHG/.test(c)) {
+      frentes.push({ h: 28, w: 60, desc: 'Frente gaveta inferior (28x60)' });
+    }
+  } else if (f === 'BAJO_RINCON_ESCUADRA' || /^BRI|^BRU/.test(c)) {
+    frentes.push({ h: 70, w: 30, desc: 'Puerta escuadra 1 (70x30)' });
+    frentes.push({ h: 70, w: 30, desc: 'Puerta escuadra 2 (70x30)' });
+  } else if (f === 'BAJO_RINCON_CIEGO' || /^BR\d+/.test(c)) {
+    const wPuerta = Math.max(40, wCm - 50);
+    frentes.push({ h: 70, w: wPuerta, desc: `Puerta rincón ciego (70x${wPuerta})` });
+  } else if (f.startsWith('BAJO') || /^B\d+|^BF\d+/.test(c)) {
+    // Bajos y Fregaderos estándar
+    const numP = (wCm >= 70 && !dio) ? 2 : 1;
+    const wUnit = numP > 1 ? Math.round(wCm / numP) : wCm;
+    for (let i = 0; i < numP; i++) {
+      frentes.push({ h: 70, w: wUnit, desc: numP > 1 ? `Puerta ${i + 1} (70x${wUnit})` : `Puerta bajo (70x${wUnit})` });
+    }
+  } 
+  // 2. COLUMNAS
+  else if (f === 'COLUMNA_DESPENSERO' || /^CD\d+/.test(c)) {
+    const hAlta = (altura === '220' || altoMm >= 2150) ? 147 : 127;
+    frentes.push({ h: hAlta, w: wCm, desc: `Puerta superior despensa (${hAlta}x${wCm})` });
+    frentes.push({ h: 70, w: wCm, desc: `Puerta inferior despensa (70x${wCm})` });
+  } else if (f === 'COLUMNA_FRIGO' || /^CF\d+/.test(c)) {
+    frentes.push({ h: 127, w: 60, desc: 'Puerta superior frigo (127x60)' });
+    frentes.push({ h: 70, w: 60, desc: 'Puerta inferior congelador (70x60)' });
+  } else if (f === 'COLUMNA_HORNO' || /^CH\d+/.test(c)) {
+    const hSup = (altura === '220' || altoMm >= 2150) ? 90 : 70;
+    frentes.push({ h: hSup, w: 60, desc: `Puerta superior horno (${hSup}x60)` });
+    frentes.push({ h: 70, w: 60, desc: 'Puerta/Gaveta inferior (70x60)' });
+  } else if (f === 'COLUMNA_HORNO_MICRO' || /^CHM\d+/.test(c)) {
+    const hSup = (altura === '220' || altoMm >= 2150) ? 56 : 40;
+    frentes.push({ h: hSup, w: 60, desc: `Puerta superior (${hSup}x60)` });
+    frentes.push({ h: 70, w: 60, desc: 'Puerta/Gaveta inferior (70x60)' });
+  } else if (f.startsWith('MEDIACOLUMNA') || f.startsWith('MEDIA_') || /^M\d+|^MPG\d+|^MPH\d+|^MV\d+/.test(c)) {
+    if (f === 'MEDIA_PUERTA_GAVETA' || /^MPG/.test(c)) {
+      frentes.push({ h: 70, w: wCm, desc: `Puerta semicolumna (70x${wCm})` });
+      frentes.push({ h: 28, w: wCm, desc: `Gaveta inferior (28x${wCm})` });
+    } else {
+      frentes.push({ h: 127, w: wCm, desc: `Puerta semicolumna (127x${wCm})` });
+    }
+  } else if (f.startsWith('SOBREENC') || /^S\d+|^SV\d+|^SC\d+/.test(c)) {
+    const hSob = (altura === '147' || altoMm >= 1400) ? 147 : 127;
+    if (f.includes('CAJON')) {
+      frentes.push({ h: 14, w: wCm, desc: `Cajón sobreencimera (14x${wCm})` });
+      frentes.push({ h: hSob === 147 ? 127 : 90, w: wCm, desc: `Puerta sobreencimera (${hSob === 147 ? 127 : 90}x${wCm})` });
+    } else {
+      frentes.push({ h: hSob, w: wCm, desc: `Puerta sobreencimera (${hSob}x${wCm})` });
+    }
+  }
+  // 3. ALTOS
+  else if (f === 'ALTO_ABATIBLE' || /^AA\d+/.test(c)) {
+    frentes.push({ h: 40, w: wCm, desc: `Frente abatible superior (40x${wCm})` });
+    frentes.push({ h: 40, w: wCm, desc: `Frente abatible inferior (40x${wCm})` });
+  } else if (f === 'ALTO_CAMPANA' || /^ASC|^ASCE/.test(c)) {
+    const hAlto = (altura === '90' || altoMm >= 850) ? 90 : 70;
+    if (wCm >= 90) {
+      frentes.push({ h: hAlto, w: 45, desc: `Puerta campana izq. (${hAlto}x45)` });
+      frentes.push({ h: hAlto, w: 45, desc: `Puerta campana dcha. (${hAlto}x45)` });
+    } else {
+      frentes.push({ h: hAlto, w: wCm, desc: `Puerta campana (${hAlto}x${wCm})` });
+    }
+  } else if (f === 'ALTILLO' || f === 'ALTILLO_VITRINA' || /^L\d+|^LV\d+/.test(c)) {
+    const hAltillo = (altura === '90' || altoMm >= 850) ? 40 : 28;
+    frentes.push({ h: hAltillo, w: wCm, desc: `Puerta altillo (${hAltillo}x${wCm})` });
+  } else if (f.startsWith('ALTO') || /^A\d+|^AV\d+|^AE\d+|^AM\d+/.test(c)) {
+    const hAlto = (altura === '90' || altoMm >= 850) ? 90 : 70;
+    const numP = (wCm >= 70 && !dio) ? 2 : 1;
+    const wUnit = numP > 1 ? Math.round(wCm / numP) : wCm;
+    for (let i = 0; i < numP; i++) {
+      frentes.push({ h: hAlto, w: wUnit, desc: numP > 1 ? `Puerta ${i + 1} (${hAlto}x${wUnit})` : `Puerta alto (${hAlto}x${wUnit})` });
+    }
+  }
+
+  // Calcular puntos de cada frente
+  let puntosTotales = 0;
+  const detalle = frentes.map(fr => {
+    let pts = getPuntosPuertaMV(fr.h, fr.w, tariff);
+    if (R.vitrina || f.includes('VITRINA')) pts = Math.round(pts * 1.3);
+    puntosTotales += pts;
+    return { ...fr, puntos: pts };
+  });
+
+  return { frentes: detalle, puntosTotales, numPuertas: frentes.length };
+};
+
 // Descompone un código MV según la regla de su familia y tarifa activa.
 export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   const cod = item.cod, altura = item.altura, familia = item.familia;
@@ -126,11 +246,9 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   const factorDesmontada = getFactorDesmontada();
   const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada);
   
-  // Puertas y frentes
-  let puertas = 0;
-  if (R.puertasFn) puertas = R.puertasFn(cod);
-  else if (R.puertas === 'dio') puertas = dio ? 1 : 2;
-  else puertas = R.puertas || 0;
+  // Desglose técnico preciso de puertas y frentes
+  const desgloseFrentes = getDesglosePuertasDetallado(cod, familia, w, altura, altoMm, R, tariff);
+  const puertas = desgloseFrentes.numPuertas;
   const cajones = (R.cajFn ? R.cajFn(cod) : (R.cajones || 0));
   const gavetas = (R.gavFn ? R.gavFn(cod) : (R.gavetas || 0));
   const baldas = R.baldasSel ? (altura === '90' ? 2 : 1) : (R.baldas || 0);
@@ -138,34 +256,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
   // Cálculo de Puntos Oficiales de Puertas según la Matriz MV
   const pvPuntos = pvCustom || 3.33; // Valor punto oficial
   const dtoPuertas = (p && p.dtoPuertas != null) ? Number(p.dtoPuertas) : getDescuentoPuertas();
-  
-  let puntosPuertas = 0;
-  const anchoPuertaUnit = puertas > 1 ? Math.round(w / puertas / 10) : Math.round(w / 10);
-  const altoPuertaCm = R.altoCol ? (altura === '220' ? 147 : 127) : (R.altoSel ? (altura === '90' ? 90 : 70) : 70);
-
-  if (puertas > 0) {
-    if (R.altoCol) {
-      // Columnas: puerta alta (127/147) + puerta baja (70)
-      const ptsAlta = getPuntosPuertaMV(altura === '220' ? 147 : 127, anchoPuertaUnit, tariff);
-      const ptsBaja = getPuntosPuertaMV(70, anchoPuertaUnit, tariff);
-      puntosPuertas = ptsAlta + ptsBaja;
-    } else {
-      const ptsUnit = getPuntosPuertaMV(altoPuertaCm, anchoPuertaUnit, tariff);
-      puntosPuertas = ptsUnit * puertas;
-    }
-  }
-
-  // Frentes de cajón y gavetas si no llevan puertas completas
-  if (cajones > 0 && puertas === 0) {
-    const ptsCaj = getPuntosPuertaMV(14, Math.round(w / 10), tariff);
-    puntosPuertas += ptsCaj * cajones;
-  }
-  if (gavetas > 0 && puertas === 0) {
-    const ptsGav = getPuntosPuertaMV(28, Math.round(w / 10), tariff);
-    puntosPuertas += ptsGav * gavetas;
-  }
-
-  if (R.vitrina) puntosPuertas = Math.round(puntosPuertas * 1.3);
+  const puntosPuertas = desgloseFrentes.puntosTotales;
 
   const pvpPuertas = Math.round(puntosPuertas * pvPuntos * 100) / 100;
   const costePuertas = Math.round(pvpPuertas * (1 - dtoPuertas / 100) * 100) / 100;
@@ -189,6 +280,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom) => {
     puerta: costePuertas,
     puertaPvp: pvpPuertas,
     puntosPuertas,
+    puertasDetalle: desgloseFrentes.frentes,
     dtoPuertas,
     puertas,
     areaPuertas: Math.round(areaP * 100) / 100,

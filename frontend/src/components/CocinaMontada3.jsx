@@ -1203,7 +1203,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </td>
                       )}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Puertas: ${m.despiece?.puntosPuertas || 0} pts MV (${eur(m.despiece?.puertaPvp)}) | Coste con dto (${m.despiece?.dtoPuertas || 50}%): ${eur(m.despiece?.puerta)}`}>
+                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Puertas: ${(m.despiece?.puertasDetalle || []).map(f => `${f.desc} [${f.puntos} pts]`).join(' + ') || '0 frentes'} = ${m.despiece?.puntosPuertas || 0} pts (${eur(m.despiece?.puertaPvp)}) | Coste neto (${m.despiece?.dtoPuertas || 50}% dto): ${eur(m.despiece?.puerta)}`}>
                           {eur(m.despiece?.puerta)}
                         </td>
                       )}
