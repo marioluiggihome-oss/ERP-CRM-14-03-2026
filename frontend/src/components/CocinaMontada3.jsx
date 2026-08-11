@@ -26,13 +26,14 @@ import {
   Copy, Layers, ArrowUpDown, ChevronRight, HelpCircle, Package,
   ClipboardList, CheckCircle2, ChevronDown, Boxes, Box, X, Printer, FileUp,
   User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft,
-  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play
+  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play, List
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada } from './RentabilidadMV';
+import RelacionReview from './RelacionReview';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
@@ -180,6 +181,59 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [copiadoWs, setCopiadoWs] = useState(false);
   const [showModalDtos, setShowModalDtos] = useState(false);
   
+  // Estado e inputs para el desplegable de IMPORTAR
+  const [menuImportar, setMenuImportar] = useState(false);
+  const [relacionRevisar, setRelacionRevisar] = useState(null);
+  const [importandoRel, setImportandoRel] = useState(false);
+  const relacionInputRef = useRef(null);
+  const alvicInputRef = useRef(null);
+
+  const importarRelacion = async (file) => {
+    if (!file) return;
+    setImportandoRel(true); setMenuImportar(false);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(`${API_URL}/api/cascos/parse-relacion-pdf`, { method: 'POST', body: fd });
+      if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'Error al procesar PDF'); }
+      const d = await r.json();
+      if (!d.muebles || !d.muebles.length) {
+        alert('No se detectaron módulos válidos en el PDF.');
+        return;
+      }
+      setRelacionRevisar(d.muebles);
+    } catch (e) { alert(e.message || 'Error al procesar el PDF'); }
+    finally { setImportandoRel(false); }
+  };
+
+  const importarAlvic = async (file) => {
+    if (!file) return;
+    setImportandoRel(true); setMenuImportar(false);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(`${API_URL}/api/cascos/parse-alvic-pdf`, { method: 'POST', body: fd });
+      if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'Error al procesar PDF Alvic'); }
+      const d = await r.json();
+      if (!d.muebles || !d.muebles.length) {
+        alert('No se detectaron módulos válidos en el PDF Alvic.');
+        return;
+      }
+      setRelacionRevisar(d.muebles);
+    } catch (e) { alert(e.message || 'Error al procesar PDF Alvic'); }
+    finally { setImportandoRel(false); }
+  };
+
+  const descargarPlantillaEnBlanco = async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/plantilla-pdf`);
+      if (!r.ok) throw new Error('Error al descargar plantilla');
+      const blob = await r.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'Plantilla_Muebles_Cocina.pdf'; a.click();
+    } catch (e) { alert(e.message); }
+  };
+
   // Descuentos comerciales de compra en fábrica de puertas (Descuento 1 + Descuento 2 en cascada)
   const [dtoPuertas1, setDtoPuertas1] = useState(() => {
     try { return parseFloat(localStorage.getItem('dto_puertas_1') || localStorage.getItem('dto_puertas') || '50'); } catch { return 50; }
@@ -801,13 +855,69 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           >
             <Hammer size={13} className="text-amber-400" /> Escandallo
           </button>
-          <button
-            onClick={() => setShowPegadoMasivo(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600/50 hover:bg-indigo-600 border border-indigo-400/30 text-[11px] font-bold transition-all text-white"
-            title="Pegar lista completa de muebles de WhatsApp, email o Word"
-          >
-            <FileUp size={13} /> Pegado Masivo
-          </button>
+          {/* Desplegable IMPORTAR (Relación en pantalla, Desde plantilla PDF, Desde presupuesto Alvic PDF, Descargar plantilla) */}
+          <div className="relative">
+            <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
+            <input ref={alvicInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarAlvic(e.target.files?.[0])} />
+            <button
+              onClick={() => setMenuImportar(v => !v)}
+              title="Importar muebles: en pantalla, desde la plantilla PDF o desde un presupuesto Alvic"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-[11px] border border-white/10 transition-all"
+            >
+              {importandoRel ? <Loader size={13} className="animate-spin" /> : <FileUp size={13} />} Importar
+              <ChevronDown size={13} className={menuImportar ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
+            {menuImportar && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenuImportar(false)} />
+                <div className="absolute right-0 mt-1.5 z-50 w-80 bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-700 animate-in fade-in zoom-in-95">
+                  <button
+                    onClick={() => { setMenuImportar(false); setShowPegadoMasivo(true); }}
+                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 border-b border-slate-100 transition-colors"
+                  >
+                    <List size={18} className="text-indigo-600 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="block text-xs font-black text-slate-800">Relación en pantalla</span>
+                      <span className="block text-[10px] text-slate-500 font-medium">Montar los muebles a mano o desde texto</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setMenuImportar(false); relacionInputRef.current?.click(); }}
+                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 border-b border-slate-100 transition-colors"
+                  >
+                    <Sparkles size={18} className="text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="block text-xs font-black text-slate-800">Desde plantilla (PDF nomenclaturas)</span>
+                      <span className="block text-[10px] text-slate-500 font-medium">Sube la plantilla rellenada con los códigos MV</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setMenuImportar(false); alvicInputRef.current?.click(); }}
+                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 border-b border-slate-100 transition-colors"
+                  >
+                    <Package size={18} className="text-cyan-600 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="block text-xs font-black text-slate-800">Desde presupuesto Alvic (PDF)</span>
+                      <span className="block text-[10px] text-slate-500 font-medium">Proforma Alvic → equivalencia de muebles y cascos</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setMenuImportar(false); descargarPlantillaEnBlanco(); }}
+                    className="w-full text-left px-3.5 py-3 hover:bg-indigo-50 flex items-start gap-3 transition-colors"
+                  >
+                    <Download size={18} className="text-emerald-600 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="block text-xs font-black text-slate-800">Descargar plantilla en blanco</span>
+                      <span className="block text-[10px] text-slate-500 font-medium">PDF rellenable con las 58 familias</span>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={() => setShowComparador(v => !v)}
             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/8 hover:bg-white/15 border-white/10 text-white'}`}
@@ -1497,6 +1607,21 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de revisión de muebles parseados desde PDF de Relación o Alvic */}
+      {relacionRevisar && (
+        <RelacionReview
+          muebles={relacionRevisar}
+          tarifa={tarifa}
+          acabadoPuerta={acabadoPuerta}
+          acabadoCasco={acabadoCasco}
+          onClose={() => setRelacionRevisar(null)}
+          onAplicar={(mueblesActualizados) => {
+            setMuebles(prev => fundir(prev, mueblesActualizados));
+            setRelacionRevisar(null);
+          }}
+        />
       )}
 
     </div>
