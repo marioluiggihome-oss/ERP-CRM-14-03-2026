@@ -802,6 +802,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isCarpintero: false,
       canManageCarpinteroUsers: false,
       carpinteroLandingUrl: '',
+      isStudio3k: false,
+      canManageStudio3kUsers: false,
+      studio3kLandingUrl: 'https://studio3k.io',
       linkedRepresentativeId: isCommercial ? state.currentUser.id : '',
       allowedModules: ['montada'],
       allowedLibraries: ['ZC'],  // Por defecto ZC
@@ -2358,6 +2361,42 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                     className="w-4 h-4 rounded accent-amber-700"
                                   />
                                   <span title="Admin de la división: puede crear y gestionar sus propios usuarios/clientes, que heredan su marca y su landing." className="text-xs font-bold text-amber-900">Admin de división (crea sus usuarios)</span>
+                                </label>
+                              </>
+                            )}
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.isStudio3k}
+                                onChange={(e) => setUserForm({
+                                  ...userForm,
+                                  isStudio3k: e.target.checked,
+                                  canUseKitchenDesigner: e.target.checked ? true : userForm.canUseKitchenDesigner,
+                                  canUseCocinasAI: e.target.checked ? true : userForm.canUseCocinasAI,
+                                  canUseAIAnalysis: e.target.checked ? true : userForm.canUseAIAnalysis,
+                                  allowedModules: e.target.checked ? [] : userForm.allowedModules,
+                                })}
+                                className="w-4 h-4 rounded accent-indigo-600"
+                              />
+                              <span title="Perfil Studio3K: entra en un entorno privado con Estudio 3D como aplicación principal." className="text-xs font-bold text-slate-700">Studio3K · Estudio de cocinas</span>
+                            </label>
+                            {userForm.isStudio3k && (
+                              <>
+                                <input
+                                  type="url"
+                                  value={userForm.studio3kLandingUrl || ''}
+                                  onChange={(e) => setUserForm({...userForm, studio3kLandingUrl: e.target.value})}
+                                  placeholder="URL web de inicio Studio3K"
+                                  className="w-full px-2 py-1.5 border border-indigo-300 rounded-lg text-xs"
+                                />
+                                <label className="flex items-center gap-2 cursor-pointer bg-indigo-50 px-2 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!userForm.canManageStudio3kUsers}
+                                    onChange={(e) => setUserForm({...userForm, canManageStudio3kUsers: e.target.checked})}
+                                    className="w-4 h-4 rounded accent-indigo-600"
+                                  />
+                                  <span title="Admin del estudio: puede crear y gestionar únicamente los usuarios vinculados a su organización Studio3K." className="text-xs font-bold text-indigo-900">Admin del estudio (crea sus usuarios)</span>
                                 </label>
                               </>
                             )}

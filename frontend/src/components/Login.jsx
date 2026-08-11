@@ -66,11 +66,29 @@ const isCarpDirect = () => {
   } catch { return false; }
 };
 
+// Acceso privado desde la landing Studio3K: studio3k.io o el enlace
+// erp.luiggihome.es/?brand=studio3k conservan la identidad de la marca.
+const isStudio3kDirect = () => {
+  try {
+    const host = (window.location.hostname || '').toLowerCase();
+    const sp = new URLSearchParams(window.location.search);
+    const hash = (window.location.hash || '').toLowerCase();
+    return host.includes('studio3k.io') || host.includes('estudio3k.io')
+      || sp.get('brand') === 'studio3k' || sp.has('studio3k') || hash === '#studio3k';
+  } catch { return false; }
+};
+
+const Studio3kBrand = ({ big = false }) => (
+  <div className={`inline-flex items-baseline font-bold tracking-tight ${big ? 'text-5xl' : 'text-2xl'}`}>
+    <span className="text-white">studio</span><span className="text-[#4B6BFF]">3k</span>
+  </div>
+);
+
 const Login = ({ onLogin, customLogo }) => {
   const floorDirect = isFloorDirect();
   // La marca la decide CÓMO se entra: cada división tiene su enlace directo con
-  // SU marca (floor, carpinteros...); el resto ve la marca corporativa. Sin conmutador.
-  const brand = floorDirect ? 'floor' : (isCarpDirect() ? 'carpinteros' : 'home');
+  // SU marca (floor, carpinteros, Studio3K...); el resto ve la corporativa.
+  const brand = floorDirect ? 'floor' : (isCarpDirect() ? 'carpinteros' : (isStudio3kDirect() ? 'studio3k' : 'home'));
   const [mode, setMode] = useState('login'); // 'login', 'register', 'registerEmail', 'distributor'
   const [floorLogo, setFloorLogo] = useState(null);
   const [username, setUsername] = useState('');
@@ -280,6 +298,8 @@ const Login = ({ onLogin, customLogo }) => {
   // (ebanistería), en tonos cálidos. Reserva de color por si la imagen tarda.
   const brandBg = brand === 'carpinteros'
     ? 'https://images.unsplash.com/photo-1600489000022-c2086d79f9d4?auto=format&fit=crop&w=1920&q=80'
+    : brand === 'studio3k'
+    ? 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1920&q=80'
     : 'https://static.prod-images.emergentagent.com/jobs/b3965c3e-ccdc-4506-be7a-5d947275bca3/images/34360bf741aea83455380cd7a1a3e4f5cf9c6771d54283a4efe0ac8d2bf300d3.png';
 
   return (
@@ -326,6 +346,18 @@ const Login = ({ onLogin, customLogo }) => {
                 </h1>
                 <p className="text-white/70 text-lg">
                   Herramientas profesionales para carpinteros y ebanistas.
+                </p>
+              </>
+            ) : brand === 'studio3k' ? (
+              <>
+                <div className="mb-6"><Studio3kBrand big /></div>
+                <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
+                  TU COCINA<br />
+                  TU PROYECTO<br />
+                  <span style={{ color: '#4B6BFF' }}>EN 3D</span>
+                </h1>
+                <p className="text-white/70 text-lg">
+                  Tu entorno profesional para diseñar, presentar y vender cocinas.
                 </p>
               </>
             ) : (

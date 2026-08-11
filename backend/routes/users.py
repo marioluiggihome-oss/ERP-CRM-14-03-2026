@@ -435,3 +435,90 @@ async def carpintero_delete_user(user_id: str, current_user: dict = Depends(requ
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
     return {"success": True}
+
+
+# ---------------------------------------------------------------------------
+# Studio3K: cada estudio/tienda tiene un administrador principal y usuarios
+# vinculados únicamente a ese administrador. Es el mismo patrón de aislamiento
+# empleado por carpinter.io, pero con acceso por defecto a Estudio 3D.
+# ---------------------------------------------------------------------------
+async def require_studio3k_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    user = await require_authenticated_user(credentials)
+    if _is_user_manager(user):
+        return user
+    full = await _get_db().users.find_one(
+        {"id": user.get("id")},
+        {"_id": 0, "id": 1, "username": 1, "isStudio3k": 1,
+         "canManageStudio3kUsers": 1, "studio3kLandingUrl": 1,
+         "canUseKitchenDesigner": 1, "canUseCocinasAI": 1,
+         "canUseAIAnalysis": 1},
+    ) or {}
+    if full.get("isStudio3k") and full.get("canManageStudio3kUsers"):
+        return {**user, **full}
+    raise HTTPException(status_code=403, detail="Se requiere permiso de gestión de usuarios Studio3K")
+
+
+@router.get("/studio3k/mine")
+async def studio3k_users(current_user: dict = Depends(require_studio3k_admin)):
+    """Usuarios vinculados al administrador Studio3K autenticado."""
+    users = await _get_db().users.find(
+        {"linkedStudio3kAdminId": current_user.get("id")},
+        {"_id": 0, "password": 0},
+    ).to_list(500)
+    return users
+
+
+@router.post("/studio3k/create")
+async def studio3k_create_user(payload: dict, current_user: dict = Depends(require_studio3k_admin)):
+    """Crea un usuario del estudio vinculado a su administrador Studio3K."""
+    username = str((payload or {}).get("username", "")).strip()
+    password = str((payload or {}).get("password", ""))
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Usuario y contraseña son obligatorios")
+    existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    doc = {
+        "id": f"user-{uuid.uuid4().hex[:8]}",
+        "username": username,
+        "password": hash_password(password),
+        "clientName": str(payload.get("clientName", "")).strip(),
+        "isActive": True,
+        "isStudio3k": True,
+        "linkedStudio3kAdminId": current_user.get("id"),
+        "studio3kLandingUrl": str(payload.get("studio3kLandingUrl") or current_user.get("studio3kLandingUrl") or ""),
+        "canUseKitchenDesigner": bool(current_user.get("canUseKitchenDesigner")),
+        "canUseCocinasAI": bool(current_user.get("canUseCocinasAI")),
+        "canUseAIAnalysis": bool(current_user.get("canUseAIAnalysis")),
+        # El acceso al Estudio 3D lo dan los permisos específicos. Dejar la
+        # lista vacía mantiene al usuario dentro del portal privado Studio3K.
+        "allowedModules": [],
+    }
+    await _get_db().users.insert_one(doc)
+    logger.info("Studio3K user created: %s (by %s)", username, current_user.get("username"))
+    return {k: v for k, v in doc.items() if k != "password"}
+
+
+@router.put("/studio3k/toggle/{user_id}")
+async def studio3k_toggle_user(user_id: str, current_user: dict = Depends(require_studio3k_admin)):
+    """Activa o desactiva un usuario únicamente dentro de su estudio Studio3K."""
+    u = await _get_db().users.find_one(
+        {"id": user_id, "linkedStudio3kAdminId": current_user.get("id")},
+        {"_id": 0, "id": 1, "isActive": 1},
+    )
+    if not u:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu estudio")
+    new_active = not bool(u.get("isActive", True))
+    await _get_db().users.update_one({"id": user_id}, {"$set": {"isActive": new_active}})
+    return {"success": True, "isActive": new_active}
+
+
+@router.delete("/studio3k/remove/{user_id}")
+async def studio3k_delete_user(user_id: str, current_user: dict = Depends(require_studio3k_admin)):
+    """Elimina un usuario únicamente dentro de su estudio Studio3K."""
+    res = await _get_db().users.delete_one(
+        {"id": user_id, "linkedStudio3kAdminId": current_user.get("id")}
+    )
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu estudio")
+    return {"success": True}

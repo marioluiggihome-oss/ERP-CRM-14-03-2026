@@ -41,6 +41,7 @@ const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
 const CarpinterosUsers = lazy(() => import('./components/CarpinterosUsers')); // Gestión de usuarios de la división carpinteros
+const Studio3kUsers = lazy(() => import('./components/Studio3kUsers')); // Gestión de usuarios de cada estudio Studio3K
 const CarpinterPanel = lazy(() => import('./components/CarpinterPanel')); // Panel independiente admin Carpinter.io (reemplaza SettingsModal)
 const Studio3kLanding = lazy(() => import('./components/Studio3kLanding')); // Landing pública studio3k.io / estudio3k.io
 const CarpinterosLanding = lazy(() => import('./components/CarpinterosLanding')); // Landing propia carpinteros (carpenter.io)
@@ -476,8 +477,10 @@ const App = () => {
       // Logo POR USUARIO: si el usuario tiene marca propia y logo, usar el suyo;
       // si no, mantener el logo global cargado por defecto.
       logo: (user.useCustomBranding && user.logo) ? user.logo : prev.logo,
-      // Colores de marca carpinter.io: naranja corporativo para todos los usuarios de la división
-      brandColor: (user.isCarpintero || user.linkedCarpinteroAdminId) ? '#C4621D' : prev.brandColor
+      // Colores corporativos según la división del usuario.
+      brandColor: (user.isStudio3k || user.linkedStudio3kAdminId)
+        ? '#4B6BFF'
+        : ((user.isCarpintero || user.linkedCarpinteroAdminId) ? '#C4621D' : prev.brandColor)
     }));
     
     // Recargar productos de la biblioteca del usuario
@@ -999,6 +1002,46 @@ const App = () => {
               <CarpinterosLanding onEnter={null} embedded />
             </Suspense>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Portal privado Studio3K: cada tienda o estudio entra directamente en
+  // Estudio 3D, sin módulos corporativos ajenos. Su administrador solo puede
+  // gestionar los usuarios vinculados a su propio estudio.
+  if (state.currentUser?.isStudio3k && !_hasOtherAccess && !state.studio3kPortalOff) {
+    const studioWeb = state.currentUser?.studio3kLandingUrl || 'https://studio3k.io';
+    return (
+      <div className="h-screen flex flex-col bg-[#080C1A] overflow-hidden">
+        <style>{`:root { --brand-primary: #4B6BFF; }`}</style>
+        {state.showStudio3kUsers && (
+          <Suspense fallback={null}>
+            <Studio3kUsers onClose={() => setState(prev => ({ ...prev, showStudio3kUsers: false }))} />
+          </Suspense>
+        )}
+        <div className="flex items-center justify-between px-4 py-2 bg-[#0D1328] border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-black tracking-tight text-white">studio<span className="text-[#4B6BFF]">3k</span></span>
+            <span className="text-xs font-black text-[#AAB8FF] uppercase tracking-widest">Entorno privado</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {state.currentUser?.canManageStudio3kUsers && (
+              <button
+                onClick={() => setState(prev => ({ ...prev, showStudio3kUsers: true }))}
+                className="text-xs font-bold text-white bg-[#293A92] hover:bg-[#3449B3] px-3 py-1.5 rounded-lg uppercase tracking-wide"
+              >
+                Usuarios
+              </button>
+            )}
+            <a href={studioWeb} target="_blank" rel="noreferrer" className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest">Web</a>
+            <button onClick={() => setState(prev => ({ ...prev, currentUser: null }))} className="text-xs font-bold text-[#AAB8FF] hover:text-white uppercase tracking-widest">Salir</button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-hidden bg-slate-50">
+          <ErrorBoundary>
+            <EstudioCocinas state={state} setState={setState} />
+          </ErrorBoundary>
         </div>
       </div>
     );
