@@ -763,49 +763,42 @@ export default function PlanificacionProduccion({ currentUser }) {
                   </span>
                 </button>
               </div>
+
+              {/* Stepper Visual de Estaciones */}
+              <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-100 mt-2">
+                {ESTACIONES.map(est => {
+                  const infoEst = p.estaciones?.[est.id] || {};
+                  const isCurrent = p.estado === est.id;
+                  const isDone = infoEst.completado;
+
+                  return (
+                    <div 
+                      key={est.id} 
+                      className={`p-2.5 rounded-2xl border transition-all text-xs ${
+                        isDone ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950' :
+                        isCurrent ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200 text-indigo-950 shadow-sm' :
+                        'bg-slate-50/50 border-slate-200 text-slate-400 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-[11px] truncate">{est.nombre.split('. ')[1]}</span>
+                        {isDone ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> :
+                         isCurrent ? <Play size={12} className="text-indigo-600 shrink-0" fill="currentColor" /> :
+                         <Clock size={12} className="text-slate-300 shrink-0" />}
+                      </div>
+                      <div className="text-[10px] font-medium text-slate-500 truncate">
+                        {isDone ? `Completado (${infoEst.fecha || 'OK'})` :
+                         isCurrent ? `${infoEst.operario || 'En proceso'} (${infoEst.progreso || 50}%)` :
+                         'Pendiente'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
       </div>
-    </div>
-  );
-}
-
-            {/* Stepper Visual de Estaciones */}
-            <div className="grid grid-cols-5 gap-2 pt-2">
-              {ESTACIONES.map(est => {
-                const infoEst = p.estaciones[est.id] || {};
-                const isCurrent = p.estado === est.id;
-                const isDone = infoEst.completado;
-
-                return (
-                  <div 
-                    key={est.id} 
-                    className={`p-2.5 rounded-2xl border transition-all text-xs ${
-                      isDone ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950' :
-                      isCurrent ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200 text-indigo-950 shadow-sm' :
-                      'bg-slate-50/50 border-slate-200 text-slate-400 opacity-60'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-[11px] truncate">{est.nombre.split('. ')[1]}</span>
-                      {isDone ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> :
-                       isCurrent ? <Play size={12} className="text-indigo-600 shrink-0" fill="currentColor" /> :
-                       <Clock size={12} className="text-slate-300 shrink-0" />}
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-500 truncate">
-                      {isDone ? `Completado (${infoEst.fecha || 'OK'})` :
-                       isCurrent ? `${infoEst.operario || 'En proceso'} (${infoEst.progreso || 50}%)` :
-                       'Pendiente'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
     </div>
   );
 }
