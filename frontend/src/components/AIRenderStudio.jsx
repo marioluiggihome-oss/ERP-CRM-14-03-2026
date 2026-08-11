@@ -3666,7 +3666,7 @@ export default function AIRenderStudio({ state, setState }) {
                     className="max-w-full max-h-full object-contain transition-transform"
                     style={{
                       ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
-                      ...(schematic ? { filter: 'grayscale(100%) contrast(140%) brightness(115%)' } : {}),
+                      ...(schematic ? { filter: 'grayscale(100%) contrast(115%) brightness(88%)' } : {}),
                     }}
                     onError={() => setImgError(true)}
                     onClick={placeMark}
