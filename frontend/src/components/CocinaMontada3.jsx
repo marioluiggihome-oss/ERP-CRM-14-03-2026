@@ -271,16 +271,50 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         alert('No se detectaron módulos válidos en el PDF de Alvic.');
         return;
       }
-      const mueblesAdaptados = items.map(it => ({
-        cod: it.cod || it.codigo || it.ref || '',
-        descripcion: it.descripcion || it.nombre || '',
-        qty: it.qty || it.cantidad || 1,
-        ancho: it.ancho || it.width || null,
-        alto: it.alto || it.height || null,
-        familia: it.familia || '',
-        pvp: it.pvp || it.precio || 0,
-      }));
-      setRelacionRevisar(mueblesAdaptados);
+      const mueblesAdaptados = items.map((it, idx) => {
+        const rawAncho = Number(it.ancho || it.width || 0);
+        const rawAlto = Number(it.largo || it.alto || it.height || 0);
+        const widthCm = rawAncho > 320 ? Math.round(rawAncho / 10) : (rawAncho || null);
+        const heightCm = rawAlto > 320 ? Math.round(rawAlto / 10) : (rawAlto || null);
+        const qty = Number(it.cantidad || it.qty || 1);
+        const pvpUnit = Number(it.pvp || it.precio || 0);
+
+        let codMv = (it.cod || it.ref || '').trim();
+        const descUpper = (it.descripcion || '').toUpperCase();
+        let tipo = (it.tipo || '').toUpperCase();
+
+        if (!tipo) {
+          if (descUpper.includes('FREGADERO')) tipo = 'BAJO_FREGADERO';
+          else if (descUpper.includes('RINCON')) tipo = 'BAJO_RINCON_CIEGO';
+          else if (descUpper.includes('HORNO')) tipo = 'COLUMNA_HORNO_MICRO';
+          else if (descUpper.includes('ALTO')) tipo = 'ALTO';
+          else if (descUpper.includes('COLUMNA')) tipo = 'COLUMNA';
+          else tipo = 'BAJO';
+        }
+
+        if (!/^[A-Z]{1,5}\d{2,3}(D\/I|D|I)?$/i.test(codMv) && widthCm) {
+          if (tipo === 'BAJO_FREGADERO') codMv = `BF${widthCm}D/I`;
+          else if (tipo === 'BAJO_RINCON_CIEGO') codMv = `BR${widthCm}D/I`;
+          else if (tipo === 'COLUMNA_HORNO_MICRO') codMv = `CHMG${widthCm}D/I`;
+          else if (tipo === 'ALTO') codMv = `A${widthCm}D/I`;
+          else codMv = `B${widthCm}D/I`;
+        }
+
+        return {
+          _k: `alvic-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+          cod: codMv || `B${widthCm || 60}D/I`,
+          descripcion: it.descripcion || `${tipo} ${widthCm || ''}x${heightCm || ''}`.trim(),
+          qty,
+          ancho: widthCm,
+          alto: heightCm,
+          familia: tipo,
+          pvp: pvpUnit,
+          encontrado: true,
+          mano: '',
+        };
+      });
+
+      setMuebles(prev => fundir(prev, mueblesAdaptados));
     } catch (e) { alert(e.message || 'Error al procesar PDF Alvic'); }
     finally { setImportandoRel(false); if (alvicInputRef.current) alvicInputRef.current.value = ''; }
   };
