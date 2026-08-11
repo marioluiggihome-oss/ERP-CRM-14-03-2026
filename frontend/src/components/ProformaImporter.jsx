@@ -166,11 +166,14 @@ const _ES_PUERTA = /^PTA[ .]|^PUERTA\b|PUERTA DE INTEGRACION|PUERTA DE INTEGRACI
 const _ES_COSTADO = /COSTADO/;
 const _ES_REGLETA = /^REG |REGLETA|COPETE|ZOCALO|ZÓCALO/;
 const _ES_TABLERO = /^TABLERO|TRASERA|^BANDA |SIN TIRADOR/;
+// Herrajes: elementos que no son cascos ni puertas sino accesorios y complementos
+const _ES_HERRAJE = /CUBERTERO|TIRADOR|PINZA|BISAGRA|PATA\s|COLGADOR|SOPORTE|AMORTIGUADOR|GUIA|GUÍA|CORREDERA|CAJÓN\s+BLUM|CAJON\s+BLUM|GAVETA\s+BLUM|ZOCALO|ZÓCALO|PINZA\s+ZOCALO|PINZA\s+ZÓCALO|PERFIL\s+GOLA|GOLA\s+ALUMINIO|MANETA|POMO\s|TIRADOR\s/i;
 
 const _may = (desc) => (desc || '').toUpperCase();
 const _es_puerta = (desc) => _ES_PUERTA.test(_may(desc));
 const _es_costado = (desc) => _ES_COSTADO.test(_may(desc));
 const _es_regleta = (desc) => _ES_REGLETA.test(_may(desc));
+const _es_herraje = (desc) => _ES_HERRAJE.test(desc || '');
 
 const _es_pieza_suelta = (desc) => {
   const t = _may(desc);
@@ -330,6 +333,7 @@ const DESTINOS = {
 
 const _destino_auto = (it, acb) => {
   if (_es_puerta(it.descripcion)) return 'puertas';
+  if (_es_herraje(it.descripcion)) return 'herrajes';
   if (_es_pieza_suelta(it.descripcion)) return 'otros';
   if (acb) return 'cascos';
   return 'otros';
@@ -1600,6 +1604,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                 puertas={calc.puertas}
                 costados={calc.costados}
                 regletas={calc.regletas}
+                muebles={calc.rows.filter(r => r._puertasMueble)}
                 pm2={calc.pm2}
                 costePuertas={calc.costePuertas}
                 puertasEditadas={puertasEditadas}
@@ -1844,7 +1849,7 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
 }
 
 // ── Editor de pedido de puertas/costados/regletas ────────────────────────────
-function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertasEditadas, setPuertasEditadas,
+function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePuertas, puertasEditadas, setPuertasEditadas,
                         costadosEditados, setCostadosEditados, regletasEditadas, setRegletasEditadas,
                         ocultarImportes, onExportar }) {
   // Con el candado echado el precio/m2 y el total en euros no se ensenan; las
@@ -1863,6 +1868,11 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
   };
   const setMedidaRegleta = (i, campo, val) => {
     setRegletasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
+  };
+  // Puertas por mueble: estado local editable por índice de mueble
+  const [puertasMuebleEdit, setPuertasMuebleEdit] = React.useState({});
+  const setMedidaMueble = (i, campo, val) => {
+    setPuertasMuebleEdit(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
 
   // Un numero editable de medida, en mm. Vacio NO es 0: es «no se sabe», y por
@@ -2077,6 +2087,78 @@ function EditorPuertas({ puertas, costados, regletas, pm2, costePuertas, puertas
                   );
                 })}
               </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Puertas por mueble — pedido al proveedor de puertas */}
+      {muebles.length > 0 && (
+        <div>
+          <div className="text-[10px] font-black text-indigo-700 uppercase mb-1.5 flex items-center gap-2">
+            <span>🚪 Puertas por mueble — Pedido proveedor ({muebles.length} muebles)</span>
+            <span className="text-[9px] font-normal text-slate-500 normal-case">Medidas editables · incluye holgura</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-indigo-50 text-indigo-800">
+                <tr>
+                  <th className="px-2 py-1 text-left">#</th>
+                  <th className="px-2 py-1 text-left">Código</th>
+                  <th className="px-2 py-1 text-left">Descripción</th>
+                  <th className="px-2 py-1 text-center">Muebles</th>
+                  <th className="px-2 py-1 text-center">Puertas/ud</th>
+                  <th className="px-2 py-1 text-center">Alto mm</th>
+                  <th className="px-2 py-1 text-center">Ancho mm</th>
+                  <th className="px-2 py-1 text-center">Total puertas</th>
+                  <th className="px-2 py-1 text-center">Frente mixto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {muebles.map((r, i) => {
+                  const pm = r._puertasMueble;
+                  const ov = puertasMuebleEdit[i] || {};
+                  const alto = Number(ov.alto ?? pm.alto) || 0;
+                  const ancho = Number(ov.ancho ?? pm.ancho) || 0;
+                  const totalPuertas = (pm.n || 1) * (pm.uds || 1);
+                  return (
+                    <tr key={i} className={`border-t border-slate-100 ${r._frenteMixto ? 'bg-amber-50' : ''}`}>
+                      <td className="px-2 py-1 text-slate-400">{i + 1}</td>
+                      <td className="px-2 py-1 font-mono text-indigo-700">{r.cod}</td>
+                      <td className="px-2 py-1 max-w-[200px] truncate text-slate-700" title={r.descripcion}>{r.descripcion}</td>
+                      <td className="px-2 py-1 text-center font-bold">{pm.uds || 1}</td>
+                      <td className="px-2 py-1 text-center">{pm.n}</td>
+                      <td className="px-2 py-1 text-center">
+                        <input type="number" value={ov.alto ?? pm.alto}
+                          onChange={e => setMedidaMueble(i, 'alto', e.target.value)}
+                          className="w-20 px-1 py-0.5 border border-indigo-200 rounded text-center text-xs focus:border-indigo-400 focus:outline-none" />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <input type="number" value={ov.ancho ?? pm.ancho}
+                          onChange={e => setMedidaMueble(i, 'ancho', e.target.value)}
+                          className="w-20 px-1 py-0.5 border border-indigo-200 rounded text-center text-xs focus:border-indigo-400 focus:outline-none" />
+                      </td>
+                      <td className="px-2 py-1 text-center font-bold text-indigo-700">{totalPuertas}</td>
+                      <td className="px-2 py-1 text-center">
+                        {r._frenteMixto && (
+                          <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-bold">Cajones/gavetas — revisar</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-indigo-50 border-t-2 border-indigo-200">
+                <tr>
+                  <td colSpan={7} className="px-2 py-1.5 text-right text-xs font-black text-indigo-800">
+                    Total puertas a pedir:
+                  </td>
+                  <td className="px-2 py-1.5 text-center text-sm font-black text-indigo-900">
+                    {muebles.reduce((s, r) => s + (r._puertasMueble.n || 1) * (r._puertasMueble.uds || 1), 0)}
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>

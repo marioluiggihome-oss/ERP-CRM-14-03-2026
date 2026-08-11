@@ -364,12 +364,23 @@ const Cascos = ({ state, setState }) => {
       const s = norm(t);
       if (/alto|altillo|sobre\s*encimera|sobre\s*columna|cubretermo|escurre|campana|vitrina/.test(s)) return 'alto';
       if (/columna|semicolumna/.test(s)) return 'columna';
+      // Tipos específicos de bajo — deben emparejarse con su casco exacto
+      if (/fregadero|placa/.test(s)) return 'bajo_fregadero';
+      if (/horno/.test(s)) return 'bajo_horno';
       return 'bajo';
     };
     const pool = CASCOS.filter(m => (m.gama || 'kit') === gama && String(m.grosor) === String(grosorActivo) && m.precios[colorActivo] != null);
     const lines = cabs.map((det, idx) => {
       const fam = famOf(det.tipo);
-      let cand = pool.filter(m => famOf(m.tipo) === fam);
+      // Mapear familia del mueble al tipo de casco exacto
+      const tipoCascoExacto = fam === 'bajo_fregadero' ? 'Bajo Fregadero'
+        : fam === 'bajo_horno' ? 'Bajo Horno'
+        : null;
+      let cand = tipoCascoExacto
+        ? pool.filter(m => m.tipo === tipoCascoExacto)
+        : pool.filter(m => famOf(m.tipo) === fam);
+      // Si no hay cascos del tipo exacto, caer al tipo genérico de la familia
+      if (!cand.length && tipoCascoExacto) cand = pool.filter(m => famOf(m.tipo) === 'bajo');
       if (!cand.length) cand = pool;
       // A MILÍMETROS ANTES DE COMPARAR. El catálogo está en mm y hay orígenes
       // que mandan cm: comparar 60 contra 600 no da error, da el casco más
