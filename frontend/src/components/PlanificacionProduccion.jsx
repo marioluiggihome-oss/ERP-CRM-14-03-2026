@@ -36,92 +36,55 @@ const ESTACIONES = [
 
 const PEDIDOS_DEMO = [
   {
-    id: 'OF-2026-081',
+    id: 'OF-INT-2026-081',
     cliente: 'Promociones Canalejas Salamanca',
     ref: 'Vivienda Ático D',
     tipo: 'Cocina Montada 3',
     tarifa: 'T4 ZENIT',
+    casco: 'Grafito Antracita (19mm)',
+    origen: 'INTERNO',
     modulos: 18,
-    m2Tablero: 42.5,
-    mlCanteado: 145,
-    estado: 'mecanizado',
     prioridad: 'ALTA',
-    progreso: 45,
     fechaInicio: '2026-08-11',
     fechaEntrega: '2026-08-18',
-    estaciones: {
-      corte: { completado: true, fecha: '11/08 09:30', operario: 'Carlos M.' },
-      cnc: { completado: false, enCurso: true, progreso: 60, operario: 'David R.' },
-      canteado: { completado: false, pendiente: true },
-      ensamblado: { completado: false, pendiente: true },
-      embalaje: { completado: false, pendiente: true }
-    }
+    cascosEstado: 'recibido',
+    puertasEstado: 'pedido',
+    herrajesEstado: 'recibido',
+    accesoriosEstado: 'recibido'
   },
   {
-    id: 'OF-2026-082',
+    id: 'OF-EXT-2026-082',
     cliente: 'Estudio Álvarez-Quiñones',
     ref: 'Chalet Villares',
     tipo: 'Cocina Montada 3',
     tarifa: 'T2 Seda',
+    casco: 'Blanco Hidrófugo (19mm)',
+    origen: 'EXTERNO',
     modulos: 12,
-    m2Tablero: 28.0,
-    mlCanteado: 95,
-    estado: 'corte',
     prioridad: 'NORMAL',
-    progreso: 20,
     fechaInicio: '2026-08-11',
     fechaEntrega: '2026-08-20',
-    estaciones: {
-      corte: { completado: false, enCurso: true, progreso: 50, operario: 'Carlos M.' },
-      cnc: { completado: false, pendiente: true },
-      canteado: { completado: false, pendiente: true },
-      ensamblado: { completado: false, pendiente: true },
-      embalaje: { completado: false, pendiente: true }
-    }
+    cascosEstado: 'pedido',
+    puertasEstado: 'pedido',
+    herrajesEstado: 'pendiente',
+    accesoriosEstado: 'pedido'
   },
   {
-    id: 'OF-2026-083',
+    id: 'OF-INT-2026-083',
     cliente: 'Marmolería y Cocinas Zamora',
     ref: 'Edificio Plaza Mayor',
     tipo: 'Cocina Desmontada',
     tarifa: 'T1 Sincro',
+    casco: 'Roble Aurora (19mm)',
+    origen: 'INTERNO',
     modulos: 24,
-    m2Tablero: 58.0,
-    mlCanteado: 190,
-    estado: 'ensamblado',
     prioridad: 'URGENTE',
-    progreso: 80,
     fechaInicio: '2026-08-09',
     fechaEntrega: '2026-08-14',
-    estaciones: {
-      corte: { completado: true, fecha: '09/08 11:00', operario: 'Carlos M.' },
-      cnc: { completado: true, fecha: '10/08 14:00', operario: 'David R.' },
-      canteado: { completado: true, fecha: '10/08 18:30', operario: 'Elena P.' },
-      ensamblado: { completado: false, enCurso: true, progreso: 65, operario: 'Manuel T.' },
-      embalaje: { completado: false, pendiente: true }
-    }
-  },
-  {
-    id: 'OF-2026-084',
-    cliente: 'Construcciones Valladolid Norte',
-    ref: 'Residencial Zaratán Bloque 2',
-    tipo: 'Cocina Montada 3',
-    tarifa: 'T5 FENIX',
-    modulos: 15,
-    m2Tablero: 36.0,
-    mlCanteado: 120,
-    estado: 'pendiente',
-    prioridad: 'NORMAL',
-    progreso: 0,
-    fechaInicio: '2026-08-13',
-    fechaEntrega: '2026-08-22',
-    estaciones: {
-      corte: { completado: false, pendiente: true },
-      cnc: { completado: false, pendiente: true },
-      canteado: { completado: false, pendiente: true },
-      ensamblado: { completado: false, pendiente: true },
-      embalaje: { completado: false, pendiente: true }
-    }
+    cascosEstado: 'recibido',
+    puertasEstado: 'recibido',
+    herrajesEstado: 'recibido',
+    accesoriosEstado: 'recibido'
   }
 ];
 
@@ -155,58 +118,78 @@ export default function PlanificacionProduccion({ currentUser }) {
       return next;
     });
   };
+
+  const toggleEstadoPieza = (id, campo) => {
+    setPedidos(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const actual = p[campo] || 'pendiente';
+      let siguiente = 'pedido';
+      if (actual === 'pendiente') siguiente = 'pedido';
+      else if (actual === 'pedido') siguiente = 'recibido';
+      else if (actual === 'recibido') siguiente = 'pendiente';
+      return { ...p, [campo]: siguiente };
+    }));
+  };
+
   const [filtroOrigen, setFiltroOrigen] = useState('TODOS');
+  const [filtroEstadoMaterial, setFiltroEstadoMaterial] = useState('TODOS');
   const [filtroPrioridad, setFiltroPrioridad] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
+
+  // Métricas del almacén en vivo
+  const metricasAlmacen = useMemo(() => {
+    let cascosP = 0, cascosR = 0;
+    let puertasP = 0, puertasR = 0;
+    let herrajesP = 0, herrajesR = 0;
+    let accP = 0, accR = 0;
+    let listos = 0;
+
+    pedidos.forEach(p => {
+      if (p.cascosEstado === 'pedido') cascosP++;
+      if (p.cascosEstado === 'recibido') cascosR++;
+
+      if (p.puertasEstado === 'pedido') puertasP++;
+      if (p.puertasEstado === 'recibido') puertasR++;
+
+      if (p.herrajesEstado === 'pedido') herrajesP++;
+      if (p.herrajesEstado === 'recibido') herrajesR++;
+
+      if (p.accesoriosEstado === 'pedido') accP++;
+      if (p.accesoriosEstado === 'recibido') accR++;
+
+      if (p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido') {
+        listos++;
+      }
+    });
+
+    return { cascosP, cascosR, puertasP, puertasR, herrajesP, herrajesR, accP, accR, listos };
+  }, [pedidos]);
 
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter(p => {
       const orig = p.origen || (p.id.includes('EXT') ? 'EXTERNO' : 'INTERNO');
       const matchOrigen = filtroOrigen === 'TODOS' || orig === filtroOrigen;
+      
+      let matchMaterial = true;
+      if (filtroEstadoMaterial === 'CASCOS_PEDIDOS') matchMaterial = p.cascosEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'CASCOS_RECIBIDOS') matchMaterial = p.cascosEstado === 'recibido';
+      else if (filtroEstadoMaterial === 'PUERTAS_PEDIDAS') matchMaterial = p.puertasEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'PUERTAS_RECIBIDAS') matchMaterial = p.puertasEstado === 'recibido';
+      else if (filtroEstadoMaterial === 'HERRAJES_PEDIDOS') matchMaterial = p.herrajesEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'HERRAJES_RECIBIDOS') matchMaterial = p.herrajesEstado === 'recibido';
+      else if (filtroEstadoMaterial === 'ACCESORIOS_PEDIDOS') matchMaterial = p.accesoriosEstado === 'pedido';
+      else if (filtroEstadoMaterial === 'ACCESORIOS_RECIBIDOS') matchMaterial = p.accesoriosEstado === 'recibido';
+      else if (filtroEstadoMaterial === 'COMPLETO') matchMaterial = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+
       const matchPrioridad = filtroPrioridad === 'TODOS' || p.prioridad === filtroPrioridad;
       const matchBusqueda = !busqueda.trim() || 
         p.id.toLowerCase().includes(busqueda.toLowerCase()) ||
         p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
         (p.casco && p.casco.toLowerCase().includes(busqueda.toLowerCase())) ||
         p.ref.toLowerCase().includes(busqueda.toLowerCase());
-      return matchOrigen && matchPrioridad && matchBusqueda;
+      return matchOrigen && matchMaterial && matchPrioridad && matchBusqueda;
     });
-  }, [pedidos, filtroOrigen, filtroPrioridad, busqueda]);
-
-  const avanzarEstacion = (idPedido) => {
-    setPedidos(prev => prev.map(p => {
-      if (p.id !== idPedido) return p;
-      let nextEstado = p.estado;
-      let nextProgreso = p.progreso;
-      const ests = { ...p.estaciones };
-
-      if (p.estado === 'pendiente') {
-        nextEstado = 'corte'; nextProgreso = 20;
-        ests.corte = { completado: false, enCurso: true, progreso: 30, operario: 'Carlos M.' };
-      } else if (p.estado === 'corte') {
-        nextEstado = 'mecanizado'; nextProgreso = 40;
-        ests.corte = { completado: true, fecha: 'Hoy' };
-        ests.cnc = { completado: false, enCurso: true, progreso: 40, operario: 'David R.' };
-      } else if (p.estado === 'mecanizado') {
-        nextEstado = 'canteado'; nextProgreso = 60;
-        ests.cnc = { completado: true, fecha: 'Hoy' };
-        ests.canteado = { completado: false, enCurso: true, progreso: 50, operario: 'Elena P.' };
-      } else if (p.estado === 'canteado') {
-        nextEstado = 'ensamblado'; nextProgreso = 80;
-        ests.canteado = { completado: true, fecha: 'Hoy' };
-        ests.ensamblado = { completado: false, enCurso: true, progreso: 60, operario: 'Manuel T.' };
-      } else if (p.estado === 'ensamblado') {
-        nextEstado = 'embalaje'; nextProgreso = 95;
-        ests.ensamblado = { completado: true, fecha: 'Hoy' };
-        ests.embalaje = { completado: false, enCurso: true, progreso: 70, operario: 'Ana S.' };
-      } else if (p.estado === 'embalaje') {
-        nextEstado = 'listo'; nextProgreso = 100;
-        ests.embalaje = { completado: true, fecha: 'Hoy' };
-      }
-
-      return { ...p, estado: nextEstado, progreso: nextProgreso, estaciones: ests };
-    }));
-  };
+  }, [pedidos, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda]);
 
   return (
     <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-4 sm:p-6 pb-36 space-y-5">
@@ -219,13 +202,13 @@ export default function PlanificacionProduccion({ currentUser }) {
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-white tracking-tight">Planificación de Fabricación de Cascos</h1>
+              <h1 className="text-2xl font-black text-white tracking-tight">Control de Almacén y Recepción de Materiales</h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase">
                 {pedidos.length} Órdenes Activas
               </span>
             </div>
             <p className="text-sm text-indigo-200/80 font-medium">
-              Control de órdenes de fabricación por casco por defecto y fechas de entrega
+              Gestión logística de cascos, puertas, herrajes y accesorios (zócalos, perfiles gola, grapas)
             </p>
           </div>
         </div>
@@ -238,9 +221,60 @@ export default function PlanificacionProduccion({ currentUser }) {
         </div>
       </div>
 
+      {/* Monitor de Secciones Logísticas (5 Tarjetas) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold text-lg">📦</div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cascos</p>
+            <p className="text-xs font-black text-slate-800">
+              <span className="text-amber-600">{metricasAlmacen.cascosP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.cascosR} Rec</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 font-bold text-lg">🚪</div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Puertas</p>
+            <p className="text-xs font-black text-slate-800">
+              <span className="text-amber-600">{metricasAlmacen.puertasP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.puertasR} Rec</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 font-bold text-lg">🔩</div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Herrajes</p>
+            <p className="text-xs font-black text-slate-800">
+              <span className="text-amber-600">{metricasAlmacen.herrajesP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.herrajesR} Rec</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-fuchsia-50 border border-fuchsia-200 flex items-center justify-center text-fuchsia-600 font-bold text-lg">⚙️</div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Accesorios (Zócalos, Gola)</p>
+            <p className="text-xs font-black text-slate-800">
+              <span className="text-amber-600">{metricasAlmacen.accP} Ped</span> · <span className="text-emerald-600">{metricasAlmacen.accR} Rec</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 border border-emerald-200 bg-emerald-50/30 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700 font-bold text-lg">✨</div>
+          <div>
+            <p className="text-[10px] font-black text-emerald-800 uppercase tracking-wider">Listo para Montaje</p>
+            <p className="text-xs font-black text-emerald-900">{metricasAlmacen.listos} de {pedidos.length} Completo</p>
+          </div>
+        </div>
+      </div>
+
       {/* Filtros y Buscador de Órdenes */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex items-center justify-between gap-4 flex-wrap text-xs">
-        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[240px]">
           <Search size={16} className="text-slate-400" />
           <input
             value={busqueda}
@@ -250,95 +284,175 @@ export default function PlanificacionProduccion({ currentUser }) {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-400 uppercase text-[10px]">Origen Fabricación:</span>
+            <span className="font-bold text-slate-400 uppercase text-[10px]">Estado Material:</span>
+            <select
+              value={filtroEstadoMaterial}
+              onChange={e => setFiltroEstadoMaterial(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
+            >
+              <option value="TODOS">Todos los Estados</option>
+              <option value="CASCOS_PEDIDOS">📦 Cascos Pedidos</option>
+              <option value="CASCOS_RECIBIDOS">✅ Cascos Recibidos</option>
+              <option value="PUERTAS_PEDIDAS">🚪 Puertas Pedidas</option>
+              <option value="PUERTAS_RECIBIDAS">✅ Puertas Recibidas</option>
+              <option value="HERRAJES_PEDIDOS">🔩 Herrajes Pedidos</option>
+              <option value="HERRAJES_RECIBIDOS">✅ Herrajes Recibidos</option>
+              <option value="ACCESORIOS_PEDIDOS">⚙️ Accesorios Pedidos</option>
+              <option value="ACCESORIOS_RECIBIDOS">✅ Accesorios Recibidos</option>
+              <option value="COMPLETO">✨ Material 100% Recibido</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-slate-400 uppercase text-[10px]">Origen:</span>
             <select
               value={filtroOrigen}
               onChange={e => setFiltroOrigen(e.target.value)}
               className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
             >
               <option value="TODOS">Todas las Órdenes</option>
-              <option value="INTERNO">🏠 Taller Propio (Interno)</option>
-              <option value="EXTERNO">🚚 Proveedor Externo (Fuera)</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-400 uppercase text-[10px]">Prioridad:</span>
-            <select
-              value={filtroPrioridad}
-              onChange={e => setFiltroPrioridad(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
-            >
-              <option value="TODOS">Todas</option>
-              <option value="URGENTE">Urgente</option>
-              <option value="ALTA">Alta</option>
-              <option value="NORMAL">Normal</option>
+              <option value="INTERNO">🏠 Taller Propio</option>
+              <option value="EXTERNO">🚚 Proveedor Fuera</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Lista de Órdenes de Fabricación */}
+      {/* Lista de Órdenes de Fabricación con Controles Logísticos */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
         <div className="px-6 py-4 bg-slate-50/70 flex items-center justify-between text-xs font-black uppercase text-slate-400">
-          <span>Órdenes de Fabricación en Curso ({pedidosFiltrados.length})</span>
-          <span>Acciones y Borrado (Admin)</span>
+          <span>Órdenes de Fabricación ({pedidosFiltrados.length})</span>
+          <span>Estado de Recepción (Hacer Clic para Cambiar Estado)</span>
         </div>
 
-        {pedidosFiltrados.map(p => (
-          <div key={p.id} className="p-5 hover:bg-slate-50/80 transition-colors space-y-3">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-3">
-                <div className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
-                  {p.id}
-                </div>
-                <div>
-                  <h4 className="font-black text-sm text-slate-900">{p.cliente} · <span className="text-slate-600 font-medium">{p.ref}</span></h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
-                    <span className="font-bold text-indigo-600">{p.tipo}</span>
-                    <span>•</span>
-                    <span className="font-semibold text-slate-700">{p.tarifa}</span>
-                    <span>•</span>
-                    <span className="px-2 py-0.5 bg-slate-100 rounded-md font-bold text-slate-800">Casco: {p.casco || 'Grafito Antracita (19mm)'}</span>
-                    <span>•</span>
-                    <span className={`px-2 py-0.5 rounded-md font-black text-xs border ${
-                      (p.origen === 'EXTERNO' || p.id.includes('EXT')) ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-blue-100 text-blue-900 border-blue-300'
-                    }`}>
-                      {(p.origen === 'EXTERNO' || p.id.includes('EXT')) ? '🚚 Proveedor Fuera' : '🏠 Taller Propio'}
-                    </span>
-                    <span>•</span>
-                    <span>{p.modulos} módulos</span>
+        {pedidosFiltrados.map(p => {
+          const cEst = p.cascosEstado || 'pendiente';
+          const pEst = p.puertasEstado || 'pendiente';
+          const hEst = p.herrajesEstado || 'pendiente';
+          const aEst = p.accesoriosEstado || 'pendiente';
+          const esCompleto = cEst === 'recibido' && pEst === 'recibido' && hEst === 'recibido' && aEst === 'recibido';
+
+          return (
+            <div key={p.id} className={`p-5 transition-colors space-y-3 ${esCompleto ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'hover:bg-slate-50/80'}`}>
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
+                    {p.id}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                      {p.cliente} · <span className="text-slate-600 font-medium">{p.ref}</span>
+                      {esCompleto && <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black uppercase">✨ Material 100% Recibido</span>}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
+                      <span className="font-bold text-indigo-600">{p.tipo}</span>
+                      <span>•</span>
+                      <span className="font-semibold text-slate-700">{p.tarifa}</span>
+                      <span>•</span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-md font-bold text-slate-800">Casco: {p.casco || 'Grafito Antracita (19mm)'}</span>
+                      <span>•</span>
+                      <span className={`px-2 py-0.5 rounded-md font-black text-xs border ${
+                        (p.origen === 'EXTERNO' || p.id.includes('EXT')) ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-blue-100 text-blue-900 border-blue-300'
+                      }`}>
+                        {(p.origen === 'EXTERNO' || p.id.includes('EXT')) ? '🚚 Proveedor Fuera' : '🏠 Taller Propio'}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="text-right text-xs">
+                    <div className="text-slate-400 font-semibold text-[10px]">Entrega Prevista:</div>
+                    <div className="font-black text-slate-800">{p.fechaEntrega}</div>
+                  </div>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => eliminarOrden(p.id)}
+                      className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 border border-rose-200 transition-all"
+                      title="Eliminar Orden de Fabricación (Solo Administrador)"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase border ${
-                  p.prioridad === 'URGENTE' ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse' :
-                  p.prioridad === 'ALTA' ? 'bg-amber-100 text-amber-800 border-amber-300' :
-                  'bg-slate-100 text-slate-700 border-slate-200'
-                }`}>
-                  {p.prioridad}
-                </span>
+              {/* Botones Interactivos de Estado de Recepción (4 Secciones) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+                {/* 1. CASCOS */}
+                <button
+                  onClick={() => toggleEstadoPieza(p.id, 'cascosEstado')}
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
+                    cEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
+                    cEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
+                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Haz clic para cambiar estado de Cascos"
+                >
+                  <span className="flex items-center gap-1.5">📦 <b>Cascos:</b></span>
+                  <span className="font-black uppercase text-[10px]">
+                    {cEst === 'recibido' ? '✅ Recibidos' : cEst === 'pedido' ? '⏳ Pedidos' : '⚪ Sin Pedir'}
+                  </span>
+                </button>
 
-                <div className="text-right text-xs">
-                  <div className="text-slate-400 font-semibold text-[10px]">Entrega Prevista:</div>
-                  <div className="font-black text-slate-800">{p.fechaEntrega}</div>
-                </div>
+                {/* 2. PUERTAS */}
+                <button
+                  onClick={() => toggleEstadoPieza(p.id, 'puertasEstado')}
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
+                    pEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
+                    pEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
+                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Haz clic para cambiar estado de Puertas"
+                >
+                  <span className="flex items-center gap-1.5">🚪 <b>Puertas:</b></span>
+                  <span className="font-black uppercase text-[10px]">
+                    {pEst === 'recibido' ? '✅ Recibidas' : pEst === 'pedido' ? '⏳ Pedidas' : '⚪ Sin Pedir'}
+                  </span>
+                </button>
 
-                {isAdmin && (
-                  <button
-                    onClick={() => eliminarOrden(p.id)}
-                    className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 border border-rose-200 transition-all"
-                    title="Eliminar Orden de Fabricación (Solo Administrador)"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
+                {/* 3. HERRAJES */}
+                <button
+                  onClick={() => toggleEstadoPieza(p.id, 'herrajesEstado')}
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
+                    hEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
+                    hEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
+                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Haz clic para cambiar estado de Herrajes"
+                >
+                  <span className="flex items-center gap-1.5">🔩 <b>Herrajes:</b></span>
+                  <span className="font-black uppercase text-[10px]">
+                    {hEst === 'recibido' ? '✅ Recibidos' : hEst === 'pedido' ? '⏳ Pedidos' : '⚪ Sin Pedir'}
+                  </span>
+                </button>
+
+                {/* 4. ACCESORIOS (Zócalos, Gola, Grapas) */}
+                <button
+                  onClick={() => toggleEstadoPieza(p.id, 'accesorioEstado')}
+                  className={`px-3 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between gap-2 shadow-sm ${
+                    aEst === 'recibido' ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200' :
+                    aEst === 'pedido' ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' :
+                    'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Haz clic para cambiar estado de Accesorios (Zócalos, Gola, Grapas)"
+                >
+                  <span className="flex items-center gap-1.5">⚙️ <b>Accesorios:</b></span>
+                  <span className="font-black uppercase text-[10px]">
+                    {aEst === 'recibido' ? '✅ Recibidos' : aEst === 'pedido' ? '⏳ Pedidos' : '⚪ Sin Pedir'}
+                  </span>
+                </button>
               </div>
             </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
             {/* Stepper Visual de Estaciones */}
             <div className="grid grid-cols-5 gap-2 pt-2">
