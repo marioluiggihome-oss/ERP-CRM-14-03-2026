@@ -132,7 +132,19 @@ export const RULES = {
 export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
 
 // Costes por defecto de componentes MV (editables en la UI de Rentabilidad)
-export const MV_COSTES_DEFAULT = { doorM2: 26, bisagra: 3.07, pata4: 0.64, colgador: 3.50, soporte: 0.30, mano: 20, cajon: 41.34, gaveta: 54.37 };
+export const MV_COSTES_DEFAULT = {
+  doorM2: 26,       // € por m² de puerta (tarifa base)
+  bisagra: 3.07,    // € por bisagra (2 por puerta)
+  pata4: 0.64,      // € por juego de 4 patas
+  colgador: 3.50,   // € por colgador de mueble alto (2 por mueble)
+  soporte: 0.30,    // € por soporte/balda (4 por balda)
+  mano: 20,         // € mano de obra por mueble
+  cajon: 41.34,     // € por cajón
+  gaveta: 54.37,    // € por gaveta
+  dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
+  dtoPuertas2: 0,   // % descuento 2 (acumulado sobre el resultado del 1)
+  dtoPuertas: 0,    // alias legado (compatibilidad)
+};
 
 // Ancho (mm) del prefijo numérico del código
 export const anchoDe = (cod) => {
@@ -415,21 +427,6 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
     factorDesmontada,
     generica: R.generica || false,
   };
-};
-
-// Costes por defecto de componentes (editables desde la UI de Rentabilidad MV).
-// Se exporta para que CocinaMontada3 y RelacionReview puedan leerlo/usarlo.
-export const MV_COSTES_DEFAULT = {
-  dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
-  dtoPuertas2: 0,   // % descuento 2 (acumulado sobre el resultado del 1)
-  dtoPuertas: 0,    // alias legado (compatibilidad)
-  bisagra: 0.65,    // € por bisagra (2 por puerta)
-  pata4: 0.45,      // € por juego de 4 patas
-  colgador: 0.30,   // € por colgador de mueble alto (2 por mueble)
-  cajon: 3.50,      // € por cajón
-  gaveta: 4.80,     // € por gaveta (cajón con frente completo)
-  soporte: 0.15,    // € por soporte/balda (4 por balda)
-  mano: 12.00,      // € mano de obra por mueble
 };
 
 export default function RentabilidadMV({ esMaster, seed }) {
