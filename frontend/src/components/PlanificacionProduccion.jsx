@@ -137,12 +137,15 @@ export default function PlanificacionProduccion({ currentUser }) {
   const [busqueda, setBusqueda] = useState('');
 
   // Métricas del almacén en vivo
+  const hoyStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   const metricasAlmacen = useMemo(() => {
     let cascosP = 0, cascosR = 0;
     let puertasP = 0, puertasR = 0;
     let herrajesP = 0, herrajesR = 0;
     let accP = 0, accR = 0;
     let listos = 0;
+    let retrasados = 0;
 
     pedidos.forEach(p => {
       if (p.cascosEstado === 'pedido') cascosP++;
@@ -157,18 +160,23 @@ export default function PlanificacionProduccion({ currentUser }) {
       if (p.accesoriosEstado === 'pedido') accP++;
       if (p.accesoriosEstado === 'recibido') accR++;
 
-      if (p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido') {
+      const esComp = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+      if (esComp) {
         listos++;
+      } else if (p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr) {
+        retrasados++;
       }
     });
 
-    return { cascosP, cascosR, puertasP, puertasR, herrajesP, herrajesR, accP, accR, listos };
-  }, [pedidos]);
+    return { cascosP, cascosR, puertasP, puertasR, herrajesP, herrajesR, accP, accR, listos, retrasados };
+  }, [pedidos, hoyStr]);
 
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter(p => {
       const orig = p.origen || (p.id.includes('EXT') ? 'EXTERNO' : 'INTERNO');
       const matchOrigen = filtroOrigen === 'TODOS' || orig === filtroOrigen;
+      const esComp = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+      const esRetrasado = p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr && !esComp;
       
       let matchMaterial = true;
       if (filtroEstadoMaterial === 'CASCOS_PEDIDOS') matchMaterial = p.cascosEstado === 'pedido';
@@ -179,7 +187,8 @@ export default function PlanificacionProduccion({ currentUser }) {
       else if (filtroEstadoMaterial === 'HERRAJES_RECIBIDOS') matchMaterial = p.herrajesEstado === 'recibido';
       else if (filtroEstadoMaterial === 'ACCESORIOS_PEDIDOS') matchMaterial = p.accesoriosEstado === 'pedido';
       else if (filtroEstadoMaterial === 'ACCESORIOS_RECIBIDOS') matchMaterial = p.accesoriosEstado === 'recibido';
-      else if (filtroEstadoMaterial === 'COMPLETO') matchMaterial = p.cascosEstado === 'recibido' && p.puertasEstado === 'recibido' && p.herrajesEstado === 'recibido' && p.accesoriosEstado === 'recibido';
+      else if (filtroEstadoMaterial === 'COMPLETO') matchMaterial = esComp;
+      else if (filtroEstadoMaterial === 'RETRASADOS') matchMaterial = esRetrasado;
 
       const matchPrioridad = filtroPrioridad === 'TODOS' || p.prioridad === filtroPrioridad;
       const matchBusqueda = !busqueda.trim() || 
@@ -189,7 +198,7 @@ export default function PlanificacionProduccion({ currentUser }) {
         p.ref.toLowerCase().includes(busqueda.toLowerCase());
       return matchOrigen && matchMaterial && matchPrioridad && matchBusqueda;
     });
-  }, [pedidos, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda]);
+  }, [pedidos, filtroOrigen, filtroEstadoMaterial, filtroPrioridad, busqueda, hoyStr]);
 
   return (
     <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-4 sm:p-6 pb-36 space-y-5">
@@ -220,6 +229,24 @@ export default function PlanificacionProduccion({ currentUser }) {
           </div>
         </div>
       </div>
+
+      {/* Alerta Visual de Envíos/Recepciones Retrasados */}
+      {metricasAlmacen.retrasados > 0 && (
+        <div className="bg-rose-600 text-white rounded-3xl p-4 shadow-lg flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 font-bold text-sm">
+            <AlertTriangle size={22} className="shrink-0 text-amber-300 animate-bounce" />
+            <span>
+              <b>¡ALERTA DE ALMACÉN!</b> Hay {metricasAlmacen.retrasados} {metricasAlmacen.retrasados === 1 ? 'pedido con fecha estimada de recepción superada' : 'pedidos con fecha estimada de recepción superada'}.
+            </span>
+          </div>
+          <button
+            onClick={() => setFiltroEstadoMaterial('RETRASADOS')}
+            className="px-4 py-1.5 rounded-xl bg-white text-rose-800 font-black text-xs hover:bg-rose-100 transition-all shadow-md"
+          >
+            Ver Retrasados
+          </button>
+        </div>
+      )}
 
       {/* Monitor de Secciones Logísticas (5 Tarjetas) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -293,6 +320,7 @@ export default function PlanificacionProduccion({ currentUser }) {
               className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 outline-none"
             >
               <option value="TODOS">Todos los Estados</option>
+              <option value="RETRASADOS">🚨 Recepción Retrasada ({metricasAlmacen.retrasados})</option>
               <option value="CASCOS_PEDIDOS">📦 Cascos Pedidos</option>
               <option value="CASCOS_RECIBIDOS">✅ Cascos Recibidos</option>
               <option value="PUERTAS_PEDIDAS">🚪 Puertas Pedidas</option>
@@ -333,18 +361,20 @@ export default function PlanificacionProduccion({ currentUser }) {
           const hEst = p.herrajesEstado || 'pendiente';
           const aEst = p.accesoriosEstado || 'pendiente';
           const esCompleto = cEst === 'recibido' && pEst === 'recibido' && hEst === 'recibido' && aEst === 'recibido';
+          const esRetrasado = p.fechaEstRecepcion && p.fechaEstRecepcion < hoyStr && !esCompleto;
 
           return (
-            <div key={p.id} className={`p-5 transition-colors space-y-3 ${esCompleto ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'hover:bg-slate-50/80'}`}>
+            <div key={p.id} className={`p-5 transition-colors space-y-3 ${esRetrasado ? 'bg-rose-50/60 hover:bg-rose-50 border-l-4 border-l-rose-600' : esCompleto ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'hover:bg-slate-50/80'}`}>
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
                   <div className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
                     {p.id}
                   </div>
                   <div>
-                    <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                    <h4 className="font-black text-sm text-slate-900 flex items-center gap-2 flex-wrap">
                       {p.cliente} · <span className="text-slate-600 font-medium">{p.ref}</span>
                       {esCompleto && <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black uppercase">✨ Material 100% Recibido</span>}
+                      {esRetrasado && <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white border border-rose-400 text-[10px] font-black uppercase animate-pulse">🚨 Recepción Retrasada</span>}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
                       <span className="font-bold text-indigo-600">{p.tipo}</span>
@@ -362,7 +392,25 @@ export default function PlanificacionProduccion({ currentUser }) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4 flex-wrap">
+                  {/* Fecha Estimada de Recepción de Material */}
+                  <div className="text-right text-xs bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl flex items-center gap-2">
+                    <Clock size={14} className="text-indigo-600 shrink-0" />
+                    <div>
+                      <div className="text-slate-400 font-bold text-[9px] uppercase tracking-wider">Est. Recepción Material:</div>
+                      <input
+                        type="date"
+                        value={p.fechaEstRecepcion || new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          const nuevaFecha = e.target.value;
+                          setPedidos(prev => prev.map(x => x.id === p.id ? { ...x, fechaEstRecepcion: nuevaFecha } : x));
+                        }}
+                        className="font-black text-slate-800 bg-transparent outline-none cursor-pointer text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fecha de Entrega a Cliente */}
                   <div className="text-right text-xs">
                     <div className="text-slate-400 font-semibold text-[10px]">Entrega Prevista:</div>
                     <div className="font-black text-slate-800">{p.fechaEntrega}</div>

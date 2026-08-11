@@ -702,6 +702,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         progreso: 10,
         observaciones: observacionesGenerales ? `${observacionesGenerales} | Casco: ${acabadoCasco} | ${tagOrigen}` : `Casco: ${acabadoCasco} | ${tagOrigen}`,
         fechaInicio: new Date().toISOString().split('T')[0],
+        fechaEstRecepcion: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
         fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
         muebles: muebles.map(m => ({ cod: m.cod, qty: m.qty, ancho: m.ancho, alto: m.alto, mano: m.mano, obs: m.obs })),
       };

@@ -630,6 +630,11 @@ const Cascos = ({ state, setState }) => {
     if (resp === null) return;
     const d = Math.min(100, Math.max(0, Number(String(resp).replace(',', '.')) || 0));
     setDescProveedor(d);
+
+    const defaultFechaRec = new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0];
+    const fechaRecResp = window.prompt('Fecha estimada de recepción del material en taller (YYYY-MM-DD)', defaultFechaRec);
+    const fechaEstRecepcion = (fechaRecResp && fechaRecResp.trim()) ? fechaRecResp.trim() : defaultFechaRec;
+
     const { jsPDF } = await import('jspdf');
     const autoTable = (await import('jspdf-autotable')).default;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -642,7 +647,7 @@ const Cascos = ({ state, setState }) => {
     pdf.text('PEDIDO A PROVEEDOR', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10); pdf.setTextColor(120);
     pdf.text(`${cliente ? 'Ref. cliente: ' + cliente : ''}${ref ? '  ·  ' + ref : ''}`, W - M, 24, { align: 'right' });
-    pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
+    pdf.text(`Fecha Pedido: ${new Date().toLocaleDateString('es-ES')}  ·  Est. Recepción: ${fechaEstRecepcion}`, W - M, 29, { align: 'right' });
     // Datos de entrega / comprador (empresa) tomados de Ajustes
     const cs = state?.settings || {};
     const entrega = centroEnvio || cs.companyAddress;
@@ -658,10 +663,41 @@ const Cascos = ({ state, setState }) => {
     const totP = subP + ivaP;
     // Guardar en historial de COMPRAS (proveedor)
     try {
+      const payloadCompra = {
+        kind: 'compra', expediente, cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100,
+        fechaEstRecepcion,
+        fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+        cascosEstado: 'pedido', puertasEstado: 'pedido', herrajesEstado: 'pedido', accesoriosEstado: 'pedido',
+        userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username
+      };
       await fetch(`${API_URL}/api/cascos/orders`, {
         method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'compra', expediente, cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100, userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }),
+        body: JSON.stringify(payloadCompra),
       });
+
+      // Sincronizar en el almacén de órdenes de taller
+      try {
+        const ofId = `OF-EXT-${expediente.replace(/[^a-zA-Z0-9]/g, '')}`;
+        const ofPayload = {
+          id: ofId,
+          cliente: cliente || 'Cliente General',
+          ref: ref || 'Pedido Cascos Proveedor',
+          tipo: 'Cocina Desmontada',
+          tarifa: `Descuento ${d}%`,
+          casco: cart[0] ? (acabadoOf(cart[0])) : 'Estándar',
+          origen: 'EXTERNO',
+          modulos: cart.reduce((s, x) => s + (Number(x.qty) || 1), 0),
+          fechaInicio: new Date().toISOString().split('T')[0],
+          fechaEstRecepcion: fechaEstRecepcion,
+          fechaEntrega: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+          cascosEstado: 'pedido', puertasEstado: 'pedido', herrajesEstado: 'pedido', accesoriosEstado: 'pedido',
+          prioridad: 'NORMAL',
+        };
+        const guardadas = JSON.parse(localStorage.getItem('ordenes_fabricacion_taller') || '[]');
+        const actualizadas = [ofPayload, ...guardadas.filter(x => x.id !== ofId)];
+        localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify(actualizadas));
+      } catch (e) { console.error('Error guardando OF en taller:', e); }
+
     } catch {}
     autoTable(pdf, {
       startY: tableStart,
