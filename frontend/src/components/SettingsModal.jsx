@@ -199,6 +199,37 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     factoryId: ''  // ID de la fábrica asignada
   });
 
+  // State para formulario de Facturación y botón Guardar
+  const [billingForm, setBillingForm] = useState({});
+  const [guardandoBilling, setGuardandoBilling] = useState(false);
+
+  const guardarBillingForm = async () => {
+    setGuardandoBilling(true);
+    try {
+      const patch = {
+        companyName: billingForm.companyName ?? (state.settings?.companyName || ''),
+        companyTaxId: billingForm.companyTaxId ?? (state.settings?.companyTaxId || ''),
+        companyAddress: billingForm.companyAddress ?? (state.settings?.companyAddress || ''),
+        companyPhone: billingForm.companyPhone ?? (state.settings?.companyPhone || ''),
+        companyEmail: billingForm.companyEmail ?? (state.settings?.companyEmail || ''),
+        companyIban: billingForm.companyIban ?? (state.settings?.companyIban || ''),
+        centrosEnvio: billingForm.centrosEnvio ?? (state.settings?.centrosEnvio || ''),
+        emailSender: billingForm.emailSender ?? (state.settings?.emailSender || ''),
+      };
+
+      if (billingForm.sendgridApiKey) {
+        await settingsAPI.update({ sendgridApiKey: billingForm.sendgridApiKey });
+      }
+
+      await saveSetting(patch);
+      alert('✓ Datos de Facturación guardados con éxito.');
+    } catch (e) {
+      alert('Error al guardar datos de facturación: ' + (e.message || 'Error'));
+    } finally {
+      setGuardandoBilling(false);
+    }
+  };
+
   // Lista de fábricas disponibles
   const [factories, setFactories] = useState([]);
 
@@ -3585,10 +3616,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </div>
           )}
 
-          {/* Tab Backups */}
+          {/* Tab Facturación */}
           {activeTab === 'billing' && (
-            <div className="p-6 space-y-5 bg-slate-50">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+            <div className="p-6 space-y-5 bg-slate-50 relative pb-28">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Building2 size={18} /></div>
                   <h3 className="text-base font-black text-slate-900 uppercase">Datos de Facturación</h3>
@@ -3608,7 +3639,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <input
                         type="text"
                         placeholder={field.placeholder}
-                        defaultValue={state.settings?.[field.key] || ''}
+                        value={billingForm[field.key] ?? (state.settings?.[field.key] || '')}
+                        onChange={(e) => setBillingForm(prev => ({ ...prev, [field.key]: e.target.value }))}
                         onBlur={(e) => saveSetting({ [field.key]: e.target.value })}
                         className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900"
                       />
@@ -3616,15 +3648,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   ))}
                 </div>
               </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                 <h3 className="text-base font-black text-slate-900 uppercase mb-1">Centros / direcciones de envío</h3>
                 <p className="text-xs text-slate-500 mb-3">Uno por línea, con el formato <b>Nombre — Dirección completa</b>. Aparecerán como opciones de "Centro de envío" al generar pedidos a proveedor.</p>
                 <textarea rows={4} placeholder={"Central Cádiz — C/ Ejemplo 1, 11000 Cádiz\nAlmacén Sevilla — Pol. Ind. ..., 41000 Sevilla"}
-                  defaultValue={state.settings?.centrosEnvio || ''}
+                  value={billingForm.centrosEnvio ?? (state.settings?.centrosEnvio || '')}
+                  onChange={(e) => setBillingForm(prev => ({ ...prev, centrosEnvio: e.target.value }))}
                   onBlur={(e) => saveSetting({ centrosEnvio: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono outline-none focus:border-indigo-500" />
               </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><RefreshCw size={18} /></div>
                   <h3 className="text-base font-black text-slate-900 uppercase">Email (envío de pedidos)</h3>
@@ -3633,7 +3668,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
                     <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Email remitente</label>
-                    <input type="text" placeholder="no-reply@luiggihome.es" defaultValue={state.settings?.emailSender || ''}
+                    <input type="text" placeholder="no-reply@luiggihome.es"
+                      value={billingForm.emailSender ?? (state.settings?.emailSender || '')}
+                      onChange={(e) => setBillingForm(prev => ({ ...prev, emailSender: e.target.value }))}
                       onBlur={(e) => saveSetting({ emailSender: e.target.value })}
                       className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900" />
                   </div>
@@ -3641,10 +3678,31 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">SendGrid API Key</label>
                     <input type="password" autoComplete="new-password"
                       placeholder={state.settings?.sendgridConfigured ? '•••••••• (ya configurada)' : 'SG.xxxxx'}
+                      value={billingForm.sendgridApiKey ?? ''}
+                      onChange={(e) => setBillingForm(prev => ({ ...prev, sendgridApiKey: e.target.value }))}
                       onBlur={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
                       className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
                   </div>
                 </div>
+              </div>
+
+              {/* BOTÓN FLOTANTE Y FIJO DE GUARDAR */}
+              <div className="sticky bottom-2 left-0 right-0 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 z-50 border border-slate-700">
+                <div className="flex items-center gap-2">
+                  <Save className="text-emerald-400" size={20} />
+                  <div>
+                    <p className="text-xs font-black">Configuración de Facturación y Datos Fiscales</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">Pulsa para guardar permanentemente todos los cambios</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={guardarBillingForm}
+                  disabled={guardandoBilling}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-xs shadow-lg transition-all flex items-center gap-2"
+                >
+                  <Save size={16} /> {guardandoBilling ? 'Guardando…' : '💾 GUARDAR FACTURACIÓN'}
+                </button>
               </div>
             </div>
           )}
