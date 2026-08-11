@@ -24,7 +24,7 @@ import {
   FileText, Plus, Trash2, Search, Check, Loader, AlertTriangle, 
   Download, Save, FolderOpen, Lock, Unlock, Sparkles, RefreshCw,
   Copy, Layers, ArrowUpDown, ChevronRight, HelpCircle, Package,
-  ClipboardList, CheckCircle2, ChevronDown, Boxes, Printer, FileUp,
+  ClipboardList, CheckCircle2, ChevronDown, Boxes, Box, X, Printer, FileUp,
   User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft,
   Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play
 } from 'lucide-react';
