@@ -209,49 +209,92 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const relacionInputRef = useRef(null);
   const alvicInputRef = useRef(null);
 
+  const authHeaders = () => {
+    const token = getToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  };
+
   const importarRelacion = async (file) => {
     if (!file) return;
     setImportandoRel(true); setMenuImportar(false);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await fetch(`${API_URL}/api/cascos/parse-relacion-pdf`, { method: 'POST', body: fd });
-      if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'Error al procesar PDF'); }
-      const d = await r.json();
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API_URL}/api/cascos/mv/detectar-relacion`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ pdfBase64: b64, tariff: tarifa }),
+      });
+      let d = {}; try { d = await r.json(); } catch { d = {}; }
+      if (!r.ok || !d.success) throw new Error(d.detail || 'Error al procesar PDF');
       if (!d.muebles || !d.muebles.length) {
         alert('No se detectaron módulos válidos en el PDF.');
         return;
       }
       setRelacionRevisar(d.muebles);
     } catch (e) { alert(e.message || 'Error al procesar el PDF'); }
-    finally { setImportandoRel(false); }
+    finally { setImportandoRel(false); if (relacionInputRef.current) relacionInputRef.current.value = ''; }
   };
 
   const importarAlvic = async (file) => {
     if (!file) return;
     setImportandoRel(true); setMenuImportar(false);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await fetch(`${API_URL}/api/cascos/parse-alvic-pdf`, { method: 'POST', body: fd });
-      if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'Error al procesar PDF Alvic'); }
-      const d = await r.json();
-      if (!d.muebles || !d.muebles.length) {
-        alert('No se detectaron módulos válidos en el PDF Alvic.');
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API_URL}/api/cascos/proforma`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ pdfBase64: b64 }),
+      });
+      let d = {}; try { d = await r.json(); } catch { d = {}; }
+      if (!r.ok) throw new Error(d.detail || d.error || 'Error al procesar PDF Alvic');
+
+      let items = d.items || [];
+      if (d.estado === 'procesando' && d.jobId) {
+        const inicio = Date.now();
+        while (Date.now() - inicio < 600000) {
+          await new Promise(res => setTimeout(res, 3000));
+          const q = await fetch(`${API_URL}/api/cascos/proforma/job/${d.jobId}`, { headers: authHeaders() });
+          let j = {}; try { j = await q.json(); } catch { j = {}; }
+          if (!q.ok) throw new Error(j.detail || 'Error al analizar el PDF de Alvic');
+          if (j.estado === 'listo') { items = j.items || []; break; }
+          if (j.estado === 'error') throw new Error(j.detail || 'No se pudieron detectar los muebles.');
+        }
+      }
+      if (!items || !items.length) {
+        alert('No se detectaron módulos válidos en el PDF de Alvic.');
         return;
       }
-      setRelacionRevisar(d.muebles);
+      const mueblesAdaptados = items.map(it => ({
+        cod: it.cod || it.codigo || it.ref || '',
+        descripcion: it.descripcion || it.nombre || '',
+        qty: it.qty || it.cantidad || 1,
+        ancho: it.ancho || it.width || null,
+        alto: it.alto || it.height || null,
+        familia: it.familia || '',
+        pvp: it.pvp || it.precio || 0,
+      }));
+      setRelacionRevisar(mueblesAdaptados);
     } catch (e) { alert(e.message || 'Error al procesar PDF Alvic'); }
-    finally { setImportandoRel(false); }
+    finally { setImportandoRel(false); if (alvicInputRef.current) alvicInputRef.current.value = ''; }
   };
 
   const descargarPlantillaEnBlanco = async () => {
     try {
-      const r = await fetch(`${API_URL}/api/cascos/plantilla-pdf`);
-      if (!r.ok) throw new Error('Error al descargar plantilla');
+      const token = getToken();
+      const r = await fetch(`${API_URL}/api/cascos/mv/nomenclaturas-pdf`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!r.ok) throw new Error('Error al descargar la plantilla PDF');
       const blob = await r.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'Plantilla_Muebles_Cocina.pdf'; a.click();
+      const a = document.createElement('a'); a.href = url; a.download = 'Nomenclaturas_MV_rellenable.pdf'; a.click();
     } catch (e) { alert(e.message); }
   };
 
@@ -293,13 +336,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   });
   const [tarifas, setTarifas] = useState([]);
 
-  const authHeaders = () => {
-    const token = getToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-  };
+
 
   useEffect(() => {
     fetch(`${API_URL}/api/cascos/mv/tarifas`, { headers: authHeaders() })
