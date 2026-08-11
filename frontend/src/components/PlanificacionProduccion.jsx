@@ -22,7 +22,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Factory, Calendar, Clock, AlertTriangle, CheckCircle2, 
   ChevronRight, Filter, Search, Plus, Play, Pause, Layers,
-  Boxes, TrendingUp, Users, ArrowUpRight, ShieldCheck, RefreshCw, Download
+  Boxes, TrendingUp, Users, ArrowUpRight, ShieldCheck, RefreshCw, Download, Trash2
 } from 'lucide-react';
 import { getToken } from '../services/api';
 
