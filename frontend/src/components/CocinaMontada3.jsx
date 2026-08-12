@@ -28,8 +28,8 @@ import {
   User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft,
   Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play, List
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada } from './RentabilidadMV';
@@ -764,7 +764,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       ];
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 72,
       head: [['#', 'Cant', 'Código', 'Descripción / Observaciones', 'Ancho', 'Alto', 'Mano', 'PVP Ud.', 'Total']],
       body: tableBody,
@@ -783,7 +783,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       }
     });
 
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const finalY = (doc.lastAutoTable?.finalY || 120) + 10;
 
     // Observaciones Generales en PDF
     if (observacionesGenerales?.trim()) {
