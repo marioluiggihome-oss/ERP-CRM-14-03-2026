@@ -127,11 +127,13 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
             j += 1
 
         full_var_text = " ".join(variantes_text).upper()
-        inc_volada = 0
+        inc_volada = 0.0
         m_vol = re.search(r"PUERTA\s+VOLADA\s*:?\s*(\d+)", full_var_text) or re.search(r"INCREMENTO\s+INFERIOR\s+PUERTA\s+VOLADA\s*:?\s*(\d+)", full_var_text)
         if m_vol:
             try:
-                inc_volada = float(m_vol.group(1))
+                raw_inc = float(m_vol.group(1))
+                # 100 en anotación Alvic proforma = 10mm (1 cm)
+                inc_volada = raw_inc / 10.0 if raw_inc >= 100 else raw_inc
             except ValueError:
                 inc_volada = 0.0
 
@@ -139,8 +141,10 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
         ancho = nums[1] if len(nums) > 1 else None
         grueso = nums[2] if len(nums) > 2 else None
 
-        # Si hay incremento de puerta volada (ej 100mm), el casco mide largo_total - inc_volada
-        largo_casco = (largo_total - inc_volada) if (largo_total is not None and inc_volada > 0) else largo_total
+        # El casco del alto mide exactamente lo que indica la proforma (ej 800mm / 80 cm)
+        largo_casco = largo_total
+        # La puerta volada suma el incremento inferior (ej 800mm + 10mm = 810mm / 81 cm)
+        largo_puerta = (largo_total + inc_volada) if (largo_total is not None and inc_volada > 0) else largo_total
 
         color, herraje_blum = _color_y_herraje(material)
         frentes = _cuenta_frentes(desc)
@@ -154,7 +158,7 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
             "n": idx, "cod": cod, "descripcion": desc, "material": material,
             "color": color, "herrajeBlum": herraje_blum,
             "largo": largo_casco, "ancho": ancho, "grueso": grueso,
-            "largoPuerta": largo_total, "incVolada": inc_volada,
+            "largoPuerta": largo_puerta, "incVolada": inc_volada,
             "cantidad": cantidad or 1.0, "pvp": precio, "total": total,
             "puertas": frentes["puertas"], "cajones": frentes["cajones"], "gavetas": frentes["gavetas"],
             "tipo": tipo, "esMueble": es_mueble,
