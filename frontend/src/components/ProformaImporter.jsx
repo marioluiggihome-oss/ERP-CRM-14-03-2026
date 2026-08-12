@@ -290,14 +290,38 @@ const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
   if (!pool.length) return null;
 
-  let best = pool[0], bd = Infinity;
-  for (const c of pool) {
-    const d = Math.abs((c.ancho || 0) - ancho) * 3
-      + (alto ? Math.abs((c.alto || 0) - alto) : 0)
-      + (fondo ? Math.abs((c.fondo || 0) - fondo) : 0);
-    if (d < bd) { bd = d; best = c; }
+  // Verificar si existe el alto exacto con stock/precio en el color activo
+  let exactMatch = pool.find(c => Math.abs((c.ancho || 0) - ancho) < 5 && (alto ? Math.abs((c.alto || 0) - alto) < 5 : true));
+  let esSuperior = false;
+
+  if (!exactMatch && alto) {
+    // Buscar el inmediato superior en el mismo tipo y ancho (ej. pedir 80cm y usar Alto 90cm)
+    const superiores = pool.filter(c => Math.abs((c.ancho || 0) - ancho) < 5 && (c.alto || 0) > alto);
+    if (superiores.length) {
+      superiores.sort((a, b) => (a.alto || 0) - (b.alto || 0));
+      exactMatch = superiores[0];
+      esSuperior = true;
+    }
   }
-  return _valorar(best, colorKey, false, punto);
+
+  let best = exactMatch || pool[0];
+  if (!exactMatch) {
+    let bd = Infinity;
+    for (const c of pool) {
+      const d = Math.abs((c.ancho || 0) - ancho) * 3
+        + (alto ? Math.abs((c.alto || 0) - alto) : 0)
+        + (fondo ? Math.abs((c.fondo || 0) - fondo) : 0);
+      if (d < bd) { bd = d; best = c; }
+    }
+  }
+
+  const res = _valorar(best, colorKey, false, punto);
+  if (res && (esSuperior || (alto && Math.abs((best.alto || 0) - alto) >= 5))) {
+    res._esSuperior = true;
+    res._altoBuscado = alto;
+    res._corteRequerido = true;
+  }
+  return res;
 };
 
 /** Busca cascos por texto libre, para elegirlos a mano desde la línea.
@@ -618,7 +642,8 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
         // multiplicaba en ningun sitio (ni casco, ni herraje, ni mano de obra),
         // asi que toda proforma con lineas de mas de una unidad salia barata.
         const uds = Math.max(Number(it.cantidad) || 1, 1);
-        const casco = precioAcb * facCasco * uds;
+        const costeCorteUnitario = (acb && acb._corteRequerido) ? (Number(p.costeCorteAltura) || 0) : 0;
+        const casco = (precioAcb * facCasco + costeCorteUnitario) * uds;
         // Un abatible no lleva bisagras: lleva mecanismo. Y el precio de la
         // tarifa Blum es NETO DE COMPRA, así que se le suma el incremento de la
         // casa para tener el coste nuestro de verdad.
@@ -1219,13 +1244,12 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                 </div>
               )}
 
-              {/* Descuento 1 + botón para mostrar descuento 2 */}
+              {/* Descuento 1 + 2º descuento + Coste por Corte en Altura */}
               <div className="flex items-end gap-2 mb-3 flex-wrap">
                 <label className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Dto casco 1 %</span>
                   <input
                     type="number" step="any" value={p.desc1} onChange={setNum('desc1')}
-                   
                     className="px-2 py-1.5 border-2 border-amber-200 rounded-lg text-sm font-bold w-28"
                   />
                 </label>
@@ -1238,7 +1262,6 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                       </span>
                       <input
                         type="number" step="any" value={p.desc2} onChange={setNum('desc2')}
-                       
                         className="px-2 py-1.5 border-2 border-amber-100 rounded-lg text-sm font-bold w-28"
                       />
                     </label>
@@ -1252,6 +1275,17 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                     </button>
                   )
                 }
+                <label className="flex flex-col gap-1 ml-auto sm:ml-4">
+                  <span className="text-[10px] font-black text-purple-700 uppercase flex items-center gap-1">
+                    ✂️ Coste Corte Altura (€/mueble)
+                  </span>
+                  <input
+                    type="number" step="any" value={p.costeCorteAltura ?? ''} onChange={setNum('costeCorteAltura')}
+                    placeholder="0"
+                    title="Coste adicional por recortar en taller/fábrica un casco de altura superior (ej. recortar Alto 90cm a Alto 80cm)"
+                    className="px-2 py-1.5 border-2 border-purple-300 rounded-lg text-sm font-bold w-36 bg-purple-50/40 text-purple-900"
+                  />
+                </label>
               </div>
 
               {/* COLOR DEL CASCO, para toda la proforma. Estaba escrito a pelo
