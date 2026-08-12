@@ -1527,11 +1527,18 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                 </div>
                 <div className="flex justify-between"><span className="text-slate-500">Herraje (bisagras, patas, colgadores, guías)</span><b>{eur(calc.totHerr)}</b></div>
                 {calc.costePuertas > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">
-                      Puertas ({calc.pm2Propios
-                        ? (calc.pm2 > 0 ? `${calc.pm2}€/m² y precios propios` : 'precios propios')
-                        : `${calc.pm2}€/m²`})
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 flex items-center gap-1.5">
+                      Puertas
+                      {calc.pm2Propios ? (
+                        <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[9px] font-black uppercase border border-purple-200" title="Precios individuales tecleados o importados de pedido valorado de proveedor">
+                          Valorado por coste puerta real
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-black uppercase border border-amber-200" title="Valorado automáticamente según fórmula de €/m² general">
+                          Valorado por m² ({calc.pm2}€/m²)
+                        </span>
+                      )}
                     </span>
                     <b>{eur(calc.costePuertas)}</b>
                   </div>
@@ -1550,11 +1557,20 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
             {/* Aviso puertas + sin equivalencia */}
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span>
+                <span className="flex items-center gap-2 flex-wrap">
                   <b>Puertas a cotizar:</b> {calc.totPuertas} puerta(s) — el casco ACB va desnudo.
+                  {calc.pm2Propios ? (
+                    <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-black uppercase shadow-xs">
+                      ✨ Valorado por coste puerta real
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-black uppercase">
+                      📐 Valorado por m² ({calc.pm2}€/m²)
+                    </span>
+                  )}
                   {!ocultarImportes && (
-                    <label className="ml-3 inline-flex items-center gap-1">
-                      <span className="text-slate-500">€/m²:</span>
+                    <label className="ml-2 inline-flex items-center gap-1">
+                      <span className="text-slate-500">€/m² general:</span>
                       <input
                         type="number" step="any" value={precioM2Puerta}
                         onChange={e => setPrecioM2Puerta(e.target.value)}
