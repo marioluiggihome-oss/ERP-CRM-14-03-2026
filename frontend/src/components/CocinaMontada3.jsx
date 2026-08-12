@@ -943,13 +943,6 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         {/* Botonera Central: herramientas secundarias */}
         <div className="flex items-center gap-1 flex-wrap">
           <button
-            onClick={() => setShowPegadoMasivo(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] shadow-sm border border-indigo-400/40 transition-all"
-            title="Montar muebles en masa pegando la relación de texto"
-          >
-            <List size={12} /> Pegado Masivo
-          </button>
-          <button
             onClick={() => setShowMuestrario(v => !v)}
             className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showMuestrario ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Muestrario de acabados de puertas y cascos"
@@ -985,8 +978,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   >
                     <List size={16} className="text-indigo-600 mt-0.5 shrink-0" />
                     <div>
-                      <span className="block text-xs font-black text-slate-800">Relación en pantalla</span>
-                      <span className="block text-[9px] text-slate-500 font-medium">Montar los muebles a mano o desde texto</span>
+                      <span className="block text-xs font-black text-slate-800">Pegado Masivo (Texto / WhatsApp)</span>
+                      <span className="block text-[9px] text-slate-500 font-medium">Pega la relación de muebles en masa o móntalos a mano</span>
                     </div>
                   </button>
 
@@ -1317,13 +1310,6 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
               >
                 <Plus size={18} /> Añadir Mueble
-              </button>
-              <button
-                onClick={() => setShowPegadoMasivo(true)}
-                className="px-5 py-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm border border-indigo-200 transition-all flex items-center gap-2 shrink-0 shadow-sm"
-                title="Abrir ventana para pegar la relación de muebles en masa desde texto"
-              >
-                <List size={18} /> Pegado Masivo
               </button>
             </div>
 
