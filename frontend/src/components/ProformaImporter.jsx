@@ -1829,6 +1829,12 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
                         : undefined}>
                       {r._acb._colorSustituido && '⚠ '}{r._acb._colorLbl} {r._acb.grosor}
                     </span>
+                    {r._acb._corteRequerido && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-900 bg-purple-100 border border-purple-300 rounded px-1.5 py-0.5 ml-1"
+                            title={`Sin stock ACB en Alto ${r._acb._altoBuscado || 800} en ${r._acb._colorLbl}. Propuesta oficial: Alto ${r._acb.alto} + Recorte en altura`}>
+                        ✂️ Propuesta: Alto {r._acb.alto} (+ Recorte)
+                      </span>
+                    )}
                     {r._acb._elegido && <span className="text-[9px] text-indigo-500 font-bold ml-1">(elegido)</span>}
                   </>
                 : (r.esMueble ? <span className="text-red-500 font-bold">sin equivalencia</span> : '—')}
