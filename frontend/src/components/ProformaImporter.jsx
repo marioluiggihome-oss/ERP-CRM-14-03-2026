@@ -2175,7 +2175,16 @@ function EditorPuertas({
 
       const tableRows = selectedEntries.map((entry, idx) => {
         const { category, rawIndex, item } = entry;
-        if (category === 'PUERTAS') {
+        if (category === 'CASCOS') {
+          const uds = Number(item.cantidad || item._uds) || 1;
+          const altoStock = Number(item.largo) || 0;
+          const ancho = Number(item.ancho) || 0;
+          const acbNom = item._acb ? (item._acb._name || item._acb.tipo) : 'Casco';
+          const esCorte = item._acb?._corteRequerido;
+          const altoTarget = item._acb?._altoBuscado || 800;
+          const desc = `${item.descripcion} (${acbNom})${esCorte ? ` ✂️ RECORTAR ALTURA DE ${altoStock}mm A ${altoTarget}mm` : ''}`;
+          return [idx + 1, 'Casco ACB', item.cod || '—', desc, uds, esCorte ? `${altoTarget} (${altoStock})` : (altoStock || '—'), ancho || '—', '—'];
+        } else if (category === 'PUERTAS') {
           const ov = puertasEditadas[rawIndex] || {};
           const alto = Number(ov.alto ?? item.largo) || 0;
           const ancho = Number(ov.ancho ?? item.ancho) || 0;
@@ -2222,9 +2231,32 @@ function EditorPuertas({
         }
       });
 
-      const finalY = (doc.lastAutoTable?.finalY || 120) + 8;
+      let finalY = (doc.lastAutoTable?.finalY || 120) + 8;
+
+      // Sección de Mecanizados y Adaptaciones de Cascos si existen cortes
+      const cascosConCorte = selectedEntries.filter(e => e.category === 'CASCOS' && e.item._acb?._corteRequerido);
+      if (cascosConCorte.length > 0) {
+        doc.setFillColor(254, 243, 199); // Amber 100
+        doc.roundedRect(14, finalY, 182, 12 + cascosConCorte.length * 6, 2, 2, 'F');
+        doc.setTextColor(146, 64, 14); // Amber 900
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text('✂️ ORDEN DE MECANIZADO / ADAPTACIÓN DE CASCOS EN ALTURA:', 18, finalY + 6);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        cascosConCorte.forEach((entry, k) => {
+          const it = entry.item;
+          const targetH = it._acb?._altoBuscado || 800;
+          const stockH = it.largo || 900;
+          const uds = Number(it.cantidad || it._uds) || 1;
+          doc.text(`• ${uds} ud(s) ${it.descripcion}: Pedir casco stock de ${stockH} mm y RECORTAR EN ALTURA A ${targetH} mm`, 22, finalY + 12 + k * 5);
+        });
+        finalY += 16 + cascosConCorte.length * 5;
+      }
+
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
       doc.text(`Resumen: ${selectedEntries.length} ítems seleccionados · Superficie Total: ${m2.total.toFixed(3)} m²`, 14, finalY);
 
       doc.save(`Pedido_Proveedor_${refPedidoProv.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
@@ -2251,7 +2283,18 @@ function EditorPuertas({
         piezas_count: selectedEntries.length,
         items: selectedEntries.map(entry => {
           const { category, rawIndex, item } = entry;
-          if (category === 'PUERTAS') {
+          if (category === 'CASCOS') {
+            return {
+              tipo: 'Casco ACB',
+              cod: item.cod,
+              descripcion: item.descripcion,
+              cascoAcb: item._acb ? item._acb.tipo : null,
+              altoSolicitado: item._acb?._altoBuscado || item.largo,
+              altoStockPedido: item.largo,
+              corteEnAltura: !!item._acb?._corteRequerido,
+              cant: Number(item.cantidad || item._uds) || 1
+            };
+          } else if (category === 'PUERTAS') {
             const ov = puertasEditadas[rawIndex] || {};
             return { tipo: 'Puerta', cod: item.cod, descripcion: item.descripcion, cant: item.cantidad || 1, alto: ov.alto ?? item.largo, ancho: ov.ancho ?? item.ancho };
           } else if (category === 'COSTADOS') {
