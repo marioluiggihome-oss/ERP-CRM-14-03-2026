@@ -1617,13 +1617,14 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
               )}
             </div>
 
-            {/* Editor de pedido de puertas */}
+            {/* Editor de pedido de cascos, puertas, costados y regletas */}
             {showEditorPuertas && (
               <EditorPuertas
                 puertas={calc.puertas}
                 costados={calc.costados}
                 regletas={calc.regletas}
                 muebles={calc.rows.filter(r => r._puertasMueble)}
+                cascosMuebles={calc.rows.filter(r => r._acb || r.esMueble)}
                 pm2={calc.pm2}
                 costePuertas={calc.costePuertas}
                 puertasEditadas={puertasEditadas}
@@ -1634,6 +1635,8 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                 setRegletasEditadas={setRegletasEditadas}
                 ocultarImportes={ocultarImportes}
                 onExportar={exportarPedidoPuertas}
+                referenciaActual={calc.ref || nombreProyecto || ''}
+                clienteActual={calc.cliente || ''}
               />
             )}
           </>
@@ -1874,12 +1877,13 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
   );
 }
 
-// ── Editor de pedido de puertas/costados/regletas ────────────────────────────
+// ── Editor de pedido de cascos/puertas/costados/regletas ────────────────────
 function EditorPuertas({
   puertas = [],
   costados = [],
   regletas = [],
   muebles = [],
+  cascosMuebles = [],
   pm2,
   costePuertas = 0,
   puertasEditadas = {},
@@ -1920,7 +1924,7 @@ function EditorPuertas({
   // Trazabilidad y Vincular a Pedido de Venta / Proveedor
   const [refPedidoProv, setRefPedidoProv] = React.useState(() => `PED-PROV-${referenciaActual ? String(referenciaActual).replace(/[^a-zA-Z0-9]/g, '-') : Date.now().toString().slice(-6)}`);
   const [refPedidoVenta, setRefPedidoVenta] = React.useState(() => clienteActual ? `PV · ${clienteActual}` : (referenciaActual || 'PV-GENERAL'));
-  const [nombreProveedor, setNombreProveedor] = React.useState('Proveedor de Puertas / Alvic / MV');
+  const [nombreProveedor, setNombreProveedor] = React.useState('Proveedor de Puertas / Alvic / MV / Cascos ACB');
   const [creandoPedido, setCreandoPedido] = React.useState(false);
   const [analizandoPedido, setAnalizandoPedido] = React.useState(false);
 
@@ -1935,6 +1939,9 @@ function EditorPuertas({
   // Colección unificada de ítems con ID único
   const allItems = React.useMemo(() => {
     const list = [];
+    cascosMuebles.forEach((it, i) => {
+      list.push({ id: `casco-${i}`, category: 'CASCOS', categoryLabel: 'Casco ACB', rawIndex: i, item: it });
+    });
     puertas.forEach((it, i) => {
       list.push({ id: `p-${i}`, category: 'PUERTAS', categoryLabel: 'Puerta', rawIndex: i, item: it });
     });
@@ -1948,7 +1955,7 @@ function EditorPuertas({
       list.push({ id: `m-${i}`, category: 'MUEBLES', categoryLabel: 'Puerta Mueble', rawIndex: i, item: it });
     });
     return list;
-  }, [puertas, costados, regletas, muebles]);
+  }, [cascosMuebles, puertas, costados, regletas, muebles]);
 
   const isSelected = (id) => seleccionados[id] !== false;
   const toggleItem = (id) => {
@@ -2254,7 +2261,7 @@ function EditorPuertas({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white p-3.5 rounded-xl border border-amber-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-black text-amber-900 uppercase tracking-wide">Editor de Pedido de Puertas / Costados / Regletas</span>
+            <span className="text-sm font-black text-amber-900 uppercase tracking-wide">Editor de Pedido (Cascos, Puertas, Costados y Regletas)</span>
             <span className="text-[11px] font-black text-slate-700 bg-amber-100 border border-amber-300 rounded-full px-2.5 py-0.5">
               Tablero: {m2.total.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²
               {m2.sinMedida > 0 && (
@@ -2342,6 +2349,7 @@ function EditorPuertas({
         <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
           {[
             { id: 'TODOS', label: `Todos (${allItems.length})` },
+            { id: 'CASCOS', label: `Cascos (${cascosMuebles.length})` },
             { id: 'PUERTAS', label: `Puertas (${puertas.length})` },
             { id: 'COSTADOS', label: `Costados (${costados.length})` },
             { id: 'REGLETAS', label: `Regletas (${regletas.length})` },
@@ -2374,6 +2382,12 @@ function EditorPuertas({
             className="px-2 py-1 rounded bg-white hover:bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-200"
           >
             ☐ Nada
+          </button>
+          <button
+            onClick={() => seleccionarEnBloque('CASCOS')}
+            className="px-2 py-1 rounded bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-[11px] border border-purple-300"
+          >
+            📦 Cascos
           </button>
           <button
             onClick={() => seleccionarEnBloque('PUERTAS')}
@@ -2426,7 +2440,37 @@ function EditorPuertas({
                 const { id, category, categoryLabel, rawIndex, item } = entry;
                 const active = isSelected(id);
 
-                if (category === 'PUERTAS') {
+                if (category === 'CASCOS') {
+                  const acbNombre = item._acb ? (item._acb._name || item._acb.tipo) : 'Sin emparejar';
+                  const uds = Number(item.cantidad || item._uds) || 1;
+                  const alto = Number(item.largo) || 0;
+                  const ancho = Number(item.ancho) || 0;
+                  const costeNeto = Number(item._casco) || 0;
+                  return (
+                    <tr key={id} className={`hover:bg-purple-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-purple-50/20'}`}>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="checkbox" checked={active} onChange={() => toggleItem(id)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                      </td>
+                      <td className="px-2.5 py-2 text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="px-2.5 py-2">
+                        <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 text-[10px] font-black uppercase">
+                          {categoryLabel}
+                        </span>
+                      </td>
+                      <td className="px-2.5 py-2 font-mono font-bold text-purple-950">{item.cod || '—'}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[240px]" title={item.descripcion}>
+                        <div className="font-bold text-slate-900">{item.descripcion}</div>
+                        <div className="text-[10px] text-purple-700 font-medium">ACB: {acbNombre}</div>
+                      </td>
+                      <td className="px-2.5 py-2 text-center font-bold text-slate-800">{uds}</td>
+                      <td className="px-2.5 py-2 text-center font-mono font-bold text-slate-800">{alto || '—'}</td>
+                      <td className="px-2.5 py-2 text-center font-mono font-bold text-slate-800">{ancho || '—'}</td>
+                      <td className="px-2.5 py-2 text-right font-mono text-slate-400">—</td>
+                      {!ocultarImportes && <td className="px-2.5 py-2 text-center text-slate-400">—</td>}
+                      {verEuros && <td className="px-2.5 py-2 text-right font-bold text-purple-900">{costeNeto > 0 ? eur(costeNeto) : '—'}</td>}
+                    </tr>
+                  );
+                } else if (category === 'PUERTAS') {
                   const ov = puertasEditadas[rawIndex] || {};
                   const alto = Number(ov.alto ?? item.largo) || 0;
                   const ancho = Number(ov.ancho ?? item.ancho) || 0;

@@ -100,14 +100,7 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
             continue
         idx = int(h.group(1)); cod = h.group(2)
         desc = lines[i + 1] if i + 1 < n else ""
-        # Recorre el bloque hasta la siguiente cabecera recogiendo números y material.
-        j = i + 2
-        nums: List[float] = []
-        cantidad = None
-        material = ""
-        precio = None
-        total = None
-        seen_ud = False
+        variantes_text = []
         while j < n and not _HEADER.match(lines[j]):
             ln = lines[j]
             cm = _CANT.match(ln)
@@ -127,13 +120,28 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
                             total = val
                 j += 1
                 continue
-            # línea de texto: material/color (la que lleva letras y guiones)
-            if re.search(r"[A-Za-z]", ln) and not material and ln.upper() != "UD":
-                material = ln
+            if re.search(r"[A-Za-z]", ln) and ln.upper() != "UD":
+                variantes_text.append(ln)
+                if not material:
+                    material = ln
             j += 1
-        largo = nums[0] if len(nums) > 0 else None
+
+        full_var_text = " ".join(variantes_text).upper()
+        inc_volada = 0
+        m_vol = re.search(r"PUERTA\s+VOLADA\s*:?\s*(\d+)", full_var_text) or re.search(r"INCREMENTO\s+INFERIOR\s+PUERTA\s+VOLADA\s*:?\s*(\d+)", full_var_text)
+        if m_vol:
+            try:
+                inc_volada = float(m_vol.group(1))
+            except ValueError:
+                inc_volada = 0.0
+
+        largo_total = nums[0] if len(nums) > 0 else None
         ancho = nums[1] if len(nums) > 1 else None
         grueso = nums[2] if len(nums) > 2 else None
+
+        # Si hay incremento de puerta volada (ej 100mm), el casco mide largo_total - inc_volada
+        largo_casco = (largo_total - inc_volada) if (largo_total is not None and inc_volada > 0) else largo_total
+
         color, herraje_blum = _color_y_herraje(material)
         frentes = _cuenta_frentes(desc)
         tipo = _tipo_mueble(desc)
@@ -145,7 +153,8 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
         items.append({
             "n": idx, "cod": cod, "descripcion": desc, "material": material,
             "color": color, "herrajeBlum": herraje_blum,
-            "largo": largo, "ancho": ancho, "grueso": grueso,
+            "largo": largo_casco, "ancho": ancho, "grueso": grueso,
+            "largoPuerta": largo_total, "incVolada": inc_volada,
             "cantidad": cantidad or 1.0, "pvp": precio, "total": total,
             "puertas": frentes["puertas"], "cajones": frentes["cajones"], "gavetas": frentes["gavetas"],
             "tipo": tipo, "esMueble": es_mueble,
