@@ -1816,7 +1816,14 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
       {!ocultarImportes && <>
         {verDesglose && <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._totalAlvic > 0 ? eur(r._totalAlvic) : '—'}</td>}
         {verDesglose && <td className="px-2 py-1.5 text-right text-slate-400 whitespace-nowrap">{r._precioAcb ? eur(r._precioAcb) : '—'}</td>}
-        <td className="px-2 py-1.5 text-right font-bold text-slate-800 whitespace-nowrap" title="Coste neto del casco ACB">{eur(r._casco)}</td>
+        <td
+          className="px-2 py-1.5 text-right font-bold text-slate-800 whitespace-nowrap"
+          title={r._acb
+            ? `Puntos base: ${r._acb._base} pts · PVP Tarifa: ${eur(r._precioAcb)} (${r._acb._base} pts × ${punto} €/pt) · Neto con Dto: ${eur(r._casco)}`
+            : "Coste neto del casco ACB"}
+        >
+          {eur(r._casco)}
+        </td>
         <td className="px-2 py-1.5 text-right whitespace-nowrap text-slate-600" title={`Bisagras ${eur(r._bis)} · Patas ${eur(r._pat)} · Colgadores ${eur(r._col)} · Guías ${eur(r._gui)}`}>
           {r._herraje ? eur(r._herraje) : '—'}
         </td>
