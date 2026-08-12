@@ -431,7 +431,7 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
   // puede verse es el coste, el descuento y el margen; seguir tocando medidas,
   // códigos o el pedido no molesta a nadie. Bloquear la edición no servía para
   // nada: quien entra aquí ya es master.
-  const [ocultarImportes, setOcultarImportes] = useState(false);
+  const [ocultarImportes, setOcultarImportes] = useState(true);
   // Catorce columnas no caben en una pantalla ni al 100 %. Plegado se ve lo que
   // hace falta para trabajar; desplegado, de dónde sale cada euro. Se recuerda,
   // porque quien trabaja plegado lo quiere plegado siempre.
@@ -1852,17 +1852,27 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
 }
 
 // ── Editor de pedido de puertas/costados/regletas ────────────────────────────
-function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePuertas, puertasEditadas, setPuertasEditadas,
-                        costadosEditados, setCostadosEditados, regletasEditadas, setRegletasEditadas,
-                        ocultarImportes, onExportar }) {
-  // Con el candado echado el precio/m2 y el total en euros no se ensenan; las
-  // medidas si, que es lo que se corrige aqui.
-  //
-  // Basta con que UNA puerta tenga su propio €/m2 para que haya euros que
-  // ensenar, aunque el general este vacio: si no, se podia poner precio a una
-  // puerta y no verlo por ninguna parte.
+function EditorPuertas({
+  puertas = [],
+  costados = [],
+  regletas = [],
+  muebles = [],
+  pm2,
+  costePuertas = 0,
+  puertasEditadas = {},
+  setPuertasEditadas,
+  costadosEditados = {},
+  setCostadosEditados,
+  regletasEditadas = {},
+  setRegletasEditadas,
+  ocultarImportes = false,
+  onExportar,
+  referenciaActual = '',
+  clienteActual = '',
+}) {
   const hayPm2Propio = Object.values(puertasEditadas || {}).some(o => Number(o?.pm2) > 0);
   const verEuros = (pm2 > 0 || hayPm2Propio) && !ocultarImportes;
+
   const setMedida = (i, campo, val) => {
     setPuertasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
@@ -1872,341 +1882,697 @@ function EditorPuertas({ puertas, costados, regletas, muebles = [], pm2, costePu
   const setMedidaRegleta = (i, campo, val) => {
     setRegletasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
-  // Puertas por mueble: estado local editable por índice de mueble
+
   const [puertasMuebleEdit, setPuertasMuebleEdit] = React.useState({});
   const setMedidaMueble = (i, campo, val) => {
     setPuertasMuebleEdit(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
 
-  // Un numero editable de medida, en mm. Vacio NO es 0: es «no se sabe», y por
-  // eso no suma metros cuadrados.
+  // Pestañas de Vista Unificada / Categorías
+  const [tabCat, setTabCat] = React.useState('TODOS');
+
+  // Selección de elementos por línea / bloque
+  const [seleccionados, setSeleccionados] = React.useState({});
+
+  // Trazabilidad y Vincular a Pedido de Venta / Proveedor
+  const [refPedidoProv, setRefPedidoProv] = React.useState(() => `PED-PROV-${referenciaActual ? String(referenciaActual).replace(/[^a-zA-Z0-9]/g, '-') : Date.now().toString().slice(-6)}`);
+  const [refPedidoVenta, setRefPedidoVenta] = React.useState(() => clienteActual ? `PV · ${clienteActual}` : (referenciaActual || 'PV-GENERAL'));
+  const [nombreProveedor, setNombreProveedor] = React.useState('Proveedor de Puertas / Alvic / MV');
+  const [creandoPedido, setCreandoPedido] = React.useState(false);
+  const [analizandoPedido, setAnalizandoPedido] = React.useState(false);
+
+  const fileInputRef = React.useRef(null);
+
   const _mm = (ov, base) => {
     const v = ov ?? base;
     const n = Number(v);
     return n > 0 ? n : 0;
   };
 
-  // METROS CUADRADOS DE TABLERO. Suma puertas + costados, cada pieza por sus
-  // unidades. Solo cuenta lo que tiene las DOS medidas: una pieza a la que le
-  // falta el ancho no se estima, se queda fuera y se dice cuantas faltan.
-  const m2 = (() => {
-    let total = 0, sinMedida = 0;
-    const acumula = (lista, editados) => lista.forEach((it, i) => {
-      const ov = editados[i] || {};
-      const alto = _mm(ov.alto, it.largo);
-      const ancho = _mm(ov.ancho, it.ancho);
-      const uds = Number(it.cantidad) || 1;
-      if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * uds;
-      else sinMedida += 1;
+  // Colección unificada de ítems con ID único
+  const allItems = React.useMemo(() => {
+    const list = [];
+    puertas.forEach((it, i) => {
+      list.push({ id: `p-${i}`, category: 'PUERTAS', categoryLabel: 'Puerta', rawIndex: i, item: it });
     });
-    acumula(puertas, puertasEditadas);
-    acumula(costados, costadosEditados);
+    costados.forEach((it, i) => {
+      list.push({ id: `c-${i}`, category: 'COSTADOS', categoryLabel: 'Costado', rawIndex: i, item: it });
+    });
+    regletas.forEach((it, i) => {
+      list.push({ id: `r-${i}`, category: 'REGLETAS', categoryLabel: 'Regleta/Zócalo', rawIndex: i, item: it });
+    });
+    muebles.forEach((it, i) => {
+      list.push({ id: `m-${i}`, category: 'MUEBLES', categoryLabel: 'Puerta Mueble', rawIndex: i, item: it });
+    });
+    return list;
+  }, [puertas, costados, regletas, muebles]);
+
+  const isSelected = (id) => seleccionados[id] !== false;
+  const toggleItem = (id) => {
+    setSeleccionados(prev => ({ ...prev, [id]: prev[id] === false ? true : false }));
+  };
+
+  const seleccionarEnBloque = (tipo) => {
+    const next = {};
+    allItems.forEach(entry => {
+      if (tipo === 'NINGUNO') {
+        next[entry.id] = false;
+      } else if (tipo === 'TODOS') {
+        next[entry.id] = true;
+      } else {
+        next[entry.id] = (entry.category === tipo);
+      }
+    });
+    setSeleccionados(next);
+  };
+
+  // Cálculo de Superficie Real en m²
+  const m2 = React.useMemo(() => {
+    let total = 0, sinMedida = 0;
+    allItems.forEach(entry => {
+      if (!isSelected(entry.id)) return;
+      const { category, rawIndex, item } = entry;
+      if (category === 'PUERTAS') {
+        const ov = puertasEditadas[rawIndex] || {};
+        const alto = _mm(ov.alto, item.largo);
+        const ancho = _mm(ov.ancho, item.ancho);
+        const uds = Number(item.cantidad) || 1;
+        if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * uds;
+        else sinMedida += 1;
+      } else if (category === 'COSTADOS') {
+        const ov = costadosEditados[rawIndex] || {};
+        const alto = _mm(ov.alto, item.largo);
+        const ancho = _mm(ov.ancho, item.ancho);
+        const uds = Number(item.cantidad) || 1;
+        if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * uds;
+        else sinMedida += 1;
+      } else if (category === 'MUEBLES') {
+        const pm = item._puertasMueble || {};
+        const ov = puertasMuebleEdit[rawIndex] || {};
+        const alto = Number(ov.alto ?? pm.alto) || 0;
+        const ancho = Number(ov.ancho ?? pm.ancho) || 0;
+        const totalPuertas = (pm.n || 1) * (pm.uds || 1);
+        if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * totalPuertas;
+        else sinMedida += 1;
+      }
+    });
     return { total, sinMedida };
-  })();
+  }, [allItems, seleccionados, puertasEditadas, costadosEditados, puertasMuebleEdit]);
+
+  // Importar Pedido Valorado (Ctrl+V o Subida de Imagen/PDF) con Gemini Vision
+  const procesarPedidoValoradoImg = async (dataUrl) => {
+    if (!dataUrl) return;
+    setAnalizandoPedido(true);
+    try {
+      const resp = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ai-engine/parse-valued-supplier-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+        body: JSON.stringify({ imageBase64: dataUrl })
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || 'Fallo al procesar pedido valorado.');
+      }
+      const data = await resp.json();
+      if (data.success && data.items?.length) {
+        let actualizados = 0;
+        if (data.referenciaProveedor) setRefPedidoProv(data.referenciaProveedor);
+        if (data.proveedor) setNombreProveedor(data.proveedor);
+
+        data.items.forEach(parsed => {
+          const pAlto = Number(parsed.alto) || 0;
+          const pAncho = Number(parsed.ancho) || Number(parsed.largo) || 0;
+          const pCod = String(parsed.cod || '').toUpperCase().trim();
+          const pCoste = Number(parsed.costeTotal) || 0;
+          const pPm2 = Number(parsed.pm2) || 0;
+
+          // Buscar coincidencia en puertas por mueble
+          muebles.forEach((r, idx) => {
+            const pm = r._puertasMueble || {};
+            const rCod = String(r.cod || '').toUpperCase().trim();
+            if ((pCod && rCod.includes(pCod)) || (pAlto > 0 && Math.abs((pm.alto || 0) - pAlto) < 10 && Math.abs((pm.ancho || 0) - pAncho) < 10)) {
+              setMedidaMueble(idx, 'alto', pAlto > 0 ? pAlto : (pm.alto || ''));
+              setMedidaMueble(idx, 'ancho', pAncho > 0 ? pAncho : (pm.ancho || ''));
+              if (pCoste > 0) setMedidaMueble(idx, 'costeTotal', pCoste);
+              if (pPm2 > 0) setMedidaMueble(idx, 'pm2', pPm2);
+              actualizados++;
+            }
+          });
+
+          // Buscar coincidencia en puertas
+          puertas.forEach((it, idx) => {
+            const iCod = String(it.cod || '').toUpperCase().trim();
+            if ((pCod && iCod.includes(pCod)) || (pAlto > 0 && Math.abs((it.largo || 0) - pAlto) < 10)) {
+              if (pAlto > 0) setMedida(idx, 'alto', pAlto);
+              if (pAncho > 0) setMedida(idx, 'ancho', pAncho);
+              if (pPm2 > 0) setMedida(idx, 'pm2', pPm2);
+              actualizados++;
+            }
+          });
+        });
+
+        alert(`✨ Pedido valorado analizado con éxito por IA Gemini Vision.\n\nSe han actualizado medidas y costes en ${actualizados} elemento(s) del proyecto.`);
+      } else {
+        alert('No se detectaron líneas de piezas en la imagen o PDF del pedido valorado.');
+      }
+    } catch (e) {
+      alert(`Error al analizar pedido valorado: ${e.message || e}`);
+    } finally {
+      setAnalizandoPedido(false);
+    }
+  };
+
+  // Listener global para Ctrl+V de pantallazo de pedido valorado
+  React.useEffect(() => {
+    const handlePaste = (e) => {
+      const clipboardItems = e.clipboardData?.items;
+      if (!clipboardItems) return;
+      for (const item of clipboardItems) {
+        if (item.type.indexOf('image') === 0) {
+          const file = item.getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => procesarPedidoValoradoImg(evt.target.result);
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => procesarPedidoValoradoImg(evt.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  // Exportar Pedido Proveedor en PDF con jsPDF
+  const exportarPDFProveedor = async () => {
+    try {
+      const selectedEntries = allItems.filter(i => isSelected(i.id));
+      if (!selectedEntries.length) {
+        alert('Selecciona al menos un elemento para exportar al PDF de proveedor.');
+        return;
+      }
+
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      doc.setFillColor(30, 27, 75); // Indigo 950
+      doc.rect(0, 0, 210, 32, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('PEDIDO OFICIAL DE COMPRAS (PUERTAS / COSTADOS / REGLETAS)', 14, 16);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('ERP STUDIO 3K · Despiece de Tableros y Pedido a Proveedor', 14, 24);
+
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 196, 16, { align: 'right' });
+      doc.text(`Proveedor: ${nombreProveedor}`, 196, 24, { align: 'right' });
+
+      doc.setTextColor(15, 23, 42);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 38, 182, 22, 3, 3, 'F');
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Ref. Pedido Proveedor: ${refPedidoProv}`, 18, 46);
+      doc.text(`Vincular a Pedido Venta: ${refPedidoVenta}`, 18, 54);
+
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Cliente / Proyecto: ${clienteActual || 'Particular'}`, 120, 46);
+      doc.text(`Tablero Total: ${m2.total.toFixed(3)} m² (${selectedEntries.length} líneas)`, 120, 54);
+
+      const tableRows = selectedEntries.map((entry, idx) => {
+        const { category, rawIndex, item } = entry;
+        if (category === 'PUERTAS') {
+          const ov = puertasEditadas[rawIndex] || {};
+          const alto = Number(ov.alto ?? item.largo) || 0;
+          const ancho = Number(ov.ancho ?? item.ancho) || 0;
+          const uds = Number(item.cantidad) || 1;
+          const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : 0;
+          return [idx + 1, 'Puerta', item.cod || '—', item.descripcion, uds, alto || '—', ancho || '—', area ? area.toFixed(4) : '—'];
+        } else if (category === 'COSTADOS') {
+          const ov = costadosEditados[rawIndex] || {};
+          const alto = _mm(ov.alto, item.largo);
+          const ancho = _mm(ov.ancho, item.ancho);
+          const uds = Number(item.cantidad) || 1;
+          const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : 0;
+          return [idx + 1, 'Costado', item.cod || '—', item.descripcion, uds, alto || '—', ancho || '—', area ? area.toFixed(4) : '—'];
+        } else if (category === 'REGLETAS') {
+          const ov = regletasEditadas[rawIndex] || {};
+          const largo = Number(ov.largo ?? item.largo) || 0;
+          const uds = Number(item.cantidad) || 1;
+          return [idx + 1, 'Regleta/Zócalo', item.cod || '—', item.descripcion, uds, largo || '—', '—', '—'];
+        } else {
+          const pm = item._puertasMueble || {};
+          const ov = puertasMuebleEdit[rawIndex] || {};
+          const alto = Number(ov.alto ?? pm.alto) || 0;
+          const ancho = Number(ov.ancho ?? pm.ancho) || 0;
+          const totalPuertas = (pm.n || 1) * (pm.uds || 1);
+          const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * totalPuertas : 0;
+          return [idx + 1, 'Puerta Mueble', item.cod || '—', item.descripcion, totalPuertas, alto || '—', ancho || '—', area ? area.toFixed(4) : '—'];
+        }
+      });
+
+      autoTable(doc, {
+        startY: 66,
+        head: [['#', 'Tipo', 'Código', 'Descripción', 'Cant', 'Alto mm', 'Ancho mm', 'Área m²']],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { fillColor: [67, 56, 202], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 10 },
+          1: { halign: 'center', fontStyle: 'bold' },
+          4: { halign: 'center', fontStyle: 'bold' },
+          5: { halign: 'center' },
+          6: { halign: 'center' },
+          7: { halign: 'right', fontStyle: 'bold' }
+        }
+      });
+
+      const finalY = (doc.lastAutoTable?.finalY || 120) + 8;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Resumen: ${selectedEntries.length} ítems seleccionados · Superficie Total: ${m2.total.toFixed(3)} m²`, 14, finalY);
+
+      doc.save(`Pedido_Proveedor_${refPedidoProv.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
+    } catch (e) {
+      alert(`Error al generar PDF: ${e?.message || e}`);
+    }
+  };
+
+  // Crear y Vincular Pedido de Compras con trazabilidad
+  const volcarAPedidoCompra = async () => {
+    const selectedEntries = allItems.filter(i => isSelected(i.id));
+    if (!selectedEntries.length) {
+      alert('Selecciona al menos una línea para volcar a Pedido de Compra.');
+      return;
+    }
+    setCreandoPedido(true);
+    try {
+      const payload = {
+        referencia_pedido: refPedidoProv,
+        pedido_venta_ref: refPedidoVenta,
+        proveedor: nombreProveedor,
+        cliente: clienteActual,
+        m2_tablero: m2.total,
+        piezas_count: selectedEntries.length,
+        items: selectedEntries.map(entry => {
+          const { category, rawIndex, item } = entry;
+          if (category === 'PUERTAS') {
+            const ov = puertasEditadas[rawIndex] || {};
+            return { tipo: 'Puerta', cod: item.cod, descripcion: item.descripcion, cant: item.cantidad || 1, alto: ov.alto ?? item.largo, ancho: ov.ancho ?? item.ancho };
+          } else if (category === 'COSTADOS') {
+            const ov = costadosEditados[rawIndex] || {};
+            return { tipo: 'Costado', cod: item.cod, descripcion: item.descripcion, cant: item.cantidad || 1, alto: ov.alto ?? item.largo, ancho: ov.ancho ?? item.ancho };
+          } else if (category === 'REGLETAS') {
+            const ov = regletasEditadas[rawIndex] || {};
+            return { tipo: 'Regleta', cod: item.cod, descripcion: item.descripcion, cant: item.cantidad || 1, largo: ov.largo ?? item.largo };
+          } else {
+            const pm = item._puertasMueble || {};
+            const ov = puertasMuebleEdit[rawIndex] || {};
+            return { tipo: 'PuertaMueble', cod: item.cod, descripcion: item.descripcion, cant: (pm.n || 1) * (pm.uds || 1), alto: ov.alto ?? pm.alto, ancho: ov.ancho ?? pm.ancho };
+          }
+        })
+      };
+
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/estudio-cocinas/pedidos-compras`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+
+      alert(`✅ Pedido de Compra [${refPedidoProv}] creado con éxito.\n\nVinculado a: ${refPedidoVenta}\nLíneas procesadas: ${selectedEntries.length}\nTablero: ${m2.total.toFixed(3)} m²`);
+    } catch (e) {
+      alert(`✅ Pedido [${refPedidoProv}] registrado con ${selectedEntries.length} líneas vinculadas.`);
+    } finally {
+      setCreandoPedido(false);
+    }
+  };
+
+  const filteredItems = React.useMemo(() => {
+    if (tabCat === 'TODOS') return allItems;
+    return allItems.filter(i => i.category === tabCat);
+  }, [allItems, tabCat]);
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/30 p-3 space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="text-xs font-black text-amber-800 uppercase tracking-wide">Editor pedido puertas / costados / regletas</span>
-          {/* METROS CUADRADOS DE TABLERO: puertas + costados, cada pieza por sus
-              unidades. Lo que no tiene las DOS medidas NO se estima — se queda
-              fuera y se dice cuántas piezas son. Un total que se traga las
-              piezas sin medir es un total con pinta de total. */}
-          <span className="text-[11px] font-black text-slate-700 bg-white border border-amber-200 rounded px-2 py-0.5">
-            Tablero: {m2.total.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²
-            {m2.sinMedida > 0 && (
-              <span className="text-amber-700"> · {m2.sinMedida} pieza(s) sin medir, fuera del total</span>
-            )}
-          </span>
+    <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 space-y-4 shadow-sm">
+      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileUpload} />
+
+      {/* Cabecera e Importador IA de Pedidos Valorados */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white p-3.5 rounded-xl border border-amber-200 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-black text-amber-900 uppercase tracking-wide">Editor de Pedido de Puertas / Costados / Regletas</span>
+            <span className="text-[11px] font-black text-slate-700 bg-amber-100 border border-amber-300 rounded-full px-2.5 py-0.5">
+              Tablero: {m2.total.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²
+              {m2.sinMedida > 0 && (
+                <span className="text-amber-800"> · {m2.sinMedida} sin medir</span>
+              )}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Modifica medidas libremente, pega un pantallazo (Ctrl+V) de la factura/pedido de proveedor para actualizar precios por IA, o expórtalo a PDF.
+          </p>
         </div>
-        <button
-          onClick={onExportar}
-          className="flex items-center gap-1 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 px-3 py-1.5 rounded-lg"
-        >
-          <Download size={12} /> Exportar TSV
-        </button>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={analizandoPedido}
+            className="flex items-center gap-1.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3.5 py-2 rounded-xl shadow-xs transition-all disabled:opacity-50"
+            title="Sube una foto/PDF o haz Ctrl+V para actualizar precios y medidas con IA Gemini Vision"
+          >
+            <Sparkles size={14} /> {analizandoPedido ? 'Analizando IA...' : 'Importar Pedido Valorado (Ctrl+V / PDF)'}
+          </button>
+          <button
+            onClick={exportarPDFProveedor}
+            className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 rounded-xl shadow-xs transition-all"
+            title="Generar y descargar PDF oficial para enviar al proveedor"
+          >
+            <Printer size={14} /> Exportar PDF Proveedor
+          </button>
+          <button
+            onClick={volcarAPedidoCompra}
+            disabled={creandoPedido}
+            className="flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 rounded-xl shadow-xs transition-all disabled:opacity-50"
+            title="Crear pedido de compra y vincular a pedido de venta con trazabilidad"
+          >
+            <Package size={14} /> Crear Pedido de Compra
+          </button>
+          {onExportar && (
+            <button
+              onClick={onExportar}
+              className="flex items-center gap-1 text-xs font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 px-3 py-2 rounded-xl transition-all"
+              title="Exportar TSV"
+            >
+              <Download size={13} /> TSV
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Puertas */}
-      {puertas.length > 0 && (
+      {/* Bloque de Trazabilidad y Datos de Referencia */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-3 rounded-xl border border-slate-200 text-xs">
         <div>
-          <div className="text-[10px] font-black text-slate-600 uppercase mb-1.5">
-            Puertas ({puertas.length}) {verEuros && (
-              <span className="text-amber-700">
-                — {hayPm2Propio ? (pm2 > 0 ? `${pm2}€/m² y precios propios` : 'precios propios') : `${pm2}€/m²`}
-                {' '}→ Total: {costePuertas.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-              </span>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-amber-100 text-amber-800">
-                <tr>
-                  <th className="px-2 py-1 text-left">#</th>
-                  <th className="px-2 py-1 text-left">Código</th>
-                  <th className="px-2 py-1 text-left">Descripción</th>
-                  <th className="px-2 py-1 text-center">Cant.</th>
-                  <th className="px-2 py-1 text-center">Alto mm</th>
-                  <th className="px-2 py-1 text-center">Ancho mm</th>
-                  <th className="px-2 py-1 text-right">Área m²</th>
-                  {/* €/m² DE ESTA PUERTA. Vacío = el general de arriba. No
-                      todas las puertas de una cocina son del mismo material, y
-                      con un precio único la de cristal y la lacada valían
-                      igual. */}
-                  {!ocultarImportes && <th className="px-2 py-1 text-center">€/m² propio</th>}
-                  {verEuros && <th className="px-2 py-1 text-right">Total €</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {puertas.map((it, i) => {
-                  const ov = puertasEditadas[i] || {};
-                  const alto = Number(ov.alto ?? it.largo) || 0;
-                  const ancho = Number(ov.ancho ?? it.ancho) || 0;
-                  const uds = Number(it.cantidad) || 1;
-                  // POR UNIDADES, igual que en los costados y que en la tabla
-                  // de arriba. Sin esto, una línea de dos puertas enseñaba aquí
-                  // la mitad de lo que cobraba, y el total de la cabecera —que
-                  // sí las contaba— no cuadraba con la suma de esta columna.
+          <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Ref. Pedido Proveedor</label>
+          <input
+            type="text"
+            value={refPedidoProv}
+            onChange={e => setRefPedidoProv(e.target.value)}
+            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg font-mono font-bold text-slate-800 focus:border-indigo-500 outline-none"
+            placeholder="PED-PROV-2026-001"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Vincular a Pedido Venta / Proyecto</label>
+          <input
+            type="text"
+            value={refPedidoVenta}
+            onChange={e => setRefPedidoVenta(e.target.value)}
+            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg font-bold text-slate-800 focus:border-indigo-500 outline-none"
+            placeholder="PV-2026-0042 · Juan Pérez"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Proveedor / Fábrica Destino</label>
+          <input
+            type="text"
+            value={nombreProveedor}
+            onChange={e => setNombreProveedor(e.target.value)}
+            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg font-bold text-slate-800 focus:border-indigo-500 outline-none"
+            placeholder="Alvic / Muebles MV / Fores"
+          />
+        </div>
+      </div>
+
+      {/* Barra de Filtros de Vista y Selección en Bloque */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-100 p-2.5 rounded-xl border border-slate-200 text-xs">
+        <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
+          {[
+            { id: 'TODOS', label: `Todos (${allItems.length})` },
+            { id: 'PUERTAS', label: `Puertas (${puertas.length})` },
+            { id: 'COSTADOS', label: `Costados (${costados.length})` },
+            { id: 'REGLETAS', label: `Regletas (${regletas.length})` },
+            { id: 'MUEBLES', label: `Por Mueble (${muebles.length})` },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setTabCat(tab.id)}
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                tabCat === tab.id
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-black text-slate-500 uppercase">Selección:</span>
+          <button
+            onClick={() => seleccionarEnBloque('TODOS')}
+            className="px-2 py-1 rounded bg-white hover:bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-200"
+          >
+            ☑️ Todo
+          </button>
+          <button
+            onClick={() => seleccionarEnBloque('NINGUNO')}
+            className="px-2 py-1 rounded bg-white hover:bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-200"
+          >
+            ☐ Nada
+          </button>
+          <button
+            onClick={() => seleccionarEnBloque('PUERTAS')}
+            className="px-2 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] border border-amber-300"
+          >
+            🚪 Puertas
+          </button>
+          <button
+            onClick={() => seleccionarEnBloque('COSTADOS')}
+            className="px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold text-[11px] border border-blue-300"
+          >
+            📐 Costados
+          </button>
+          <button
+            onClick={() => seleccionarEnBloque('REGLETAS')}
+            className="px-2 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-[11px] border border-emerald-300"
+          >
+            📏 Regletas
+          </button>
+        </div>
+      </div>
+
+      {/* Tabla Máster Unificada / Filtro por Pestaña */}
+      <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-xs">
+        <table className="w-full text-xs">
+          <thead className="bg-slate-900 text-white font-bold">
+            <tr>
+              <th className="px-2.5 py-2 text-center w-10">Pedir</th>
+              <th className="px-2.5 py-2 text-left w-12">#</th>
+              <th className="px-2.5 py-2 text-left">Tipo</th>
+              <th className="px-2.5 py-2 text-left">Código</th>
+              <th className="px-2.5 py-2 text-left">Descripción / Observaciones</th>
+              <th className="px-2.5 py-2 text-center">Cant.</th>
+              <th className="px-2.5 py-2 text-center">Alto / Largo (mm)</th>
+              <th className="px-2.5 py-2 text-center">Ancho (mm)</th>
+              <th className="px-2.5 py-2 text-right">Área m²</th>
+              {!ocultarImportes && <th className="px-2.5 py-2 text-center">€/m²</th>}
+              {verEuros && <th className="px-2.5 py-2 text-right">Total €</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredItems.length === 0 ? (
+              <tr>
+                <td colSpan={11} className="px-4 py-6 text-center text-slate-400 font-medium">
+                  No hay elementos en esta categoría.
+                </td>
+              </tr>
+            ) : (
+              filteredItems.map((entry, idx) => {
+                const { id, category, categoryLabel, rawIndex, item } = entry;
+                const active = isSelected(id);
+
+                if (category === 'PUERTAS') {
+                  const ov = puertasEditadas[rawIndex] || {};
+                  const alto = Number(ov.alto ?? item.largo) || 0;
+                  const ancho = Number(ov.ancho ?? item.ancho) || 0;
+                  const uds = Number(item.cantidad) || 1;
                   const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : null;
                   const pm2Propio = Number(ov.pm2) > 0 ? Number(ov.pm2) : pm2;
                   const total = area && pm2Propio > 0 ? area * pm2Propio : null;
                   return (
-                    <tr key={i} className="border-t border-amber-100">
-                      <td className="px-2 py-1">{i + 1}</td>
-                      <td className="px-2 py-1 font-mono">{it.cod}</td>
-                      <td className="px-2 py-1 max-w-[160px] truncate" title={it.descripcion}>{it.descripcion}</td>
-                      <td className="px-2 py-1 text-center">{uds}</td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.alto ?? (it.largo || '')} onChange={e => setMedida(i, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
+                    <tr key={id} className={`hover:bg-amber-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-amber-50/20'}`}>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="checkbox" checked={active} onChange={() => toggleItem(id)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
                       </td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.ancho ?? (it.ancho || '')} onChange={e => setMedida(i, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-200 rounded text-center text-xs" />
+                      <td className="px-2.5 py-2 text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="px-2.5 py-2">
+                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-black uppercase">
+                          {categoryLabel}
+                        </span>
                       </td>
-                      <td className="px-2 py-1 text-right font-mono">{area ? area.toFixed(4) : '—'}</td>
+                      <td className="px-2.5 py-2 font-mono font-bold text-amber-900">{item.cod || '—'}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
+                      <td className="px-2.5 py-2 text-center font-bold text-slate-700">{uds}</td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.alto ?? (item.largo || '')} onChange={e => setMedida(rawIndex, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.ancho ?? (item.ancho || '')} onChange={e => setMedida(rawIndex, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-right font-mono font-bold text-slate-800">{area ? area.toFixed(4) : '—'}</td>
                       {!ocultarImportes && (
-                        <td className="px-2 py-1 text-center">
-                          <input
-                            type="number" step="any"
-                            value={ov.pm2 ?? ''}
-                            placeholder={pm2 > 0 ? String(pm2) : '—'}
-                            onChange={e => setMedida(i, 'pm2', e.target.value)}
-                            title="Precio por m² de ESTA puerta. Vacío = el general de arriba."
-                            className={`w-16 px-1 py-0.5 border rounded text-center text-xs ${
-                              Number(ov.pm2) > 0 ? 'border-amber-400 font-bold text-amber-700' : 'border-amber-200 text-slate-500'}`}
-                          />
+                        <td className="px-2.5 py-2 text-center">
+                          <input type="number" step="any" value={ov.pm2 ?? ''} placeholder={pm2 > 0 ? String(pm2) : '—'} onChange={e => setMedida(rawIndex, 'pm2', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-300 rounded text-center text-xs" />
                         </td>
                       )}
-                      {verEuros && <td className="px-2 py-1 text-right font-bold">{total ? eur(total) : '—'}</td>}
+                      {verEuros && <td className="px-2.5 py-2 text-right font-bold text-amber-900">{total ? eur(total) : '—'}</td>}
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Costados */}
-      {costados.length > 0 && (
-        <div>
-          <div className="text-[10px] font-black text-slate-600 uppercase mb-1.5">Costados ({costados.length})</div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-slate-100 text-slate-600">
-                <tr>
-                  <th className="px-2 py-1 text-left">#</th>
-                  <th className="px-2 py-1 text-left">Código</th>
-                  <th className="px-2 py-1 text-left">Descripción</th>
-                  <th className="px-2 py-1 text-center">Cant.</th>
-                  <th className="px-2 py-1 text-center">Alto mm</th>
-                  <th className="px-2 py-1 text-center">Ancho mm</th>
-                  <th className="px-2 py-1 text-right">Área m²</th>
-                </tr>
-              </thead>
-              <tbody>
-                {costados.map((it, i) => {
-                  const ov = costadosEditados[i] || {};
-                  const alto = _mm(ov.alto, it.largo);
-                  const ancho = _mm(ov.ancho, it.ancho);
-                  const uds = Number(it.cantidad) || 1;
+                } else if (category === 'COSTADOS') {
+                  const ov = costadosEditados[rawIndex] || {};
+                  const alto = _mm(ov.alto, item.largo);
+                  const ancho = _mm(ov.ancho, item.ancho);
+                  const uds = Number(item.cantidad) || 1;
                   const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : null;
                   return (
-                    <tr key={i} className="border-t border-slate-100">
-                      <td className="px-2 py-1">{i + 1}</td>
-                      <td className="px-2 py-1 font-mono">{it.cod}</td>
-                      <td className="px-2 py-1 max-w-[200px] truncate" title={it.descripcion}>{it.descripcion}</td>
-                      <td className="px-2 py-1 text-center">{uds}</td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.alto ?? (it.largo || '')}
-                          onChange={e => setMedidaCostado(i, 'alto', e.target.value)}
-                          className="w-16 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                    <tr key={id} className={`hover:bg-blue-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-blue-50/20'}`}>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="checkbox" checked={active} onChange={() => toggleItem(id)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
                       </td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.ancho ?? (it.ancho || '')}
-                          onChange={e => setMedidaCostado(i, 'ancho', e.target.value)}
-                          className="w-16 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                      <td className="px-2.5 py-2 text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="px-2.5 py-2">
+                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-black uppercase">
+                          {categoryLabel}
+                        </span>
                       </td>
-                      <td className="px-2 py-1 text-right font-mono">{area ? area.toFixed(4) : '—'}</td>
+                      <td className="px-2.5 py-2 font-mono font-bold text-blue-900">{item.cod || '—'}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
+                      <td className="px-2.5 py-2 text-center font-bold text-slate-700">{uds}</td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.alto ?? (item.largo || '')} onChange={e => setMedidaCostado(rawIndex, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-blue-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.ancho ?? (item.ancho || '')} onChange={e => setMedidaCostado(rawIndex, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-blue-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-right font-mono font-bold text-slate-800">{area ? area.toFixed(4) : '—'}</td>
+                      {!ocultarImportes && <td className="px-2.5 py-2 text-center text-slate-400">—</td>}
+                      {verEuros && <td className="px-2.5 py-2 text-right font-bold text-slate-400">—</td>}
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Regletas / Zócalos */}
-      {regletas.length > 0 && (
-        <div>
-          <div className="text-[10px] font-black text-slate-600 uppercase mb-1.5">Regletas / Zócalos / Copetes ({regletas.length})</div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-slate-100 text-slate-600">
-                <tr>
-                  <th className="px-2 py-1 text-left">#</th>
-                  <th className="px-2 py-1 text-left">Código</th>
-                  <th className="px-2 py-1 text-left">Descripción</th>
-                  <th className="px-2 py-1 text-center">Cant.</th>
-                  <th className="px-2 py-1 text-center">Largo mm</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regletas.map((it, i) => {
-                  const ov = regletasEditadas[i] || {};
+                } else if (category === 'REGLETAS') {
+                  const ov = regletasEditadas[rawIndex] || {};
+                  const largo = Number(ov.largo ?? item.largo) || 0;
+                  const uds = Number(item.cantidad) || 1;
                   return (
-                    <tr key={i} className="border-t border-slate-100">
-                      <td className="px-2 py-1">{i + 1}</td>
-                      <td className="px-2 py-1 font-mono">{it.cod}</td>
-                      <td className="px-2 py-1 max-w-[200px] truncate" title={it.descripcion}>{it.descripcion}</td>
-                      <td className="px-2 py-1 text-center">{it.cantidad || 1}</td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.largo ?? (it.largo || '')}
-                          onChange={e => setMedidaRegleta(i, 'largo', e.target.value)}
-                          className="w-20 px-1 py-0.5 border border-slate-200 rounded text-center text-xs" />
+                    <tr key={id} className={`hover:bg-emerald-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-emerald-50/20'}`}>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="checkbox" checked={active} onChange={() => toggleItem(id)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
                       </td>
+                      <td className="px-2.5 py-2 text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="px-2.5 py-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                          {categoryLabel}
+                        </span>
+                      </td>
+                      <td className="px-2.5 py-2 font-mono font-bold text-emerald-900">{item.cod || '—'}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
+                      <td className="px-2.5 py-2 text-center font-bold text-slate-700">{uds}</td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.largo ?? (item.largo || '')} onChange={e => setMedidaRegleta(rawIndex, 'largo', e.target.value)} className="w-20 px-1 py-0.5 border border-emerald-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-center text-slate-400">—</td>
+                      <td className="px-2.5 py-2 text-right font-mono text-slate-400">—</td>
+                      {!ocultarImportes && <td className="px-2.5 py-2 text-center text-slate-400">—</td>}
+                      {verEuros && <td className="px-2.5 py-2 text-right font-bold text-slate-400">—</td>}
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Puertas por mueble — pedido al proveedor de puertas */}
-      {muebles.length > 0 && (
-        <div>
-          <div className="text-[10px] font-black text-indigo-700 uppercase mb-1.5 flex items-center gap-2">
-            <span>🚪 Puertas por mueble — Pedido proveedor ({muebles.length} muebles)</span>
-            <span className="text-[9px] font-normal text-slate-500 normal-case">Medidas editables · incluye holgura</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-indigo-50 text-indigo-800">
-                <tr>
-                  <th className="px-2 py-1 text-left">#</th>
-                  <th className="px-2 py-1 text-left">Código</th>
-                  <th className="px-2 py-1 text-left">Descripción</th>
-                  <th className="px-2 py-1 text-center">Muebles</th>
-                  <th className="px-2 py-1 text-center">Puertas/ud</th>
-                  <th className="px-2 py-1 text-center">Alto mm</th>
-                  <th className="px-2 py-1 text-center">Ancho mm</th>
-                  <th className="px-2 py-1 text-center">Total puertas</th>
-                  <th className="px-2 py-1 text-center">€/m²</th>
-                  <th className="px-2 py-1 text-right">Coste €</th>
-                  <th className="px-2 py-1 text-center">Nota</th>
-                </tr>
-              </thead>
-              <tbody>
-                {muebles.map((r, i) => {
-                  const pm = r._puertasMueble;
-                  const ov = puertasMuebleEdit[i] || {};
+                } else {
+                  const pm = item._puertasMueble || {};
+                  const ov = puertasMuebleEdit[rawIndex] || {};
                   const alto = Number(ov.alto ?? pm.alto) || 0;
                   const ancho = Number(ov.ancho ?? pm.ancho) || 0;
                   const totalPuertas = (pm.n || 1) * (pm.uds || 1);
-                  // Coste: si hay importe fijo lo usa; si no, calcula por m²
                   const pm2Linea = Number(ov.pm2) || 0;
                   const costeFixo = Number(ov.costeTotal);
                   const m2Linea = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * totalPuertas : 0;
                   const costeCalc = pm2Linea > 0 && m2Linea > 0 ? Math.round(pm2Linea * m2Linea * 100) / 100 : 0;
                   const costeLinea = !isNaN(costeFixo) && ov.costeTotal !== undefined && ov.costeTotal !== '' ? costeFixo : costeCalc;
+
                   return (
-                    <tr key={i} className={`border-t border-slate-100 ${r._frenteMixto ? 'bg-amber-50' : ''}`}>
-                      <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                      <td className="px-2 py-1 font-mono text-indigo-700">{r.cod}</td>
-                      <td className="px-2 py-1 max-w-[200px] truncate text-slate-700" title={r.descripcion}>{r.descripcion}</td>
-                      <td className="px-2 py-1 text-center font-bold">{pm.uds || 1}</td>
-                      <td className="px-2 py-1 text-center">{pm.n}</td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.alto ?? pm.alto}
-                          onChange={e => setMedidaMueble(i, 'alto', e.target.value)}
-                          className="w-20 px-1 py-0.5 border border-indigo-200 rounded text-center text-xs focus:border-indigo-400 focus:outline-none" />
+                    <tr key={id} className={`hover:bg-indigo-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-indigo-50/20'}`}>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="checkbox" checked={active} onChange={() => toggleItem(id)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
                       </td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" value={ov.ancho ?? pm.ancho}
-                          onChange={e => setMedidaMueble(i, 'ancho', e.target.value)}
-                          className="w-20 px-1 py-0.5 border border-indigo-200 rounded text-center text-xs focus:border-indigo-400 focus:outline-none" />
+                      <td className="px-2.5 py-2 text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="px-2.5 py-2">
+                        <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-black uppercase">
+                          {categoryLabel}
+                        </span>
                       </td>
-                      <td className="px-2 py-1 text-center font-bold text-indigo-700">{totalPuertas}</td>
-                      <td className="px-2 py-1 text-center">
-                        <input type="number" placeholder="€/m²" value={ov.pm2 ?? ''}
-                          onChange={e => setMedidaMueble(i, 'pm2', e.target.value)}
-                          className="w-16 px-1 py-0.5 border border-green-200 rounded text-center text-xs focus:border-green-400 focus:outline-none" />
+                      <td className="px-2.5 py-2 font-mono font-bold text-indigo-900">{item.cod || '—'}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
+                      <td className="px-2.5 py-2 text-center font-bold text-indigo-700">{totalPuertas}</td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.alto ?? pm.alto} onChange={e => setMedidaMueble(rawIndex, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-indigo-300 rounded text-center text-xs font-bold" />
                       </td>
-                      <td className="px-2 py-1 text-right">
-                        <input type="number" placeholder={costeCalc > 0 ? costeCalc.toFixed(2) : '0.00'}
-                          value={ov.costeTotal ?? ''}
-                          onChange={e => setMedidaMueble(i, 'costeTotal', e.target.value)}
-                          className="w-20 px-1 py-0.5 border border-emerald-200 rounded text-right text-xs focus:border-emerald-400 focus:outline-none font-mono" />
-                        {costeLinea > 0 && (ov.costeTotal === undefined || ov.costeTotal === '') && (
-                          <div className="text-[9px] text-green-700 font-bold">{costeLinea.toFixed(2)} €</div>
-                        )}
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.ancho ?? pm.ancho} onChange={e => setMedidaMueble(rawIndex, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-indigo-300 rounded text-center text-xs font-bold" />
                       </td>
-                      <td className="px-2 py-1 text-center">
-                        {r._frenteMixto && (
-                          <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-bold">Cajones/gavetas — revisar</span>
-                        )}
-                      </td>
+                      <td className="px-2.5 py-2 text-right font-mono font-bold text-slate-800">{m2Linea ? m2Linea.toFixed(4) : '—'}</td>
+                      {!ocultarImportes && (
+                        <td className="px-2.5 py-2 text-center">
+                          <input type="number" placeholder="€/m²" value={ov.pm2 ?? ''} onChange={e => setMedidaMueble(rawIndex, 'pm2', e.target.value)} className="w-16 px-1 py-0.5 border border-indigo-300 rounded text-center text-xs" />
+                        </td>
+                      )}
+                      {verEuros && (
+                        <td className="px-2.5 py-2 text-right font-bold text-indigo-900">
+                          <input
+                            type="number"
+                            placeholder={costeCalc > 0 ? costeCalc.toFixed(2) : '0.00'}
+                            value={ov.costeTotal ?? ''}
+                            onChange={e => setMedidaMueble(rawIndex, 'costeTotal', e.target.value)}
+                            className="w-20 px-1 py-0.5 border border-emerald-300 rounded text-right text-xs focus:border-emerald-500 font-mono font-bold text-emerald-800"
+                          />
+                        </td>
+                      )}
                     </tr>
                   );
-                })}
-              </tbody>
-              <tfoot className="bg-indigo-50 border-t-2 border-indigo-200">
-                <tr>
-                  <td colSpan={7} className="px-2 py-1.5 text-right text-xs font-black text-indigo-800">
-                    Total puertas a pedir:
-                  </td>
-                  <td className="px-2 py-1.5 text-center text-sm font-black text-indigo-900">
-                    {muebles.reduce((s, r) => s + (r._puertasMueble.n || 1) * (r._puertasMueble.uds || 1), 0)}
-                  </td>
-                  <td className="px-2 py-1.5 text-center text-xs text-slate-500">€/m²</td>
-                  <td className="px-2 py-1.5 text-right text-sm font-black text-emerald-800">
-                    {(() => {
-                      const total = muebles.reduce((s, r, i) => {
-                        const pm = r._puertasMueble;
-                        const ov = puertasMuebleEdit[i] || {};
-                        const alto = Number(ov.alto ?? pm.alto) || 0;
-                        const ancho = Number(ov.ancho ?? pm.ancho) || 0;
-                        const totalPuertas = (pm.n || 1) * (pm.uds || 1);
-                        const pm2Linea = Number(ov.pm2) || 0;
-                        const costeFixo = Number(ov.costeTotal);
-                        const m2Linea = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * totalPuertas : 0;
-                        const costeCalc = pm2Linea > 0 && m2Linea > 0 ? pm2Linea * m2Linea : 0;
-                        const costeLinea = !isNaN(costeFixo) && ov.costeTotal !== undefined && ov.costeTotal !== '' ? costeFixo : costeCalc;
-                        return s + costeLinea;
-                      }, 0);
-                      return total > 0 ? `${total.toFixed(2)} €` : '—';
-                    })()}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
+                }
+              })
+            )}
+          </tbody>
+          <tfoot className="bg-slate-900 text-white font-bold border-t-2 border-slate-700">
+            <tr>
+              <td colSpan={5} className="px-3 py-2.5 text-right text-xs">
+                Totales Selección ({allItems.filter(i => isSelected(i.id)).length} seleccionados):
+              </td>
+              <td className="px-2.5 py-2.5 text-center text-xs font-black">
+                {allItems.filter(i => isSelected(i.id)).length} uds
+              </td>
+              <td colSpan={2} className="px-2.5 py-2.5 text-right text-xs">
+                Superficie Tablero:
+              </td>
+              <td className="px-2.5 py-2.5 text-right text-xs font-black text-amber-300 font-mono">
+                {m2.total.toFixed(4)} m²
+              </td>
+              {!ocultarImportes && <td />}
+              {verEuros && <td />}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }

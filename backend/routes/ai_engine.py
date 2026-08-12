@@ -1244,3 +1244,72 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
         logger.error(f"detect-installations error: {e}")
         # Muestra el motivo real (recortado) para poder diagnosticar desde la app.
         raise HTTPException(status_code=500, detail=f"No se pudieron detectar las instalaciones: {str(e)[:180]}")
+
+
+@ai_engine_router.post("/parse-valued-supplier-order")
+async def parse_valued_supplier_order(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Analiza una foto, pantallazo (Ctrl+V) o PDF de un pedido valorado de proveedor de puertas/costados/regletas
+    usando Gemini 2.5 Flash Vision. Extrae códigos, descripciones, medidas (alto/ancho en mm), cantidades y precios,
+    y devuelve la estructura normalizada para actualizar el proyecto en tiempo real."""
+    import json as _json, re as _re
+    p = payload or {}
+    img = p.get("imageBase64") or p.get("image") or ""
+    if not img:
+        raise HTTPException(status_code=400, detail="Falta la imagen o archivo del pedido valorado.")
+    try:
+        import base64 as _b64x, io as _iox
+        from PIL import Image as _PILImg
+        _m = _re.match(r"^data:[^;]+;base64,(.*)$", img.strip(), _re.DOTALL)
+        _raw = (_m.group(1) if _m else img).strip()
+        _raw_clean = _re.sub(r"\s+", "", _raw)
+        _im = _PILImg.open(_iox.BytesIO(_b64x.b64decode(_raw_clean))).convert("RGB")
+        if _im.width > 2000:
+            _h = round(_im.height * 2000 / _im.width)
+            _im = _im.resize((2000, _h), _PILImg.LANCZOS)
+        _buf = _iox.BytesIO()
+        _im.save(_buf, format="JPEG", quality=90, optimize=True)
+        img = "data:image/jpeg;base64," + _b64x.b64encode(_buf.getvalue()).decode()
+    except Exception as _e:
+        logger.warning("parse-valued-supplier-order: error al procesar imagen: %s", _e)
+
+    try:
+        from services.llm_vision import analyze_image_with_gemini, is_vision_available
+        if not is_vision_available():
+            raise HTTPException(status_code=503, detail="IA no disponible.")
+
+        prompt = (
+            "Analyze this valued kitchen supplier order / proforma / invoice / doors & side panels cut list.\n"
+            "Read every row of doors, side panels (costados), filler strips (regletas), and drawer fronts.\n"
+            "Extract a JSON list of line items with extreme accuracy:\n"
+            "{\n"
+            '  "referenciaProveedor": "order reference if present",\n'
+            '  "proveedor": "supplier name if present",\n'
+            '  "items": [\n'
+            '    {\n'
+            '      "cod": "item code or model",\n'
+            '      "descripcion": "item description or type",\n'
+            '      "cant": number,\n'
+            '      "alto": number_in_mm,\n'
+            '      "ancho": number_in_mm,\n'
+            '      "largo": number_in_mm_if_regleta,\n'
+            '      "pm2": price_per_m2_number_or_null,\n'
+            '      "costeTotal": total_line_price_in_eur_number_or_null\n'
+            '    }\n'
+            '  ]\n'
+            "}\n\n"
+            "Important: heights and widths MUST be numbers in millimeters (mm). Convert cm to mm if needed (e.g. 70cm -> 700mm). Output ONLY valid JSON."
+        )
+
+        text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-flash")
+        m = _re.search(r"\{[\s\S]*\}", text or "")
+        data = _json.loads(m.group()) if m else {}
+        items = data.get("items") or []
+        return {
+            "success": True,
+            "referenciaProveedor": data.get("referenciaProveedor") or "",
+            "proveedor": data.get("proveedor") or "",
+            "items": items
+        }
+    except Exception as e:
+        logger.error(f"parse-valued-supplier-order error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al analizar pedido valorado: {str(e)[:180]}")
