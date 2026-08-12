@@ -122,7 +122,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const [pistaCandado, setPistaCandado] = useState('');
   
   // Modales y paneles auxiliares
-  const [showPegadoMasivo, setShowPegadoMasivo] = useState(false);
+  const [showPegadoMasivo, setShowPegadoMasivo] = useState(() => !initialMuebles || initialMuebles.length === 0);
   const [textoMasivo, setTextoMasivo] = useState('');
   const [showComparador, setShowComparador] = useState(false);
   const [showDespiece, setShowDespiece] = useState(false);
@@ -560,7 +560,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
-      <div className="bg-white w-full max-w-6xl max-h-[92vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+      <div className="bg-white w-[98vw] max-w-[1600px] h-[95vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         
         {/* Cabecera Principal */}
         <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-4 shrink-0 shadow-md">

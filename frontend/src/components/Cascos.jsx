@@ -842,11 +842,6 @@ const Cascos = ({ state, setState }) => {
               así que no se encontraba. Sigue siendo master-only: el cliente no la ve. */}
           {esMasterCascos && (
             <div className="flex items-center gap-2 relative">
-              <button onClick={() => setRelacionRevisar([])}
-                title="Pegar lista de muebles masiva (WhatsApp, correo, notas de obra)"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs shadow transition-all">
-                <List size={15} /> Pegado Masivo
-              </button>
               <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
               <button onClick={() => setMenuImportar(v => !v)}
                 title="Importar muebles: pegado masivo, plantilla PDF o presupuesto Alvic"
@@ -983,20 +978,11 @@ const Cascos = ({ state, setState }) => {
 
           {seccion === 'cascos' ? (<>
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
-            <div className="flex gap-2 mb-3">
-              <div className="relative flex-1">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por palabra: fregadero, campana, altillo, columna…"
-                  className="w-full pl-9 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-400 outline-none" />
-                {q && <button type="button" onClick={() => setQ('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600"><X size={16} /></button>}
-              </div>
-              <button
-                onClick={() => setRelacionRevisar([])}
-                className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
-                title="Pegar texto masivo de muebles (WhatsApp, notas)"
-              >
-                <List size={15} /> Pegado Masivo
-              </button>
+            <div className="relative mb-3">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por palabra: fregadero, campana, altillo, columna…"
+                className="w-full pl-9 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-400 outline-none" />
+              {q && <button type="button" onClick={() => setQ('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600"><X size={16} /></button>}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               <div className="col-span-2 sm:col-span-2">
