@@ -217,12 +217,12 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         del_suelo = [e for e in elementos
                      if e["pared_idx"] == pidx and e.get("fila") == "bajo"]
         escritos = [e for e in del_suelo if e.get("medida_escrita")]
-        # Hace falta que la mayoría estén acotados: con una medida suelta escrita
-        # no se puede deducir el ancho de toda la pared.
-        if not del_suelo or len(escritos) * 2 < len(del_suelo):
-            continue
-        suma = sum(e["ancho"] for e in del_suelo)
-        if suma != pared["ancho"] and en_rango(suma, "ancho_pared"):
+        if del_suelo:
+            suma = sum(e["ancho"] for e in del_suelo)
+            if suma > 0 and en_rango(suma, "ancho_pared"):
+                if suma != pared["ancho"]:
+                    avisos.append(f"Pared {pidx+1}: el ancho se ajusta a la suma real de módulos ({suma} cm).")
+                    pared["ancho"] = suma
             avisos.append(
                 f"Pared {pidx+1}: el ancho pasa de {pared['ancho']} cm (estimado) a "
                 f"{suma} cm, que es lo que suman las medidas escritas en el plano.")
