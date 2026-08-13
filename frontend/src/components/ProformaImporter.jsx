@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check, Factory } from 'lucide-react';
+import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, ChevronRight, Save, FolderOpen, X, AlertTriangle, Lock, Unlock, Download, Edit2, Check, Factory, Sparkles } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
@@ -2200,7 +2200,7 @@ function EditorPuertas({
       doc.text('PEDIDO OFICIAL DE COMPRAS (PUERTAS / COSTADOS / REGLETAS)', 14, 16);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('ERP STUDIO 3K · Despiece de Tableros y Pedido a Proveedor', 14, 24);
+      doc.text('LUIGGI HOME ERP · Despiece de Tableros y Pedido a Proveedor', 14, 24);
 
       doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 196, 16, { align: 'right' });
       doc.text(`Proveedor: ${nombreProveedor}`, 196, 24, { align: 'right' });

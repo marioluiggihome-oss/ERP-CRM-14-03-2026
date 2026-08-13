@@ -738,7 +738,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.rect(0, 0, 210, 35, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    const companyBrand = (state?.settings?.companyName || currentUser?.empresa || 'STUDIO 3K').toUpperCase() + ' · COCINA MONTADA';
+    const companyBrand = (state?.settings?.companyName || currentUser?.empresa || 'LUIGGI HOME').toUpperCase() + ' · COCINA MONTADA';
     doc.text(companyBrand, 14, 18);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
