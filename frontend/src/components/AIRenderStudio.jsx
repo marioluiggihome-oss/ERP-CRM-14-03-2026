@@ -924,30 +924,35 @@ export default function AIRenderStudio({ state, setState }) {
     return path;
   };
 
-  const pareceUnaImagen = async (blob) => {
-    if (!blob || blob.size < 12) return false;
-    if ((blob.type || '').startsWith('image/')) return true;
+  // Identifica el formato por su firma: los proxys de archivos pueden perder
+  // el MIME, pero un render AVIF/HEIF sigue siendo una imagen válida.
+  const tipoImagenPorFirma = async (blob) => {
+    if (!blob || blob.size < 12) return null;
     try {
-      const b = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+      const b = new Uint8Array(await blob.slice(0, 24).arrayBuffer());
       const es = (pos, ...bytes) => bytes.every((v, i) => b[pos + i] === v);
-      if (
-        es(0, 0x89, 0x50, 0x4E, 0x47) ||                    // PNG
-        es(0, 0xFF, 0xD8, 0xFF) ||                          // JPEG
-        es(0, 0x47, 0x49, 0x46, 0x38) ||                    // GIF
-        es(0, 0x42, 0x4D) ||                                // BMP
-        (es(0, 0x52, 0x49, 0x46, 0x46) && es(8, 0x57, 0x45, 0x42, 0x50))  // WEBP
-      ) return true;
-
-      const headerStr = new TextDecoder().decode(b).toLowerCase();
-      if (headerStr.includes('<html') || headerStr.includes('<!doc') || headerStr.includes('{"') || headerStr.includes('{"error')) {
-        return false;
+      const texto = (ini, fin) => String.fromCharCode(...b.slice(ini, fin));
+      if (es(0, 0x89, 0x50, 0x4E, 0x47)) return 'image/png';
+      if (es(0, 0xFF, 0xD8, 0xFF)) return 'image/jpeg';
+      if (es(0, 0x47, 0x49, 0x46, 0x38)) return 'image/gif';
+      if (es(0, 0x42, 0x4D)) return 'image/bmp';
+      if (es(0, 0x52, 0x49, 0x46, 0x46) && es(8, 0x57, 0x45, 0x42, 0x50)) return 'image/webp';
+      if (texto(4, 8) === 'ftyp') {
+        const marca = texto(8, 12).toLowerCase();
+        if (['avif', 'avis'].includes(marca)) return 'image/avif';
+        if (['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1'].includes(marca)) return 'image/heic';
       }
-      return blob.size > 500;
+      return null;
     } catch {
-      return false;
+      return null;
     }
   };
 
+  const pareceUnaImagen = async (blob) =>
+    !!((blob?.type || '').startsWith('image/') || await tipoImagenPorFirma(blob));
+
+  // Descarga la imagen del render (o de una miniatura) como dataURL, para
+  // guardar/PDF. Sirve tanto para dataURL directas como para el proxy con token.
   const imageToDataUrl = async (path) => {
     if (!path) return null;
     if (typeof path === 'string' && path.startsWith('data:')) return path;
@@ -960,14 +965,21 @@ export default function AIRenderStudio({ state, setState }) {
       throw new Error(`No se pudo descargar la imagen del render (${resp.status}).`);
     }
     const blob = await resp.blob();
+    const tipoDetectado = await tipoImagenPorFirma(blob);
     if (!(await pareceUnaImagen(blob))) {
       throw new Error('Lo descargado no es una imagen; vuelve a generar el render.');
     }
+    // Si el proxy pierde el MIME (caso común en AVIF), reetiquetamos el Blob
+    // con el formato detectado para que FileReader produzca un data:image/* que
+    // después el canvas y el backend puedan normalizar a JPEG.
+    const blobImagen = tipoDetectado && !(blob.type || '').startsWith('image/')
+      ? new Blob([blob], { type: tipoDetectado })
+      : blob;
     return await new Promise((res, rej) => {
       const fr = new FileReader();
       fr.onload = () => res(fr.result);
       fr.onerror = rej;
-      fr.readAsDataURL(blob);
+      fr.readAsDataURL(blobImagen);
     });
   };
 

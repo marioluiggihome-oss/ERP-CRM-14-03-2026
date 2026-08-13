@@ -472,14 +472,10 @@ async def search_with_gemini(
 # GENERACIÓN DE IMÁGENES (render) con Gemini — usado por Render 3D y Armarios
 # ============================================================================
 
-# Modelos de imagen candidatos (cascada ante retirada/renombrado de modelos)
-# gemini-2.5-flash-image es el principal: sigue mejor las instrucciones de
-# fidelidad al boceto que gemini-3-pro-image-preview (que es más "creativo"
-# e ignora el layout). gemini-3-pro va como respaldo de calidad.
+# IA1 utiliza intencionadamente un único modelo: la fidelidad del boceto no
+# debe variar por una cascada automática a motores más creativos.
 GEMINI_IMAGE_MODELS = [
     "gemini-2.5-flash-image",
-    "gemini-2.5-flash-image-preview",
-    "gemini-3-pro-image-preview",
 ]
 
 
