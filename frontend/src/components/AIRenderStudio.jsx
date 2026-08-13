@@ -2732,22 +2732,7 @@ export default function AIRenderStudio({ state, setState }) {
         </div>
       </div>
 
-      {/* Barra temporal de accesos a otras herramientas (solo master) — plegada por defecto */}
-      {isMaster && setState && (
-        <div className="shrink-0 flex items-center gap-2 flex-wrap px-4 sm:px-8 py-1.5 bg-amber-50 border-b border-amber-200">
-          <button onClick={() => setShowOtras(s => !s)}
-            className="flex items-center gap-1 text-[10px] font-black text-amber-700 uppercase tracking-wider hover:text-amber-900">
-            <ChevronRight size={12} className={`transition-transform ${showOtras ? 'rotate-90' : ''}`} />
-            Otras herramientas (temporal · master)
-          </button>
-          {showOtras && OTRAS_HERRAMIENTAS.map(h => (
-            <button key={h.tab} onClick={() => irA(h.tab)}
-              className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-amber-200 text-amber-700 hover:bg-amber-100">
-              {h.label}
-            </button>
-          ))}
-        </div>
-      )}
+
 
       {/* Content: siempre flex-row en desktop, panel izquierdo estrecho + área render grande */}
       <div className="flex-1 flex flex-row overflow-hidden min-h-0">
