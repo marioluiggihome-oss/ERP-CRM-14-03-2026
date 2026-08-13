@@ -49,6 +49,11 @@ class ApolloImportRequest(BaseModel):
     linkedin: Optional[str] = ""
     web: Optional[str] = ""
     notas: Optional[str] = ""
+    origen: Optional[str] = ""
+    proveedor: Optional[str] = ""
+    source_record_id: Optional[str] = ""
+    source_url: Optional[str] = ""
+    consultado_en: Optional[str] = ""
 
 
 @router.get("/status")
@@ -58,7 +63,7 @@ async def get_apollo_status():
     return {
         "success": True,
         "configurado": bool(key),
-        "modo": "api_oficial" if key else "directorio_oficial_verificado",
+        "modo": "api_oficial" if key else "sin_fuente_configurada",
         "sectoresDisponibles": len(SECTORES_B2B)
     }
 
@@ -110,6 +115,8 @@ async def search_apollo_prospects(req: ApolloSearchRequest):
 async def import_prospect_to_crm(req: ApolloImportRequest, current_user: Optional[dict] = Depends(get_current_user)):
     """Importa un prospecto de Apollo directamente a la base de datos de Contactos y Oportunidades del CRM."""
     try:
+        if req.origen != "apollo_live_api" or not req.source_record_id:
+            raise HTTPException(status_code=400, detail="Solo se pueden importar resultados trazables obtenidos en vivo desde Apollo.")
         db = _get_db()
         user_id = (current_user or {}).get("id") or "anonymous"
         user_name = (current_user or {}).get("username") or (current_user or {}).get("clientName") or "Comercial"
@@ -148,9 +155,19 @@ async def import_prospect_to_crm(req: ApolloImportRequest, current_user: Optiona
             "website": req.web or "",
             "linkedin": req.linkedin or "",
             "status": "active",
-            "tags": ["Apollo B2B", req.sector.capitalize() if req.sector else "Arquitectura", "Prescriptor"],
-            "notes": req.notas or f"Prospecto importado desde Apollo AI. Cargo: {req.cargo}. Sector: {req.sector}.",
-            "source": "Apollo B2B",
+            "tags": ["Apollo B2B", "Pendiente de verificación", req.sector.capitalize() if req.sector else "Sin clasificar"],
+            "notes": req.notas or f"Organización importada desde Apollo.io. Revisar datos de contacto antes de cualquier acción comercial.",
+            "source": "Apollo.io",
+            "prospecting": {
+                "provider": req.proveedor or "Apollo.io",
+                "origin": req.origen,
+                "sourceRecordId": req.source_record_id,
+                "sourceUrl": req.source_url,
+                "consultedAt": req.consultado_en,
+                "dataQuality": "pendiente_verificacion_manual",
+                "emailVerified": False,
+                "phoneVerified": False,
+            },
             "createdByUserId": user_id,
             "createdByName": user_name,
             "assignedTo": user_name,
@@ -169,12 +186,13 @@ async def import_prospect_to_crm(req: ApolloImportRequest, current_user: Optiona
             "contactName": req.nombre,
             "company": req.empresa,
             "stage": "lead",  # Etapa inicial del pipeline
-            "value": 15000.0, # Estimación inicial de valor de proyecto
-            "probability": 25,
+            "value": 0.0,
+            "probability": 0,
             "expectedCloseDate": "",
-            "notes": f"Contacto profesional ({req.cargo}). Presentación de catálogo de cocinas Luiggi Home y dossier para arquitectos/interioristas.",
-            "source": "Apollo B2B",
-            "priority": "high",
+            "notes": "Lead de prospección pendiente de verificación manual. No representa una oportunidad cualificada todavía.",
+            "source": "Apollo.io",
+            "priority": "normal",
+            "prospecting": nuevo_contacto["prospecting"],
             "createdByUserId": user_id,
             "createdByName": user_name,
             "assignedTo": user_name,
@@ -191,8 +209,8 @@ async def import_prospect_to_crm(req: ApolloImportRequest, current_user: Optiona
             "contactId": contact_id,
             "opportunityId": opp_id,
             "type": "note",
-            "subject": "Prospecto B2B importado desde Apollo AI",
-            "description": f"Se ha dado de alta a {req.nombre} ({req.cargo} en {req.empresa}) desde la búsqueda de Apollo B2B.",
+            "subject": "Organización B2B importada desde Apollo.io",
+            "description": f"Se ha dado de alta a {req.empresa} desde Apollo.io. Datos pendientes de verificación manual antes de contactar.",
             "status": "completed",
             "date": now,
             "createdByUserId": user_id,
@@ -211,3 +229,19 @@ async def import_prospect_to_crm(req: ApolloImportRequest, current_user: Optiona
     except Exception as e:
         logger.error(f"Error importando contacto de Apollo: {e}")
         raise HTTPException(status_code=500, detail=f"Error al importar contacto: {str(e)}")
+
+
+@router.get("/audit-crm")
+async def audit_apollo_contacts(current_user: Optional[dict] = Depends(get_current_user)):
+    """Resume la trazabilidad de los contactos de prospección ya existentes, sin modificarlos."""
+    db = _get_db()
+    query = {"$or": [{"source": "Apollo B2B"}, {"source": "Apollo.io"}, {"tags": "Apollo B2B"}]}
+    total = await db.crm_contacts.count_documents(query)
+    trazables = await db.crm_contacts.count_documents({**query, "prospecting.sourceRecordId": {"$exists": True, "$ne": ""}})
+    return {
+        "success": True,
+        "totalProspeccionB2B": total,
+        "conTrazabilidadIndividual": trazables,
+        "pendientesDeRevision": max(0, total - trazables),
+        "mensaje": "Los registros sin identificador de proveedor se consideran pendientes de verificación; esta auditoría no borra ni altera datos.",
+    }

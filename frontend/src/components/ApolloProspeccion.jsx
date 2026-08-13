@@ -68,7 +68,9 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
   const [totalResultados, setTotalResultados] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState({ configurado: false, modo: 'directorio_oficial_verificado' });
+  const [status, setStatus] = useState({ configurado: false, modo: 'sin_fuente_configurada' });
+  const [sourceMeta, setSourceMeta] = useState({ origen: 'sin_fuente_verificable', mensaje: '' });
+  const [auditoria, setAuditoria] = useState(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [guardandoKey, setGuardandoKey] = useState(false);
@@ -119,7 +121,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
       if (res.ok) {
         await fetchStatus();
         setShowConfigModal(false);
-        setMensajeExito(apiKeyInput.trim() ? '✓ Clave de Apollo.io configurada con éxito.' : '✓ Modo restaurado a Directorio Oficial Verificado.');
+        setMensajeExito(apiKeyInput.trim() ? '✓ Clave de Apollo.io configurada con éxito.' : '✓ Sin fuente B2B activa hasta configurar Apollo.');
         setTimeout(() => setMensajeExito(null), 4000);
         buscarProspectos(1);
       }
@@ -151,6 +153,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
         setProspectos(data.prospectos || []);
         setTotalResultados(data.total || (data.prospectos || []).length);
         setTotalPaginas(data.totalPaginas || 1);
+        setSourceMeta({ origen: data.origen || 'sin_fuente_verificable', mensaje: data.mensaje || '' });
         setPagina(numPagina);
       } else {
         setError('Error al conectar con el motor de prospección B2B.');
@@ -181,7 +184,12 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
           telefono_directo: p.telefono_directo,
           linkedin: p.linkedin,
           web: p.web,
-          notas: `Importado de Base de Datos B2B. ${p.proyectos_recientes || ''}`
+          notas: `Importado desde ${p.proveedor || p.origen || 'fuente no indicada'}. ${p.proyectos_recientes || ''}`,
+          origen: p.origen,
+          proveedor: p.proveedor,
+          source_record_id: p.source_record_id,
+          source_url: p.source_url,
+          consultado_en: p.consultado_en
         })
       });
       if (res.ok) {
@@ -227,7 +235,12 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
               telefono_directo: p.telefono_directo,
               linkedin: p.linkedin,
               web: p.web,
-              notas: `Importado de Base de Datos B2B en lote. ${p.proyectos_recientes || ''}`
+              notas: `Importado desde ${p.proveedor || p.origen || 'fuente no indicada'}. ${p.proyectos_recientes || ''}`,
+              origen: p.origen,
+              proveedor: p.proveedor,
+              source_record_id: p.source_record_id,
+              source_url: p.source_url,
+              consultado_en: p.consultado_en
             })
           });
           if (res.ok) {
@@ -242,6 +255,16 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
       setTimeout(() => setMensajeExito(null), 5000);
     } finally {
       setImportandoLote(false);
+    }
+  };
+
+  const auditarCRM = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/apollo/audit-crm`, { headers: getHeaders() });
+      if (res.ok) setAuditoria(await res.json());
+      else setError('No se pudo auditar la trazabilidad de los contactos B2B del CRM.');
+    } catch (e) {
+      setError('Error de conexión al auditar el CRM.');
     }
   };
 
@@ -283,7 +306,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
               </span>
               <h1 className="text-xl font-black tracking-tight text-white">Base de Datos de Clientes Potenciales (B2B)</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                ● Base de Datos Nacional & Prospección Inteligente
+                ● {status.configurado ? 'Consulta en vivo con fuente trazable' : 'Sin fuente de datos activa'}
               </span>
             </div>
             <p className="text-xs text-slate-300">
@@ -299,6 +322,13 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
             >
               <ShieldCheck size={14} className={status.configurado ? 'text-emerald-400' : 'text-slate-300'} />
               <span>{status.configurado ? 'Apollo API Activa' : 'Configurar Apollo Key'}</span>
+            </button>
+            <button
+              onClick={auditarCRM}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-colors"
+              title="Revisar cuántos contactos B2B importados al CRM tienen fuente trazable"
+            >
+              <ShieldCheck size={14} /> Auditar CRM
             </button>
             <button
               onClick={handleImportarLote}
@@ -429,11 +459,17 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
 
         {/* Estadísticas / Resumen de resultados */}
         <div className="flex items-center justify-between text-xs text-slate-500 px-1 flex-wrap gap-2">
-          <span>Se han encontrado <b>{totalResultados}</b> profesionales y empresas verificadas en <b>{ciudad}</b></span>
-          <span className="flex items-center gap-1 text-emerald-600 font-bold">
-            <ShieldCheck size={14} /> Emails y teléfonos verificados para contacto directo
+          <span>Se han encontrado <b>{totalResultados}</b> organizaciones procedentes de <b>{sourceMeta.origen === 'apollo_live_api' ? 'Apollo.io' : 'una fuente no configurada'}</b> en <b>{ciudad}</b></span>
+          <span className={`flex items-center gap-1 font-bold ${sourceMeta.origen === 'apollo_live_api' ? 'text-indigo-600' : 'text-amber-700'}`}>
+            <ShieldCheck size={14} /> {sourceMeta.mensaje || 'Revisa cada dato antes de contactar'}
           </span>
         </div>
+
+        {auditoria && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 flex flex-wrap gap-x-5 gap-y-1">
+            <b>Auditoría CRM B2B:</b><span>{auditoria.totalProspeccionB2B} registros de prospección</span><span>{auditoria.conTrazabilidadIndividual} trazables</span><span className="font-bold">{auditoria.pendientesDeRevision} pendientes de revisión</span>
+          </div>
+        )}
 
         {/* Grid de Prospectos */}
         {loading ? (
@@ -471,9 +507,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
                             <p className="text-[11px] font-bold text-indigo-600">{p.cargo}</p>
                           </div>
                         </div>
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {p.puntuacion_interes || 95}% Match
-                        </span>
+                        {p.proveedor && <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">{p.proveedor}</span>}
                       </div>
 
                       {/* Empresa y Ubicación */}
@@ -498,7 +532,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
                         </p>
                       )}
 
-                      {/* Datos de contacto verificados */}
+                      {/* Datos de la fuente: solo se marcan verificados con evidencia explícita. */}
                       <div className="space-y-1 text-[11px] text-slate-600 mb-4 border-t border-slate-100 pt-2.5">
                         {p.email && (
                           <div className="flex items-center justify-between">
@@ -506,9 +540,7 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
                               <Mail size={12} className="text-indigo-500 shrink-0" />
                               <a href={`mailto:${p.email}`} className="hover:underline truncate">{p.email}</a>
                             </span>
-                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                              Verificado
-                            </span>
+                            {p.email_verificado && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Verificado por proveedor</span>}
                           </div>
                         )}
                         {(p.telefono_directo || p.telefono) && (
