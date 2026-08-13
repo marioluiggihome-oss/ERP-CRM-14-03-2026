@@ -464,7 +464,7 @@ export default function EstudioCocinas({ state, setState }) {
   const [panelHidden, setPanelHidden] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Sidebar overlay en mobile
   // Panel derecho (acciones + proyecto) — solo desktop
-  const [rightOpen, setRightOpen] = useState(true);      // visible u oculto
+  const [rightOpen, setRightOpen] = useState(false);      // visible u oculto (falso por defecto para maximizar lienzo)
   const [rightExpanded, setRightExpanded] = useState(false); // normal (220px) o expandido (340px)
   const resizingPanel = useRef(false);
   const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
@@ -1640,6 +1640,30 @@ export default function EstudioCocinas({ state, setState }) {
                       <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white"><X size={18}/></button>
                     </div>
                   )}
+                </div>
+
+                {/* ── Exportador CAD / DXF para AutoCAD ── */}
+                <div className={`mt-2 pt-4 border-t ${t.cardBorder}`}>
+                  <h2 className={`text-sm font-black mb-1 ${t.title}`}>Exportar plano vectorial CAD (.DXF)</h2>
+                  <p className={`text-xs mb-3 ${t.subtext}`}>Exporta el plano de planta y los alzados vectoriales en formato DXF (AutoCAD R12/2000 ASCII) listos para taller, fábrica de cascos y marmolistas.</p>
+                  <button onClick={async () => {
+                    try {
+                      const res = await fetch(`${API}/api/estudio-cocinas/exportar-dxf`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                        body: JSON.stringify({ distribucion: { tipo: proy.tipo_distribucion || 'L', paredes: [{ id: 1, ancho: proy.ancho_estancia || 360, elementos: [] }] }, cliente: proy.nombre_cliente || 'Cliente' }),
+                      });
+                      const data = await res.json();
+                      if (data.dxfContent) {
+                        const blob = new Blob([data.dxfContent], { type: 'application/dxf' });
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                        a.download = data.filename || 'plano_cad.dxf'; a.click();
+                      }
+                    } catch (e) { alert('No se pudo generar el archivo DXF'); }
+                  }}
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
+                    <Maximize2 size={15}/> Exportar archivo DXF (AutoCAD)
+                  </button>
                 </div>
               </div>
             )}
