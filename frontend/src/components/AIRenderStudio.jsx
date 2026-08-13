@@ -615,7 +615,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
   // marcas de enchufes/agua/desagüe/gas donde irían).
   const detectInstalaciones = async (srcArg) => {
-    const src = srcArg || currentImage(); if (!src || detecting) return;
+    const src = (typeof srcArg === 'string' && srcArg.length > 5) ? srcArg : currentImage(); if (!src || detecting) return;
     setDetecting(true); setError(null);
     try {
       // Reducir la imagen antes de enviar (un render 4K rompe la petición por tamaño).
@@ -3423,7 +3423,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {showInstall && (
                   <div className="mt-2 flex items-center gap-1.5 overflow-x-auto sm:overflow-visible sm:flex-wrap [&>*]:shrink-0 sm:[&>*]:shrink bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
-                  <button onClick={detectInstalaciones} disabled={detecting}
+                  <button onClick={() => detectInstalaciones()} disabled={detecting}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
                     {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar auto (IA)'}
                   </button>
