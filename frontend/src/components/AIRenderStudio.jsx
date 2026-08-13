@@ -1881,29 +1881,29 @@ export default function AIRenderStudio({ state, setState }) {
   // un render grande (p.ej. 2K) puede pesar varios MB y el servidor/proxy
   // rechaza el JSON → "Error al guardar". Para archivo basta 1600px JPEG.
   const shrinkForSave = async (src) => {
-    const dataUrl = await imageToDataUrl(src);
-    // Antes, cualquier cosa que no fuese `data:image` se devolvía TAL CUAL y
-    // seguía su camino haciéndose pasar por una imagen. Si no lo es, se corta
-    // aquí: más vale un error claro que un render fantasma.
-    if (dataUrl && !String(dataUrl).startsWith('data:image')) {
-      throw new Error('La imagen del render no se pudo leer.');
-    }
-    if (!dataUrl) return dataUrl;
-    return await new Promise((resolve) => {
-      const im = new window.Image();
-      im.onload = () => {
-        try {
-          const maxDim = 1600;
-          const scale = Math.min(1, maxDim / Math.max(im.width, im.height));
-          const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
-          const c = document.createElement('canvas'); c.width = w; c.height = h;
-          c.getContext('2d').drawImage(im, 0, 0, w, h);
-          resolve(c.toDataURL('image/jpeg', 0.85));
-        } catch (_) { resolve(dataUrl); }
-      };
-      im.onerror = () => resolve(dataUrl);
-      im.src = dataUrl;
-    });
+    if (!src) return null;
+    try {
+      const dataUrl = await imageToDataUrl(src);
+      if (dataUrl && String(dataUrl).startsWith('data:image')) {
+        return await new Promise((resolve) => {
+          const im = new window.Image();
+          im.crossOrigin = 'anonymous';
+          im.onload = () => {
+            try {
+              const maxDim = 1600;
+              const scale = Math.min(1, maxDim / Math.max(im.width, im.height));
+              const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
+              const c = document.createElement('canvas'); c.width = w; c.height = h;
+              c.getContext('2d').drawImage(im, 0, 0, w, h);
+              resolve(c.toDataURL('image/jpeg', 0.85));
+            } catch (_) { resolve(dataUrl); }
+          };
+          im.onerror = () => resolve(dataUrl);
+          im.src = dataUrl;
+        });
+      }
+    } catch (_) { /* fallback */ }
+    return src;
   };
 
   // ─── La sesión sobrevive a cambiar de pestaña ───────────────────────────────
@@ -2787,84 +2787,69 @@ export default function AIRenderStudio({ state, setState }) {
           </div>
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
-            <div className="flex-1 flex flex-col p-4 sm:p-5 gap-4">
-              {/* PASO 1 — Describe el diseño */}
-              <StepHeader n={1} title="Describe el diseño" hint={`${tipoActual.label}. Puedes hablar o escribir.`} />
+            <div className="flex-1 flex flex-col p-4 gap-3 bg-slate-50/50">
+              {/* BLOQUE 1: Tipo de Proyecto y Plantillas */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-indigo-600" />
+                    Configurar Proyecto
+                  </span>
+                  {tiposPermitidos.length > 1 && (
+                    <div className="flex bg-slate-100 p-0.5 rounded-lg gap-0.5">
+                      {tiposPermitidos.map(tp => (
+                        <button key={tp.id} onClick={() => setTipo3d(tp.id)}
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${tipo3d === tp.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                          {tp.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              {/* Tipo de proyecto (permisos por partidas). Solo se ofrecen los tipos permitidos. */}
-              <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tipo de proyecto</p>
-                {tiposPermitidos.length > 1 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {tiposPermitidos.map(tp => (
-                      <button key={tp.id} onClick={() => setTipo3d(tp.id)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${tipo3d === tp.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-                        {tp.label}
+                {/* Plantillas Rápidas */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Plantillas rápidas</span>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    {PRESETS.map(p => (
+                      <button key={p.id} onClick={() => applyPreset(p)} title={p.desc}
+                        className="shrink-0 px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-50/80 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors whitespace-nowrap">
+                        {p.label}
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <span className="self-start px-3 py-1.5 rounded-full text-[11px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">{tipoActual.label}</span>
-                )}
+                </div>
               </div>
 
-              {/* Plantillas rápidas (arranque en 1 clic) */}
-              <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Plantillas rápidas</p>
-                <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-                  {PRESETS.map(p => (
-                    <button key={p.id} onClick={() => applyPreset(p)} title={p.desc}
-                      className="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 whitespace-nowrap">
-                      {p.label}
+              {/* BLOQUE 2: Descripción, Voz y Referencias */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex-1 flex flex-col gap-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Descripción del diseño</span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Botón de Voz Integrado */}
+                    <button
+                      onClick={toggleMic}
+                      disabled={!isSupported}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition-all ${
+                        isListening
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : isSupported
+                            ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200'
+                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                      title={isListening ? 'Detener dictado' : 'Dictar por voz'}
+                    >
+                      {isListening ? <MicOff size={13} /> : <Mic size={13} />}
+                      <span>{isListening ? 'Escuchando…' : 'Dictar'}</span>
                     </button>
-                  ))}
-                </div>
-              </div>
 
-              {/* Botón de micrófono grande */}
-              <div className="flex justify-center">
-                <button
-                  onClick={toggleMic}
-                  disabled={!isSupported}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg shrink-0 ${
-                    isListening
-                      ? 'bg-red-500 text-white animate-pulse scale-110 shadow-red-300'
-                      : isSupported
-                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:scale-105 hover:shadow-2xl'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  }`}
-                  title={isListening ? 'Detener grabación' : 'Iniciar grabación de voz'}
-                >
-                  {isListening ? <MicOff size={22} /> : <Mic size={22} />}
-                </button>
-              </div>
-
-              {isListening && (
-                <div className="text-center">
-                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-xs font-bold uppercase tracking-wider">
-                    <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                    Escuchando...
-                  </span>
-                </div>
-              )}
-
-              {!isSupported && (
-                <p className="text-center text-xs text-amber-600 bg-amber-50 rounded-lg p-3">
-                  Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge, o escribe tu descripción.
-                </p>
-              )}
-
-              {/* Campo de texto */}
-              <div className="flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Descripción del diseño
-                  </label>
-                  <label className={`text-[11px] font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg ${analyzingRef ? 'bg-purple-200 text-purple-500' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
-                    <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
-                    {analyzingRef ? 'Analizando…' : 'Subir imagen(es) de referencia'}
-                    <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
-                  </label>
+                    {/* Subir Imágenes */}
+                    <label className={`text-[11px] font-bold flex items-center gap-1 cursor-pointer px-2.5 py-1 rounded-full transition-all ${analyzingRef ? 'bg-purple-200 text-purple-600' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}>
+                      <Image size={13} className={analyzingRef ? 'animate-pulse' : ''} />
+                      <span>{analyzingRef ? 'Leyendo…' : 'Subir croquis/foto'}</span>
+                      <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
+                    </label>
+                  </div>
                 </div>
                 {analyzingRef && (
                   <div className="mb-2">
@@ -3435,6 +3420,11 @@ export default function AIRenderStudio({ state, setState }) {
                   className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white rounded-lg text-[11px] font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
                   <BookOpen size={12} />
                   <span className="hidden sm:inline truncate">Dossier</span>
+                </button>
+                <button onClick={exportDXF} disabled={downloading}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-cyan-600 text-white rounded-lg text-[11px] font-bold hover:bg-cyan-700 shadow-sm" title="Descargar plano en formato vectorial DXF (AutoCAD R12/2000) listo para taller, fábrica ACB y marmolista">
+                  <Maximize2 size={12} />
+                  <span className="truncate">📐 CAD DXF</span>
                 </button>
                 <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded-lg text-[11px] font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
