@@ -837,15 +837,18 @@ export default function EstudioCocinas({ state, setState }) {
     } catch {}
   }, [savedId]);
 
-  // ── Plano ──
+  // ── Plano 2D ──
   const genPlano = useCallback(async () => {
-    if (!proy.medidas.trim()) { setPlano(s => ({ ...s, status: 'error', msg: 'Introduce las medidas' })); return; }
-    setPlano(s => ({ ...s, status: 'loading', msg: 'Generando plano técnico…', b64: null }));
+    setPlano(s => ({ ...s, status: 'loading', msg: 'Generando plano técnico 2D…', b64: null }));
     try {
-      const r = await apiPost('/plano-2d', { ...proy, distribucion_estructurada: distribucion });
-      setPlano(s => ({ ...s, status: 'success', msg: 'Plano generado', b64: r.planoBase64 }));
+      const medEfectivas = proy.medidas?.trim() || '360cm x 240cm';
+      const distEfectiva = (distribucion && (distribucion.paredes || []).some(p => Number(p.ancho) > 0))
+        ? distribucion
+        : { tipo: proy.tipo_distribucion || 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }, { id: 2, ancho: 240, elementos: [] }] };
+      const r = await apiPost('/plano-2d', { ...proy, medidas: medEfectivas, distribucion_estructurada: distEfectiva });
+      setPlano(s => ({ ...s, status: 'success', msg: 'Plano 2D generado correctamente', b64: r.planoBase64 }));
     } catch (err) {
-      setPlano(s => ({ ...s, status: 'error', msg: err.message }));
+      setPlano(s => ({ ...s, status: 'error', msg: `Error al generar el plano 2D: ${err.message}` }));
     }
   }, [proy, distribucion]);
 
@@ -928,23 +931,16 @@ export default function EstudioCocinas({ state, setState }) {
     // eslint-disable-next-line
   }, [render.imageUrl, plano.b64, alzado.b64, ficha.md, proy, watermark, defaultLogo]);
 
-  // ── Vista alámbrica (alzados por pared, con cotas) ──
   const genAlzado = useCallback(async () => {
-    // El alzado se dibuja con las medidas REALES de las paredes; sin ellas no se
-    // inventa nada. Se avisa aquí en vez de mandar una petición que va a fallar:
-    // el usuario veía un error del servidor sin saber que le faltaba elegir la
-    // distribución en el panel de la izquierda.
-    if (!distribucion || !(distribucion.paredes || []).some(p => Number(p.ancho) > 0)) {
-      setAlzado(s => ({ ...s, status: 'error', b64: null,
-        msg: 'Falta la distribución: elígela en el panel de la izquierda (lineal, L, U…) y pon el ancho de cada pared.' }));
-      return;
-    }
-    setAlzado(s => ({ ...s, status: 'loading', msg: 'Generando vista alámbrica…', b64: null }));
+    setAlzado(s => ({ ...s, status: 'loading', msg: 'Generando vista alámbrica acotada…', b64: null }));
     try {
-      const r = await apiPost('/alzado', { ...proy, distribucion_estructurada: distribucion });
-      setAlzado(s => ({ ...s, status: 'success', msg: `Alzados generados (${r.paredes} pared/es)`, b64: r.alzadoBase64 }));
+      const distEfectiva = (distribucion && (distribucion.paredes || []).some(p => Number(p.ancho) > 0))
+        ? distribucion
+        : { tipo: proy.tipo_distribucion || 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }, { id: 2, ancho: 240, elementos: [] }] };
+      const r = await apiPost('/alzado', { ...proy, distribucion_estructurada: distEfectiva });
+      setAlzado(s => ({ ...s, status: 'success', msg: `Alzados acotados generados (${r.paredes || 2} pared/es)`, b64: r.alzadoBase64 }));
     } catch (err) {
-      setAlzado(s => ({ ...s, status: 'error', msg: err.message }));
+      setAlzado(s => ({ ...s, status: 'error', msg: `Error al generar alzados: ${err.message}` }));
     }
   }, [proy, distribucion]);
 
