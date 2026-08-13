@@ -2734,9 +2734,10 @@ export default function AIRenderStudio({ state, setState }) {
                   <Palette size={12} /> ✨ Acabados ALVIC
                 </button>
                 <button onClick={saveDesign} disabled={busy}
-              {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
-              <span className="hidden sm:inline">Guardar</span>
-            </button>
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
+                  {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
+                  <span className="hidden sm:inline">Guardar</span>
+                </button>
           </div>
         </div>
       </div>
