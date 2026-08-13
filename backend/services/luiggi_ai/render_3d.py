@@ -668,6 +668,7 @@ class Render3DService:
                 "THE DRAWING IS THE GROUND TRUTH FOR GEOMETRY:\n"
                 "- Reproduce the EXACT overall SHAPE of the kitchen (linear, L-shaped, U-shaped, "
                 "with island or peninsula) as drawn. If it is drawn as an L, it must be an L.\n"
+                "- PHYSICAL L-SHAPE RULE: when the drawing has a 90-degree corner, a visible return, or modules continuing onto a secondary wall, render TWO PERPENDICULAR cabinet runs joined at that inside corner. Never flatten the return wall into the main frontal run. The final image must visibly show the depth and receding side wall of the L.\n"
                 "- Reproduce the EXACT NUMBER and ORDER of the modules from left to right: base units, wall units and tall columns.\n"
                 "- EXACT TALL COLUMN COUNT: render PRECISELY the number of tall columns drawn in the sketch. If ONLY 1 single column is drawn on the right, render EXACTLY 1 column (do NOT invent a 2nd or 3rd column). If 2 or 3 columns are drawn, render each one as drawn.\n"
                 "- APPLIANCE PLACEMENT FROM SKETCH: place every sink and cooktop on the EXACT module where drawn (e.g. if sink is on module 2 and cooktop is on module 3, keep that exact sequence).\n"
@@ -694,6 +695,7 @@ class Render3DService:
                 "  · 'BF-60' / 'Bajo Fregadero': sink base unit with undermount single sink basin and high-arc mixer tap.\n"
                 "  · 'Bajo Placa 2 Gavetas' / '2 Gavetas': 90cm wide cooktop unit with TWO large closed horizontal pull-out drawers (gavetones) and black induction cooktop on the countertop.\n"
                 "  · 'Gola Extraible 30' / 'Extraible': closed narrow 30cm pull-out bottle/spice base unit.\n"
+                "- CAMERA FOR L-SHAPES: use a three-quarter view from inside or opposite the corner, so BOTH perpendicular walls and the 90-degree return are visibly distinct. A straight-on frontal elevation is forbidden for an L-shaped kitchen.\n"
                 "- Use a wide-angle corner viewpoint so the COMPLETE layout is visible at once.\n\n"
                 + (f"FINISHES (this is the ONLY thing the text decides — geometry comes 100% "
                    f"from the drawing): {brief_txt}\n\n" if brief_txt else
@@ -957,13 +959,16 @@ class Render3DService:
                "not a style reference. Read the geometry from them and build it exactly: do NOT "
                "reproduce the paper, the pencil strokes or the handwriting in the final image, and "
                "do NOT 'tidy up', simplify or upgrade the layout because it looks rough — a "
-               "hand-drawn L-shaped kitchen must come out as that same L-shaped kitchen.\n"
+               "hand-drawn L-shaped kitchen must come out as that same L-shaped kitchen, with two "
+               "perpendicular cabinet runs visibly joined at the actual inside corner.\n"
                if hay_croquis else "")
             + "\nSTRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "
             "part of the kitchen (e.g. the tall fridge/oven columns, an end run or the island). "
-            "Use a wide-angle corner view so the complete L/U/peninsula layout is visible at once.\n"
+            "For an L-shaped layout, render two clearly perpendicular runs joined at the inside corner; "
+            "the return wall must visibly recede in depth and must never be flattened into a frontal wall. "
+            "Use a three-quarter wide-angle corner view so the complete L/U/peninsula layout is visible at once.\n"
             "- Keep the EXACT same layout and the SAME cabinet modules (number, order, widths and "
             "heights), the same wall units, base units, tall/column units, the same appliances "
             "(fridge, oven, microwave, hob, hood, dishwasher), sink, windows, doors and "
@@ -1024,7 +1029,7 @@ class Render3DService:
                 "2. TALL COLUMNS COUNT AND TYPES: Count how many full-height tall columns are drawn side-by-side (e.g. '2 SEPARATE TALL COLUMNS: 1x Refrigerator column 60cm + 1x Freezer/Congelador column 60cm'). Explicitly state if there are 2 separate tall columns or 1 single column. DO NOT MERGE multiple tall columns into one!\n"
                 "3. BASE CABINET SEQUENCE (left to right / around walls): list each module with label (e.g. 'Horno', '2 gavetas', 'Ex/Extraíble', 'Fregadero', 'Frigo', 'Congelador') and width in cm/mm.\n"
                 "4. WALL CABINETS & HOOD: describe upper cabinets, open shelves, and wall hood placement.\n"
-                "5. CORNER & LAYOUT SHAPE: L-shaped, U-shaped, or linear, including corner module dimensions (e.g. 93x93 cm).\n"
+                "5. CORNER & LAYOUT SHAPE: L-shaped, U-shaped, or linear, including corner module dimensions (e.g. 93x93 cm). If the drawing visibly turns at an inside corner or shows a secondary wall/return, classify it as L-shaped even when one wall is drawn mostly frontally. State the MAIN WALL sequence and the RETURN WALL sequence separately.\n"
                 "Be strictly factual, clear, and concise."
             )
             raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
