@@ -3602,7 +3602,7 @@ export default function AIRenderStudio({ state, setState }) {
                       </div>
                     );
                   })}
-                  </>
+                  </div>
                 ) : imgError ? (
                   <div className="text-center p-8 max-w-sm">
                     <Image size={40} className="text-slate-500 mx-auto mb-3" />
