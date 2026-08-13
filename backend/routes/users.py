@@ -442,6 +442,16 @@ async def carpintero_delete_user(user_id: str, current_user: dict = Depends(requ
 # vinculados únicamente a ese administrador. Es el mismo patrón de aislamiento
 # empleado por carpinter.io, pero con acceso por defecto a Estudio 3D.
 # ---------------------------------------------------------------------------
+ESTUDIO3D_TIPOS_VALIDOS = {"cocina", "armario", "bano", "otro"}
+
+
+def _tipos_estudio3d(value) -> list[str]:
+    """Normaliza los tipos contratados; una lista vacía conserva el acceso total."""
+    if not isinstance(value, list):
+        return []
+    return [str(tipo).strip().lower() for tipo in value if str(tipo).strip().lower() in ESTUDIO3D_TIPOS_VALIDOS]
+
+
 async def require_studio3k_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     user = await require_authenticated_user(credentials)
     if _is_user_manager(user):
@@ -451,7 +461,7 @@ async def require_studio3k_admin(credentials: Optional[HTTPAuthorizationCredenti
         {"_id": 0, "id": 1, "username": 1, "isStudio3k": 1,
          "canManageStudio3kUsers": 1, "studio3kLandingUrl": 1,
          "canUseKitchenDesigner": 1, "canUseCocinasAI": 1,
-         "canUseAIAnalysis": 1},
+         "canUseAIAnalysis": 1, "estudio3dTipos": 1},
     ) or {}
     if full.get("isStudio3k") and full.get("canManageStudio3kUsers"):
         return {**user, **full}
@@ -490,6 +500,9 @@ async def studio3k_create_user(payload: dict, current_user: dict = Depends(requi
         "canUseKitchenDesigner": bool(current_user.get("canUseKitchenDesigner")),
         "canUseCocinasAI": bool(current_user.get("canUseCocinasAI")),
         "canUseAIAnalysis": bool(current_user.get("canUseAIAnalysis")),
+        # Los usuarios del estudio heredan los tipos contratados por su admin.
+        # Vacío mantiene la compatibilidad de "todos los tipos".
+        "estudio3dTipos": _tipos_estudio3d(current_user.get("estudio3dTipos")),
         # El acceso al Estudio 3D lo dan los permisos específicos. Dejar la
         # lista vacía mantiene al usuario dentro del portal privado Studio3K.
         "allowedModules": [],

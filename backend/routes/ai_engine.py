@@ -50,6 +50,52 @@ ai_engine_router = APIRouter(prefix="/ai-engine", tags=["LuiggiAI Engine"])
 _db = _get_db()  # cliente MongoDB compartido (singleton)
 
 
+# ─── Permisos por tipo de proyecto de Estudio 3D ────────────────────────────
+_ESTUDIO3D_TIPOS = {"cocina", "armario", "bano", "otro"}
+_ESTUDIO3D_ALIASES = {
+    "cocina": "cocina", "kitchen": "cocina",
+    "armario": "armario", "vestidor": "armario", "closet": "armario",
+    "bano": "bano", "baño": "bano", "bathroom": "bano",
+    "otro": "otro", "mueble": "otro", "furniture": "otro",
+}
+
+
+def _normalizar_tipo_estudio3d(value: Optional[str]) -> str:
+    return _ESTUDIO3D_ALIASES.get(str(value or "cocina").strip().lower(), "cocina")
+
+
+def _tipos_contratados(value) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(tipo).strip().lower() for tipo in value if str(tipo).strip().lower() in _ESTUDIO3D_TIPOS]
+
+
+async def exigir_tipo_estudio3d(user: dict, project_type: Optional[str]) -> str:
+    """Bloquea por API los renders de tipos que el cliente no tiene contratados."""
+    tipo = _normalizar_tipo_estudio3d(project_type)
+    if any(user.get(flag) for flag in ADMIN_ROLE_FLAGS):
+        return tipo
+    full = await _db.users.find_one(
+        {"id": user.get("id")},
+        {"_id": 0, "estudio3dTipos": 1, "linkedStudio3kAdminId": 1},
+    ) or {}
+    permitidos = _tipos_contratados(full.get("estudio3dTipos"))
+    if not permitidos and full.get("linkedStudio3kAdminId"):
+        admin_estudio = await _db.users.find_one(
+            {"id": full.get("linkedStudio3kAdminId")},
+            {"_id": 0, "estudio3dTipos": 1},
+        ) or {}
+        permitidos = _tipos_contratados(admin_estudio.get("estudio3dTipos"))
+    if permitidos and tipo not in permitidos:
+        etiquetas = {"cocina": "Cocina", "armario": "Armario / Vestidor", "bano": "Baño", "otro": "Otro mueble"}
+        disponibles = ", ".join(etiquetas.get(item, item) for item in permitidos)
+        raise HTTPException(
+            status_code=403,
+            detail=f"No tienes contratado el tipo «{etiquetas[tipo]}». Tipos disponibles: {disponibles}.",
+        )
+    return tipo
+
+
 # ─── Proyectos de render 3D (guardar / historial persistente) ─────────────────
 @ai_engine_router.post("/designs")
 async def save_render_design(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
@@ -386,6 +432,7 @@ class RenderParamsRequest(BaseModel):
     lighting: str = Field(default="natural", description="Tipo de iluminación")
     style: str = Field(default="photorealistic", description="Estilo de renderizado")
     additional_details: Optional[str] = Field(None, description="Detalles adicionales")
+    projectType: Optional[str] = Field(None, description="cocina|armario|bano|otro")
 
 
 class AnalyzeRequest(BaseModel):
@@ -499,6 +546,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     Ejemplo: "Quiero una cocina en L con encimera de mármol blanco,
     muebles de roble natural y tiradores negros"
     """
+    request.projectType = await exigir_tipo_estudio3d(user, request.projectType)
     # ENFORCEMENT de créditos de IA por usuario. Admin/master = ilimitado.
     # Defensivo: si el contador falla por un error interno, NO se bloquea; solo
     # se bloquea cuando realmente no quedan créditos (restantes <= 0).
@@ -572,6 +620,7 @@ async def my_ai_credits(user=Depends(require_auth)):
 async def generate_render_compose(request: RenderComposeRequest, user=Depends(require_auth)):
     """Genera un render fotorrealista combinando un PLANO EN PLANTA (distribución)
     y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos a la vez."""
+    request.projectType = await exigir_tipo_estudio3d(user, request.projectType)
     service = get_render_service()
     overrides = {}
     if request.style:
@@ -606,6 +655,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
     """Genera varias vistas de la MISMA cocina a distintos ángulos, a partir de un
     render base, para un visor orbital (girar con el ratón). Consume créditos de IA
     (una vista = un render)."""
+    request.projectType = await exigir_tipo_estudio3d(user, request.projectType)
     # Permiso específico: el giro 360º solo está disponible si el usuario tiene
     # canUseRender360 (o es un rol elevado). El JWT no lleva el flag, se comprueba en BD.
     allowed = any(user.get(f) for f in ADMIN_ROLE_FLAGS)
@@ -711,6 +761,12 @@ async def generate_render_params(request: RenderParamsRequest, user=Depends(requ
     Genera un render 3D a partir de parámetros explícitos (formulario).
     Usar cuando el usuario selecciona materiales desde el catálogo.
     """
+    tipo = await exigir_tipo_estudio3d(user, request.projectType)
+    if tipo != "cocina":
+        raise HTTPException(
+            status_code=400,
+            detail="El render por parámetros actuales solo está disponible para Cocina. Usa descripción o plano para el tipo contratado.",
+        )
     service = get_render_service()
 
     result = await service.generate_render_from_params(

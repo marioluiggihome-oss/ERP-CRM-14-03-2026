@@ -2576,6 +2576,8 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Generar render por parámetros ──────────────────────────────────────
   const handleGenerateParams = async () => {
+    const err = guardTipo('cocina');
+    if (err) { setError(err); return; }
     setIsGenerating(true);
     setError(null);
 
@@ -2583,7 +2585,7 @@ export default function AIRenderStudio({ state, setState }) {
       const response = await fetch(`${API_URL}/api/ai-engine/render/params`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(params),
+        body: JSON.stringify({ ...params, projectType: tipo3d }),
       });
 
       const data = await response.json();
