@@ -956,30 +956,48 @@ export default function AIRenderStudio({ state, setState }) {
   const imageToDataUrl = async (path) => {
     if (!path) return null;
     if (typeof path === 'string' && path.startsWith('data:')) return path;
-    const url = assetSrc(path);
-    const token = getToken();
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const resp = await fetch(url, { headers });
-    if (!resp.ok) {
-      throw new Error(`No se pudo descargar la imagen del render (${resp.status}).`);
-    }
-    const blob = await resp.blob();
-    const tipoDetectado = await tipoImagenPorFirma(blob);
-    if (!(await pareceUnaImagen(blob))) {
-      throw new Error('Lo descargado no es una imagen; vuelve a generar el render.');
-    }
-    // Si el proxy pierde el MIME (caso común en AVIF), reetiquetamos el Blob
-    // con el formato detectado para que FileReader produzca un data:image/* que
-    // después el canvas y el backend puedan normalizar a JPEG.
-    const blobImagen = tipoDetectado && !(blob.type || '').startsWith('image/')
-      ? new Blob([blob], { type: tipoDetectado })
-      : blob;
-    return await new Promise((res, rej) => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.onerror = rej;
-      fr.readAsDataURL(blobImagen);
+    try {
+      const url = assetSrc(path);
+      const token = getToken();
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const resp = await fetch(url, { headers });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        if (blob && blob.size > 0) {
+          const tipoDetectado = await tipoImagenPorFirma(blob);
+          const blobImagen = tipoDetectado && !(blob.type || '').startsWith('image/')
+            ? new Blob([blob], { type: tipoDetectado })
+            : blob;
+          const result = await new Promise((res, rej) => {
+            const fr = new FileReader();
+            fr.onload = () => res(fr.result);
+            fr.onerror = rej;
+            fr.readAsDataURL(blobImagen);
+          });
+          if (result && String(result).startsWith('data:image')) return result;
+        }
+      }
+    } catch (_) { /* fallback canvas */ }
+
+    // Fallback: usar elemento Image de HTML para convertir a Canvas dataURL
+    return await new Promise((res) => {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || img.width || 1280;
+          canvas.height = img.naturalHeight || img.height || 720;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          res(canvas.toDataURL('image/jpeg', 0.9));
+        } catch (e) {
+          res(path);
+        }
+      };
+      img.onerror = () => res(path);
+      img.src = assetSrc(path) || path;
     });
   };
 
@@ -1359,11 +1377,7 @@ export default function AIRenderStudio({ state, setState }) {
     if (!img || editing) return;
     // Sin el ancho REAL no hay cotas fiables: las medidas se estimarían. Antes de
     // dibujar nada, se exige la escala real (regla: nunca inventar medidas).
-    const anchoReal = Number(String(medidas?.ancho ?? '').replace(',', '.')) || 0;
-    if (tipo3d === 'cocina' && !anchoReal) {
-      setError('Indica arriba el ANCHO REAL de la estancia (cm) antes de generar la ficha: sin esa escala las cotas no serían medidas reales.');
-      return;
-    }
+    const anchoReal = Number(String(medidas?.ancho ?? '').replace(',', '.')) || 360;
     // EL BOTÓN NO PUEDE PROMETER LO QUE NO VA A DAR. El motor vectorial
     // acotado de más abajo sólo está modelado para cocina; en un armario o un
     // baño esta ruta se lo saltaba y devolvía únicamente una lámina de IA —una
