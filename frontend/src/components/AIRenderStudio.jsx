@@ -347,7 +347,7 @@ const PLACEHOLDER_TIPO = {
 export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
-  const canUseRender360 = isMaster || state?.currentUser?.canUseRender360 === true;
+  const canUseRender360 = true; // Visor 360° interactivo siempre disponible
   // Permiso específico para exportar a 4K (o rol master).
   const canUse4K = isMaster || state?.currentUser?.canUse4K === true;
   // Permiso específico para el amueblado virtual (o rol master).
@@ -2697,29 +2697,6 @@ export default function AIRenderStudio({ state, setState }) {
             <button onClick={saveDesign} disabled={busy}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
               {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
-              <span className="hidden sm:inline">Guardar</span>
-            </button>
-          </div>
-          {/* Mode Toggle — compacto */}
-          <div className="flex bg-slate-100 rounded-lg p-0.5">
-            <button
-              onClick={() => setMode('natural')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                mode === 'natural' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Volume2 size={13} />
-              <span className="hidden xs:inline">Voz</span>
-            </button>
-            <button
-              onClick={() => setMode('params')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                mode === 'params' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Palette size={13} />
-              <span className="hidden xs:inline">Materiales</span>
-            </button>
           </div>
         </div>
       </div>
