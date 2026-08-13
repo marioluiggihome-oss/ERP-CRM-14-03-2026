@@ -48,8 +48,11 @@ function BarraAnalisis({ texto, hechas, total }) {
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap, Printer } from 'lucide-react';
 import { getToken } from '../services/api';
-import { guardarSesion, leerSesion } from '../services/navegacion';
+import { guardarSesion, leerSesion, irA } from '../services/navegacion';
+import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
+import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
+import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
 import RecargarRenders from './RecargarRenders';
 

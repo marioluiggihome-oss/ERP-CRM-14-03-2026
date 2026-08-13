@@ -206,6 +206,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [menuImportar, setMenuImportar] = useState(false);
   const [relacionRevisar, setRelacionRevisar] = useState(null);
   const [importandoRel, setImportandoRel] = useState(false);
+  const [progresoImportacion, setProgresoImportacion] = useState('');
   const relacionInputRef = useRef(null);
   const alvicInputRef = useRef(null);
 
@@ -229,6 +230,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const importarRelacion = async (file) => {
     if (!file) return;
     setImportandoRel(true); setMenuImportar(false);
+    setProgresoImportacion(`Analizando ${file.name} (detectando páginas y códigos de módulos)...`);
     try {
       const b64 = await new Promise((res, rej) => {
         const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
@@ -246,12 +248,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       }
       setRelacionRevisar(d.muebles);
     } catch (e) { alert(e.message || 'Error al procesar el PDF'); }
-    finally { setImportandoRel(false); if (relacionInputRef.current) relacionInputRef.current.value = ''; }
+    finally { setImportandoRel(false); setProgresoImportacion(''); if (relacionInputRef.current) relacionInputRef.current.value = ''; }
   };
 
   const importarAlvic = async (file) => {
     if (!file) return;
     setImportandoRel(true); setMenuImportar(false);
+    setProgresoImportacion(`Analizando proforma Alvic ${file.name} (detectando muebles y cascos equivalentes)...`);
     try {
       const b64 = await new Promise((res, rej) => {
         const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
@@ -267,7 +270,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       let items = d.items || [];
       if (d.estado === 'procesando' && d.jobId) {
         const inicio = Date.now();
+        let pag = 1;
         while (Date.now() - inicio < 600000) {
+          setProgresoImportacion(`Procesando páginas del PDF Alvic (${pag} seg)...`);
+          pag += 3;
           await new Promise(res => setTimeout(res, 3000));
           const q = await fetch(`${API_URL}/api/cascos/proforma/job/${d.jobId}`, { headers: authHeaders() });
           let j = {}; try { j = await q.json(); } catch { j = {}; }
@@ -932,6 +938,16 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   return (
     <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-2 sm:p-3 pb-36 space-y-2">
       
+      {/* Banner de progreso durante la importación de PDF */}
+      {importandoRel && (
+        <div className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-black flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-2">
+            <Loader size={15} className="animate-spin" />
+            <span>{progresoImportacion || 'Analizando PDF con IA (detectando páginas y códigos de módulos)...'}</span>
+          </div>
+        </div>
+      )}
+
       {/* Cabecera Principal Compacta */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl px-3 py-2 shadow-lg border border-slate-800 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2.5">

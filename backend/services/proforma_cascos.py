@@ -67,15 +67,15 @@ def _tipo_mueble(desc: str) -> str:
     - 'alto'    → lleva COLGADORES (va colgado a la pared).
     - 'panel'   → regleta/panel/zócalo (accesorio, sin patas ni colgadores).
     """
-    t = (desc or "").upper()
-    if any(k in t for k in ("REG ", "PTA ", "ZOCALO", "ZÓCALO", "COPETE", "REGLETA", "COSTADO", "PANEL")):
-        return "panel"
-    if "SEMICOLUMNA" in t or "COLUMNA" in t:
-        return "columna"
-    if t.startswith("ALTO") or " ALTO" in t or "SOBREMODULO" in t or "SOBREMÓDULO" in t or "COLGADO" in t:
-        return "alto"
-    if t.startswith("BAJO") or " BAJO" in t or "FREGADERO" in t:
+    t = (desc or "").strip().upper()
+    if t.startswith("BAJO") or " BAJO" in t or "FREGADERO" in t or re.match(r"^B\d", t) or re.match(r"^B[A-Z]*\d", t):
         return "bajo"
+    if t.startswith("ALTO") or " ALTO" in t or "SOBREMODULO" in t or "COLGADO" in t or re.match(r"^A\d", t) or re.match(r"^A[A-Z]*\d", t):
+        return "alto"
+    if "SEMICOLUMNA" in t or "COLUMNA" in t or re.match(r"^C[DHSF]?\d", t):
+        return "columna"
+    if any(k in t for k in ("REG ", "ZOCALO", "ZÓCALO", "COPETE", "REGLETA", "COSTADO", "PANEL", "AZOC")):
+        return "panel"
     return "otro"
 
 
