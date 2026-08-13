@@ -485,7 +485,15 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
 
   const buildBrief = () => {
     const p = [];
-    if (form.layout) p.push(`Distribución: ${form.layout}.`);
+    if (form.layout) {
+      if (form.layout.includes('L')) {
+        p.push(`Distribución: En L (dos frentes en ángulo de 90° con esquina). ATENCIÓN: No hacer lineal, es una cocina en L con esquina real.`);
+      } else {
+        p.push(`Distribución: ${form.layout}.`);
+      }
+    } else if (sketches.length >= 2) {
+      p.push(`Distribución: Cocina en L (dos frentes en ángulo con esquina).`);
+    }
     if (form.doorModel) p.push(`Modelo de puerta: ${form.doorModel} (${form.maker}).`);
     if (form.cabinet_material) p.push(`Frentes/acabado: ${form.cabinet_material}${form.maker ? ` (${form.maker})` : ''}.`);
     if (form.countertop_material) p.push(`Encimera: ${form.countertop_material}.`);
