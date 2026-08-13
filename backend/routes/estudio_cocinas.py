@@ -499,12 +499,12 @@ async def editar_render(payload: EditarRenderInput):
     engine = _get_engine()
 
     instruccion = (
-        f"Edita este render de cocina siguiendo exactamente esta instrucción: \"{payload.instruccion}\"\n\n"
-        f"REQUISITOS:\n"
-        f"- Mantén la distribución, estructura y dimensiones inalteradas salvo que se indique explícitamente\n"
-        f"- Conserva la iluminación fotorrealista y calidad de los materiales\n"
-        f"- El resultado debe ser un render 8K de calidad de revista de interiorismo\n"
-        f"- Devuelve SOLO la imagen editada"
+        f"Edita este render de cocina siguiendo exactamente esta instrucción del proyectista: \"{payload.instruccion}\"\n\n"
+        f"REQUISITOS OBLIGATORIOS:\n"
+        f"- Mantén la distribución (en L / lineal / U), paredes y estructura del mueble inalteradas salvo lo solicitado\n"
+        f"- Si se pide añadir una cafetera en la esquina, pequeño electrodoméstico o detalle de encimera, AÑÁDELO EN ESA POSICIÓN EXACTA\n"
+        f"- Conserva la iluminación fotorrealista 8K y la calidad de los acabados\n"
+        f"- Devuelve SOLO la imagen editada fotorrealista"
     )
 
     files = []
@@ -2248,6 +2248,31 @@ async def detect_distribucion(payload: dict):
     except Exception as e:
         logger.error(f"detect-distribucion error: {e}")
         raise HTTPException(status_code=500, detail="No se pudo analizar la distribución.")
+
+
+@router.post("/exportar-dxf")
+async def exportar_dxf(payload: dict):
+    """
+    Exporta la distribución validada de la cocina a un archivo DXF (AutoCAD R12/2000 ASCII)
+    listo para enviar a taller, fábrica de cascos o marmolista.
+    """
+    distribucion = payload.get("distribucion") or {}
+    cliente = str(payload.get("cliente") or "Cliente")
+    if not distribucion or not distribucion.get("paredes"):
+        raise HTTPException(status_code=400, detail="Falta la distribución para exportar a DXF.")
+
+    try:
+        from services.dxf_exporter import generar_dxf_cocina
+        dxf_txt = generar_dxf_cocina(distribucion, cliente=cliente)
+        filename = f"plano_cad_{cliente.lower().replace(' ', '_')}.dxf"
+        return {
+            "success": True,
+            "dxfContent": dxf_txt,
+            "filename": filename,
+        }
+    except Exception as e:
+        logger.error(f"exportar-dxf error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando archivo DXF: {e}")
 
 
 def _sanea_distribucion(data: dict, ancho_real: int, alto_real: int) -> dict:
