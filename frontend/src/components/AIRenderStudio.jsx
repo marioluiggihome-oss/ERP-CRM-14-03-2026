@@ -1166,14 +1166,14 @@ export default function AIRenderStudio({ state, setState }) {
         + 'REGLAS: dibuja solo lo que aparece en el render.' + SIN_COTAS
       );
     }
-    // Cocina (por defecto)
+    // Cocina (dinámica según el diseño de la imagen/render)
     return (
-      'Crea una LÁMINA TÉCNICA Y LIMPIA EN 2D de ESTA cocina en L a 90 grados (usa la imagen adjunta como referencia FIEL del diseño). ' + base + '\n'
-      + '- ARRIBA: los ALZADOS S1 y S2 de la cocina en L por separado (Pared 1 a la izquierda, Pared 2 a la derecha), con cada módulo claramente separado y en sus proporciones reales.\n'
-      + '- CENTRO/ABAJO: la PLANTA en L vista cenital a 90 grados exactos (Pared 1 vertical/horizontal + Pared 2 perpendicular a 90°. Queda ESTRICTAMENTE PROHIBIDO dibujar una cocina en U ni un 3er frente).\n'
+      'Crea una LÁMINA TÉCNICA Y LIMPIA EN 2D de ESTA cocina (analiza detenidamente la imagen adjunta y respeta SU DISTRIBUCIÓN EXACTA: si es una cocina en L a 90°, dibuja solo 2 paredes en L; si es una cocina en U, dibuja 3 paredes en U; si es lineal, 1 pared). ' + base + '\n'
+      + '- ARRIBA: los ALZADOS (Pared 1, Pared 2, etc.) de la cocina por separado, con cada módulo claramente separado y en sus proporciones reales.\n'
+      + '- CENTRO/ABAJO: la PLANTA vista cenital que COINCIDA EXACTAMENTE con la distribución del render (si la imagen es una L de 2 paredes, la planta DEBE SER UNA L de 2 paredes sin inventar un tercer frente).\n'
       + '- DERECHA: recuadro titulado estrictamente "ACABADOS SUGERIDOS" con ortografía correcta en español (mostrando: PUERTAS, ENCIMERA, SALPICADERO, ILUMINACIÓN, DETALLES).\n'
       + 'REGLAS TÉCNICAS OBLIGATORIAS:\n'
-      + '  · La distribución es ESTRICTAMENTE una Cocina en L a 90° con exactamente 2 paredes (Pared 1 y Pared 2). NUNCA dibujes una cocina en U ni una isla.\n'
+      + '  · Respeta FIELMENTE la forma del diseño original (L, U, lineal o con isla). Si en el render o croquis solo hay 2 paredes en L, NUNCA inventes un tercer lado ni conviertas la cocina en U.\n'
       + '  · La CAMPANA extractora va SIEMPRE centrada JUSTO ENCIMA de la placa/cocina, con el MISMO ancho que esa zona.\n'
       + '  · Los muebles ALTOS se alinean verticalmente con los BAJOS.'
       + SIN_COTAS
