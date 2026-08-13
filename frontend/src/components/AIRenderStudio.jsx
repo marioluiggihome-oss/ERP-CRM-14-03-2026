@@ -2728,7 +2728,12 @@ export default function AIRenderStudio({ state, setState }) {
               className="flex items-center gap-1 px-2 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50">
               <FolderOpen size={13} /> <span className="hidden sm:inline">Proyectos</span>
             </button>
-            <button onClick={saveDesign} disabled={busy}
+                <button onClick={() => setPaletteOpen(o => !o)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${paletteOpen ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white hover:opacity-90'}`}
+                  title="Abrir catálogo lateral de acabados ALVIC Luxe / Zenit, ACB y PORTASUR">
+                  <Palette size={12} /> ✨ Acabados ALVIC
+                </button>
+                <button onClick={toggleHD} disabled={busy}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
               {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
               <span className="hidden sm:inline">Guardar</span>
@@ -3630,53 +3635,61 @@ export default function AIRenderStudio({ state, setState }) {
               </>
               )}
 
-              {/* Cambio de color/acabado: solo el CATÁLOGO completo por gama. */}
-              {currentImage() && (
-                <div className="shrink-0 bg-white border border-slate-200 rounded-xl p-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button onClick={() => setPaletteOpen(o => !o)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-black flex items-center gap-1.5 ${paletteOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                      <Palette size={13} /> Catálogo de colores {paletteOpen ? '▾' : '▸'}
+              {/* Panel Lateral Derecho: Catálogo de Acabados (ALVIC Luxe/Zenit, ACB, PORTASUR) */}
+              {paletteOpen && (
+                <div className="fixed top-0 right-0 h-full w-80 sm:w-96 z-50 bg-white/95 backdrop-blur-md shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-300">
+                  {/* Cabecera del panel */}
+                  <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 bg-slate-900 text-white">
+                    <div className="flex items-center gap-2">
+                      <Palette size={18} className="text-amber-400" />
+                      <span className="font-black text-sm uppercase tracking-wide">Catálogo de Acabados</span>
+                    </div>
+                    <button onClick={() => setPaletteOpen(false)} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                      <X size={18} />
                     </button>
-                    {editing && <span className="text-[11px] text-slate-400 flex items-center gap-1"><Loader size={12} className="animate-spin" /> generando…</span>}
                   </div>
 
-                  {paletteOpen && (
-                    <div className="mt-2 border-t border-slate-100 pt-2">
-                      <div className="flex gap-1 mb-2">
-                        {[['c1', '✨ ALVIC (Luxe / Zenit)'], ['c2', 'ACB'], ['c3', 'PORTASUR']].map(([id, lbl]) => (
-                          <button key={id} onClick={() => { setColorTab(id); setOpenGama(null); }}
-                            className={`px-3 py-1 rounded-lg text-[11px] font-black ${colorTab === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                            {lbl}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="max-h-64 overflow-y-auto pr-1 flex flex-col gap-1">
-                        {gamas.length === 0 && <p className="text-[11px] text-slate-400 py-2">Sin colores en esta pestaña todavía.</p>}
-                        {gamas.map(g => (
-                          <div key={g.gama} className="rounded-lg border border-slate-100">
-                            <button onClick={() => setOpenGama(o => o === g.gama ? null : g.gama)}
-                              className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-black text-slate-700 hover:bg-slate-50">
-                              <span>{g.gama} <span className="text-slate-400 font-bold">({g.items.length})</span></span>
-                              <span className="text-slate-400">{openGama === g.gama ? '▾' : '▸'}</span>
-                            </button>
-                            {openGama === g.gama && (
-                              <div className="px-2.5 pb-2 grid grid-cols-1 gap-1">
-                                {g.items.map(c => (
-                                  <button key={c.label} onClick={() => colorVariant(c.modelo || c.forma ? { ...c, label: `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim() } : `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim())} disabled={editing}
-                                    title={c.forma ? `${c.modelo || c.label} — ${c.forma}` : `Muebles en ${c.label}`}
-                                    className="flex items-center gap-2 text-left px-1.5 py-1 rounded hover:bg-indigo-50 disabled:opacity-40">
-                                    <span className="w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: c.bg }} />
-                                    <span className="text-[11px] text-slate-600 truncate">{c.label}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
+                  {/* Selector de Pestañas de Fabricante */}
+                  <div className="p-3 border-b border-slate-100 bg-slate-50 flex gap-1.5 overflow-x-auto no-scrollbar">
+                    {[['c1', '✨ ALVIC (Luxe / Zenit)'], ['c2', 'ACB'], ['c3', 'PORTASUR']].map(([id, lbl]) => (
+                      <button key={id} onClick={() => { setColorTab(id); setOpenGama(null); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${colorTab === id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Lista de Gamas y Muestras de Color */}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {gamas.length === 0 && <p className="text-xs text-slate-400 text-center py-4">Cargando acabados...</p>}
+                    {gamas.map(g => (
+                      <div key={g.gama} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                        <button onClick={() => setOpenGama(o => o === g.gama ? null : g.gama)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-black text-slate-800 hover:bg-indigo-50/50 transition-colors">
+                          <span className="flex items-center gap-1.5">
+                            <span>{g.gama}</span>
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">{g.items.length}</span>
+                          </span>
+                          <ChevronRight size={14} className={`text-slate-400 transition-transform ${openGama === g.gama ? 'rotate-90 text-indigo-600' : ''}`} />
+                        </button>
+                        
+                        {openGama === g.gama && (
+                          <div className="px-3 pb-3 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/50">
+                            {g.items.map(c => (
+                              <button key={c.label}
+                                onClick={() => colorVariant(c.modelo || c.forma ? { ...c, label: `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim() } : `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim())}
+                                disabled={editing}
+                                title={c.forma ? `${c.modelo || c.label} — ${c.forma}` : `Aplicar ${c.label} al render`}
+                                className="flex items-center gap-2 text-left p-2 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-500 hover:shadow-md transition-all disabled:opacity-40 group">
+                                <span className="w-6 h-6 rounded-full border-2 border-white ring-2 ring-slate-200 shadow shrink-0 group-hover:ring-indigo-500 transition-all" style={{ background: c.bg }} />
+                                <span className="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600">{c.label}</span>
+                              </button>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
 
