@@ -2845,11 +2845,18 @@ export default function AIRenderStudio({ state, setState }) {
                       <span>{isListening ? 'Escuchando…' : 'Dictar'}</span>
                     </button>
 
-                    {/* Subir Imágenes */}
+                    {/* Subir Croquis o Foto */}
                     <label className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-full transition-all ${analyzingRef ? 'bg-purple-200 text-purple-600' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}>
                       <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
                       <span>{analyzingRef ? 'Leyendo…' : 'Subir croquis/foto'}</span>
                       <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
+                    </label>
+
+                    {/* Escaneo LiDAR / Vídeo de Obra */}
+                    <label className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-full transition-all bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100`}>
+                      <Box size={14} />
+                      <span>📱 Escaneo LiDAR / Vídeo</span>
+                      <input type="file" accept="video/*,.usdz,.ply,.e57" className="hidden" onChange={handleReferenceUpload} />
                     </label>
                   </div>
                 </div>
