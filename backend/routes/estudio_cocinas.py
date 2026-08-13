@@ -2160,13 +2160,16 @@ async def detect_distribucion(payload: dict):
             if ancho_real else "\n"
         )
         prompt = (
-            "Eres proyectista de cocinas. Analiza esta imagen (render o croquis de cocina) y deduce su "
-            "DISTRIBUCIÓN. Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, "
+            "Eres proyectista de cocinas experto. Analiza esta imagen (render o croquis de cocina) y deduce su "
+            "DISTRIBUCIÓN REAL. Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, "
             "en cada pared, la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho en cm "
             "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles "
             "cuentan como módulos (frigorífico, columna horno/microondas, lavavajillas, fregadero, "
             "placa/cocina, campana...).\n"
-            "\nREGLA MÁS IMPORTANTE — LAS MEDIDAS ESCRITAS MANDAN:\n"
+            "\nREGLA CRÍTICA — DETECCIÓN DE ESQUINAS Y FORMA EN L / U / LINEAL:\n"
+            "- Si el croquis o render muestra elementos en DOS paredes formando una esquina de 90° (por ejemplo, placa/fregadero en un frente y columna/horno/micro/lavadora/pilar en la pared lateral), EL TIPO ES OBLIGATORIAMENTE \"l\" Y DEBES DEVOLVER 2 PAREDES (Pared 1 y Pared 2). NUNCA devuelvas \"lineal\" si ves muebles dispuestos en dos paredes en esquina.\n"
+            "- Si ves 3 paredes con muebles, el tipo es \"u\". Si solo hay muebles a lo largo de una única línea recta de pared, el tipo es \"lineal\".\n"
+            "\nREGLA DE MEDIDAS ESCRITAS MANDAN:\n"
             "Si en la imagen hay NÚMEROS ESCRITOS (un croquis acotado a mano, cotas sobre un render), esos "
             "números son la VERDAD. Cópialos literalmente y marca `\"medida_escrita\": true` en ese módulo. "
             "NO los redondees, NO los ajustes y NO los sustituyas por tu estimación visual. "
@@ -2176,15 +2179,12 @@ async def detect_distribucion(payload: dict):
             "ancho sea la SUMA de los módulos escritos: nunca inventes un ancho de pared menor que esa suma.\n"
             + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"
-            "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240,"
-            "\"ancho_escrito\":false}],"
-            "\"elementos\":[{\"id\":\"frigorifico\",\"label\":\"Frigorífico\",\"pared_idx\":0,"
-            "\"posicion_cm\":0,\"ancho\":60,\"medida_escrita\":false}]}. "
-            "'posicion_cm' es la distancia desde el inicio de la pared. "
+            "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared 1 (Frente Placa/Fregadero)\",\"ancho\":370,\"alto\":240,\"ancho_escrito\":false},{\"nombre\":\"Pared 2 (Frente Columnas/Lavadora)\",\"ancho\":210,\"alto\":240,\"ancho_escrito\":false}],"
+            "\"elementos\":[{\"id\":\"placa\",\"label\":\"Placa\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":90,\"medida_escrita\":true},{\"id\":\"columna_hornos\",\"label\":\"Columna Horno/Micro\",\"pared_idx\":1,\"posicion_cm\":0,\"ancho\":60,\"medida_escrita\":true}]}. "
+            "'posicion_cm' es la distancia desde el inicio de esa pared. "
             "id usa palabras clave: frigorifico, congelador, columna_hornos, horno, microondas, lavavajillas, "
-            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca. "
-            "Distingue CAJONERA (frentes de cajón apilados) de mueble de PUERTA: son cosas distintas y el "
-            "herraje no es el mismo."
+            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca, lavadora. "
+            "Distingue CAJONERA de mueble de PUERTA."
         )
         text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")
         m = _re.search(r"\{[\s\S]*\}", text or "")
