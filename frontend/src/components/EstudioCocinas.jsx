@@ -1019,13 +1019,11 @@ export default function EstudioCocinas({ state, setState }) {
   }, [proy.nombre_cliente]);
 
   const TABS = [
-    { id: 'render', label: 'Render 3D', icon: <Sparkles size={14}/> },
-    { id: 'plano',  label: 'Plano 2D',     icon: <Image size={14}/> },
-    { id: 'ficha',  label: 'Ficha Técnica', icon: <FileText size={14}/> },
-    { id: 'dossier', label: 'Ficha Fabricación', icon: <ClipboardList size={14}/> },
-    { id: 'pres',   label: 'Presentación',  icon: <Presentation size={14}/> },
-    { id: 'inst',   label: 'Instalaciones', icon: <Zap size={14}/> },
-    { id: 'galeria', label: 'Galería',     icon: <FolderOpen size={14}/> },
+    { id: 'render',  label: 'Render 3D',     icon: <Sparkles size={14}/> },
+    { id: 'plano',   label: 'Plano & Alzado', icon: <Image size={14}/> },
+    { id: 'ficha',   label: 'Ficha Técnica', icon: <FileText size={14}/> },
+    { id: 'inst',    label: 'Instalaciones', icon: <Zap size={14}/> },
+    { id: 'galeria', label: 'Galería',       icon: <FolderOpen size={14}/> },
   ];
 
   const ESTILOS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Contemporáneo', 'Japandi', 'Mediterráneo', 'High-Tech', 'Provenzal', 'Wabi-Sabi'];
@@ -1646,34 +1644,30 @@ export default function EstudioCocinas({ state, setState }) {
               </div>
             )}
 
-            {/* ── FICHA DE FABRICACIÓN (dossier técnico estilo estudio) ── */}
-            {tab === 'dossier' && (
-              <div className="max-w-3xl mx-auto">
-                <FichaFabricacion proy={proy} logo={watermark.mode === 'custom' ? watermark.customLogo : defaultLogo} />
-              </div>
-            )}
-
-            {/* ── FICHA TÉCNICA ── */}
+            {/* ── FICHA TÉCNICA Y FABRICACIÓN UNIFICADA ── */}
             {tab === 'ficha' && (
-              <div className="flex flex-col gap-4 max-w-2xl xl:max-w-3xl mx-auto">
-                <div>
-                  <h2 className={`text-sm font-black mb-1 ${t.title}`}>Ficha técnica del proyecto</h2>
-                  <p className={`text-xs ${t.subtext}`}>Genera una ficha con materiales, electrodomésticos, instalaciones y plazos.</p>
-                </div>
-                <button onClick={genFicha} disabled={ficha.status === 'loading'}
-                  className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
-                  {ficha.status === 'loading' ? <><Loader2 size={15} className="animate-spin"/> Generando ficha…</> : <><FileText size={15}/> Generar Ficha Técnica</>}
-                </button>
-                <StatusBadge status={ficha.status} message={ficha.msg} t={t} />
-                {ficha.md && (
-                  <>
-                    <PrintPdfBar t={t} onPrint={() => handlePrint('ficha-print-area')} onPdf={() => handlePdfExport(ficha.md, `ficha_${ficha.ref || 'cocina'}.pdf`)}
-                      extraBtns={<button onClick={() => dl(ficha.md, `ficha_${ficha.ref || 'cocina'}.md`, 'text/markdown')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}><Download size={11}/> .md</button>} />
-                    <div id="ficha-print-area">
-                      <pre className={`rounded-xl p-5 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono ${t.pre}`}>{ficha.md}</pre>
+              <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                  <h2 className={`text-base font-black mb-1 ${t.title}`}>Ficha Técnica y de Fabricación</h2>
+                  <p className={`text-xs mb-4 ${t.subtext}`}>Ficha técnica con materiales, electrodomésticos, despiece de cascos y plazos de taller.</p>
+                  <button onClick={genFicha} disabled={ficha.status === 'loading'}
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
+                    {ficha.status === 'loading' ? <><Loader2 size={15} className="animate-spin"/> Generando ficha…</> : <><FileText size={15}/> Generar Ficha Técnica</>}
+                  </button>
+                  <StatusBadge status={ficha.status} message={ficha.msg} t={t} />
+                  {ficha.md && (
+                    <div className="mt-4">
+                      <PrintPdfBar t={t} onPrint={() => handlePrint('ficha-print-area')} onPdf={() => handlePdfExport(ficha.md, `ficha_${ficha.ref || 'cocina'}.pdf`)}
+                        extraBtns={<button onClick={() => dl(ficha.md, `ficha_${ficha.ref || 'cocina'}.md`, 'text/markdown')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}><Download size={11}/> .md</button>} />
+                      <div id="ficha-print-area" className="mt-3">
+                        <pre className={`rounded-xl p-5 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono ${t.pre}`}>{ficha.md}</pre>
+                      </div>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                  <FichaFabricacion proy={proy} logo={watermark.mode === 'custom' ? watermark.customLogo : defaultLogo} />
+                </div>
               </div>
             )}
 
