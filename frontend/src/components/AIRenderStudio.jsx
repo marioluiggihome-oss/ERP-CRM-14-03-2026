@@ -1876,6 +1876,36 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setDownloading(false); }
   };
 
+  // Exportar Plano CAD Vectorial DXF
+  const exportDXF = async () => {
+    setDownloading(true); setError(null);
+    try {
+      const motivos = [];
+      const dist = await deducirDistribucion(motivos).catch(() => ({
+        tipo: 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }, { id: 2, ancho: 240, elementos: [] }]
+      }));
+      const r = await fetch(`${API_URL}/api/estudio-cocinas/exportar-dxf`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ distribucion: dist || { tipo: 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }] }, cliente: cliente || 'Cliente' }),
+      });
+      const data = await r.json();
+      if (!data.success || !data.dxfContent) {
+        throw new Error(data.detail || 'No se pudo generar el archivo DXF.');
+      }
+      const blob = new Blob([data.dxfContent], { type: 'application/dxf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = data.filename || `plano_cad_${(cliente || 'cocina').toLowerCase()}.dxf`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (e) {
+      setError(`Error al exportar DXF/CAD: ${e?.message || 'error desconocido'}`);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // ─── Guardar / abrir proyectos ──────────────────────────────────────────────
   // Reduce el render a un tamaño razonable ANTES de guardarlo: una data URL de
   // un render grande (p.ej. 2K) puede pesar varios MB y el servidor/proxy
@@ -2931,155 +2961,54 @@ export default function AIRenderStudio({ state, setState }) {
                   <StepHeader n={2} title="Estilo y ambiente" hint="Aspecto, punto de vista e iluminación del render." />
                   <span className="text-slate-400 shrink-0 ml-2">{showEstilo ? '▲' : '▼'}</span>
                 </button>
-              {showEstilo && <div className="px-3 pb-3 flex flex-col gap-3">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estilo</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {MATERIALS.styles.map(s => (
-                      <button key={s.id} onClick={() => setParams(p => ({ ...p, style: s.id }))}
-                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${params.style === s.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-                        {s.label}
-                      </button>
-                    ))}
+                {showEstilo && <div className="px-3 pb-3 flex flex-col gap-3">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estilo</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {MATERIALS.styles.map(s => (
+                        <button key={s.id} onClick={() => setParams(p => ({ ...p, style: s.id }))}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${params.style === s.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Punto de vista (cámara)</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {MATERIALS.cameras.map(c => (
-                      <button key={c.id} onClick={() => setCamera(c.id)}
-                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-                        {c.label}
-                      </button>
-                    ))}
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Punto de vista (cámara)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {MATERIALS.cameras.map(c => (
+                        <button key={c.id} onClick={() => setCamera(c.id)}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Iluminación</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {MATERIALS.lighting.map(l => (
-                      <button key={l.id} onClick={() => setParams(p => ({ ...p, lighting: l.id }))}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                        {l.label}
-                      </button>
-                    ))}
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Iluminación</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MATERIALS.lighting.map(l => (
+                        <button key={l.id} onClick={() => setParams(p => ({ ...p, lighting: l.id }))}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </div>}
+                </div>}
 
-              {/* Equipamiento */}
-              <div className="rounded-xl border border-slate-200 p-3 flex flex-col gap-2">
-                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Electrodomésticos</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {MATERIALS.appliances.map(a => (
-                    <button key={a.id} onClick={() => toggleElectro(a.id)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${electros.includes(a.id) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-                </div>
-              </div>
-              {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) - colapsable */}
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col">
-                <button onClick={() => setShowPlanos(v => !v)}
-                  className="flex items-center justify-between p-3 text-left w-full">
-                  <StepHeader n={3} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
-                  <span className="text-indigo-400 shrink-0 ml-2">{showPlanos ? '▲' : '▼'}</span>
-                </button>
-              {showPlanos && <div className="px-3 pb-3 flex flex-col gap-2.5">
-                <p className="text-[11px] text-slate-500">
-                  Cada fuente aporta una cosa distinta y se pueden usar TODAS a la vez:
-                  el <b>plano</b> manda en la distribución, cada <b>boceto</b> en el diseño de
-                  su pared, la <b>referencia</b> en el acabado y tu <b>descripción</b> en los
-                  cambios que pidas.
-                </p>
-                <label className={`text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${floorPlan ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50'}`}>
-                  {floorPlan ? <><CheckCircle size={13} /> Plano en planta cargado</> : <><Image size={13} /> Subir plano en planta</>}
-                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFloorPlanUpload} />
-                </label>
-                {floorPlan && (
-                  <button onClick={() => setFloorPlan(null)} className="text-[10px] text-slate-400 hover:text-red-500 self-start">Quitar plano</button>
-                )}
-                {wallSketches.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
-                    <CheckCircle size={13} /> Boceto pared {i + 1}
-                    <button onClick={() => removeWallSketch(i)} className="ml-auto text-emerald-500 hover:text-red-500" title="Quitar boceto"><X size={13} /></button>
-                  </div>
-                ))}
-                <label className="text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50">
-                  <Image size={13} /> Añadir boceto de pared
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAddWallSketch} />
-                </label>
-                {/* Qué se va a usar de verdad en el render. Antes había que
-                    adivinarlo (y un aviso obligaba a elegir entre plano y texto). */}
-                <div className="rounded-lg bg-white border border-indigo-100 px-3 py-2">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-indigo-700 mb-1">
-                    Se usará
-                  </p>
+                {/* Equipamiento */}
+                <div className="rounded-xl border border-slate-200 p-3 flex flex-col gap-2">
+                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Electrodomésticos</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {[
-                      [!!floorPlan, 'Plano en planta'],
-                      [wallSketches.length > 0, `${wallSketches.length} boceto(s) de pared`],
-                      [!!(refImages.length || refImage), 'Referencia de acabado'],
-                      [!!description.trim(), 'Tu descripción'],
-                      [!!(medidas.ancho || medidas.fondo || medidas.altura), 'Medidas de la estancia'],
-                    ].map(([activo, etiqueta], i) => (
-                      <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${activo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200 line-through'}`}>
-                        {etiqueta}
-                      </span>
+                    {MATERIALS.appliances.map(a => (
+                      <button key={a.id} onClick={() => toggleElectro(a.id)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${electros.includes(a.id) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                        {a.label}
+                      </button>
                     ))}
                   </div>
-                  {(floorPlan || wallSketches.length > 0) && (
-                    <label className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer">
-                      <input type="checkbox" checked={soloTexto} onChange={e => setSoloTexto(e.target.checked)} />
-                      Ignorar el plano y los bocetos: generar solo desde el texto
-                    </label>
-                  )}
                 </div>
-                {describiendoTodo && (
-                  <BarraAnalisis texto="Leyendo la planta y los alzados"
-                    total={(floorPlan ? 1 : 0) + wallSketches.length
-                           + Math.min(refImages.length || (refImage ? 1 : 0), 2)} />
-                )}
-                {analizado && !describiendoTodo && (
-                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[11px] text-emerald-800">
-                    <b>Revisado:</b>{' '}
-                    {[
-                      analizado.plano ? 'el plano en planta' : null,
-                      analizado.alzados ? `${analizado.alzados} alzado(s) de pared` : null,
-                      analizado.referencias ? `${analizado.referencias} referencia(s) de acabado` : null,
-                    ].filter(Boolean).join(' · ') || 'nada'}
-                    {analizado.descartados > 0 && (
-                      <span className="block mt-0.5 text-amber-700">
-                        {analizado.descartados} dibujo(s) NO se han analizado: se llegó al tope de
-                        7 imágenes juntas. Quita alguno o describe el resto aparte.
-                      </span>
-                    )}
-                  </div>
-                )}
-                <button
-                  onClick={describirProyecto}
-                  disabled={describiendoTodo || isGenerating}
-                  title="Lee la planta y TODOS los alzados juntos y escribe una sola descripción del proyecto"
-                  className="w-full py-2.5 bg-white border-2 border-purple-200 text-purple-700 font-black uppercase tracking-wider text-[11px] rounded-xl hover:bg-purple-50 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {describiendoTodo
-                    ? <><Loader size={14} className="animate-spin" /> Leyendo todos los dibujos…</>
-                    : <><Sparkles size={14} /> Describir el proyecto con TODOS los dibujos</>}
-                </button>
-                <button
-                  onClick={handleGenerateComposed}
-                  disabled={isGenerating || (!floorPlan && wallSketches.length === 0)}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isGenerating ? <><Loader size={15} className="animate-spin" /> Generando…</> : <><Send size={15} /> Generar con todo lo marcado</>}
-                </button>
-              </div>}
-              </div>
-              {/* Separador entre las dos vías de generación */}
-              <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
               </div>
 
 
