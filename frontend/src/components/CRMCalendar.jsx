@@ -372,51 +372,60 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-3 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-3">
-        <div className="flex items-center gap-2 md:gap-4  flex-wrap">
-          <div className="flex items-center gap-1 md:gap-2">
-            <button 
-              onClick={() => navigate('prev')}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button 
-              onClick={() => navigate('next')}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-          <h2 className="text-base md:text-xl font-black text-slate-900 capitalize">{getTitle()}</h2>
-          <button 
+    <div className="h-full flex flex-col bg-white">
+      {/* Header — Google Calendar style */}
+      <div className="bg-white border-b border-slate-200 px-3 md:px-6 py-2.5 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-2">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+          {/* Hoy button */}
+          <button
             onClick={goToToday}
-            className="px-2 md:px-3 py-1 text-xs md:text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            className="px-4 py-1.5 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:shadow-sm transition-all"
           >
             Hoy
           </button>
+          {/* Navigation arrows */}
+          <div className="flex items-center">
+            <button
+              onClick={() => navigate('prev')}
+              className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
+              title="Anterior"
+            >
+              <ChevronLeft size={20} className="text-slate-600" />
+            </button>
+            <button
+              onClick={() => navigate('next')}
+              className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"
+              title="Siguiente"
+            >
+              <ChevronRight size={20} className="text-slate-600" />
+            </button>
+          </div>
+          {/* Title */}
+          <h2 className="text-lg md:text-xl font-semibold text-slate-800 capitalize tracking-tight">
+            {getTitle()}
+          </h2>
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           {/* Google Calendar (conectar / estado por usuario) */}
           <GoogleCalendarConnect compact onStatusChange={(s) => setGoogleConnected(!!s.connected)} />
 
-          {/* View Selector */}
-          <div className="flex bg-slate-100 rounded-lg p-1">
+          {/* View Selector — Google Calendar style */}
+          <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden">
             {Object.entries(VIEWS).map(([key, v]) => {
               const Icon = v.icon;
               return (
                 <button
                   key={key}
                   onClick={() => setView(key)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                    view === key ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all border-r border-slate-200 last:border-r-0 ${
+                    view === key
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <Icon size={14} />
-                  {v.name}
+                  <Icon size={13} />
+                  <span className="hidden sm:inline">{v.name}</span>
                 </button>
               );
             })}
@@ -426,9 +435,9 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-500"
+            className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all"
           >
-            <option value="">Todos los tipos</option>
+            <option value="">Todos</option>
             {Object.entries(EVENT_TYPES).map(([key, type]) => (
               <option key={key} value={key}>{type.name}</option>
             ))}
@@ -436,44 +445,43 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
 
           {/* Admin: View All Toggle */}
           {currentUser?.isAdmin || currentUser?.isGerente || currentUser?.isDirectorComercial && (
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-1.5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={viewAllEvents}
                 onChange={(e) => setViewAllEvents(e.target.checked)}
-                className="w-4 h-4 rounded"
+                className="w-3.5 h-3.5 rounded accent-indigo-600"
               />
-              <span className="text-xs font-bold text-slate-600">Ver todos</span>
+              <span className="text-[11px] font-bold text-slate-500">Equipo</span>
             </label>
           )}
 
           {/* Admin: Show Prescriptor Notes Toggle */}
           {currentUser?.isAdmin || currentUser?.isGerente || currentUser?.isDirectorComercial && (
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-1.5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPrescriptorNotes}
                 onChange={(e) => setShowPrescriptorNotes(e.target.checked)}
-                className="w-4 h-4 rounded accent-amber-500"
+                className="w-3.5 h-3.5 rounded accent-amber-500"
               />
-              <span className="text-xs font-bold text-amber-600">Notas Colaboradores</span>
+              <span className="text-[11px] font-bold text-amber-600">Colaboradores</span>
             </label>
           )}
 
-          {/* Add Event Button */}
+          {/* Add Event Button — Google Calendar "+" button */}
           <button
             onClick={() => openCreateModal()}
-            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs md:text-sm hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-2xl font-bold text-xs md:text-sm hover:bg-slate-50 hover:shadow-md transition-all shadow-sm whitespace-nowrap"
           >
-            <Plus size={16} />
-            <span className="hidden sm:inline">Nuevo Evento</span>
-            <span className="sm:hidden">Nuevo</span>
+            <Plus size={18} className="text-indigo-600" />
+            <span className="hidden sm:inline">Crear</span>
           </button>
         </div>
       </div>
 
       {/* Calendar Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-2 md:p-4">
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -482,12 +490,12 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
           <>
             {/* Month View */}
             {view === 'month' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+              <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
                 <div className="min-w-[640px]">
                 {/* Weekday Headers */}
                 <div className="overflow-x-auto"><div className="min-w-[600px]"><div className="grid grid-cols-7 border-b border-slate-200">
                   {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-                    <div key={day} className="p-2 text-center text-xs font-black text-slate-500 uppercase bg-slate-50">
+                    <div key={day} className="p-2 text-center text-[11px] font-semibold text-slate-500 uppercase">
                       {day}
                     </div>
                   ))}
@@ -505,13 +513,15 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
                       <div
                         key={idx}
                         onClick={() => openCreateModal(day)}
-                        className={`min-h-[52px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-slate-100 p-0.5 sm:p-1 cursor-pointer transition-colors hover:bg-slate-50 ${
-                          !isCurrentMonth ? 'bg-slate-50' : ''
-                        } ${isToday(day) ? 'bg-indigo-50' : ''}`}
+                        className={`min-h-[52px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-slate-100 p-0.5 sm:p-1.5 cursor-pointer transition-colors hover:bg-slate-50 ${
+                          !isCurrentMonth ? 'bg-slate-50/50' : ''
+                        } ${isToday(day) ? 'bg-blue-50/60' : ''}`}
                       >
                         <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                          <span className={`text-xs sm:text-sm font-bold ${
-                            isToday(day) ? 'text-indigo-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-300'
+                          <span className={`text-xs sm:text-sm ${
+                            isToday(day)
+                              ? 'bg-blue-600 text-white font-bold rounded-full w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center'
+                              : isCurrentMonth ? 'text-slate-800 font-medium' : 'text-slate-300 font-normal'
                           }`}>
                             {format(day, 'd')}
                           </span>
@@ -701,7 +711,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
               const now = new Date();
               const nowTop = (now.getHours() * 60 + now.getMinutes()) * (HOUR_PX / 60);
               return (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                   {allDay.length > 0 && (
                     <div className="flex border-b border-slate-200">
                       <div className="w-14 shrink-0 text-[10px] text-slate-400 text-right pr-2 py-2 border-r border-slate-100">Todo el día</div>
@@ -836,14 +846,14 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
 
       {/* Event Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] overflow-hidden">
-            <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
-              <h2 className="font-black text-lg uppercase">
+            <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="font-semibold text-lg text-slate-800">
                 {editingEvent ? 'Editar Evento' : 'Nuevo Evento'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-white/10 rounded">
-                <X size={20} />
+              <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} className="text-slate-500" />
               </button>
             </div>
             
@@ -998,28 +1008,28 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
             </div>
 
             {/* Actions */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between">
+            <div className="px-6 py-3 bg-white border-t border-slate-200 flex justify-between">
               {editingEvent && (
                 <button
                   onClick={handleDelete}
-                  className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-bold text-sm"
+                  className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium text-sm transition-colors"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={15} />
                   Eliminar
                 </button>
               )}
               <div className={`flex gap-2 ${!editingEvent ? 'ml-auto' : ''}`}>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-bold text-sm"
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700"
+                  className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
                 >
-                  <Save size={16} />
+                  <Save size={15} />
                   Guardar
                 </button>
               </div>
