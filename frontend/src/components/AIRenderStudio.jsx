@@ -2766,17 +2766,17 @@ export default function AIRenderStudio({ state, setState }) {
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-4 gap-3 bg-slate-50/50">
               {/* BLOQUE 1: Tipo de Proyecto y Plantillas */}
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-indigo-600" />
-                    Configurar Proyecto
+              <div className="bg-white p-4.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-3.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-sm font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                    <Sparkles size={16} className="text-indigo-600" />
+                    CONFIGURAR PROYECTO
                   </span>
                   {tiposPermitidos.length > 1 && (
-                    <div className="flex bg-slate-100 p-0.5 rounded-lg gap-0.5">
+                    <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
                       {tiposPermitidos.map(tp => (
                         <button key={tp.id} onClick={() => setTipo3d(tp.id)}
-                          className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${tipo3d === tp.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${tipo3d === tp.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
                           {tp.label}
                         </button>
                       ))}
@@ -2785,12 +2785,12 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
 
                 {/* Plantillas Rápidas */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Plantillas rápidas</span>
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">PLANTILLAS RÁPIDAS</span>
+                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                     {PRESETS.map(p => (
                       <button key={p.id} onClick={() => applyPreset(p)} title={p.desc}
-                        className="shrink-0 px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-50/80 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors whitespace-nowrap">
+                        className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-indigo-50/90 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors whitespace-nowrap">
                         {p.label}
                       </button>
                     ))}
@@ -2799,30 +2799,30 @@ export default function AIRenderStudio({ state, setState }) {
               </div>
 
               {/* BLOQUE 2: Descripción, Voz y Referencias */}
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex-1 flex flex-col gap-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Descripción del diseño</span>
-                  <div className="flex items-center gap-1.5">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex-1 flex flex-col gap-3.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">DESCRIPCIÓN DEL DISEÑO</span>
+                  <div className="flex items-center gap-2">
                     {/* Botón de Voz Integrado */}
                     <button
                       onClick={toggleMic}
                       disabled={!isSupported}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition-all ${
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                         isListening
                           ? 'bg-red-500 text-white animate-pulse'
                           : isSupported
-                            ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200'
+                            ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
                             : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                       }`}
                       title={isListening ? 'Detener dictado' : 'Dictar por voz'}
                     >
-                      {isListening ? <MicOff size={13} /> : <Mic size={13} />}
+                      {isListening ? <MicOff size={14} /> : <Mic size={14} />}
                       <span>{isListening ? 'Escuchando…' : 'Dictar'}</span>
                     </button>
 
                     {/* Subir Imágenes */}
-                    <label className={`text-[11px] font-bold flex items-center gap-1 cursor-pointer px-2.5 py-1 rounded-full transition-all ${analyzingRef ? 'bg-purple-200 text-purple-600' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}>
-                      <Image size={13} className={analyzingRef ? 'animate-pulse' : ''} />
+                    <label className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-full transition-all ${analyzingRef ? 'bg-purple-200 text-purple-600' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}>
+                      <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
                       <span>{analyzingRef ? 'Leyendo…' : 'Subir croquis/foto'}</span>
                       <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
                     </label>
