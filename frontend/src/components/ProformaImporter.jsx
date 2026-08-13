@@ -698,6 +698,8 @@ const _tipo_gola = (desc, tipo) => {
         const bisagras = esAbatible ? 0 : (it.puertas || 0) * 2 * (Number(p.bisagra) || 0) * uds;
         const patas = ((it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0) * uds;
         const colgadores = ((it.tipo === 'alto') ? 2 * (Number(p.colgador) || 0) : 0) * uds;
+        const guias = ((it.cajones || 0) * (Number(p.cajon) || 0)
+          + (it.gavetas || 0) * (Number(p.gaveta) || 0)) * uds;
         const esGola = _es_gola(it.descripcion);
         const tipoGola = _tipo_gola(it.descripcion, it.tipo);
         const cargoGolaUnitario = esGola
