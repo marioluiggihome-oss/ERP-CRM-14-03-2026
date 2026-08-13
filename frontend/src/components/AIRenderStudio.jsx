@@ -2731,7 +2731,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <button onClick={() => setPaletteOpen(o => !o)}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${paletteOpen ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white hover:opacity-90'}`}
                   title="Abrir catálogo lateral de acabados ALVIC Luxe / Zenit, ACB y PORTASUR">
-                  <Palette size={12} /> ✨ Acabados ALVIC
+                  <Palette size={12} /> ✨ Acabados
                 </button>
                 <button onClick={saveDesign} disabled={busy}
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
