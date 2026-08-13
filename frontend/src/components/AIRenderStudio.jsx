@@ -45,7 +45,7 @@ function BarraAnalisis({ texto, hechas, total }) {
  * - Historial de renders
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap, Printer } from 'lucide-react';
 import { getToken } from '../services/api';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
