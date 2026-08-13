@@ -113,7 +113,7 @@ const MUESTRARIO_CASCOS = [
   { id: 'olmo-18', nombre: 'Olmo (Diseño Grueso 18mm)' },
 ];
 
-export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onClose, apiUrl, authHeaders }) {
+export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onExportDesmontada, onExportMontada, onClose, apiUrl, authHeaders }) {
   const [muebles, setMuebles] = useState(() => (inicial || []).map((m, i) => ({ ...m, _k: `${m.cod || 'x'}-${i}-${Date.now()}-${m.raw || ''}` })));
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
@@ -1029,11 +1029,23 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
               <span className="text-xl font-black text-slate-900 tracking-tight">{eur(totalPvp)} <span className="text-xs font-bold text-slate-400">+ IVA</span></span>
             </div>
 
+            {onExportMontada && (
+              <button
+                onClick={() => onExportMontada(muebles, { tarifa, acabadoCasco, valorPunto: pv })}
+                className="px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm shadow-xl shadow-indigo-600/20 transition-all flex items-center gap-2"
+              >
+                <CheckCircle2 size={18} /> Cocina Montada 3
+              </button>
+            )}
             <button
-              onClick={() => onConfirm && onConfirm(muebles, { tarifa, acabadoCasco })}
+              onClick={() => {
+                const contexto = { tarifa, acabadoCasco, valorPunto: pv };
+                if (onExportDesmontada) onExportDesmontada(muebles, contexto);
+                else if (onConfirm) onConfirm(muebles, contexto);
+              }}
               className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm shadow-xl shadow-emerald-600/20 transition-all flex items-center gap-2"
             >
-              <CheckCircle2 size={18} /> Volcar al Presupuesto
+              <CheckCircle2 size={18} /> {onExportDesmontada ? 'Cocina Desmontada' : 'Volcar al Presupuesto'}
             </button>
           </div>
         </div>

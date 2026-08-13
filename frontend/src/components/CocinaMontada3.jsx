@@ -209,6 +209,15 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const relacionInputRef = useRef(null);
   const alvicInputRef = useRef(null);
 
+  // Recibe propuestas MV creadas desde una proforma Alvic en Cocina Desmontada.
+  // Siempre se abre la revisión antes de mezclar nada en el presupuesto actual.
+  useEffect(() => {
+    const pendientes = state?.cocinaMontadaPendingMuebles;
+    if (!Array.isArray(pendientes) || pendientes.length === 0) return;
+    setRelacionRevisar(pendientes);
+    setState?.(p => ({ ...p, cocinaMontadaPendingMuebles: null }));
+  }, [state?.cocinaMontadaPendingMuebles, setState]);
+
   const authHeaders = () => {
     const token = getToken();
     return {
@@ -1723,7 +1732,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           acabadoPuerta={acabadoPuerta}
           acabadoCasco={acabadoCasco}
           onClose={() => setRelacionRevisar(null)}
-          onAplicar={(mueblesActualizados) => {
+          apiUrl={API_URL}
+          authHeaders={authHeaders}
+          onConfirm={(mueblesActualizados) => {
             setMuebles(prev => fundir(prev, mueblesActualizados));
             setRelacionRevisar(null);
           }}

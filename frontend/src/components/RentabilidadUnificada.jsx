@@ -8,13 +8,38 @@ import React, { useState } from 'react';
 import { Package, TrendingUp } from 'lucide-react';
 import ProformaImporter from './ProformaImporter';
 import RentabilidadMV from './RentabilidadMV';
+import RelacionReview from './RelacionReview';
+import { authHeaders } from '../services/api';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Módulo unificado de rentabilidad (solo master). Un selector Sistema: ALVIC / MV
 // enruta al motor correspondiente. Mismo coste de fabricación, distinto sistema de
 // venta. Los clientes NO lo ven (gateado a master en Cocina Desmontada).
-export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorPunto, onClose }) {
+export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorPunto, onClose, onVolcarDesmontada, onVolcarMontada }) {
   const [sistema, setSistema] = useState(sistemaInicial === 'alvic' || sistemaInicial === 'mv' ? sistemaInicial : 'mv');
+  const [relacionMV, setRelacionMV] = useState(null);
   if (!esMaster) return null;
+  if (relacionMV) return (
+    <RelacionReview
+      muebles={relacionMV}
+      apiUrl={API_URL}
+      authHeaders={() => authHeaders()}
+      onClose={() => setRelacionMV(null)}
+      onConfirm={(muebles, contexto) => {
+        onVolcarDesmontada?.(muebles, contexto);
+        setRelacionMV(null);
+      }}
+      onExportDesmontada={(muebles, contexto) => {
+        onVolcarDesmontada?.(muebles, contexto);
+        setRelacionMV(null);
+      }}
+      onExportMontada={(muebles, contexto) => {
+        onVolcarMontada?.(muebles, contexto);
+        setRelacionMV(null);
+      }}
+    />
+  );
   return (
     // Ocupa todo el alto que le dé el modal: la cabecera se queda fija arriba y
     // es la tabla la que se desplaza, no la ventana entera.
@@ -45,7 +70,7 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorP
           selector MV/Alvic no se pierda al bajar. Antes se limitaba con
           `max-h-[85vh]`; ahora ocupa todo el hueco que quede bajo la cabecera. */}
       <div className="flex-1 min-h-0 border-2 border-t-0 border-slate-700 rounded-b-2xl bg-white overflow-auto">
-        {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} valorPunto={valorPunto} />}
+        {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} valorPunto={valorPunto} onConvertirMV={setRelacionMV} />}
       </div>
     </div>
   );

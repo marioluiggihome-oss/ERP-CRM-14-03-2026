@@ -233,6 +233,38 @@ const _tipo_acb_auto = (desc, tipo, grosor) => {
   return tipo === 'bajo' ? 'Bajo Con Balda' : (tipo === 'alto' ? 'Alto Con Balda' : (tipo === 'columna' ? 'Columna Despensa' : null));
 };
 
+// Propone una equivalencia MV sin grabarla automáticamente. Los códigos solo se
+// proponen en familias claras; columnas de despensa o frigo quedan pendientes
+// para revisarlas en el catálogo MV antes de exportar.
+const _propuesta_mv = (r) => {
+  if (!r?.esMueble) return null;
+  const texto = _may(r.descripcion);
+  const ancho = Math.round((Number(r.ancho) || 0) / 10);
+  const alto = Math.round((Number(r.largo) || 0) / 10);
+  const fondo = Math.round((Number(r.grueso) || 0) / 10) || 58;
+  if (!ancho) return { cod: '', familia: '', tipo: 'PENDIENTE', ancho: null, alto, fondo, qty: r._uds || 1, raw: r.descripcion || '', origenAlvic: r.descripcion || '', pendienteMV: true };
+
+  let cod = '';
+  let familia = '';
+  let tipo = 'PENDIENTE';
+  if (/COLUMNA|SEMICOLUMNA/.test(texto)) {
+    tipo = 'COLUMNA';
+    if (/HORNO/.test(texto) && /MICRO/.test(texto)) { cod = `CHM${ancho}`; familia = 'COLUMNA_HORNO_MICRO'; }
+    else if (/HORNO/.test(texto)) { cod = `CH${ancho}`; familia = 'COLUMNA_HORNO'; }
+    else if (!/FRIGO|FRIGOR|COMBI/.test(texto)) familia = 'COLUMNA_DESPENSERO';
+  } else if (/ALTO|ALTILLO|SOBREMODULO|SOBREMÓDULO/.test(texto)) {
+    tipo = 'ALTO';
+    if (/CAMPANA/.test(texto)) { cod = `ASC${ancho}`; familia = 'ALTO_CAMPANA'; }
+    else { cod = `A${ancho}${(Number(r.puertas) || 0) === 1 ? 'D' : ''}`; familia = 'ALTO'; }
+  } else {
+    tipo = 'BAJO';
+    if (/FREGADERO|PLACA/.test(texto)) { cod = `BF${ancho}`; familia = 'BAJO_FREGADERO'; }
+    else if (/HORNO/.test(texto)) { cod = `BH${ancho}`; familia = 'BAJO_HORNO'; }
+    else { cod = `B${ancho}${(Number(r.puertas) || 0) === 1 ? 'D' : ''}`; familia = 'BAJO'; }
+  }
+  return { cod, familia, tipo, ancho, alto, fondo, qty: r._uds || 1, raw: r.descripcion || '', origenAlvic: r.descripcion || '', pendienteMV: !cod };
+};
+
 // Color por defecto de los cascos. Es el 19 mm en kit, que es la gama normal
 // de esta casa. Vive aquí para que se pueda ENSEÑAR en pantalla: antes estaba
 // escrito a pelo dentro del emparejador y no había forma de saber cuál era.
@@ -432,7 +464,7 @@ const _diagnostico = async (e) => {
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function ProformaImporter({ esMaster, valorPunto }) {
+export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }) {
   // EL VALOR DEL PUNTO DE COCINA DES-MONTADA, EL DE AJUSTES.
   //
   // La tarifa ACB se guarda en PUNTOS y el euro sale de multiplicarla por este
@@ -804,6 +836,8 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
              mo, totMo, nMuebles, margen, costeProduccion, precioVenta,
              puertas, costados, regletas, costePuertas, pm2, pm2Propios };
   }, [items, p, overrides, deletedRows, precioM2Puerta, moLinea, puertaLinea, puertasEditadas, destinoLinea, excluidas, holgura]);
+
+  const propuestasMV = useMemo(() => calc.rows.map(_propuesta_mv).filter(Boolean), [calc.rows]);
 
   // ── Anchos de columna: se arrastran y se recuerdan ────────────────────────
   //
@@ -1460,6 +1494,11 @@ export default function ProformaImporter({ esMaster, valorPunto }) {
                 className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-700 hover:bg-indigo-600 text-white flex items-center gap-1 shadow-sm"
                 title="Lanzar orden de trabajo a Planificación de Producción">
                 <Factory size={12} /> Lanzar a Taller
+              </button>
+              <button onClick={() => onConvertirMV?.(propuestasMV)} disabled={!propuestasMV.length}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-fuchsia-700 hover:bg-fuchsia-600 text-white flex items-center gap-1 shadow-sm disabled:opacity-40"
+                title="Crear una Relación MV revisable. El PVP se calculará por tarifa y valor del punto.">
+                <Calculator size={12} /> Convertir a Relación MV ({propuestasMV.length})
               </button>
             </div>
 
