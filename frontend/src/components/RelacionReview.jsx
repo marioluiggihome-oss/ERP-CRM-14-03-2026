@@ -122,7 +122,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const [pistaCandado, setPistaCandado] = useState('');
   
   // Modales y paneles auxiliares
-  const [showPegadoMasivo, setShowPegadoMasivo] = useState(() => !initialMuebles || initialMuebles.length === 0);
+  const [showPegadoMasivo, setShowPegadoMasivo] = useState(() => !inicial || inicial.length === 0);
   const [textoMasivo, setTextoMasivo] = useState('');
   const [showComparador, setShowComparador] = useState(false);
   const [showDespiece, setShowDespiece] = useState(false);

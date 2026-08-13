@@ -195,6 +195,8 @@ const _tipo_acb_auto = (desc, tipo, grosor) => {
   // Va ANTES que la regla de FREGADERO a propósito: hay muebles que llevan las
   // dos palabras y el resultado es el mismo casco, pero el orden deja claro
   // cuál manda.
+  if (t.includes('RINCON') || t.includes('RINCÓN')) return 'Bajo Rincón Escuadra';
+  if (t.includes('BOTELLERO') || t.includes('EXTRAIBLE') || t.includes('EXTRAÍBLE')) return 'Bajo Con Balda';
   if (t.includes('PLACA')) return 'Bajo Fregadero';
   if (t.includes('FREGADERO')) return 'Bajo Fregadero';
   if (t.includes('BAJO')) return 'Bajo Con Balda';
@@ -336,8 +338,9 @@ const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
     }
   }
 
-  let best = exactMatch || pool[0];
-  if (!exactMatch) {
+  let sameWidthMatch = pool.find(c => Math.abs((c.ancho || 0) - ancho) < 5);
+  let best = exactMatch || sameWidthMatch || pool[0];
+  if (!exactMatch && !sameWidthMatch) {
     let bd = Infinity;
     for (const c of pool) {
       const d = Math.abs((c.ancho || 0) - ancho) * 3
@@ -571,7 +574,15 @@ export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }
   // lee como un dato del sistema — cuando nadie lo ha confirmado para ESTA
   // proforma. Vacíos, el coste sale a tarifa completa y el aviso ámbar de más
   // abajo lo dice a gritos; ese aviso es lo que sostiene esta decisión.
-  const P_DEFAULT = { desc1: '', desc2: '', bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, abatible: ABATIBLE_NETO, incAbatible: 50, manoObra: 0, margen: 0, colorCasco: COLOR_CASCO_DEFECTO };
+const _es_gola = (desc) => /GOLA\b/i.test(desc || '');
+const _tipo_gola = (desc, tipo) => {
+  const t = (desc || '').toUpperCase();
+  if (!/GOLA\b/i.test(t)) return null;
+  if (/ALTO|ALTILLO|SOBREMODULO|SOBREMÓDULO/.test(t) || tipo === 'alto') return 'alto';
+  return 'bajo';
+};
+
+  const P_DEFAULT = { desc1: '', desc2: '', bisagra: BISAGRA.blum, pata: 1.20, colgador: 3.50, cajon: HERRAJE.blum.cajon, gaveta: HERRAJE.blum.gaveta, abatible: ABATIBLE_NETO, incAbatible: 50, manoObra: 0, margen: 0, colorCasco: COLOR_CASCO_DEFECTO, cargoGolaBajo: 15.0, cargoGolaAlto: 12.0 };
   const [p, setP] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('alvic_costes') || 'null');
@@ -687,9 +698,13 @@ export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }
         const bisagras = esAbatible ? 0 : (it.puertas || 0) * 2 * (Number(p.bisagra) || 0) * uds;
         const patas = ((it.tipo === 'bajo' || it.tipo === 'columna') ? 4 * (Number(p.pata) || 0) : 0) * uds;
         const colgadores = ((it.tipo === 'alto') ? 2 * (Number(p.colgador) || 0) : 0) * uds;
-        const guias = ((it.cajones || 0) * (Number(p.cajon) || 0)
-          + (it.gavetas || 0) * (Number(p.gaveta) || 0)) * uds;
-        const herraje = bisagras + abatibles + patas + colgadores + guias;
+        const esGola = _es_gola(it.descripcion);
+        const tipoGola = _tipo_gola(it.descripcion, it.tipo);
+        const cargoGolaUnitario = esGola
+          ? (tipoGola === 'alto' ? (Number(p.cargoGolaAlto) ?? 12.0) : (Number(p.cargoGolaBajo) ?? 15.0))
+          : 0;
+        const cargoGolaTotal = cargoGolaUnitario * uds;
+        const herraje = bisagras + abatibles + patas + colgadores + guias + cargoGolaTotal;
         const herrajeEsp = _herraje_especial(it.descripcion);
 
         // Mano de obra: el valor general se aplica A CADA MUEBLE (los paneles,
@@ -767,7 +782,7 @@ export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }
         return {
           ...it, _origIdx: origIdx, _acb: acb, _precioAcb: precioAcb, _uds: uds,
           _casco: casco, _herraje: herraje, _bis: bisagras, _abat: abatibles, _pat: patas,
-          _col: colgadores, _gui: guias, _mat: casco + herraje,
+          _col: colgadores, _gui: guias, _cargoGola: cargoGolaTotal, _esGola: esGola, _tipoGola: tipoGola, _mat: casco + herraje,
           _herrajeEsp: herrajeEsp,
           _pvpAlvic: Number(it.pvp) || 0,
           _totalAlvic: Number(it.total) || 0,
@@ -1396,6 +1411,24 @@ export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }
                   </p>
                 </div>
               </div>
+              {/* Cargos por Mecanizado GOLA (Altos y Bajos) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-2 border-t border-slate-200 bg-indigo-50/50 p-2.5 rounded-xl">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-indigo-700 uppercase">Cargo GOLA Bajos €</span>
+                  <input type="number" step="any" value={p.cargoGolaBajo ?? 15} onChange={setNum('cargoGolaBajo')}
+                    title="Cargo por mecanizado perfil GOLA en muebles bajos y columnas."
+                    className="px-2 py-1.5 border border-indigo-200 rounded-lg text-sm font-bold bg-white" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-indigo-700 uppercase">Cargo GOLA Altos €</span>
+                  <input type="number" step="any" value={p.cargoGolaAlto ?? 12} onChange={setNum('cargoGolaAlto')}
+                    title="Cargo por mecanizado perfil GOLA en muebles altos."
+                    className="px-2 py-1.5 border border-indigo-200 rounded-lg text-sm font-bold bg-white" />
+                </label>
+                <div className="col-span-2 flex items-center">
+                  <span className="text-[11px] text-indigo-900 font-bold">✨ Cargo automático por mecanizado GOLA aplicado a cada mueble GOLA</span>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <label className="flex flex-col gap-1">
                   <span className="text-[10px] font-black text-emerald-600 uppercase">Mano de obra € (coste producción)</span>
@@ -1994,6 +2027,8 @@ function EditorPuertas({
     setPuertasMuebleEdit(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
 
+  const golaItems = cascosMuebles.filter(it => it._esGola || /GOLA\b/i.test(it.descripcion || ''));
+
   // Pestañas de Vista Unificada / Categorías
   const [tabCat, setTabCat] = React.useState('TODOS');
 
@@ -2472,6 +2507,7 @@ function EditorPuertas({
           {[
             { id: 'TODOS', label: `Todos (${allItems.length})` },
             { id: 'CASCOS', label: `Cascos (${cascosMuebles.length})` },
+            { id: 'GOLA', label: `Mecanizado GOLA (${golaItems.length})` },
             { id: 'PUERTAS', label: `Puertas (${puertas.length})` },
             { id: 'COSTADOS', label: `Costados (${costados.length})` },
             { id: 'REGLETAS', label: `Regletas (${regletas.length})` },
