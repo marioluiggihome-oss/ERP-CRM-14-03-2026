@@ -1453,9 +1453,9 @@ export default function AIRenderStudio({ state, setState }) {
       }
       const extra = await generarPlanosExactos(distribucion);
       if (!extra.length) { setError('No se pudieron generar los planos técnicos (respuesta vacía del servicio).'); return; }
-      // Los planos técnicos NO sustituyen a la propuesta de diseño 3D en la vista
-      // principal: se añaden como láminas en el historial para poder abrirlos.
+      // Los planos técnicos se añaden al historial y se muestran inmediatamente en pantalla.
       setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
+      if (extra[0]?.url) setRenderUrl(extra[0].url);
     } catch (e) { setError(`Error al generar los planos técnicos: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
   };
@@ -1474,6 +1474,7 @@ export default function AIRenderStudio({ state, setState }) {
       const extra = await generarPlanosExactos(dj.distribucion);
       if (!extra.length) { setError('No se pudo generar el alzado (respuesta vacía del servicio).'); return; }
       setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
+      if (extra[0]?.url) setRenderUrl(extra[0].url);
     } catch (e) { setError(`Error al generar el alzado desde la descripción: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
   };
