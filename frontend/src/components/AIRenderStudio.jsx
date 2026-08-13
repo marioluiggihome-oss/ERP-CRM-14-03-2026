@@ -3660,7 +3660,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {paletteOpen && (
                     <div className="mt-2 border-t border-slate-100 pt-2">
                       <div className="flex gap-1 mb-2">
-                        {[['c1', 'ALVIC'], ['c2', 'ACB'], ['c3', 'PORTASUR']].map(([id, lbl]) => (
+                        {[['c1', '✨ ALVIC (Luxe / Zenit)'], ['c2', 'ACB'], ['c3', 'PORTASUR']].map(([id, lbl]) => (
                           <button key={id} onClick={() => { setColorTab(id); setOpenGama(null); }}
                             className={`px-3 py-1 rounded-lg text-[11px] font-black ${colorTab === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                             {lbl}
