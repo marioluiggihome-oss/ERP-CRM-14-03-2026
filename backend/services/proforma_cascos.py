@@ -101,6 +101,13 @@ def parse_proforma_text(full_text: str) -> List[Dict[str, Any]]:
         idx = int(h.group(1)); cod = h.group(2)
         desc = lines[i + 1] if i + 1 < n else ""
         variantes_text = []
+        nums = []
+        precio = None
+        total = None
+        cantidad = 1.0
+        material = ""
+        seen_ud = False
+        j = i + 2
         while j < n and not _HEADER.match(lines[j]):
             ln = lines[j]
             cm = _CANT.match(ln)
@@ -173,27 +180,10 @@ def extract_pdf_text_all_pages(pdf_bytes: bytes) -> str:
     return texto_de_pdf(pdf_bytes)
 
 
-def pdf_pages_to_png_b64(pdf_bytes: bytes, max_pages: int = 12) -> List[str]:
-    """Renderiza a PNG base64 las páginas con tabla de artículos (respaldo visión IA).
-
-    Los presupuestos generados con "Microsoft: Print To PDF" no llevan capa de
-    texto: las letras van como trazos vectoriales. Eso permite separar una página
-    de tabla (miles de trazos) de una vista 3D o un plano (una imagen y apenas
-    trazos) y ahorrar una llamada de visión por cada página irrelevante — que es
-    lo que hacía que un presupuesto de 10 páginas tardase tanto que se cortaba la
-    conexión. El filtro solo actúa si el documento es de ese tipo (alguna página
-    con muchos trazos); en un PDF escaneado de verdad se queda inerte.
-    """
+def pdf_pages_to_png_b64(pdf_bytes: bytes, max_pages: int = 30) -> List[str]:
+    """Renderiza a PNG base64 TODAS las páginas del PDF (hasta 30 páginas)."""
     import base64
-    from services.pdf_utils import contar_trazos, paginas_a_png
+    from services.pdf_utils import paginas_a_png
 
-    trazos = contar_trazos(pdf_bytes, max_pages=max_pages)
-    utiles = list(range(len(trazos)))
-    if trazos and max(trazos) >= 400:
-        umbral = max(trazos) * 0.2
-        con_tabla = [i for i, n in enumerate(trazos) if n >= umbral]
-        if con_tabla:
-            utiles = con_tabla
-    # Escala 2,0 = 144 dpi, la misma imagen que se venía enviando a la IA.
     return [base64.b64encode(p).decode("utf-8")
-            for p in paginas_a_png(pdf_bytes, dpi=144, paginas=utiles)]
+            for p in paginas_a_png(pdf_bytes, dpi=144, paginas=None)]
