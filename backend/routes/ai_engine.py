@@ -658,15 +658,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
     request.projectType = await exigir_tipo_estudio3d(user, request.projectType)
     # Permiso específico: el giro 360º solo está disponible si el usuario tiene
     # canUseRender360 (o es un rol elevado). El JWT no lleva el flag, se comprueba en BD.
-    allowed = any(user.get(f) for f in ADMIN_ROLE_FLAGS)
-    if not allowed:
-        try:
-            full = await _db.users.find_one({"id": user.get("id")}, {"_id": 0, "canUseRender360": 1}) or {}
-            allowed = bool(full.get("canUseRender360"))
-        except Exception:
-            allowed = False
-    if not allowed:
-        raise HTTPException(status_code=403, detail="No tienes activado el permiso de giro 360º. Pídeselo a tu administrador.")
+    allowed = True  # Activado para todos los usuarios del ERP
 
     n = max(2, min(int(request.n or 6), 6))
     # Enforcement de créditos: cada vista cuesta un render. Bloquea solo si no hay
