@@ -74,14 +74,11 @@ class ApolloKeyRequest(BaseModel):
 
 @router.post("/set-key")
 async def set_apollo_key(req: ApolloKeyRequest):
-    """Guarda la clave de API oficial de Apollo.io en el entorno."""
-    import os
-    os.environ["APOLLO_API_KEY"] = req.apiKey.strip()
-    return {
-        "success": True,
-        "configurado": bool(req.apiKey.strip()),
-        "mensaje": "Clave de Apollo.io configurada correctamente para búsquedas en vivo." if req.apiKey.strip() else "Clave eliminada. Se usará el directorio oficial verificado."
-    }
+    """Impide guardar secretos desde una sesión web: deben residir en Railway."""
+    raise HTTPException(
+        status_code=403,
+        detail="Configura APOLLO_API_KEY en las variables seguras de Railway. Las claves no se guardan desde el navegador.",
+    )
 
 
 @router.get("/sectores")

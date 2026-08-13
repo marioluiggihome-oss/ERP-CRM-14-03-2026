@@ -72,8 +72,6 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
   const [sourceMeta, setSourceMeta] = useState({ origen: 'sin_fuente_verificable', mensaje: '' });
   const [auditoria, setAuditoria] = useState(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [guardandoKey, setGuardandoKey] = useState(false);
   const [importados, setImportados] = useState({});
   const [importingId, setImportingId] = useState(null);
   const [importandoLote, setImportandoLote] = useState(false);
@@ -107,28 +105,6 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
       }
     } catch (e) {
       console.warn('No se pudo verificar estado de Apollo:', e);
-    }
-  };
-
-  const guardarApiKey = async () => {
-    setGuardandoKey(true);
-    try {
-      const res = await fetch(`${API_URL}/api/apollo/set-key`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ apiKey: apiKeyInput })
-      });
-      if (res.ok) {
-        await fetchStatus();
-        setShowConfigModal(false);
-        setMensajeExito(apiKeyInput.trim() ? '✓ Clave de Apollo.io configurada con éxito.' : '✓ Sin fuente B2B activa hasta configurar Apollo.');
-        setTimeout(() => setMensajeExito(null), 4000);
-        buscarProspectos(1);
-      }
-    } catch (e) {
-      alert('Error guardando la clave de API: ' + e.message);
-    } finally {
-      setGuardandoKey(false);
     }
   };
 
@@ -629,14 +605,14 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
         )}
       </div>
 
-      {/* Modal de Configuración de Apollo API Key */}
+      {/* Modal de configuración segura de la fuente B2B */}
       {showConfigModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={22} className="text-indigo-600" />
-                <h3 className="text-lg font-black text-slate-900">Configuración de Apollo.io API</h3>
+                <h3 className="text-lg font-black text-slate-900">Fuente B2B: Apollo.io</h3>
               </div>
               <button onClick={() => setShowConfigModal(false)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400">
                 ✕
@@ -648,41 +624,20 @@ export default function ApolloProspeccion({ currentUser, onNavigateToContacts })
                 <b>Estado actual:</b> {status.configurado ? (
                   <span className="text-emerald-700 font-bold">● Conectado a la API oficial de Apollo.io (Búsquedas en vivo entre 275M+ contactos).</span>
                 ) : (
-                  <span className="text-indigo-700 font-bold">● Directorio Oficial Verificado (Colegios de Arquitectos y Registro Mercantil).</span>
+                  <span className="text-amber-700 font-bold">● No hay fuente B2B activa; no se muestran datos de respaldo.</span>
                 )}
               </p>
               <p>
-                Si dispones de una cuenta de <b>Apollo.io</b>, introduce tu clave de API privada para buscar y sincronizar contactos reales en tiempo real:
+                Para activar consultas reales, añade <b>APOLLO_API_KEY</b> en las variables seguras del servicio ERP de Railway y vuelve a abrir esta pantalla. La clave no se guarda ni se transmite desde el navegador.
               </p>
             </div>
 
-            <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Clave de API de Apollo (X-Api-Key)</label>
-              <input
-                type="password"
-                value={apiKeyInput}
-                onChange={e => setApiKeyInput(e.target.value)}
-                placeholder="Pega aquí tu clave de Apollo.io..."
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">
-                * Deja el campo vacío y guarda para volver al Directorio Oficial Verificado.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end pt-2">
               <button
                 onClick={() => setShowConfigModal(false)}
                 className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
               >
-                Cancelar
-              </button>
-              <button
-                onClick={guardarApiKey}
-                disabled={guardandoKey}
-                className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5"
-              >
-                {guardandoKey ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />} Guardar Clave
+                Entendido
               </button>
             </div>
           </div>
