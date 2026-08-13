@@ -2814,19 +2814,6 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   )}
                 </div>
-
-                {/* Plantillas Rápidas */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">PLANTILLAS RÁPIDAS</span>
-                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    {PRESETS.map(p => (
-                      <button key={p.id} onClick={() => applyPreset(p)} title={p.desc}
-                        className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-indigo-50/90 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors whitespace-nowrap">
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* BLOQUE 2: Descripción, Voz y Referencias */}
