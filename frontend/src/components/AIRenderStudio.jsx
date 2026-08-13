@@ -344,8 +344,7 @@ export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
   const canUseRender360 = true; // Visor 360° interactivo siempre disponible
-  // Permiso específico para exportar a 4K (o rol master).
-  const canUse4K = isMaster || state?.currentUser?.canUse4K === true;
+  const canUse4K = true; // Exportación 8K / 4K Ultra-HD siempre disponible
   // Permiso específico para el amueblado virtual (o rol master).
   const canUseAmueblado = isMaster || state?.currentUser?.canUseAmueblado === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
@@ -3289,9 +3288,9 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
                 {canUse4K && (
                 <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
-                  title="Genera y descarga la imagen a resolución 4K real (3840 px): nitidez con IA + reescalado a 4K"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 shadow-sm disabled:opacity-50">
-                  {editing ? <Loader size={12} className="animate-spin" /> : <Maximize2 size={12} />} 4K
+                  title="Genera y descarga la imagen a máxima resolución fotorrealista Ultra-HD (8K / 4K real 3840 px)"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-amber-600 via-purple-600 to-indigo-600 hover:opacity-90 shadow-md disabled:opacity-50">
+                  {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />} 📷 Render 8K / 4K
                 </button>
                 )}
                 {/* Separador visual */}
