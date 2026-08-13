@@ -661,13 +661,16 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setOrbitLoading(false); }
   };
 
-  // Coloca una marca de instalación en el punto pulsado del render (% del box).
+  // Coloca una marca de instalación en el punto pulsado del render (% exacto de la imagen).
   const placeMark = (e) => {
     if (editMark !== null) { setEditMark(null); return; } // clic fuera cierra el editor
     if (!markTool || interactiveMode) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * 100;
-    const y = ((e.clientY - r.top) / r.height) * 100;
+    const imgEl = document.getElementById('render-annot-img');
+    if (!imgEl) return;
+    const r = imgEl.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    const x = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100));
     setMarks(m => [...m, { x, y, type: markTool }]);
   };
 
@@ -3539,24 +3542,23 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   </div>
                 ) : renderResult?.result?.images?.[0] && !imgError ? (
-                  <>
+                  <div className="relative inline-flex items-center justify-center max-w-full max-h-full overflow-hidden" onClick={placeMark}>
                   <img
                     id="render-annot-img"
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
-                    className="max-w-full max-h-full object-contain transition-transform"
+                    className="max-w-full max-h-full object-contain transition-transform block"
                     style={{
                       ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
                       ...(schematic ? { filter: 'grayscale(100%) contrast(115%) brightness(88%)' } : {}),
                     }}
                     onError={() => setImgError(true)}
-                    onClick={placeMark}
                   />
                   {/* Capa de marcas de instalaciones: icono + cota de altura (editable) */}
                   {!interactiveMode && marks.map((mk, i) => {
                     const t = MARK_TYPES[mk.type]; const Ic = t.Icon;
                     return (
-                      <div key={i} className="absolute z-10 flex flex-col items-center"
+                      <div key={i} className="absolute z-10 flex flex-col items-center pointer-events-auto"
                         style={{ left: `${mk.x}%`, top: `${mk.y}%`, transform: 'translate(-50%,-50%)' }}>
                         <button onClick={(e) => { e.stopPropagation(); setEditMark(editMark === i ? null : i); }}
                           title={`${t.label} · altura ${markH(mk)} cm — clic para editar`}
