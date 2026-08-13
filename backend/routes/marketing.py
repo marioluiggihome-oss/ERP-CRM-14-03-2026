@@ -213,3 +213,31 @@ async def enviar_campaign(campaign_id: str, payload: dict = None, current_user: 
         }},
     )
     return {"success": True, "sentCount": ok, "failCount": fail, "total": len(destinatarios)}
+
+
+@router.post("/crm/marketing/test-email")
+async def enviar_email_prueba(payload: dict, current_user: dict = Depends(get_current_user)):
+    """Envía un email de prueba individual a la dirección especificada (ej. mariohv2017@gmail.com)."""
+    to_email = (payload.get("email") or "mariohv2017@gmail.com").strip()
+    subject = payload.get("subject") or "Prueba de Campaña CRM - Luiggi Home"
+    html_content = payload.get("html") or "<p>Email de prueba</p>"
+
+    sample_contact = {
+        "name": current_user.get("name") or "Mario Luiggi",
+        "email": to_email,
+        "company": "Luiggi Home",
+        "city": "Salamanca",
+        "province": "Salamanca"
+    }
+
+    rendered_subject = f"[PRUEBA TEST] {_render(subject, sample_contact)}"
+    rendered_html = _render(html_content, sample_contact)
+
+    from services.email_service import send_email
+    try:
+        sent = await send_email(to_email=to_email, subject=rendered_subject, html_content=rendered_html)
+        return {"success": bool(sent), "to": to_email, "message": "Email enviado con éxito" if sent else "Fallo al enviar email"}
+    except Exception as e:
+        logger.error("Error enviando email de prueba a %s: %s", to_email, e)
+        return {"success": False, "error": str(e), "detail": "Asegúrate de que SENDGRID_API_KEY está configurado en las variables de entorno."}
+
