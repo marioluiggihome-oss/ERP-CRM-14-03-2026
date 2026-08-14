@@ -177,3 +177,48 @@ def test_los_mismos_milimetros_que_cocina_montada():
     esquemas = _leer(os.path.join(RAIZ, "backend", "models", "schemas.py"))
     assert "doorToleranceHeight: float = 2" in esquemas
     assert "doorToleranceWidth: float = 3" in esquemas
+
+
+# ─── 5. El precio se busca por el codigo DE TARIFA ──────────────────────────
+
+def test_la_tarifa_distingue_AE60_de_AE60DI():
+    """Los numeros que trajo el master. Son DOS referencias distintas, no la
+    misma con la mano puesta:
+
+        AE60     = [64, 74] puntos  -> a 90 son 74 x 3,33 = 246,42 €
+        AE60D/I  = [57, 63] puntos  -> a 90 son 63 x 3,33 = 209,79 €
+    """
+    with open(MV_JSON, encoding="utf-8") as f:
+        data = json.load(f)
+    items = data["tariffs"]["T1"]["ALTO_ESCURREPLATOS"]["items"]
+    pv = data["_meta"]["pointValue"]
+    assert items["AE60"] == [64, 74]
+    assert items["AE60D/I"] == [57, 63]
+    assert round(74 * pv, 2) == 246.42
+    assert round(63 * pv, 2) == 209.79
+
+
+def test_decidir_la_mano_NO_puede_dejar_el_precio_congelado():
+    """CANDADO. En la tarifa el codigo es «AE60D/I»: existe en derecha y en
+    izquierda al mismo precio. Al decidir la mano, el codigo que va al taller
+    pasa a ser «AE60D» — y ese NO existe en la tarifa. Buscando el precio por
+    el, no se encuentra nada y la linea se queda con el de antes: se cambia de
+    tarifa y sigue valiendo lo de la anterior, sin decir nada.
+    """
+    src = _leer(REVIEW)
+    assert "m.codTarifa || m.cod" in src, (
+        "el precio se busca por el codigo con la mano puesta: al decidirla, la "
+        "linea deja de encontrarse en la tarifa y el precio se congela")
+    i = src.index("const setMano")
+    cuerpo = src[i:i + 600]
+    assert "codTarifa: m.codTarifa || cod" in cuerpo, (
+        "al decidir la mano no se guarda el codigo de tarifa original")
+
+
+def test_el_codigo_de_tarifa_se_guarda_UNA_vez():
+    """Si se sobreescribiera al cambiar de mano otra vez, se perderia el
+    original y volveriamos al problema."""
+    src = _leer(REVIEW)
+    i = src.index("const setMano")
+    assert "m.codTarifa || cod" in src[i:i + 600], (
+        "el codigo de tarifa se pisa al cambiar de mano por segunda vez")

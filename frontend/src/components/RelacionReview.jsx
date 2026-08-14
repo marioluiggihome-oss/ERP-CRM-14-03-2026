@@ -61,7 +61,7 @@ const costeDe = (m, p) => {
     + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
 };
 
-export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onClose, apiUrl, authHeaders }) {
+export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, onClose, apiUrl, authHeaders, embebido = false, textoConfirmar }) {
   const [muebles, setMuebles] = useState(() => (inicial || []).map((m, i) => ({ ...m, _k: `${m.cod || 'x'}-${i}-${m.raw || ''}` })));
   const [busca, setBusca] = useState('');
   const [buscando, setBuscando] = useState(false);
@@ -175,7 +175,15 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   // Recalcula los PUNTOS/PVP de un código para una altura dada (según su tipo de familia).
   const puntosLocal = (m, alto) => {
     const info = familias?.[m.familia];
-    const e = info?.items?.[m.cod];
+    // EL PRECIO SE BUSCA POR EL CODIGO DE TARIFA, NO POR EL QUE LLEVA LA MANO.
+    //
+    // En la tarifa el codigo es «AE60D/I»: significa que ese mueble existe en
+    // derecha y en izquierda, al mismo precio. Al decidir la mano, el codigo que
+    // va al taller pasa a ser «AE60D» — y ese NO existe en la tarifa. Buscando
+    // por el, no se encuentra nada y el precio se queda congelado con el de
+    // antes: cambias de tarifa y la linea sigue valiendo lo de la anterior, sin
+    // decir nada.
+    const e = info?.items?.[m.codTarifa || m.cod];
     if (e == null) return m.pvp;
     if (Array.isArray(e)) {
       const t = info.type;
@@ -214,7 +222,8 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     if (m._k !== k) return m;
     const cod = String(m.cod || '');
     // Se cambia SOLO el sufijo: el resto del código es el mueble y no se toca.
-    return { ...m, cod: cod.replace(/(D\/I|D|I)$/i, mano) };
+    // Y se recuerda el código DE TARIFA, que es con el que se busca el precio.
+    return { ...m, codTarifa: m.codTarifa || cod, cod: cod.replace(/(D\/I|D|I)$/i, mano) };
   }));
 
   const setNota = (k, nota) => setMuebles(prev => prev.map(m => m._k === k ? { ...m, nota } : m));
@@ -347,8 +356,16 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     // columna estrecha en medio, con la mitad del monitor en gris al lado y la
     // tabla haciendo scroll para nada. Aquí se revisa una relación entera antes
     // de volcarla: cuanto más se ve de golpe, menos se cuela.
-    <div className="fixed inset-0 z-[60] bg-black/50 flex items-stretch justify-center p-2 sm:p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+    // Dos formas de vivir: como VENTANA sobre la pantalla de Cocina Desmontada,
+    // y EMBEBIDA como página entera (Cocina Montada 3). Es el mismo trabajo
+    // —elegir tarifa, meter muebles, decidir manos— y tenerlo dos veces escrito
+    // sería tenerlo dos veces mal.
+    <div className={embebido
+      ? 'h-full w-full flex'
+      : 'fixed inset-0 z-[60] bg-black/50 flex items-stretch justify-center p-2 sm:p-4'}
+      onClick={embebido ? undefined : onClose}>
+      <div className={`bg-white flex flex-col overflow-hidden w-full h-full ${embebido ? '' : 'rounded-2xl shadow-2xl'}`}
+        onClick={e => e.stopPropagation()}>
         {/* Cabecera */}
         <div className="px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-between">
           <h3 className="font-black flex items-center gap-2"><FileUp size={18} /> Revisar relación de muebles</h3>
@@ -371,7 +388,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg"><X size={18} /></button>
+          {!embebido && <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg"><X size={18} /></button>}
         </div>
 
         {/* Añadir: buscador libre + desplegable del catálogo */}
