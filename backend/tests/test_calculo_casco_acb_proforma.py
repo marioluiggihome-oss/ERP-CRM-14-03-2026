@@ -45,6 +45,8 @@ import json
 import os
 import re
 
+import pytest
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CATALOGO = os.path.join(RAIZ, "frontend", "src", "data", "cascos.js")
 IMPORTER = os.path.join(RAIZ, "frontend", "src", "components", "ProformaImporter.jsx")
@@ -352,12 +354,114 @@ def test_un_mueble_que_no_se_reconoce_SIGUE_pidiendo_casco():
     justo donde hace falta. Por eso la lista es EXPLICITA y no «lo que
     `_tipo_acb_auto` no ha sabido clasificar»."""
     src = _leer(IMPORTER)
+    # La condicion ocupa varias lineas: se lee hasta el final de la expresion.
     i = src.index("esMueble: it.esMueble !== false")
-    linea = src[i:src.index("\n", i)]
-    assert "_es_pieza_suelta" in linea
-    assert "_tipo_acb_auto" not in linea, (
+    expr = src[i:src.index(",\n", src.index("_es_herraje", i))]
+    assert "_es_pieza_suelta" in expr
+    assert "_tipo_acb_auto" not in expr, (
         "`esMueble` vuelve a depender de si se ha sabido deducir el tipo: un "
         "mueble no reconocido dejaria de poder elegir casco a mano")
+
+
+def test_un_herraje_no_pide_que_le_elijan_un_casco():
+    """Un «TIRADOR T70 NEGRO MATE» salia en rojo con «sin equivalencia» y un
+    boton «Elegir casco». Un tirador no va a tener casco nunca, y encima se
+    colaba en la relacion MV tipado como CASCO ACB."""
+    src = _leer(IMPORTER)
+    i = src.index("esMueble: it.esMueble !== false")
+    expr = src[i:src.index(",\n", src.index("_es_herraje", i))]
+    assert "_es_herraje" in expr, (
+        "un herraje vuelve a contar como mueble: pedira un casco que no existe "
+        "y se colara en la lista de cascos del pedido")
+
+
+# ─── 3 bis. LAS VARIANTES DEL MUEBLE NO DICEN LO QUE EL MUEBLE ES ───────────
+#
+# 14/08/2026, el master: «ha dejado de detectar bien los cascos de acb».
+#
+# Alvic escribe el mueble y, pegadas detras, sus variantes:
+#
+#     «BAJO 2 PUERTAS 1 CAJON SUPERIOR. Tirador T000 - SIN TIRADOR ,»
+#
+# «SIN TIRADOR» estaba en la lista de TABLEROS y «TIRADOR» en la de HERRAJES.
+# Resultado: TODO mueble sin tirador —o sea toda la cocina de gola, que es la
+# normal de esta casa— salia como pieza suelta Y como herraje, y se quedaba SIN
+# CASCO. Un guion en la columna del casco, cero euros de coste, y ningun error.
+
+
+def test_un_mueble_sin_tirador_sigue_siendo_un_mueble():
+    """CANDADO PRINCIPAL de esto. «SIN TIRADOR» describe el TIRADOR."""
+    src = _leer(IMPORTER)
+    i = src.index("const _ES_TABLERO")
+    linea = src[i:src.index("\n", i)]
+    assert "SIN TIRADOR" not in linea, (
+        "«SIN TIRADOR» vuelve a estar en la lista de TABLEROS: toda la cocina "
+        "de gola se quedara otra vez sin casco y sin coste")
+
+
+def test_lo_que_una_linea_es_se_decide_por_como_empieza():
+    src = _leer(IMPORTER)
+    assert "const _ES_MODULO_INI" in src, (
+        "ya no se mira el principio de la linea: las palabras de las variantes "
+        "(tirador, bisagra) volveran a decidir lo que es el mueble")
+    i = src.index("const _ES_MODULO_INI")
+    linea = src[i:src.index("\n", i)]
+    for palabra in ("BAJO", "ALTO", "COLUMNA", "SEMICOLUMNA"):
+        assert palabra in linea, f"«{palabra}» ya no empieza un modulo"
+
+
+@pytest.mark.parametrize("clasificador", [
+    "_es_puerta", "_es_costado", "_es_regleta", "_es_herraje", "_es_pieza_suelta"])
+def test_ningun_clasificador_puede_convertir_un_modulo_en_otra_cosa(clasificador):
+    """Un mueble es un mueble aunque su descripcion nombre el tirador que lleva
+    puesto. Si un solo clasificador se olvida de mirarlo, ese mueble se cae de
+    los cascos por ese camino y no se entera nadie."""
+    src = _leer(IMPORTER)
+    i = src.index(f"const {clasificador} = ")
+    fin = src.index("\n};", i) if "\n};" in src[i:i + 400] else i + 400
+    assert "_es_modulo" in src[i:fin], (
+        f"`{clasificador}` ya no comprueba si la linea es un modulo: un "
+        f"«BAJO … Tirador T000 - SIN TIRADOR» volvera a salir sin casco")
+
+
+def test_el_corte_de_variantes_no_se_come_la_linea_del_tirador():
+    """«T000 - SIN TIRADOR» es la linea del TIRADOR entera, no un mueble con
+    cola. Cortando por la palabra quedaria «T000 - SIN», que ya no se reconoce
+    como nada y acabaria pidiendo casco. Fuera de un modulo solo se corta si hay
+    un SEPARADOR de verdad."""
+    src = _leer(IMPORTER)
+    i = src.index("const _sin_variantes")
+    cuerpo = src[i:src.index("\n};", i)]
+    assert "[.,;]" in cuerpo, (
+        "el corte de variantes ya no exige separador: se comera el nombre de "
+        "los articulos que se llaman como su variante")
+    assert "_es_modulo" in cuerpo, \
+        "el corte sin separador ha dejado de reservarse a los modulos"
+
+
+# ─── 3 ter. TODOS LOS CAMPOS SE PUEDEN CORREGIR ────────────────────────────
+
+
+@pytest.mark.parametrize("mapa", [
+    "puertasEditadas", "costadosEditados", "regletasEditadas", "cascosEditados"])
+def test_cada_categoria_del_editor_se_puede_corregir_a_mano(mapa):
+    """Los CASCOS eran los unicos en solo lectura: cantidad, alto y ancho salian
+    del lector del PDF y, si venian mal, no habia forma de tocarlos — y son
+    justo las lineas que van al proveedor."""
+    src = _leer(IMPORTER)
+    assert f"const [{mapa}" in src or f"{mapa} = {{}}" in src, \
+        f"ya no hay correcciones a mano para {mapa}"
+    assert f"{mapa}[rawIndex]" in src, f"{mapa} no se lee al pintar la linea"
+
+
+def test_las_unidades_tambien_se_corrigen():
+    """Si el lector lee 1 donde pone 2, se pide la mitad del material y no lo
+    dice nadie."""
+    src = _leer(IMPORTER)
+    assert "const _uds = (mapa, i, item)" in src, \
+        "las unidades vuelven a leerse solo del PDF, sin poder corregirlas"
+    assert "'uds', e.target.value" in src, \
+        "no hay ningun campo en pantalla para corregir las unidades"
 
 
 # ─── 4. El descuento no viene puesto ────────────────────────────────────────

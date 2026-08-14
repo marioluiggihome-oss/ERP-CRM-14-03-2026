@@ -165,23 +165,75 @@ const _medidas_mm = (it) => {
 const _ES_PUERTA = /^PTA[ .]|^PUERTA\b|PUERTA DE INTEGRACION|PUERTA DE INTEGRACIÓN/;
 const _ES_COSTADO = /COSTADO/;
 const _ES_REGLETA = /^REG |REGLETA|COPETE|ZOCALO|ZÓCALO/;
-const _ES_TABLERO = /^TABLERO|TRASERA|^BANDA |SIN TIRADOR/;
+const _ES_TABLERO = /^TABLERO|TRASERA|^BANDA /;
 // Herrajes: elementos que no son cascos ni puertas sino accesorios y complementos
 const _ES_HERRAJE = /CUBERTERO|TIRADOR|PINZA|BISAGRA|PATA\s|COLGADOR|SOPORTE|AMORTIGUADOR|GUIA|GUÍA|CORREDERA|CAJÓN\s+BLUM|CAJON\s+BLUM|GAVETA\s+BLUM|ZOCALO|ZÓCALO|PINZA\s+ZOCALO|PINZA\s+ZÓCALO|PERFIL\s+GOLA|GOLA\s+ALUMINIO|MANETA|POMO\s|TIRADOR\s/i;
 
+/** LO QUE UNA LÍNEA ES SE DECIDE POR CÓMO EMPIEZA.
+ *
+ * Alvic escribe el mueble y, pegadas detrás, sus VARIANTES:
+ *
+ *     «BAJO 2 PUERTAS 1 CAJON SUPERIOR. Tirador T000 - SIN TIRADOR ,»
+ *     «ALTO PLATERO 1 PUERTA Mano Derecha Variantes: BISAGRA: HETTICH»
+ *
+ * Esas palabras hablan del TIRADOR y de la BISAGRA, no del mueble. Y el
+ * clasificador las leía como si hablaran de la línea entera:
+ *
+ *   · «SIN TIRADOR» estaba en la lista de TABLEROS, así que TODO mueble sin
+ *     tirador —o sea toda la cocina de gola, que es la normal de esta casa—
+ *     salía como pieza suelta y se quedaba SIN CASCO.
+ *   · «TIRADOR» y «BISAGRA» están en la lista de HERRAJES, así que ese mismo
+ *     bajo salía además contado como herraje.
+ *
+ * Un mueble entero se quedaba sin casco y sin precio, y no daba ningún error:
+ * salía un guion en la columna del casco. Es lo que reportó el master el
+ * 14/08/2026: «ha dejado de detectar bien los cascos de acb».
+ *
+ * Por eso se mira el PRINCIPIO: en la proforma la descripción empieza siempre
+ * por lo que el artículo ES. Si empieza por BAJO/ALTO/COLUMNA…, es un mueble, y
+ * lo que venga detrás son variantes suyas — nunca puede convertirlo en otra cosa.
+ */
+const _ES_MODULO_INI = /^(?:BAJO|ALTO|ALTILLO|COLUMNA|SEMICOLUMNA|SOBREMODULO|SOBREMÓDULO|SOBRE\s+(?:MODULO|MÓDULO|COLUMNA|ENCIMERA))\b/;
+
 const _may = (desc) => (desc || '').toUpperCase();
-const _es_puerta = (desc) => _ES_PUERTA.test(_may(desc));
-const _es_costado = (desc) => _ES_COSTADO.test(_may(desc));
-const _es_regleta = (desc) => _ES_REGLETA.test(_may(desc));
-const _es_herraje = (desc) => _ES_HERRAJE.test(desc || '');
+
+/** ¿La línea es un MÓDULO (un mueble con casco) por cómo empieza? */
+const _es_modulo = (desc) => _ES_MODULO_INI.test(_may(desc).trim());
+
+/** La línea sin su cola de variantes, para clasificarla por lo que ES.
+ *
+ * OJO con dónde se corta. «T000 - SIN TIRADOR» es una línea de TIRADOR entera:
+ * ahí no hay cola que quitar, y cortar por la palabra dejaría «T000 - SIN», que
+ * ya no se reconoce como nada. Por eso, fuera de un módulo solo se corta cuando
+ * hay un SEPARADOR de verdad («COSTADO VISTO. Tirador T000…»), que es cuando se
+ * sabe seguro dónde acaba el artículo y dónde empieza su variante.
+ */
+const _sin_variantes = (desc) => {
+  const t = String(desc || '').trim();
+  let m = /[.,;]\s*(?:Tirador\b|Variantes\s*:)/i.exec(t);
+  // En un módulo la cola puede venir sin separador: «… Mano Derecha Variantes:».
+  if (!m && _es_modulo(t)) m = /\s(?:Tirador\b|Variantes\s*:)/i.exec(t);
+  const cabeza = m && m.index > 0 ? t.slice(0, m.index).trim() : '';
+  return cabeza || t;
+};
+
+const _es_puerta = (desc) => !_es_modulo(desc) && _ES_PUERTA.test(_may(_sin_variantes(desc)));
+const _es_costado = (desc) => !_es_modulo(desc) && _ES_COSTADO.test(_may(_sin_variantes(desc)));
+const _es_regleta = (desc) => !_es_modulo(desc) && _ES_REGLETA.test(_may(_sin_variantes(desc)));
+// Un mueble NUNCA es un herraje, por mucho que su descripción nombre el tirador
+// o la bisagra que lleva puestos. Un costado, tampoco.
+const _es_herraje = (desc) => !_es_modulo(desc) && _ES_HERRAJE.test(_sin_variantes(desc));
 
 const _es_pieza_suelta = (desc) => {
-  const t = _may(desc);
+  if (_es_modulo(desc)) return false;
+  const t = _may(_sin_variantes(desc));
   return _ES_PUERTA.test(t) || _ES_COSTADO.test(t) || _ES_REGLETA.test(t) || _ES_TABLERO.test(t);
 };
 
 const _tipo_acb_auto = (desc, tipo, grosor) => {
-  const t = (desc || '').toUpperCase();
+  // Se clasifica por el MUEBLE, sin su cola de variantes: si no, un «BAJO
+  // RINCON … Tirador T000» podía decidirse por palabras del tirador.
+  const t = _may(_sin_variantes(desc));
   // Ni puertas, ni costados, ni regletas llevan casco: no son muebles.
   if (_ES_PUERTA.test(t) || _ES_COSTADO.test(t) || _ES_REGLETA.test(t)) return null;
   // UN BAJO DE PLACA LLEVA CASCO DE FREGADERO, SIEMPRE.
@@ -546,6 +598,10 @@ export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }
   // de tablero salia mal sin remedio.
   const [costadosEditados, setCostadosEditados] = useState({});
   const [regletasEditadas, setRegletasEditadas] = useState({});
+  // Y los CASCOS igual. Eran los unicos que se enseniaban en solo lectura: la
+  // cantidad, el alto y el ancho venian del lector del PDF y, si salian mal, no
+  // habia forma de tocarlos — justo en las lineas que van al proveedor.
+  const [cascosEditados, setCascosEditados] = useState({});
   // Mano de obra y coste de puerta POR LINEA. Sin valor propio, cada mueble
   // toma la mano de obra general y cada puerta su precio por m2; con valor,
   // manda el de la linea. Asi se puede subir o bajar un mueble suelto sin
@@ -805,7 +861,14 @@ const _tipo_gola = (desc, tipo) => {
           //
           // El criterio ya existía: `_tipo_acb_auto` devuelve null justo para
           // esas cosas. Se usa ese, en vez de una marca que dice que sí a todo.
-          esMueble: it.esMueble !== false && !_es_pieza_suelta(it.descripcion),
+          //
+          // Un HERRAJE tampoco es un mueble. Un «TIRADOR T70 NEGRO MATE» salía
+          // en rojo con «sin equivalencia» y un botón «Elegir casco»: un tirador
+          // no va a tener casco nunca, y encima se colaba en la relación MV
+          // como si fuera uno.
+          esMueble: it.esMueble !== false
+            && !_es_pieza_suelta(it.descripcion)
+            && !_es_herraje(it.descripcion),
         };
       });
 
@@ -1745,6 +1808,8 @@ const _tipo_gola = (desc, tipo) => {
                 setCostadosEditados={setCostadosEditados}
                 regletasEditadas={regletasEditadas}
                 setRegletasEditadas={setRegletasEditadas}
+                cascosEditados={cascosEditados}
+                setCascosEditados={setCascosEditados}
                 ocultarImportes={ocultarImportes}
                 onExportar={exportarPedidoPuertas}
                 referenciaActual={calc.ref || nombreProyecto || ''}
@@ -2010,6 +2075,8 @@ function EditorPuertas({
   setCostadosEditados,
   regletasEditadas = {},
   setRegletasEditadas,
+  cascosEditados = {},
+  setCascosEditados,
   ocultarImportes = false,
   onExportar,
   referenciaActual = '',
@@ -2027,6 +2094,31 @@ function EditorPuertas({
   const setMedidaRegleta = (i, campo, val) => {
     setRegletasEditadas(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
   };
+  const setMedidaCasco = (i, campo, val) => {
+    setCascosEditados(prev => ({ ...prev, [i]: { ...(prev[i] || {}), [campo]: val } }));
+  };
+
+  // Las unidades tambien se corrigen a mano: si el lector del PDF lee 1 donde
+  // pone 2, se pide la mitad del material y no lo dice nadie.
+  const _uds = (mapa, i, item) => {
+    const ov = (mapa || {})[i] || {};
+    const n = Number(ov.uds ?? item.cantidad ?? item._uds);
+    return n > 0 ? n : 1;
+  };
+
+  // Observacion por linea: viaja al PDF del proveedor y al pedido.
+  const _nota = (mapa, i) => ((mapa || {})[i] || {}).nota || '';
+
+  const CampoNota = ({ mapa, set, i }) => (
+    <input
+      type="text"
+      value={_nota(mapa, i)}
+      onChange={e => set(i, 'nota', e.target.value)}
+      placeholder="Observación…"
+      title="Se manda al proveedor con la línea"
+      className="mt-1 w-full min-w-[9rem] px-1.5 py-0.5 border border-slate-200 rounded text-[11px] text-slate-700 placeholder:text-slate-300"
+    />
+  );
 
   const [puertasMuebleEdit, setPuertasMuebleEdit] = React.useState({});
   const setMedidaMueble = (i, campo, val) => {
@@ -2106,14 +2198,14 @@ function EditorPuertas({
         const ov = puertasEditadas[rawIndex] || {};
         const alto = _mm(ov.alto, item.largo);
         const ancho = _mm(ov.ancho, item.ancho);
-        const uds = Number(item.cantidad) || 1;
+        const uds = _uds(puertasEditadas, rawIndex, item);
         if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * uds;
         else sinMedida += 1;
       } else if (category === 'COSTADOS') {
         const ov = costadosEditados[rawIndex] || {};
         const alto = _mm(ov.alto, item.largo);
         const ancho = _mm(ov.ancho, item.ancho);
-        const uds = Number(item.cantidad) || 1;
+        const uds = _uds(costadosEditados, rawIndex, item);
         if (alto > 0 && ancho > 0) total += (alto / 1000) * (ancho / 1000) * uds;
         else sinMedida += 1;
       } else if (category === 'MUEBLES') {
@@ -2274,20 +2366,20 @@ function EditorPuertas({
           const ov = puertasEditadas[rawIndex] || {};
           const alto = Number(ov.alto ?? item.largo) || 0;
           const ancho = Number(ov.ancho ?? item.ancho) || 0;
-          const uds = Number(item.cantidad) || 1;
+          const uds = _uds(puertasEditadas, rawIndex, item);
           const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : 0;
           return [idx + 1, 'Puerta', item.cod || '—', item.descripcion, uds, alto || '—', ancho || '—', area ? area.toFixed(4) : '—'];
         } else if (category === 'COSTADOS') {
           const ov = costadosEditados[rawIndex] || {};
           const alto = _mm(ov.alto, item.largo);
           const ancho = _mm(ov.ancho, item.ancho);
-          const uds = Number(item.cantidad) || 1;
+          const uds = _uds(costadosEditados, rawIndex, item);
           const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : 0;
           return [idx + 1, 'Costado', item.cod || '—', item.descripcion, uds, alto || '—', ancho || '—', area ? area.toFixed(4) : '—'];
         } else if (category === 'REGLETAS') {
           const ov = regletasEditadas[rawIndex] || {};
           const largo = Number(ov.largo ?? item.largo) || 0;
-          const uds = Number(item.cantidad) || 1;
+          const uds = _uds(regletasEditadas, rawIndex, item);
           return [idx + 1, 'Regleta/Zócalo', item.cod || '—', item.descripcion, uds, largo || '—', '—', '—'];
         } else {
           const pm = item._puertasMueble || {};
@@ -2606,9 +2698,10 @@ function EditorPuertas({
 
                 if (category === 'CASCOS') {
                   const acbNombre = item._acb ? (item._acb._name || item._acb.tipo) : 'Sin emparejar';
-                  const uds = Number(item.cantidad || item._uds) || 1;
-                  const alto = Number(item.largo) || 0;
-                  const ancho = Number(item.ancho) || 0;
+                  const ov = cascosEditados[rawIndex] || {};
+                  const uds = _uds(cascosEditados, rawIndex, item);
+                  const alto = Number(ov.alto ?? item.largo) || 0;
+                  const ancho = Number(ov.ancho ?? item.ancho) || 0;
                   const costeNeto = Number(item._casco) || 0;
                   return (
                     <tr key={id} className={`hover:bg-purple-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-purple-50/20'}`}>
@@ -2625,10 +2718,17 @@ function EditorPuertas({
                       <td className="px-2.5 py-2 text-slate-800 max-w-[240px]" title={item.descripcion}>
                         <div className="font-bold text-slate-900">{item.descripcion}</div>
                         <div className="text-[10px] text-purple-700 font-medium">ACB: {acbNombre}</div>
+                        <CampoNota mapa={cascosEditados} set={setMedidaCasco} i={rawIndex} />
                       </td>
-                      <td className="px-2.5 py-2 text-center font-bold text-slate-800">{uds}</td>
-                      <td className="px-2.5 py-2 text-center font-mono font-bold text-slate-800">{alto || '—'}</td>
-                      <td className="px-2.5 py-2 text-center font-mono font-bold text-slate-800">{ancho || '—'}</td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? item._uds ?? 1)} onChange={e => setMedidaCasco(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-purple-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.alto ?? (item.largo || '')} onChange={e => setMedidaCasco(rawIndex, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-purple-300 rounded text-center text-xs font-bold" />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" value={ov.ancho ?? (item.ancho || '')} onChange={e => setMedidaCasco(rawIndex, 'ancho', e.target.value)} className="w-16 px-1 py-0.5 border border-purple-300 rounded text-center text-xs font-bold" />
+                      </td>
                       <td className="px-2.5 py-2 text-right font-mono text-slate-400">—</td>
                       {!ocultarImportes && <td className="px-2.5 py-2 text-center text-slate-400">—</td>}
                       {verEuros && <td className="px-2.5 py-2 text-right font-bold text-purple-900">{costeNeto > 0 ? eur(costeNeto) : '—'}</td>}
@@ -2638,7 +2738,7 @@ function EditorPuertas({
                   const ov = puertasEditadas[rawIndex] || {};
                   const alto = Number(ov.alto ?? item.largo) || 0;
                   const ancho = Number(ov.ancho ?? item.ancho) || 0;
-                  const uds = Number(item.cantidad) || 1;
+                  const uds = _uds(puertasEditadas, rawIndex, item);
                   const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : null;
                   const pm2Propio = Number(ov.pm2) > 0 ? Number(ov.pm2) : pm2;
                   const total = area && pm2Propio > 0 ? area * pm2Propio : null;
@@ -2654,8 +2754,13 @@ function EditorPuertas({
                         </span>
                       </td>
                       <td className="px-2.5 py-2 font-mono font-bold text-amber-900">{item.cod || '—'}</td>
-                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
-                      <td className="px-2.5 py-2 text-center font-bold text-slate-700">{uds}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px]" title={item.descripcion}>
+                        <div className="truncate">{item.descripcion}</div>
+                        <CampoNota mapa={puertasEditadas} set={setMedida} i={rawIndex} />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? 1)} onChange={e => setMedida(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-amber-300 rounded text-center text-xs font-bold" />
+                      </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" value={ov.alto ?? (item.largo || '')} onChange={e => setMedida(rawIndex, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-amber-300 rounded text-center text-xs font-bold" />
                       </td>
@@ -2675,7 +2780,7 @@ function EditorPuertas({
                   const ov = costadosEditados[rawIndex] || {};
                   const alto = _mm(ov.alto, item.largo);
                   const ancho = _mm(ov.ancho, item.ancho);
-                  const uds = Number(item.cantidad) || 1;
+                  const uds = _uds(costadosEditados, rawIndex, item);
                   const area = alto > 0 && ancho > 0 ? (alto / 1000) * (ancho / 1000) * uds : null;
                   return (
                     <tr key={id} className={`hover:bg-blue-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-blue-50/20'}`}>
@@ -2689,8 +2794,13 @@ function EditorPuertas({
                         </span>
                       </td>
                       <td className="px-2.5 py-2 font-mono font-bold text-blue-900">{item.cod || '—'}</td>
-                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
-                      <td className="px-2.5 py-2 text-center font-bold text-slate-700">{uds}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px]" title={item.descripcion}>
+                        <div className="truncate">{item.descripcion}</div>
+                        <CampoNota mapa={costadosEditados} set={setMedidaCostado} i={rawIndex} />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? 1)} onChange={e => setMedidaCostado(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-blue-300 rounded text-center text-xs font-bold" />
+                      </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" value={ov.alto ?? (item.largo || '')} onChange={e => setMedidaCostado(rawIndex, 'alto', e.target.value)} className="w-16 px-1 py-0.5 border border-blue-300 rounded text-center text-xs font-bold" />
                       </td>
@@ -2705,7 +2815,7 @@ function EditorPuertas({
                 } else if (category === 'REGLETAS') {
                   const ov = regletasEditadas[rawIndex] || {};
                   const largo = Number(ov.largo ?? item.largo) || 0;
-                  const uds = Number(item.cantidad) || 1;
+                  const uds = _uds(regletasEditadas, rawIndex, item);
                   return (
                     <tr key={id} className={`hover:bg-emerald-50/50 transition-colors ${!active ? 'opacity-40 bg-slate-50' : 'bg-emerald-50/20'}`}>
                       <td className="px-2.5 py-2 text-center">
@@ -2718,8 +2828,13 @@ function EditorPuertas({
                         </span>
                       </td>
                       <td className="px-2.5 py-2 font-mono font-bold text-emerald-900">{item.cod || '—'}</td>
-                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px] truncate" title={item.descripcion}>{item.descripcion}</td>
-                      <td className="px-2.5 py-2 text-center font-bold text-slate-700">{uds}</td>
+                      <td className="px-2.5 py-2 text-slate-800 max-w-[220px]" title={item.descripcion}>
+                        <div className="truncate">{item.descripcion}</div>
+                        <CampoNota mapa={regletasEditadas} set={setMedidaRegleta} i={rawIndex} />
+                      </td>
+                      <td className="px-2.5 py-2 text-center">
+                        <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? 1)} onChange={e => setMedidaRegleta(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-emerald-300 rounded text-center text-xs font-bold" />
+                      </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" value={ov.largo ?? (item.largo || '')} onChange={e => setMedidaRegleta(rawIndex, 'largo', e.target.value)} className="w-20 px-1 py-0.5 border border-emerald-300 rounded text-center text-xs font-bold" />
                       </td>
