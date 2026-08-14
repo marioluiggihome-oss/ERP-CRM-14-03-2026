@@ -2109,7 +2109,12 @@ function EditorPuertas({
   // Observacion por linea: viaja al PDF del proveedor y al pedido.
   const _nota = (mapa, i) => ((mapa || {})[i] || {}).nota || '';
 
-  const CampoNota = ({ mapa, set, i }) => (
+  // OJO: esto NO puede ser un componente definido aquí dentro. Un componente
+  // declarado en el cuerpo de otro es un tipo NUEVO en cada render, así que
+  // React desmonta y vuelve a montar el input en cada pulsación: se escribe una
+  // letra, el campo pierde el foco y hay que volver a tocarlo para la siguiente.
+  // Es una función que devuelve JSX, no un componente: el input es el mismo.
+  const campoNota = (mapa, set, i) => (
     <input
       type="text"
       value={_nota(mapa, i)}
@@ -2718,7 +2723,7 @@ function EditorPuertas({
                       <td className="px-2.5 py-2 text-slate-800 max-w-[240px]" title={item.descripcion}>
                         <div className="font-bold text-slate-900">{item.descripcion}</div>
                         <div className="text-[10px] text-purple-700 font-medium">ACB: {acbNombre}</div>
-                        <CampoNota mapa={cascosEditados} set={setMedidaCasco} i={rawIndex} />
+                        {campoNota(cascosEditados, setMedidaCasco, rawIndex)}
                       </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? item._uds ?? 1)} onChange={e => setMedidaCasco(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-purple-300 rounded text-center text-xs font-bold" />
@@ -2756,7 +2761,7 @@ function EditorPuertas({
                       <td className="px-2.5 py-2 font-mono font-bold text-amber-900">{item.cod || '—'}</td>
                       <td className="px-2.5 py-2 text-slate-800 max-w-[220px]" title={item.descripcion}>
                         <div className="truncate">{item.descripcion}</div>
-                        <CampoNota mapa={puertasEditadas} set={setMedida} i={rawIndex} />
+                        {campoNota(puertasEditadas, setMedida, rawIndex)}
                       </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? 1)} onChange={e => setMedida(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-amber-300 rounded text-center text-xs font-bold" />
@@ -2796,7 +2801,7 @@ function EditorPuertas({
                       <td className="px-2.5 py-2 font-mono font-bold text-blue-900">{item.cod || '—'}</td>
                       <td className="px-2.5 py-2 text-slate-800 max-w-[220px]" title={item.descripcion}>
                         <div className="truncate">{item.descripcion}</div>
-                        <CampoNota mapa={costadosEditados} set={setMedidaCostado} i={rawIndex} />
+                        {campoNota(costadosEditados, setMedidaCostado, rawIndex)}
                       </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? 1)} onChange={e => setMedidaCostado(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-blue-300 rounded text-center text-xs font-bold" />
@@ -2830,7 +2835,7 @@ function EditorPuertas({
                       <td className="px-2.5 py-2 font-mono font-bold text-emerald-900">{item.cod || '—'}</td>
                       <td className="px-2.5 py-2 text-slate-800 max-w-[220px]" title={item.descripcion}>
                         <div className="truncate">{item.descripcion}</div>
-                        <CampoNota mapa={regletasEditadas} set={setMedidaRegleta} i={rawIndex} />
+                        {campoNota(regletasEditadas, setMedidaRegleta, rawIndex)}
                       </td>
                       <td className="px-2.5 py-2 text-center">
                         <input type="number" min="1" value={ov.uds ?? (item.cantidad ?? 1)} onChange={e => setMedidaRegleta(rawIndex, 'uds', e.target.value)} className="w-14 px-1 py-0.5 border border-emerald-300 rounded text-center text-xs font-bold" />

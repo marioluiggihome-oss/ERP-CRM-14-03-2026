@@ -1037,12 +1037,27 @@ async def seed_default_factories():
                 logger.debug(f"Skip seed factory {factory['id']}: {e}")
 
 
-# Ejecutar seed al importar el módulo
-try:
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        asyncio.create_task(seed_default_factories())
-    else:
-        loop.run_until_complete(seed_default_factories())
-except RuntimeError:
-    pass  # Ya hay un event loop corriendo
+# LA SIEMBRA NO SE HACE AL IMPORTAR. LA HACE `server.py` AL ARRANCAR.
+#
+# Aquí había un `loop.run_until_complete(seed_default_factories())` a nivel de
+# módulo: una consulta a Mongo DURANTE EL IMPORT de la ruta. Y el `except` solo
+# recogía `RuntimeError`, que es lo que lanza asyncio — no lo que lanza la base
+# de datos.
+#
+# Consecuencia: si Mongo tarda en levantar o está un momento inaccesible cuando
+# arranca el contenedor —que es justo cuando arranca todo a la vez—, la consulta
+# lanza `ServerSelectionTimeoutError`, el import de `routes.fabrica` revienta,
+# `server.py` no llega a construir la app y EL ERP ENTERO NO ARRANCA. No es que
+# falte el listado de fábricas: es que no hay web, y el log habla de fábricas.
+#
+# Sembrar unas fábricas por defecto es lo menos importante que hace este módulo.
+# Nunca puede decidir si el ERP arranca o no.
+async def sembrar_fabricas_por_defecto() -> None:
+    """Siembra las fábricas por defecto sin poder tumbar el arranque."""
+    try:
+        await seed_default_factories()
+    except Exception as e:      # noqa: BLE001 — a propósito: de aquí no sale nada
+        logger.error(
+            "No se pudieron sembrar las fábricas por defecto (%s: %s). El ERP "
+            "arranca igual; revisa la conexión con la base de datos.",
+            type(e).__name__, e)

@@ -2497,6 +2497,16 @@ app.include_router(api_router)
 @app.on_event("startup")
 async def startup_event():
     """Configure scheduled backups and database indexes on startup"""
+    # Fábricas por defecto. Antes se sembraban DURANTE EL IMPORT de
+    # `routes.fabrica`, así que una base de datos que tardara en levantar
+    # impedía arrancar el ERP entero. Aquí ya hay app y event loop, y el fallo
+    # se queda en el log: sin fábricas de ejemplo se puede trabajar; sin web, no.
+    try:
+        from routes.fabrica import sembrar_fabricas_por_defecto
+        await sembrar_fabricas_por_defecto()
+    except Exception as e:
+        logger.error(f"Siembra de fábricas por defecto omitida: {e}")
+
     # =============================================
     # ÍNDICES DE BASE DE DATOS - Fortalecer integridad
     # =============================================
