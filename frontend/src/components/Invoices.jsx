@@ -513,8 +513,10 @@ const Invoices = ({ currentUser, state }) => {
 
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-y-auto p-4 sm:p-6 pb-36 space-y-4">
-      {/* Cabecera Principal */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
+      {/* Cabecera Principal. `hueco-logo` le deja sitio al botón flotante del
+          logo: con el menú plegado se le comía el icono y el principio del
+          título. */}
+      <div className="hueco-logo bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-orange-600 border border-orange-400/40 flex items-center justify-center shadow-lg shadow-orange-600/30">
             <Receipt size={26} className="text-white" />

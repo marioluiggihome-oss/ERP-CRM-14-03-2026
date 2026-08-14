@@ -217,16 +217,19 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         del_suelo = [e for e in elementos
                      if e["pared_idx"] == pidx and e.get("fila") == "bajo"]
         escritos = [e for e in del_suelo if e.get("medida_escrita")]
-        if del_suelo:
+        # SOLO si hay cotas escritas. Sin esta condición el ancho de pared pasaba
+        # a ser SIEMPRE la suma de los módulos, y entonces cualquier composición
+        # "cabía": la pared se estiraba hasta ella. Así, una pared de 324 cm con
+        # 310 cm de muebles se convertía en una pared de 310 (y el hueco de 14 cm
+        # desaparecía del plano), y 240 cm de electrodomésticos "cabían" en una
+        # pared de 120. El validador dejaba de validar nada.
+        if escritos:
             suma = sum(e["ancho"] for e in del_suelo)
-            if suma > 0 and en_rango(suma, "ancho_pared"):
-                if suma != pared["ancho"]:
-                    avisos.append(f"Pared {pidx+1}: el ancho se ajusta a la suma real de módulos ({suma} cm).")
-                    pared["ancho"] = suma
-            avisos.append(
-                f"Pared {pidx+1}: el ancho pasa de {pared['ancho']} cm (estimado) a "
-                f"{suma} cm, que es lo que suman las medidas escritas en el plano.")
-            pared["ancho"] = int(suma)
+            if suma > 0 and en_rango(suma, "ancho_pared") and suma != pared["ancho"]:
+                avisos.append(
+                    f"Pared {pidx+1}: el ancho pasa de {pared['ancho']} cm (estimado) a "
+                    f"{suma} cm, que es lo que suman las medidas escritas en el plano.")
+                pared["ancho"] = int(suma)
 
     # Cuadrar cada pared: la suma de anchos DEBE coincidir con el ancho de pared.
     # Criterio de arquitecto técnico:

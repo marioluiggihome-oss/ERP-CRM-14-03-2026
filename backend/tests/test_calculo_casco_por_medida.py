@@ -138,7 +138,10 @@ def test_ninguna_pantalla_se_hace_su_propia_conversion():
 
 def test_el_emparejamiento_convierte_antes_de_comparar():
     src = _leer(CASCOS)
-    i = src.index("const famOf = (t) =>")   # el emparejador, no el comentario
+    # `const` para caer en el emparejador y no en el comentario que lo explica.
+    # La firma cambió de (t) a (det) al pasarle el mueble entero en vez del
+    # tipo suelto: el candado se ancla en el nombre, no en los parámetros.
+    i = src.index("const famOf = (")
     trozo = src[i:i + 4000]
     assert "aMilimetros(det.ancho)" in trozo, (
         "el ancho se compara sin convertir: 60 contra 600 no da error, da el "

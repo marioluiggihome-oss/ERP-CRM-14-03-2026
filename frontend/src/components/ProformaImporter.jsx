@@ -441,8 +441,12 @@ const COLUMNAS = [
   { clave: 'destino', etiqueta: 'Pedido a',          ancho: 112 },
 ];
 
-// Columnas opcionales que se pliegan con 'Ver desglose'
-const COLUMNAS_DESGLOSE = ['alvic', 'tarifa', 'mat'];
+// Columnas opcionales que se pliegan con 'Ver desglose'.
+// Son el DESGLOSE del coste, no el coste: plegadas siguen quedando Mano Obra,
+// Puertas y Total Línea, que es lo que se mira para presupuestar. Con las cinco
+// desplegadas la tabla no cabe en pantalla ni al 100 %, que es lo que reportó el
+// master: se salía por la derecha y había que ir arrastrando.
+const COLUMNAS_DESGLOSE = ['alvic', 'tarifa', 'cascoE', 'herraje', 'mat'];
 
 // Plegada, la columna Código enseña seis caracteres; desplegada tiene dentro un
 // campo para escribirlo. Son dos anchos distintos y no se puede tener uno solo.

@@ -53,8 +53,18 @@ def test_al_cambiar_de_tarifa_se_recalcula_lo_ya_metido():
     """Dejar los muebles con el precio de la tarifa anterior daria un
     presupuesto MEZCLADO: unas lineas a un precio y otras a otro."""
     src = _leer(REVIEW)
-    assert "puntosLocal(m, m.alto)" in src, (
+    assert "puntosLocal(m, m.alto" in src, (
         "al cambiar de tarifa no se recalculan los muebles ya aniadidos")
+    # Y se revaloran con la MISMA funcion que todo lo demas. Aqui hubo una copia
+    # de la formula del precio y las dos ya se habian separado: una miraba
+    # `m.alto` y la otra se inventaba un alto por defecto, o sea que el mismo
+    # mueble valia una cosa u otra segun por donde se hubiera valorado.
+    i = src.index("setTodasTarifasData(prev =>")   # el efecto, no el useState
+    cuerpo = src[i:i + 900]
+    assert "puntosLocal(" in cuerpo, (
+        "al cambiar de tarifa se vuelve a valorar con una copia de la formula "
+        "en vez de con `puntosLocal`: las dos copias acabaran diciendo cosas "
+        "distintas del mismo mueble")
 
 
 def test_hay_endpoint_que_lista_las_tarifas_con_sus_acabados():
@@ -99,19 +109,43 @@ def test_el_acabado_ZENIT_sigue_siendo_T4():
 # ─── 2. La mano de la puerta ────────────────────────────────────────────────
 
 def test_se_puede_decidir_la_mano_en_la_linea():
-    """CANDADO. Un «AV30D/I» sin decidir llega al taller y lo decide el taller."""
+    """CANDADO. Un «AV30D/I» sin decidir llega al taller y lo decide el taller.
+
+    La decision se toma linea a linea (`rotarMano`, que va girando D -> I ->
+    D/I con un toque, que es lo que se puede hacer en una tablet) o de golpe
+    para las que queden sin decidir (`fijarTodasManos`)."""
     src = _leer(REVIEW)
-    assert "manoDe" in src and "setMano" in src, (
+    assert "manoDe" in src, "ya no se sabe si una linea lleva mano o no"
+    assert "rotarMano" in src and "fijarTodasManos" in src, (
         "no se puede decidir la mano: los codigos salen como D/I y la mano la "
         "acaba eligiendo quien fabrica")
 
 
-def test_la_mano_cambia_SOLO_el_sufijo_del_codigo():
+@pytest.mark.parametrize("funcion", ["const rotarMano", "const fijarTodasManos"])
+def test_la_mano_cambia_SOLO_el_sufijo_del_codigo(funcion):
     """El resto del codigo es el mueble. Tocarlo seria cambiar de mueble."""
     src = _leer(REVIEW)
-    i = src.index("const setMano")
+    i = src.index(funcion)
     cuerpo = src[i:i + 500]
-    assert "replace(/(D\\/I|D|I)$/i" in cuerpo
+    assert "replace(/(D\\/I|D|I)$/i" in cuerpo or "replace(/(D\\/I)$/i" in cuerpo, (
+        f"«{funcion}» ya no toca solo el sufijo: esta cambiando el codigo del "
+        f"mueble, o sea pidiendo otro mueble")
+
+
+def test_el_precio_no_se_congela_al_decidir_la_mano():
+    """CANDADO DE DINERO. En la tarifa el codigo lleva la mano SIN decidir
+    («AE60D/I»). En cuanto se decide («AE60D») ese codigo ya no existe en la
+    tarifa: buscando solo por el codigo de la linea no se encuentra nada, se
+    devuelve el precio anterior y la linea se queda con la tarifa vieja.
+
+    No da ningun error. Da un presupuesto mezclado: unas lineas a una tarifa y
+    otras a otra. Salio cuando el master pregunto «de donde sacas este valor»."""
+    src = _leer(REVIEW)
+    i = src.index("const puntosLocal")
+    cuerpo = src[i:i + 900]
+    assert "baseCod" in cuerpo, (
+        "al valorar se busca solo por el codigo con la mano ya decidida: no se "
+        "encuentra en la tarifa y el precio se queda congelado")
 
 
 def test_se_avisa_antes_de_volcar_con_manos_sin_decidir():
@@ -121,6 +155,35 @@ def test_se_avisa_antes_de_volcar_con_manos_sin_decidir():
     i = src.index("const confirmar")
     cuerpo = src[i:i + 900]
     assert "sinMano" in cuerpo and "confirm" in cuerpo
+
+
+def test_una_mano_sin_decidir_no_se_imprime_como_izquierda():
+    """CANDADO. `'AV30D/I'.endsWith('I')` es CIERTO. Con esa comprobacion, una
+    puerta SIN mano decidida salia impresa —y copiada al WhatsApp— como «Izq»:
+    el taller la fabricaba a la izquierda sin que nadie lo hubiera decidido, y
+    en el papel no habia ni rastro de que estuviera sin decidir.
+
+    La mano se lee con `manoDe`, que distingue las TRES situaciones: sin mano,
+    sin decidir y decidida."""
+    # Se mira el CODIGO, no los comentarios: «endsWith» aparece a proposito en
+    # las notas que explican por que NO se usa.
+    codigo = "\n".join(l.split("//")[0] for l in _leer(REVIEW).splitlines())
+    for sufijo in ("D", "I"):
+        for comilla in ("'", '"'):
+            assert f"endsWith({comilla}{sufijo}{comilla})" not in codigo, (
+                "se vuelve a leer la mano con `endsWith`: «D/I» acaba en «I» y "
+                "una puerta sin decidir se dara por izquierda")
+
+
+def test_la_observacion_sale_impresa_y_no_solo_en_pantalla():
+    """El master la pidio «para que salga al imprimir el presupuesto». Una
+    observacion que solo se ve en pantalla no le sirve a quien fabrica."""
+    src = _leer(REVIEW)
+    i = src.index("const filasHtml")
+    cuerpo = src[i:i + 2000]
+    assert "m.nota" in cuerpo, (
+        "la observacion de la linea no se imprime: se escribe y se queda en la "
+        "pantalla, que es justo lo que no se pidio")
 
 
 def test_la_regla_del_sufijo_reconoce_los_codigos_reales():

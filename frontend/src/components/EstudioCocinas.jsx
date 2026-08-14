@@ -932,13 +932,24 @@ export default function EstudioCocinas({ state, setState }) {
   }, [render.imageUrl, plano.b64, alzado.b64, ficha.md, proy, watermark, defaultLogo]);
 
   const genAlzado = useCallback(async () => {
+    // El alzado se dibuja con las medidas REALES de las paredes; sin ellas no se
+    // inventa nada. Se avisa aquí en vez de mandar una petición que va a fallar:
+    // el usuario veía un error del servidor sin saber que le faltaba elegir la
+    // distribución en el panel de la izquierda.
+    //
+    // Aquí hubo una «distribución de respaldo» con dos paredes de 360 y 240 cm
+    // escritas a fuego. No fallaba: salía un alzado acotado, con pinta de bueno,
+    // de una cocina que no era la del cliente. Un plano con cotas inventadas se
+    // manda al taller y se fabrica.
+    if (!distribucion || !(distribucion.paredes || []).some(p => Number(p.ancho) > 0)) {
+      setAlzado(s => ({ ...s, status: 'error', b64: null,
+        msg: 'Falta la distribución: elígela en el panel de la izquierda (lineal, L, U…) y pon el ancho de cada pared.' }));
+      return;
+    }
     setAlzado(s => ({ ...s, status: 'loading', msg: 'Generando vista alámbrica acotada…', b64: null }));
     try {
-      const distEfectiva = (distribucion && (distribucion.paredes || []).some(p => Number(p.ancho) > 0))
-        ? distribucion
-        : { tipo: proy.tipo_distribucion || 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }, { id: 2, ancho: 240, elementos: [] }] };
-      const r = await apiPost('/alzado', { ...proy, distribucion_estructurada: distEfectiva });
-      setAlzado(s => ({ ...s, status: 'success', msg: `Alzados acotados generados (${r.paredes || 2} pared/es)`, b64: r.alzadoBase64 }));
+      const r = await apiPost('/alzado', { ...proy, distribucion_estructurada: distribucion });
+      setAlzado(s => ({ ...s, status: 'success', msg: `Alzados acotados generados (${r.paredes} pared/es)`, b64: r.alzadoBase64 }));
     } catch (err) {
       setAlzado(s => ({ ...s, status: 'error', msg: `Error al generar alzados: ${err.message}` }));
     }

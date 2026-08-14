@@ -665,6 +665,19 @@ class Render3DService:
                 "Produce a single photorealistic interior photograph of THAT SAME kitchen, "
                 "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
                 "NOT a new design — do not 'improve' it and do not substitute a nicer layout.\n\n"
+                "CLOSED COMPOSITION — THIS IS THE RULE THAT OVERRIDES THE OTHERS:\n"
+                "- The kitchen contains EXACTLY the modules that are drawn or written, and NOTHING ELSE. "
+                "Never add a module because a kitchen 'usually' has one there — no extra fridge, combi, "
+                "larder, broom unit, wine cooler or filler cabinet. If it is not drawn or written, IT DOES "
+                "NOT EXIST and it must NOT appear in the image.\n"
+                "- NEGATIONS ARE ORDERS TOO. If the text says something is NOT there ('no va combi', "
+                "'sin campana', 'no lleva columna', 'only a side panel'), that item MUST NOT be rendered. "
+                "A word appearing inside a negative sentence is a PROHIBITION, never a request. Read the "
+                "whole sentence before rendering anything named in it.\n"
+                "- A run of cabinets ENDS where the drawing ends. If the drawing shows only a side panel, "
+                "an end panel or a bare wall past the last module, render exactly that: a side panel or "
+                "empty wall. Do not close the run with an invented cabinet or column.\n"
+                "- Empty wall is a valid, correct result. Leave it empty.\n\n"
                 "THE DRAWING IS THE GROUND TRUTH FOR GEOMETRY:\n"
                 "- Reproduce the EXACT overall SHAPE of the kitchen (linear, L-shaped, U-shaped, "
                 "with island or peninsula) as drawn. If it is drawn as an L, it must be an L.\n"
@@ -679,7 +692,10 @@ class Render3DService:
                 "  · 'NEGRO' / 'BLANCO' / 'MADERA': apply the specified finish to the exact cabinet group indicated.\n"
                 "- CONTINUOUS STRAIGHT BACK WALL (LINEAR LAYOUT): in a linear elevation, every single base cabinet, wall unit and tall column is installed against ONE SINGLE FLAT CONTINUOUS BACK WALL in a single unbroken flush line. The countertop must end directly abutting against the vertical side panel of the oven tower column.\n"
                 "- DOORS AND DRAWERS MUST BE FULLY CLOSED: every single cabinet door, drawer, pull-out unit and lift-up flap MUST be rendered 100% COMPLETELY CLOSED and flush in its resting position.\n"
-                "- READ HANDWRITTEN SPANISH TECHNICAL LABELS AND CODES:\n"
+                "- READ HANDWRITTEN SPANISH TECHNICAL LABELS AND CODES. This is a DICTIONARY, not a "
+                "shopping list: each entry applies ONLY when that label is actually written on the "
+                "drawing (or stated affirmatively in the text) AND is not negated. Never render an item "
+                "just because its name appears in this list:\n"
                 "  · 'Frigo' / 'Frijo' / 'Frigorifico': render a DISTINCT, VISIBLE freestanding refrigerator exactly where drawn, with the appliance front exposed (never concealed by kitchen doors).\n"
                 "  · 'Combi': render a DISTINCT, VISIBLE freestanding combi refrigerator with exposed appliance front and clear upper/lower door split, exactly in the module drawn.\n"
                 "  · 'Combi integrable' / 'Frigo integrable': render an INTEGRATED combi refrigerator concealed behind kitchen cabinet doors, with fronts matching the exact colour, material, gola and handle system of the kitchen.\n"
@@ -989,29 +1005,49 @@ class Render3DService:
             provider=provider, reference_images=images,
         )
 
-    CROQUIS_SATURACION_MAX = 0.35    # saturación media admitida (permite bolígrafo rojo, azul, etc.)
-    CROQUIS_FONDO_CLARO_MIN = 0.30   # brillo medio mínimo para papel con iluminación interior
+    # Dos casos reales, y cada uno necesita su umbral:
+    #  · Croquis a LÁPIZ: casi sin color. Basta con exigir poca saturación.
+    #  · Croquis a BOLÍGRAFO rojo/azul: el trazo sí tiene color, pero es un trazo
+    #    fino: el papel sigue ocupando casi toda la imagen.
+    # Lo que NO vale es medir el BRILLO medio: una foto de una cocina blanca da
+    # 0,85 y un croquis 0,97 — con el listón en 0,30 pasaban las dos, y una foto
+    # de la cocina del cliente tomada por croquis se rediseña entera en vez de
+    # editarse. Lo que separa el papel de una foto es cuánta imagen es papel.
+    CROQUIS_SATURACION_MAX = 0.10       # lápiz/grafito: casi sin color
+    CROQUIS_SATURACION_TINTA_MAX = 0.35  # bolígrafo rojo/azul
+    CROQUIS_FONDO_CLARO_MIN = 0.55      # fracción de píxeles casi blancos (papel)
+    CROQUIS_FONDO_CLARO_TINTA_MIN = 0.80  # con tinta de color se exige más papel
 
     def _parece_dibujo_a_mano(self, raw_b64):
-        """Detecta si la imagen es un croquis/plano dibujado sobre papel (a lápiz,
-        bolígrafo rojo/azul, rotulador) fotografiado con móvil o escaneado."""
+        """¿Este mapa de bits es un croquis/plano a mano y no la FOTO de una
+        cocina real? Papel + trazo = casi sin color y con mucho fondo claro.
+
+        CONSERVADOR a propósito: ante la duda devuelve False y la imagen se
+        sigue tratando como foto, que es el comportamiento de siempre.
+        Confundir una foto con un croquis también estropea el render."""
         try:
             import base64
             import io
-            from PIL import Image, ImageStat
+            from PIL import Image, ImageChops, ImageStat
             raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
             img = Image.open(io.BytesIO(base64.b64decode(raw))).convert("RGB")
             img.thumbnail((160, 160))
-            
-            # Saturación y brillo general
-            hsv = img.convert("HSV")
-            saturacion = ImageStat.Stat(hsv.split()[1]).mean[0] / 255.0
-            brillo = ImageStat.Stat(hsv.split()[2]).mean[0] / 255.0
-            
-            # Si el brillo es de papel (> 0.35) y la saturación no es de una foto de exterior (< 0.35)
-            if saturacion <= self.CROQUIS_SATURACION_MAX and brillo >= self.CROQUIS_FONDO_CLARO_MIN:
+            # Saturación media: en HSV de PIL es (max-min)/max, justo lo que
+            # separa un trazo de lápiz (gris) de una cocina real (con color).
+            saturacion = ImageStat.Stat(img.convert("HSV").split()[1]).mean[0] / 255.0
+            # Fracción de píxeles casi blancos = el papel. Se mira el canal MÁS
+            # OSCURO de cada píxel: blanco de verdad es alto en R, G y B a la vez.
+            r, g, b = img.split()
+            minimo = ImageChops.darker(ImageChops.darker(r, g), b)
+            fondo_claro = ImageStat.Stat(
+                minimo.point(lambda v: 255 if v >= 200 else 0)).mean[0] / 255.0
+            if (saturacion <= self.CROQUIS_SATURACION_MAX
+                    and fondo_claro >= self.CROQUIS_FONDO_CLARO_MIN):
                 return True
-            return False
+            # Trazo de color: se admite más saturación, pero el papel tiene que
+            # mandar de forma clara. Una foto de cocina no llega a este fondo.
+            return (saturacion <= self.CROQUIS_SATURACION_TINTA_MAX
+                    and fondo_claro >= self.CROQUIS_FONDO_CLARO_TINTA_MIN)
         except Exception as e:
             logger.debug(f"No se pudo analizar la referencia como croquis: {e}")
             return False

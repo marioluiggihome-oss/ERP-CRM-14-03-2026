@@ -1,3 +1,7 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Servicio de prospección B2B basado exclusivamente en datos trazables de Apollo.
 
 No devuelve directorios estáticos, contactos inventados ni resultados generados por IA.

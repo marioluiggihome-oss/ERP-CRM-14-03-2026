@@ -99,8 +99,11 @@ def test_ia3_usa_flux_pro_y_no_la_version_barata():
 
 def test_el_motivo_de_cada_modelo_queda_escrito_en_el_codigo():
     """Un modelo cambiado no rompe nada: solo empeora el resultado. Sin el
-    porqué al lado, el siguiente que pase lo vuelve a cambiar."""
-    assert "fidelidad al boceto" in _leer(VISION), \
+    porqué al lado, el siguiente que pase lo vuelve a cambiar.
+
+    Lo que se exige es que el porqué esté escrito, no una redacción concreta:
+    «fidelidad al boceto» y «fidelidad del boceto» dicen lo mismo."""
+    assert re.search(r"fidelidad (al|del) boceto", _leer(VISION)), \
         "se ha borrado la nota que explica por qué manda gemini-2.5-flash-image"
     assert "NO flux-schnell" in _leer(RENDER), \
         "se ha borrado la nota que explica por qué IA 3 va con Flux Pro"

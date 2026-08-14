@@ -175,24 +175,14 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           const newPv = d.pointValue || 3.33;
           setPv(newPv);
           setTodasTarifasData(prev => ({ ...prev, [tarifa]: { familias: d.familias, pv: newPv } }));
-          setMuebles(prev => prev.map(m => {
-            const baseCod = String(m.cod || '').replace(/(D\/I|D|I)$/i, '');
-            const info = d.familias?.[m.familia];
-            const e = info?.items?.[m.cod] || info?.items?.[baseCod];
-            if (e == null) return m;
-            let pvp = m.pvp;
-            if (Array.isArray(e)) {
-              const t = info.type;
-              let i = 0;
-              if (t === 'h7090') i = (m.alto || 90) >= 85 ? 1 : 0;
-              else if (t === 'h127147') i = (m.alto || 127) > 137 ? 1 : 0;
-              else if (t === 'h200220') i = (m.alto || 200) > 210 ? 1 : 0;
-              pvp = Math.round((e[i] || e[0]) * newPv * 100) / 100;
-            } else if (typeof e === 'number') {
-              pvp = Math.round(e * newPv * 100) / 100;
-            }
-            return { ...m, pvp };
-          }));
+          // Al cambiar de tarifa se revaloran los muebles YA metidos: dejarlos
+          // con el precio de la tarifa anterior daría un presupuesto MEZCLADO,
+          // unas líneas a un precio y otras a otro, sin ningún aviso.
+          // Se valora con la MISMA función que todo lo demás: aquí había una
+          // copia de la fórmula y las dos ya se habían separado.
+          setMuebles(prev => prev.map(m => ({
+            ...m, pvp: puntosLocal(m, m.alto, d.familias, newPv),
+          })));
         }
       })
       .catch(() => {});
@@ -243,9 +233,16 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     return OPCIONES_ALTURA[t] || null;
   };
 
-  const puntosLocal = (m, alto) => {
-    const info = familias?.[m.familia];
-    const e = info?.items?.[m.cod];
+  // El precio SIEMPRE sale de la tarifa. `fams`/`punto` permiten valorar con una
+  // tarifa recién descargada, antes de que el estado se haya actualizado.
+  const puntosLocal = (m, alto, fams = familias, punto = pv) => {
+    const info = fams?.[m.familia];
+    // En la tarifa el código lleva la mano SIN decidir («AE60D/I»). Una vez
+    // decidida («AE60D») ya no existe en la tarifa: buscando solo por `m.cod` no
+    // se encontraba nada, se devolvía el precio anterior y la línea se quedaba
+    // congelada a la tarifa vieja. No daba error: daba un presupuesto mezclado.
+    const baseCod = String(m.cod || '').replace(/(D\/I|D|I)$/i, '');
+    const e = info?.items?.[m.cod] ?? info?.items?.[`${baseCod}D/I`] ?? info?.items?.[baseCod];
     if (e == null) return m.pvp;
     if (Array.isArray(e)) {
       const t = info.type;
@@ -253,9 +250,9 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
       if (t === 'h7090') i = alto >= 85 ? 1 : 0;
       else if (t === 'h127147') i = alto > 137 ? 1 : 0;
       else if (t === 'h200220') i = alto > 210 ? 1 : 0;
-      return Math.round((e[i] || e[0]) * pv * 100) / 100;
+      return Math.round((e[i] || e[0]) * punto * 100) / 100;
     }
-    return typeof e === 'number' ? Math.round(e * pv * 100) / 100 : m.pvp;
+    return typeof e === 'number' ? Math.round(e * punto * 100) / 100 : m.pvp;
   };
 
   const setQty = (k, deltaOrVal, isDelta = false) => {
@@ -422,7 +419,10 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
       ancho: c.ancho,
       alto: alto,
       fondo: c.familia?.startsWith('ALTO') ? 33 : 58,
-      mano: c.cod.endsWith('D') ? 'D' : c.cod.endsWith('I') ? 'I' : '',
+      // «AV30D/I» acaba en «I»: con `endsWith` un mueble recién añadido del
+      // catálogo nacía con la mano puesta a izquierda sin que nadie la eligiera.
+      // Vacío = sin decidir, que es lo que de verdad se sabe al añadirlo.
+      mano: manoDe(c.cod) || '',
       qty: 1,
       pvp: pvp,
       encontrado: true,
@@ -459,8 +459,14 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
       `*Total Unidades:* ${totalUds} muebles`,
       `----------------------------------------`,
       ...muebles.map(m => {
-        const manoTxt = m.cod?.endsWith('D') ? ' [Dcha]' : m.cod?.endsWith('I') ? ' [Izq]' : '';
-        return `• ${m.qty}x *${m.cod}* (${m.ancho || '—'}x${m.alto || '—'} cm)${manoTxt} -> ${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}`;
+        // `endsWith('I')` es CIERTO para «AV30D/I»: una puerta sin decidir se
+        // copiaba como [Izq]. La mano sale de `manoDe`, que sí las distingue.
+        const mano = manoDe(m.cod);
+        const manoTxt = mano === 'D' ? ' [Dcha]' : mano === 'I' ? ' [Izq]'
+          : mano === null ? ' [MANO SIN DECIDIR]' : '';
+        const nota = (m.nota || '').trim();
+        return `• ${m.qty}x *${m.cod}* (${m.ancho || '—'}x${m.alto || '—'} cm)${manoTxt} -> ${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}`
+          + (nota ? `\n    _${nota}_` : '');
       }),
       `----------------------------------------`,
       `*TOTAL PRESUPUESTO:* ${eur(totalPvp)} + IVA`,
@@ -474,19 +480,36 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
   const imprimirPresupuesto = () => {
     const w = window.open('', '_blank');
     if (!w) return;
-    const filasHtml = muebles.map((m, idx) => `
-      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
+    // Lo que escriba el usuario va a un documento: se escapa. Un «<» suelto en
+    // una observación se comería el resto del presupuesto impreso.
+    const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const filasHtml = muebles.map((m, idx) => {
+      // OJO: `cod.endsWith('I')` es CIERTO para «AV30D/I», o sea que una puerta
+      // SIN mano decidida se imprimía como «Izq». El taller la fabricaba a la
+      // izquierda sin que nadie lo hubiera decidido. La mano sale de `manoDe`,
+      // que distingue las tres situaciones: sin mano, sin decidir, y decidida.
+      const mano = manoDe(m.cod);
+      const manoTxt = mano === 'D' ? 'Dcha' : mano === 'I' ? 'Izq'
+        : mano === null ? 'Sin decidir' : '—';
+      const nota = (m.nota || '').trim();
+      return `
+      <tr style="border-bottom: ${nota ? 'none' : '1px solid #e2e8f0'}; font-size: 13px;">
         <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #475569;">${idx + 1}</td>
         <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #4338ca;">${m.qty}</td>
-        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${m.cod || '—'}</td>
-        <td style="padding: 8px 12px; color: #475569;">${m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}</td>
+        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${esc(m.cod) || '—'}</td>
+        <td style="padding: 8px 12px; color: #475569;">${esc(m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble')}</td>
         <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.ancho ? m.ancho + ' cm' : '—'}</td>
         <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.alto ? m.alto + ' cm' : '—'}</td>
-        <td style="padding: 8px 12px; text-align: center; font-weight: bold;">${m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—'}</td>
+        <td style="padding: 8px 12px; text-align: center; font-weight: bold; ${mano === null ? 'color:#b45309;' : ''}">${manoTxt}</td>
         <td style="padding: 8px 12px; text-align: right; color: #334155;">${eur(m.pvp)}</td>
         <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #0f172a;">${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}</td>
       </tr>
-    `).join('');
+      ${nota ? `<tr style="border-bottom: 1px solid #e2e8f0; font-size: 12px;">
+        <td></td>
+        <td colspan="8" style="padding: 0 12px 8px 12px; color: #475569; font-style: italic;">${esc(nota)}</td>
+      </tr>` : ''}`;
+    }).join('');
 
     w.document.write(`<!DOCTYPE html>
       <html>
@@ -550,13 +573,43 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     w.print();
   };
 
-  const handlersCandado = usePulsacionLarga(() => {
+  // El candado del coste. `usePulsacionLarga` recibe SOLO la acción: el segundo
+  // argumento son OPCIONES ({ms}), no una segunda función. Pasarle ahí la pista
+  // hacía que no se llamara nunca y el aviso no salía jamás.
+  const largoCandado = usePulsacionLarga(() => {
     setVerCoste(v => !v);
     setPistaCandado('');
-  }, () => {
+  });
+
+  // Volcar es el último punto donde se puede mirar: después ya no se mira.
+  const confirmar = () => {
+    // Un código que acaba en «D/I» es una puerta SIN mano decidida. Si sale así
+    // hacia el taller la decide el taller: acierta la mitad de las veces, y la
+    // otra mitad es un frente desmontado y vuelto a taladrar en casa del
+    // cliente. Se decide delante del plano, que es donde se sabe.
+    if (sinMano > 0) {
+      const seguir = window.confirm(
+        `Hay ${sinMano} ${sinMano === 1 ? 'puerta' : 'puertas'} sin decidir la mano (el código acaba en «D/I»).\n\n` +
+        'Si se vuelca así, la mano la elegirá quien fabrique.\n\n' +
+        '¿Volcar de todas formas?');
+      if (!seguir) return;
+    }
+    // La observación de cada línea viaja con ella: si se queda aquí, se escribe
+    // y se pierde al volcar, que es peor que no poder escribirla.
+    const lineas = muebles.map(m => ({ ...m, nota: m.nota || '' }));
+    const contexto = { tarifa, acabadoCasco, valorPunto: pv };
+    if (onExportDesmontada) onExportDesmontada(lineas, contexto);
+    else if (onConfirm) onConfirm(lineas, contexto);
+  };
+
+  const clicCandado = (e) => {
+    // Al soltar el dedo el navegador manda TAMBIÉN un clic: sin `consumir()` la
+    // pulsación larga abre el candado y ese clic lo cierra en el mismo gesto.
+    if (largoCandado.consumir()) return;
+    if (e.shiftKey) { setVerCoste(v => !v); setPistaCandado(''); return; }
     setPistaCandado(AYUDA_CANDADO);
     setTimeout(() => setPistaCandado(''), 4000);
-  });
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
@@ -814,6 +867,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                   <th className="py-2 px-3 text-center">Ancho</th>
                   <th className="py-2 px-3 text-center">Alto</th>
                   <th className="py-2 px-3 text-center">Mano</th>
+                  <th className="py-2 px-3 text-left">Observación</th>
                   {verCoste && <th className="py-2 px-3 text-right text-purple-700" title="Coste Neto de Casco ACB">Casco Neto (ACB)</th>}
                   {verCoste && <th className="py-2 px-3 text-right text-purple-700" title={`Coste de Puertas según Tarifa ${tarifa}`}>Puertas ({tarifa})</th>}
                   {verCoste && <th className="py-2 px-3 text-right text-purple-700">Coste Total</th>}
@@ -913,6 +967,18 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                         )}
                       </td>
 
+                      {/* Observación de la línea: sale impresa en el presupuesto */}
+                      <td className="py-2.5 px-3">
+                        <input
+                          type="text"
+                          value={m.nota || ''}
+                          onChange={e => setNota(m._k, e.target.value)}
+                          placeholder="Observación…"
+                          title="Se imprime en el presupuesto, debajo de la línea"
+                          className="w-full min-w-[9rem] px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 outline-none focus:border-indigo-400 placeholder:text-slate-300"
+                        />
+                      </td>
+
                       {/* Coste y Margen (candado) */}
                       {verCoste && (
                         <td className="py-2.5 px-3 text-right font-mono text-purple-700 font-bold" title={`Neto ACB: ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
@@ -1007,9 +1073,11 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           <div className="flex items-center gap-4">
             <button
               type="button"
-              {...handlersCandado}
+              {...largoCandado.props}
+              onClick={clicCandado}
               className={`p-2 rounded-xl border transition-all ${verCoste ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
-              title="Shift + Clic para ver desglose de coste y margen"
+              title={AYUDA_CANDADO}
+              aria-label="Ver coste y margen"
             >
               {verCoste ? <Unlock size={16} /> : <Lock size={16} />}
             </button>
@@ -1038,11 +1106,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
               </button>
             )}
             <button
-              onClick={() => {
-                const contexto = { tarifa, acabadoCasco, valorPunto: pv };
-                if (onExportDesmontada) onExportDesmontada(muebles, contexto);
-                else if (onConfirm) onConfirm(muebles, contexto);
-              }}
+              onClick={confirmar}
               className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm shadow-xl shadow-emerald-600/20 transition-all flex items-center gap-2"
             >
               <CheckCircle2 size={18} /> {onExportDesmontada ? 'Cocina Desmontada' : 'Volcar al Presupuesto'}

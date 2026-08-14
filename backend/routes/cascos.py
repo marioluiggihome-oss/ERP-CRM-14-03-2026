@@ -574,22 +574,15 @@ from services.cambios_proyecto import cambios_sin_aprobar
 _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
 
-@router.get("/cascos/mv/tarifas")
-async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
-    """Las tarifas MV disponibles, CADA UNA CON SUS ACABADOS.
-
-    Hasta ahora la pantalla pedía siempre T1, escrito a fuego: se presupuestaba
-    todo a la tarifa más barata aunque la cocina fuera un ZENIT (T4) o un FENIX
-    (T5). No daba ningún error — daba un presupuesto barato.
-
-    Se devuelven los acabados porque es lo que se sabe al presupuestar: nadie
-    dice «esta cocina es una T4», dice «esta cocina es ZENIT». Elegir por número
-    de tarifa es pedirle al comercial que se sepa la tabla de memoria.
-    """
 def _can_use_mv(user: Optional[dict]) -> bool:
     return True
 
 
+# OJO: aquí estaba DOS VECES `@router.get("/cascos/mv/tarifas")`, y la primera se
+# había quedado sin cuerpo —solo el docstring—, o sea que devolvía `null`. Y era
+# la que mandaba: FastAPI resuelve por orden de registro, así que la buena (esta)
+# no se ejecutaba nunca. El desplegable de tarifas salía VACÍO y no había forma
+# de elegir grupo de precios. Sin error, sin traza, sin nada.
 @router.get("/cascos/mv/tarifas")
 async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
     """Las tarifas MV disponibles, CADA UNA CON SUS ACABADOS.
@@ -601,8 +594,11 @@ async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
     Se devuelven los acabados porque es lo que se sabe al presupuestar: nadie
     dice «esta cocina es una T4», dice «esta cocina es ZENIT». Elegir por número
     de tarifa es pedirle al comercial que se sepa la tabla de memoria.
+
+    SOLO MASTER: la tarifa es información de coste. La guarda va aquí, en el
+    endpoint, no en el botón: esconder el desplegable no cierra ninguna puerta.
     """
-    if not _can_use_mv(current_user):
+    if not _es_master(current_user):
         raise HTTPException(status_code=403, detail="Sin permiso para consultar tarifas MV.")
     try:
         with open(_MV_PATH, "r", encoding="utf-8") as f:
