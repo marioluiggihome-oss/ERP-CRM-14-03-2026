@@ -1659,6 +1659,13 @@ export default function AIRenderStudio({ state, setState }) {
           provider: providerOf(),
           referenceImage: dataUrl,
           referenceImages: editRefImage ? [editRefImage] : undefined,
+          // La imagen es un render NUESTRO: se dice, no se deja adivinar. Sin
+          // esto el servidor se lo pasaba al detector de croquis, y una cocina
+          // blanca —paredes, muebles y encimera blancos— tiene poco color y
+          // mucho claro, que es la firma del papel: la tomaba por un dibujo a
+          // mano y REHACÍA la cocina entera en vez de aplicar el cambio. Se
+          // pedía «cierra las puertas» y volvía otra cocina, con gavetas.
+          editingRender: true,
         }),
       });
       const data = await response.json();

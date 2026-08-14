@@ -70,12 +70,19 @@ def test_el_modelo_principal_de_imagen_es_el_que_sigue_el_boceto():
 
 
 def test_el_modelo_creativo_no_se_cuela_por_delante():
-    """gemini-3-pro puede quedarse como RESPALDO, nunca como principal."""
+    """gemini-3-pro no va NI de principal NI de respaldo.
+
+    Antes se le dejaba quedarse detrás. Ya no: un respaldo se usa justo el día
+    que falla el principal, o sea el día que nadie está mirando, y entonces el
+    render deja de seguir el boceto — pero sale igual de bonito, así que no se
+    nota en la imagen. Si algún día se quiere de verdad, que sea una decisión
+    del master y se escriba aquí; ver también
+    `test_el_respaldo_es_el_mismo_modelo_y_no_uno_mas_creativo`."""
     fuente = _leer(VISION)
     modelos = re.findall(r'"(gemini-[0-9a-z.\-]*image[0-9a-z.\-]*)"', fuente)
-    if "gemini-3-pro-image-preview" in modelos:
-        assert modelos.index("gemini-3-pro-image-preview") > 0, \
-            "gemini-3-pro-image-preview ha vuelto a ser el modelo principal"
+    assert "gemini-3-pro-image-preview" not in modelos, (
+        "gemini-3-pro-image-preview ha vuelto a la cascada: es más 'creativo' e "
+        "ignora el layout, o sea que se inventa la distribución del cliente")
 
 
 def test_ia3_usa_flux_pro_y_no_la_version_barata():
@@ -107,6 +114,35 @@ def test_el_motivo_de_cada_modelo_queda_escrito_en_el_codigo():
         "se ha borrado la nota que explica por qué manda gemini-2.5-flash-image"
     assert "NO flux-schnell" in _leer(RENDER), \
         "se ha borrado la nota que explica por qué IA 3 va con Flux Pro"
+
+
+def test_el_render_no_se_queda_sin_respaldo():
+    """Cuando Google retira o renombra un modelo, la llamada devuelve NOT_FOUND.
+    Con UN SOLO nombre en la lista, el Estudio 3D se queda sin renders de golpe
+    y sin nada a lo que caer: no es que salgan peor, es que no sale ninguno y la
+    fábrica se para. El respaldo tiene que existir."""
+    fuente = _leer(VISION)
+    modelos = re.findall(r'"(gemini-[0-9a-z.\-]*image[0-9a-z.\-]*)"', fuente)
+    assert len(modelos) >= 2, (
+        "la cascada de imagen se ha quedado con un solo modelo: el día que "
+        "Google le cambie el nombre, el Estudio 3D deja de generar renders")
+
+
+def test_el_respaldo_es_el_mismo_modelo_y_no_uno_mas_creativo():
+    """El respaldo está para cubrir un CAMBIO DE NOMBRE, no para cambiar de
+    motor. Si detrás se cuela uno más creativo, el día que falle el principal
+    el render dejará de seguir el boceto — y saldrá igual de bonito, así que
+    nadie lo notará mirando la imagen."""
+    fuente = _leer(VISION)
+    modelos = re.findall(r'"(gemini-[0-9a-z.\-]*image[0-9a-z.\-]*)"', fuente)
+    principal = modelos[0]
+    # La familia es el nombre sin el sufijo de publicación (-preview, -exp…).
+    familia = principal.replace("-preview", "").replace("-exp", "")
+    for m in modelos[1:]:
+        assert m.replace("-preview", "").replace("-exp", "") == familia, (
+            f"«{m}» no es el mismo modelo que «{principal}»: como respaldo "
+            f"cambia el motor, no solo el nombre, y la fidelidad al boceto "
+            f"dejaría de estar garantizada sin que se vea en la imagen")
 
 
 # ── Qué modelo hay detrás NO se le enseña al cliente ─────────────────────────

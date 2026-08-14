@@ -290,3 +290,72 @@ def test_una_foto_de_cocina_si_se_edita(servicio):
     assert "EDIT that exact image" in caja.get("task_prompt", ""), (
         "una foto real de cocina ha dejado de ir por el modo edición: ahora se "
         "rediseña entera en vez de aplicar solo el cambio pedido.")
+
+
+# ── EDITAR UN RENDER NUESTRO NO ES INTERPRETAR UN CROQUIS ────────────────────
+# 14/08/2026. El master tiene el render bien —la cocina en L, sus columnas, sus
+# puertas— escribe abajo «cierra las puertas de mueble placa», y vuelve OTRA
+# cocina: las puertas convertidas en gavetas, los altos movidos, la composicion
+# rehecha. No dio ningun error. Devolvio una cocina preciosa que no era la suya.
+#
+# El motivo: al editar se le pasaba el render al DETECTOR DE CROQUIS. Y su
+# cocina es blanca —paredes blancas, muebles blancos, encimera blanca—, o sea
+# poco color y mucho claro: exactamente la firma del papel. La tomaba por un
+# dibujo a mano y se iba por la rama de «construye lo que esta dibujado», que
+# reconstruye la cocina entera.
+#
+# El arreglo no es afinar el umbral: es no adivinar. Cuando el ERP edita SU
+# PROPIO render, lo sabe. Una procedencia conocida gana siempre a una heuristica.
+
+
+def _render_blanco():
+    """Un render nuestro de cocina blanca: poco color y mucho claro, que es lo
+    que el detector de croquis confunde con papel."""
+    img = Image.new("RGB", (800, 600), (250, 250, 249))
+    d = ImageDraw.Draw(img)
+    d.rectangle((0, 430, 800, 600), fill=(238, 236, 232))   # suelo claro
+    d.rectangle((40, 250, 760, 430), fill=(252, 252, 251))  # muebles bajos
+    d.rectangle((40, 235, 760, 252), fill=(246, 246, 245))  # encimera
+    d.rectangle((520, 60, 760, 200), fill=(251, 251, 250))  # muebles altos
+    return img
+
+
+def test_editar_el_render_propio_no_pasa_por_el_detector_de_croquis(servicio):
+    """CANDADO. `editing_render` dice la PROCEDENCIA: es nuestro, no se adivina."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="cierra las puertas de mueble placa",
+        reference_image=_a_data_url(_render_blanco()),
+        reference_mime="image/jpeg",
+        editing_render=True,
+        provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert "EDIT that exact image" in prompt, (
+        "editando un render NUESTRO se ha vuelto a la rama del croquis: en vez "
+        "de aplicar el cambio se rehace la cocina entera y vuelve otra")
+    assert "TECHNICAL 2D DRAWING" not in prompt, \
+        "el render propio se sigue tratando como un dibujo a mano"
+
+
+def test_cerrar_las_puertas_no_autoriza_a_cambiar_los_frentes(servicio):
+    """Lo que le paso al master: pidio CERRAR unas puertas y le devolvieron
+    gavetas. Cambiar el estado de algo no autoriza a cambiar el mueble."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="cierra las puertas de mueble placa",
+        reference_image=_a_data_url(_render_blanco()),
+        reference_mime="image/jpeg",
+        editing_render=True,
+        provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert "NEVER swap doors for drawers" in prompt, (
+        "el prompt de edicion ya no prohibe cambiar puertas por gavetas: "
+        "«cierra las puertas» volvera a devolver cajones")
+    # La frase del master, escrita en la REGLA. Se busca la regla ENTERA porque
+    # «cierra las puertas» tambien llega por lo que teclea el usuario, y
+    # entonces la comprobacion pasaria sin que la regla existiera.
+    assert "'cierra las puertas' means render those SAME doors" in prompt, \
+        "se ha quitado el ejemplo literal del master, que es el caso probado"
+    assert "never authorise changing the furniture itself" in prompt, (
+        "ya no se dice que una palabra de ESTADO (abierto/cerrado) no da "
+        "permiso para tocar el mueble")

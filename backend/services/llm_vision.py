@@ -472,10 +472,22 @@ async def search_with_gemini(
 # GENERACIÓN DE IMÁGENES (render) con Gemini — usado por Render 3D y Armarios
 # ============================================================================
 
-# IA1 utiliza intencionadamente un único modelo: la fidelidad del boceto no
-# debe variar por una cascada automática a motores más creativos.
+# IA1 utiliza intencionadamente un único MOTOR: la fidelidad del boceto no debe
+# variar por una cascada automática a motores más creativos (gemini-3-pro-image
+# es más "creativo" e ignora el layout: se inventa la distribución del cliente).
+#
+# Lo que sí lleva detrás es el MISMO modelo en su variante `-preview`. No es otro
+# motor: es el mismo, con el nombre que Google usa mientras lo publica. Está por
+# una razón concreta: cuando Google retira o renombra un modelo, la llamada
+# devuelve NOT_FOUND, y con un solo nombre en la lista el Estudio 3D se queda sin
+# renders de golpe y sin nada a lo que caer. Con esto, un cambio de nombre no
+# para la fábrica y la fidelidad no se toca, porque es el mismo modelo.
+#
+# El orden manda: el primero es el de producción. Si alguna vez se usa el
+# respaldo, queda escrito en el log en voz alta (ver más abajo).
 GEMINI_IMAGE_MODELS = [
     "gemini-2.5-flash-image",
+    "gemini-2.5-flash-image-preview",
 ]
 
 

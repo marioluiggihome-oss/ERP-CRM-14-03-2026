@@ -508,6 +508,7 @@ class Render3DService:
         reference_images: Optional[list] = None,
         project_type: Optional[str] = None,
         room_photo: bool = False,
+        editing_render: bool = False,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -557,7 +558,19 @@ class Render3DService:
         # o imagen con trazos a mano), NO es una foto a editar sino un plano del que
         # INTERPRETAR la distribución. En ese caso usamos la rama SIN referencia pero
         # pasando la imagen como guía de layout. (Si room_photo es True, NUNCA es croquis: es la estancia real).
-        is_sketch = False if room_photo else self._is_sketch_reference(reference_image, reference_mime)
+        #
+        # `editing_render` es la MISMA idea y por el mismo motivo: cuando el ERP
+        # edita SU PROPIO render, ya sabe lo que es y no hay nada que adivinar.
+        # Sin esto se le pasaba el render al detector de croquis, y una cocina
+        # blanca —paredes blancas, muebles blancos, encimera blanca— tiene poco
+        # color y mucho claro, que es justo la firma del papel. La tomaba por un
+        # dibujo y se iba por la rama de «construye lo que está dibujado»: en vez
+        # de cerrar las puertas que se le pedían, REHACÍA la cocina entera y
+        # devolvía otra distinta (puertas convertidas en gavetas, altos movidos).
+        # No daba ningún error: devolvía una cocina preciosa que no era la suya.
+        # Una procedencia conocida siempre gana a una heurística.
+        is_sketch = False if (room_photo or editing_render) else \
+            self._is_sketch_reference(reference_image, reference_mime)
 
         # ── AMUEBLADO VIRTUAL: la foto es la ESTANCIA REAL (vacía / a reformar) ──
         # No hay que EDITAR un mueble existente, sino DISEÑAR uno nuevo DENTRO de esa
@@ -625,6 +638,16 @@ class Render3DService:
                 "Do NOT redesign, reorganize, add, remove, move, resize or 'improve' anything that "
                 "is not explicitly requested."
                 + elemento_note + "\n\n"
+                "THE FRONTS OF EACH MODULE DO NOT CHANGE:\n"
+                "- Every module keeps the SAME KIND and NUMBER of fronts it already has. A module "
+                "with two hinged DOORS keeps two hinged doors; a module with drawers keeps exactly "
+                "those drawers. NEVER swap doors for drawers or drawers for doors, and never change "
+                "how many fronts a module has, unless the requested change says so in those words.\n"
+                "- 'Close the doors' / 'cierra las puertas' means render those SAME doors in their "
+                "CLOSED position. It does NOT mean remove them, replace them with drawers or a "
+                "solid panel, or rebuild the module. Same doors, same size, same hinges, shut.\n"
+                "- Words about the STATE of something (open/closed, on/off, light/dark) change only "
+                "that state. They never authorise changing the furniture itself.\n\n"
                 f"Requested change (apply ONLY this): {change or 'no change, just re-render faithfully'}.\n\n"
                 "Photorealistic result identical in composition to the reference, realistic PBR "
                 "materials, natural light and shadows, 16:9. It must look like the SAME kitchen as "
