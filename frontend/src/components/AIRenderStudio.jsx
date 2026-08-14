@@ -514,6 +514,44 @@ export default function AIRenderStudio({ state, setState }) {
   const [showOtras, setShowOtras] = useState(false); // barra master "otras herramientas" plegada
   const [watermarkOn, setWatermarkOn] = useState(false); // marca de agua con logo personalizado al descargar
   const markH = (mk) => (mk.h != null ? mk.h : MARK_TYPES[mk.type].h); // altura efectiva (cm)
+
+  // ── ARRASTRAR UN PUNTO ────────────────────────────────────────────────────
+  // Antes un punto solo se podía PONER de un clic: si caía torcido —y la IA los
+  // coloca aproximados— había que borrarlo y volver a ponerlo, a ojo, hasta
+  // acertar. Este papel se lo lleva el electricista a picar pared, así que
+  // colocarlo bien es el trabajo, no un adorno.
+  //
+  // Se usan eventos de PUNTERO (no de ratón) para que funcione igual con el
+  // dedo en la tablet, que es donde se revisa la obra.
+  const capaMarcasRef = useRef(null);
+  const arrastreRef = useRef(null);
+
+  const empezarArrastre = (i) => (e) => {
+    e.stopPropagation();
+    arrastreRef.current = { i, movido: false };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) { /* noop */ }
+  };
+
+  const seguirArrastre = (e) => {
+    const a = arrastreRef.current;
+    const capa = capaMarcasRef.current;
+    if (!a || !capa) return;
+    const r = capa.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const x = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100));
+    a.movido = true;
+    setMarks(m => m.map((mk, j) => (j === a.i ? { ...mk, x, y } : mk)));
+  };
+
+  const soltarArrastre = (e) => {
+    e.stopPropagation();
+    const a = arrastreRef.current;
+    arrastreRef.current = null;
+    // Un toque SIN mover abre el editor; si se ha arrastrado, no — o cada vez
+    // que se recoloca un punto se abriría el panel encima.
+    if (a && !a.movido) setEditMark(prev => (prev === a.i ? null : a.i));
+  };
   // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [colorTab, setColorTab] = useState('c1');
@@ -521,7 +559,16 @@ export default function AIRenderStudio({ state, setState }) {
   const paletteData = colorTab === 'c1' ? COLORES_1 : colorTab === 'c2' ? COLORES_2 : COLORES_3;
   const gamas = porGama(paletteData);
   // Panel izquierdo redimensionable/ocultable (solo en pantallas grandes).
-  const [panelW, setPanelW] = useState(280);
+  //
+  // Arrancaba en 280 px fijos. En ese ancho no cabe nada: las pestañas
+  // «Cocina / Armario / Vestidor / Baño» se parten en cuatro líneas, la
+  // descripción se lee en columnas de cinco palabras y hay que redimensionar a
+  // mano CADA VEZ que se abre. Se abre ya a media pantalla, que es donde se
+  // trabaja; sigue siendo redimensionable para el que lo quiera más estrecho.
+  const [panelW, setPanelW] = useState(() => {
+    if (typeof window === 'undefined') return 480;
+    return Math.round(Math.min(Math.max(window.innerWidth * 0.5, 420), 900));
+  });
   // En móvil/tablet el panel arranca oculto para que el render sea lo primero que se ve
   const [panelHidden, setPanelHidden] = useState(typeof window !== 'undefined' && window.innerWidth < 1024);
   // Saldo de renders y compra de packs (no caducan). Se abre solo al pulsar.
@@ -558,15 +605,22 @@ export default function AIRenderStudio({ state, setState }) {
     // arrastrando. Ahora llega hasta el 70% de la ventana, que es lo que hace
     // falta para leer una descripción larga o comparar acabados a gusto; se
     // deja siempre un hueco mínimo para que el render no desaparezca.
+    // Eventos de PUNTERO, no de ratón: así el tirador también se arrastra con
+    // el dedo. Con `mousemove` la barra no se podía mover en una tablet.
     const onMove = (e) => {
       if (!resizingPanel.current) return;
       const maximo = Math.max(420, Math.round(window.innerWidth * 0.7));
       setPanelW(Math.max(240, Math.min(maximo, e.clientX - 8)));
     };
     const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
   }, []);
   const [imgError, setImgError] = useState(false);    // la imagen del render no cargó
   // Visor orbital 360º: vistas de la misma cocina a distintos ángulos, girables con el ratón
@@ -741,14 +795,35 @@ export default function AIRenderStudio({ state, setState }) {
       const sc = Math.min(cw / im.width, ch / im.height);
       const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
       ctx.drawImage(im, dx, dy, dw, dh);
+      // EL TAMAÑO DE LA MARCA SALE DEL LIENZO, NO DEL FACTOR DE ESCALA.
+      // Iba a `8 * scale` px de radio: 16 px sobre un lienzo de 2.500, y luego
+      // el PDF lo mete en dos tercios de un A4. En el papel quedaban puntos de
+      // menos de un milímetro. Y este papel se lo lleva el electricista a picar
+      // pared. Atado al ancho del lienzo, la marca ocupa siempre lo mismo en
+      // proporción, se imprima al tamaño que se imprima.
+      const R = Math.max(9, cw * 0.013);          // radio del punto
+      const FS = Math.max(12, cw * 0.019);        // cuerpo de la cota
       marks.forEach((mk) => {
         const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
-        ctx.beginPath(); ctx.arc(x, y, 8 * scale, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
-        ctx.lineWidth = 2 * scale; ctx.strokeStyle = '#fff'; ctx.stroke();
+        // Halo blanco: sin él, un punto naranja sobre una cocina blanca con
+        // mucha luz se pierde igual aunque sea grande.
+        ctx.beginPath(); ctx.arc(x, y, R + R * 0.28, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        ctx.lineWidth = Math.max(2, R * 0.16); ctx.strokeStyle = '#fff'; ctx.stroke();
+        // La cota, en BLANCO sobre el color de la marca. Antes iba en el color
+        // de la marca sobre fondo blanco: sobre una cocina blanca, ilegible.
         const cota = `${markH(mk)} cm`;
-        ctx.font = `bold ${11 * scale}px sans-serif`; const tw = ctx.measureText(cota).width;
-        ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(x + 11 * scale, y - 8 * scale, tw + 8 * scale, 16 * scale);
-        ctx.fillStyle = t.color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(cota, x + 15 * scale, y + 0.5);
+        ctx.font = `bold ${FS}px sans-serif`;
+        const tw = ctx.measureText(cota).width;
+        const px = FS * 0.5, bh = FS * 1.5;
+        const bx = x + R * 1.35, by = y - bh / 2;
+        ctx.fillStyle = t.color;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, by, tw + px * 2, bh, bh * 0.28); ctx.fill(); }
+        else ctx.fillRect(bx, by, tw + px * 2, bh);
+        ctx.lineWidth = Math.max(1.5, FS * 0.09); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(cota, bx + px, y);
       });
       resolve(cv.toDataURL('image/png'));
     };
@@ -766,46 +841,64 @@ export default function AIRenderStudio({ state, setState }) {
       if (!img) { setError('No se pudo preparar la imagen del esquema.'); return; }
       const { jsPDF } = await import('jspdf');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), M = 12;
-      // Cabecera
+      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), M = 10;
+      // EL DIBUJO OCUPA EL ANCHO ENTERO.
+      //
+      // Antes se le daban dos tercios de la página y el tercio restante era una
+      // columna de texto con cuatro líneas: el dibujo salía pequeño Y encima
+      // quedaba una banda vacía debajo, porque un render 16:9 metido en 184 mm
+      // solo ocupa 103 mm de alto de los 168 disponibles. Media página en
+      // blanco y el plano ilegible.
+      //
+      // En este papel lo que se mira es el DIBUJO: dónde va cada toma. La
+      // leyenda son cuatro datos y caben en una tira horizontal debajo.
+      const props = pdf.getImageProperties(img);
+      const usados = [...new Set(marks.map(m => m.type))];
+      const FILAS_LEY = Math.ceil(usados.length / 4);
+      const ALTO_LEY = 10 + FILAS_LEY * 9;             // tira de leyenda
+      const cabY = 22;
+      const areaH = H - cabY - ALTO_LEY - 8;
+      const areaW = W - M * 2;
+      const ratio = Math.min(areaW / props.width, areaH / props.height);
+      const iw = props.width * ratio, ih = props.height * ratio;
+      const ix = (W - iw) / 2, iy = cabY;
+
+      // Cabecera, en una sola línea para no robarle alto al dibujo.
       const logo = state?.logo;
       if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
-        try { const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG'); pdf.addImage(logo, fmt, M, 8, 28, 14); } catch (_) {}
+        try { const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG'); pdf.addImage(logo, fmt, M, 6, 26, 13); } catch (_) {}
       }
-      pdf.setFont(undefined, 'bold'); pdf.setFontSize(15); pdf.setTextColor(20, 30, 60);
-      pdf.text('ESQUEMA DE INSTALACIONES — GREMIO', W - M, 14, { align: 'right' });
+      pdf.setFont(undefined, 'bold'); pdf.setFontSize(16); pdf.setTextColor(20, 30, 60);
+      pdf.text('ESQUEMA DE INSTALACIONES — GREMIO', W - M, 13, { align: 'right' });
       pdf.setFont(undefined, 'normal'); pdf.setFontSize(9); pdf.setTextColor(110);
-      const sub = [cliente && `Cliente: ${cliente}`, ref && `Ref: ${ref}`, new Date().toLocaleDateString('es-ES')].filter(Boolean).join('   ·   ');
-      pdf.text(sub, W - M, 20, { align: 'right' });
-      // Imagen del render con marcas (columna izquierda)
-      const imgW = W * 0.66 - M, areaY = 28, areaH = H - areaY - 14;
-      const props = pdf.getImageProperties(img);
-      const ratio = Math.min(imgW / props.width, areaH / props.height);
-      const iw = props.width * ratio, ih = props.height * ratio;
-      pdf.addImage(img, 'PNG', M, areaY, iw, ih);
-      // Tabla de tomas (columna derecha)
-      const tx = M + imgW + 6; let ty = areaY + 2;
-      pdf.setFont(undefined, 'bold'); pdf.setFontSize(10); pdf.setTextColor(20, 30, 60);
-      pdf.text('TOMAS A DEJAR', tx, ty); ty += 6;
-      pdf.setFontSize(7.5); pdf.setTextColor(130); pdf.setFont(undefined, 'normal');
-      pdf.text('Alturas orientativas desde suelo terminado.', tx, ty); ty += 6;
-      const used = [...new Set(marks.map(m => m.type))];
-      used.forEach((tp) => {
-        const t = MARK_TYPES[tp]; const n = marks.filter(m => m.type === tp).length;
-        const rgb = hexToRgb(t.color);
-        pdf.setFillColor(rgb.r, rgb.g, rgb.b); pdf.circle(tx + 2, ty - 1.2, 1.8, 'F');
-        pdf.setTextColor(40); pdf.setFont(undefined, 'bold'); pdf.setFontSize(9);
-        pdf.text(`${t.label}`, tx + 6, ty);
-        pdf.setFont(undefined, 'normal'); pdf.setTextColor(110); pdf.setFontSize(8);
-        pdf.text(`x${n}   ·   h ${t.h} cm`, tx + 6, ty + 4);
-        ty += 9.5;
-      });
-      // Total y pie
-      ty += 2; pdf.setDrawColor(220); pdf.line(tx, ty, W - M, ty); ty += 5;
+      const sub = [cliente && `Cliente: ${cliente}`, ref && `Ref: ${ref}`,
+        `${marks.length} puntos`, new Date().toLocaleDateString('es-ES')].filter(Boolean).join('   ·   ');
+      pdf.text(sub, W - M, 18.5, { align: 'right' });
+
+      pdf.addImage(img, 'PNG', ix, iy, iw, ih);
+      pdf.setDrawColor(210); pdf.rect(ix, iy, iw, ih);
+
+      // Leyenda en TIRA HORIZONTAL, debajo del dibujo: cuatro por fila.
+      let ly = iy + ih + 8;
+      pdf.setDrawColor(225); pdf.line(M, ly - 4, W - M, ly - 4);
       pdf.setFont(undefined, 'bold'); pdf.setFontSize(9); pdf.setTextColor(20, 30, 60);
-      pdf.text(`Total puntos: ${marks.length}`, tx, ty);
+      pdf.text('TOMAS A DEJAR', M, ly);
+      pdf.setFont(undefined, 'normal'); pdf.setFontSize(7.5); pdf.setTextColor(130);
+      pdf.text('Alturas desde suelo terminado.', M + 34, ly);
+      ly += 6;
+      const colW = (W - M * 2) / 4;
+      usados.forEach((tp, k) => {
+        const t = MARK_TYPES[tp]; const n = marks.filter(m => m.type === tp).length;
+        const cx = M + (k % 4) * colW, cy = ly + Math.floor(k / 4) * 9;
+        const rgb = hexToRgb(t.color);
+        pdf.setFillColor(rgb.r, rgb.g, rgb.b); pdf.circle(cx + 2.4, cy - 1, 2.4, 'F');
+        pdf.setTextColor(35); pdf.setFont(undefined, 'bold'); pdf.setFontSize(9.5);
+        pdf.text(`${t.label}`, cx + 7, cy);
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(110); pdf.setFontSize(8);
+        pdf.text(`x${n}  ·  h ${t.h} cm`, cx + 7, cy + 4);
+      });
       pdf.setFontSize(7); pdf.setTextColor(150); pdf.setFont(undefined, 'normal');
-      pdf.text(pdf.splitTextToSize('Esquema orientativo generado por IA para coordinación con el gremio. Verificar in situ.', W - M - tx), tx, H - 12);
+      pdf.text('Esquema orientativo generado por IA para coordinación con el gremio. Verificar in situ.', M, H - 4);
       pdf.save(`esquema_gremio_${(cliente || ref || 'cocina').replace(/\s+/g, '_')}.pdf`);
     } catch (e) { setError('No se pudo generar el esquema: ' + (e.message || '')); }
     finally { setDownloading(false); }
@@ -3222,9 +3315,9 @@ export default function AIRenderStudio({ state, setState }) {
         {/* Divisor redimensionable + ocultar panel (solo pantallas grandes) */}
         {!panelHidden ? (
           <div className="hidden lg:flex shrink-0 relative items-stretch">
-            <div onMouseDown={() => { resizingPanel.current = true; document.body.style.userSelect = 'none'; }}
+            <div onPointerDown={() => { resizingPanel.current = true; document.body.style.userSelect = 'none'; }}
               title="Arrastra para redimensionar"
-              className="w-1.5 cursor-ew-resize bg-slate-100 hover:bg-indigo-400 transition-colors" />
+              className="w-2.5 cursor-ew-resize touch-none bg-slate-100 hover:bg-indigo-400 transition-colors" />
             <button onClick={() => setPanelHidden(true)} title="Ocultar panel de características"
               className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow">
               <ChevronLeft size={15} />
@@ -3588,7 +3681,7 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   </div>
                 ) : renderResult?.result?.images?.[0] && !imgError ? (
-                  <div className="relative inline-flex items-center justify-center max-w-full max-h-full overflow-hidden" onClick={placeMark}>
+                  <div ref={capaMarcasRef} className="relative inline-flex items-center justify-center max-w-full max-h-full overflow-hidden" onClick={placeMark}>
                   <img
                     id="render-annot-img"
                     src={assetSrc(renderResult.result.images[0])}
@@ -3606,13 +3699,20 @@ export default function AIRenderStudio({ state, setState }) {
                     return (
                       <div key={i} className="absolute z-10 flex flex-col items-center pointer-events-auto"
                         style={{ left: `${mk.x}%`, top: `${mk.y}%`, transform: 'translate(-50%,-50%)' }}>
-                        <button onClick={(e) => { e.stopPropagation(); setEditMark(editMark === i ? null : i); }}
-                          title={`${t.label} · altura ${markH(mk)} cm — clic para editar`}
-                          className={`w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg ring-2 ${editMark === i ? 'ring-indigo-500' : 'ring-white'}`}
+                        <button onPointerDown={empezarArrastre(i)}
+                          onPointerMove={seguirArrastre}
+                          onPointerUp={soltarArrastre}
+                          onPointerCancel={() => { arrastreRef.current = null; }}
+                          onClick={(e) => e.stopPropagation()}
+                          title={`${t.label} · altura ${markH(mk)} cm — arrastra para colocarlo, toca para editar`}
+                          className={`w-10 h-10 rounded-full text-white flex items-center justify-center shadow-lg ring-2 cursor-grab active:cursor-grabbing touch-none select-none ${editMark === i ? 'ring-indigo-500' : 'ring-white'}`}
                           style={{ background: t.color }}>
-                          <Ic size={15} />
+                          <Ic size={20} />
                         </button>
-                        <span className="mt-0.5 px-1.5 py-[1px] rounded bg-white/90 text-[9px] font-black text-slate-700 shadow whitespace-nowrap leading-tight">{markH(mk)} cm</span>
+                        {/* La cota va con el color del punto y en blanco: sobre una
+                            cocina blanca, un texto gris sobre fondo blanco no se lee. */}
+                        <span className="mt-1 px-2 py-[2px] rounded text-[12px] font-black text-white shadow whitespace-nowrap leading-tight ring-1 ring-white/70"
+                          style={{ background: t.color }}>{markH(mk)} cm</span>
 
                         {/* Editor de la marca */}
                         {editMark === i && (

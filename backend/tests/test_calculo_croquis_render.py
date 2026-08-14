@@ -359,3 +359,65 @@ def test_cerrar_las_puertas_no_autoriza_a_cambiar_los_frentes(servicio):
     assert "never authorise changing the furniture itself" in prompt, (
         "ya no se dice que una palabra de ESTADO (abierto/cerrado) no da "
         "permiso para tocar el mueble")
+
+
+# ── UN DIBUJO DA GEOMETRIA, NUNCA ESTILO ────────────────────────────────────
+# 14/08/2026. El master pasa la ILUSTRACION de un armario —plana, con contorno,
+# en tonos pastel— y el render sale igual de plano: «queda como si fuera de
+# dibujos animados, quiero un render real de un armario real».
+#
+# El prompt del croquis solo prohibia dibujar «el papel, el lapiz y la letra»,
+# que es lo que tiene un croquis a mano. Con una ilustracion en color, el modelo
+# tomo su ESTILO por el estilo pedido: copio contornos, colores planos y luz
+# uniforme. Y encima el prompt decia «kitchen» escrito a fuego, o sea que a un
+# croquis de ARMARIO se le pedia una cocina y a la vez fidelidad al dibujo.
+
+
+def test_del_dibujo_se_copia_la_geometria_y_no_como_esta_dibujado(servicio):
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="armario blanco mate",
+        reference_image=_a_data_url(croquis_a_lapiz()),
+        reference_mime="image/jpeg", project_type="armario", provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert "IT NEVER GIVES STYLE" in prompt, (
+        "el prompt ya no separa geometria de estilo: una ilustracion volvera a "
+        "salir renderizada como ilustracion")
+    for prohibido in ("cartoon", "flat fills", "illustration palette"):
+        assert prohibido in prompt, f"ya no se prohibe copiar «{prohibido}»"
+    assert "The colours of the drawing are NOT the materials" in prompt, \
+        "los colores del dibujo vuelven a tomarse por el acabado del mueble"
+
+
+def test_lo_dibujado_dentro_se_fotografia_como_objeto_real(servicio):
+    """En el armario del master lo de dentro salio dibujado: camisas de linea,
+    cajas planas. Si el continente es foto y el contenido dibujo, no vale."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="armario", reference_image=_a_data_url(croquis_a_lapiz()),
+        reference_mime="image/jpeg", project_type="armario", provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert "Never a drawing of a shirt" in prompt, \
+        "lo que va dentro del mueble vuelve a poder salir dibujado"
+
+
+@pytest.mark.parametrize("tipo,palabra", [
+    ("armario", "wardrobe"),
+    ("bano", "bathroom"),
+    ("cocina", "kitchen"),
+    (None, "kitchen"),
+])
+def test_el_croquis_se_realiza_como_el_mueble_que_es(servicio, tipo, palabra):
+    """«kitchen» estaba escrito a fuego: con el croquis de un armario se pedia
+    una cocina Y fidelidad al dibujo. Dos ordenes que se contradicen."""
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description="mueble a medida",
+        reference_image=_a_data_url(croquis_a_lapiz()),
+        reference_mime="image/jpeg", project_type=tipo, provider="gemini"))
+    prompt = caja.get("task_prompt", "")
+    assert palabra in prompt.split("STRICT RULES")[0], (
+        f"con project_type={tipo!r} el croquis no se realiza como «{palabra}»")
+    if tipo == "armario":
+        assert "TECHNICAL 2D DRAWING of ONE specific kitchen" not in prompt, \
+            "a un croquis de armario se le sigue pidiendo una cocina"

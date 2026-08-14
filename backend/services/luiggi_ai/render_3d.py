@@ -677,17 +677,42 @@ class Render3DService:
             parsed_params["fromSketch"] = True
             brief_txt = (description or "").strip()
 
+            # QUÉ MUEBLE ES. El prompt decía «kitchen» siempre, escrito a fuego:
+            # con el croquis de un armario se le pedía al modelo una COCINA y
+            # luego se le exigía fidelidad al dibujo. Órdenes contradictorias.
+            _pieza = {
+                "armario": "fitted wardrobe / walk-in closet",
+                "bano": "bathroom vanity / cabinetry",
+            }.get((project_type or "").strip().lower(), "kitchen")
+
             # Transcripción multimodal con Vision: lee cotas, módulos, frigorífico y divisiones
             sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
             transcription_block = f"\nTECHNICAL BREAKDOWN EXTRACTED DIRECTLY FROM THE SKETCH:\n{sketch_transcription}\n" if sketch_transcription else ""
 
             task_prompt = (
-                "You are given a TECHNICAL 2D DRAWING of ONE specific kitchen: a hand-drawn "
+                f"You are given a TECHNICAL 2D DRAWING of ONE specific {_pieza}: a hand-drawn "
                 "floor plan, elevation or blueprint, with handwritten dimensions and labels.\n"
                 + transcription_block +
-                "Produce a single photorealistic interior photograph of THAT SAME kitchen, "
+                f"Produce a single photorealistic interior photograph of THAT SAME {_pieza}, "
                 "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
                 "NOT a new design — do not 'improve' it and do not substitute a nicer layout.\n\n"
+                "THE DRAWING GIVES GEOMETRY. IT NEVER GIVES STYLE:\n"
+                "- The output is a PHOTOGRAPH of real furniture in a real room. It is never a "
+                "drawing, illustration, cartoon, comic, sticker, clip-art, flat vector, cel-shaded "
+                "or hand-painted image, and never a 'render of a drawing'.\n"
+                "- Copy from the reference ONLY: what modules exist, their order, their sizes and "
+                "what goes inside each one. Copy NOTHING of how it is drawn — no outlines or "
+                "contour lines around objects, no flat fills, no paper texture, no sketchy edges, "
+                "no pastel illustration palette, no uniform lighting.\n"
+                "- The colours of the drawing are NOT the materials. A cabinet drawn in flat pale "
+                "blue or beige is a cabinet whose finish comes from the brief text; if the brief "
+                "says nothing, use restrained real materials (matt lacquer, natural oak veneer).\n"
+                "- Everything drawn inside must become the REAL object photographed: garments in "
+                "real fabric with real folds, real leather shoes, real cardboard or fabric boxes, "
+                "real metal rails and hangers. Never a drawing of a shirt — an actual shirt.\n"
+                "- Real photography: physically based materials, visible wood grain and textile "
+                "weave, contact shadows under every object, soft directional daylight, shallow "
+                "natural falloff into the corners.\n\n"
                 "CLOSED COMPOSITION — THIS IS THE RULE THAT OVERRIDES THE OTHERS:\n"
                 "- The kitchen contains EXACTLY the modules that are drawn or written, and NOTHING ELSE. "
                 "Never add a module because a kitchen 'usually' has one there — no extra fridge, combi, "

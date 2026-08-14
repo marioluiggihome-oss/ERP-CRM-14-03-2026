@@ -155,7 +155,9 @@ def _prompt_del_croquis():
     Si no, una frase partida en dos lineas de Python haria fallar el candado sin
     que nadie haya tocado la regla, y a la tercera vez se borra el candado."""
     src = _leer(RENDER)
-    i = src.index("TECHNICAL 2D DRAWING of ONE specific kitchen")
+    # El mueble ya no va escrito a fuego («kitchen»): sale de `project_type`,
+    # porque a un croquis de ARMARIO no se le puede pedir una cocina.
+    i = src.index("TECHNICAL 2D DRAWING of ONE specific {_pieza}")
     cuerpo = src[src.rindex("task_prompt = (", 0, i):src.index("return await", i)]
     return re.sub(r'"\s*\n\s*"', "", cuerpo)
 
