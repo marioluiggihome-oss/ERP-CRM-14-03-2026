@@ -86,6 +86,20 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       const errMsg = this.state.error?.message || String(this.state.error || 'Error desconocido');
+      // EL DETALLE TIENE QUE DECIR DÓNDE, NO SOLO QUÉ.
+      //
+      // Antes solo se pintaba `error.message`, así que un fallo llegaba
+      // reportado como «da fallo» y había que adivinar la pantalla. Con la PILA
+      // DE COMPONENTES, el mismo pantallazo ya dice en qué componente ha
+      // reventado, que es la mitad del trabajo de arreglarlo.
+      const pila = (this.state.errorInfo?.componentStack || '')
+        .split('\n').filter(Boolean).slice(0, 12).join('\n');
+      const detalle = [
+        errMsg,
+        this.state.error?.stack ? `\n${String(this.state.error.stack).split('\n').slice(0, 6).join('\n')}` : '',
+        pila ? `\nDónde:${pila}` : '',
+        `\n${window.location.pathname}${window.location.hash || ''}`,
+      ].filter(Boolean).join('\n');
       return (
         <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', background: '#0f172a', minHeight: '100vh', color: 'white' }}>
           <div style={{ maxWidth: 560, margin: '40px auto', background: '#1e293b', borderRadius: 16, padding: 24, border: '1px solid #334155' }}>
@@ -95,7 +109,15 @@ class ErrorBoundary extends React.Component {
             </p>
             <details style={{ background: '#0f172a', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 12, color: '#94a3b8' }}>
               <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Ver detalles técnicos</summary>
-              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 8 }}>{errMsg}</pre>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 8 }}>{detalle}</pre>
+              {/* Para poder MANDARLO en vez de transcribirlo a mano desde una
+                  pantalla de móvil. */}
+              <button
+                onClick={() => { try { navigator.clipboard.writeText(detalle); } catch { /* noop */ } }}
+                style={{ marginTop: 10, background: '#334155', color: 'white', border: 'none', padding: '8px 14px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', fontSize: 12 }}
+              >
+                Copiar detalle
+              </button>
             </details>
             <button
               onClick={this.handleManualReload}

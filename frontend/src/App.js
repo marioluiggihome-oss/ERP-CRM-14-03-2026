@@ -620,8 +620,14 @@ const App = () => {
   // Function to add furniture from Visualizer (IA Lab) to budget
   const handleAddFromVisualizer = (furniture, showAlert = true) => {
     
-    const tipo = (furniture.tipo || 'MUEBLE').toUpperCase();
-    const subtipo = furniture.subtipo ? furniture.subtipo.replace(/_/g, ' ') : '';
+    // TODO LO QUE VIENE DE LA IA SE TRATA COMO TEXTO ANTES DE TOCARLO.
+    // Estos datos salen de un JSON que escribe un modelo: si devuelve un
+    // NÚMERO donde se espera una cadena (`subtipo: 2`, un código sin letras),
+    // `.replace` y `.toUpperCase` no existen, revienta la pantalla entera y al
+    // usuario le sale «Algo ha fallado» sin decir por qué. Volcar al
+    // presupuesto no puede caerse por eso.
+    const tipo = String(furniture.tipo || 'MUEBLE').toUpperCase();
+    const subtipo = furniture.subtipo ? String(furniture.subtipo).replace(/_/g, ' ') : '';
     // Preferir dimensiones REALES del catálogo (backend) sobre las estimadas por la IA
     const ancho = furniture.ancho_real || furniture.width || furniture.ancho_estimado || 600;
     const alto = furniture.alto_real || furniture.height || furniture.alto_estimado || 70;
@@ -669,7 +675,7 @@ const App = () => {
       newItem = {
         id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         productId: furniture.productId || furniture.product_id || matchedCode,
-        productCode: matchedCode.toUpperCase(),
+        productCode: String(matchedCode).toUpperCase(),
         productName: furniture.name || furniture.nombre_catalogo || `${tipo} ${subtipo}`.trim(),
         quantity: qty,
         customWidth: ancho,
@@ -687,12 +693,12 @@ const App = () => {
     } else {
       // Producto NO encontrado - crear con referencia desconocida
       const productName = `${tipo} ${subtipo} ${ancho}x${alto}x${fondo}mm [REF. NO ENCONTRADA]`.toUpperCase().trim();
-      const productCode = iaCode || possibleCodes[0] || `IA-${tipo.substring(0,3)}-${ancho}`;
+      const productCode = String(iaCode || possibleCodes[0] || `IA-${tipo.substring(0, 3)}-${ancho}`);
       
       newItem = {
         id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         productId: productCode,
-        productCode: productCode.toUpperCase(),
+        productCode: String(productCode).toUpperCase(),
         productName: productName,
         quantity: qty,
         customWidth: ancho,
