@@ -9,8 +9,12 @@
     «Para el mueble bajo cajonero, se ha interpretado que 'nP' en el código se
      refiere al número de frentes, resultando en 7B2P800».
 
-Ese código NO está en el plano. La IA lo ha CONSTRUIDO por patrón. Y luego el
-buscador de catálogo lo usaba con expresiones muy sueltas:
+OJO, QUE ESTO SE ENTENDIÓ MAL LA PRIMERA VEZ: la IA no se inventa el código. Lo
+CONSTRUYE con la nomenclatura ZC, y normalmente bien — «7B2P800» es un bajo de
+70 de alto, 2 puertas y 800 de ancho, y es un código de catálogo válido; lo
+aclaró el master. El problema no es la forma del código, sino qué pasa cuando
+ESE código no está en el catálogo de la biblioteca activa: ahí entran los
+respaldos, y buscaban con expresiones muy sueltas:
 
     pattern_simple = f".*{tipo_code}.*{ancho}$"     ->  .*B.*800$
 
@@ -145,3 +149,21 @@ def test_la_busqueda_por_codigo_EXACTO_no_se_estorba():
     assert "_es_del_mueble_detectado" not in cuerpo, (
         "se está verificando también el código exacto: un código correcto "
         "acabaría en «revisión manual» sin motivo")
+
+
+def test_un_codigo_ZC_de_verdad_NO_acaba_en_revision_manual(ia):
+    """El caso que aclaró el master: «7B2P800» es un bajo de 70, 2 puertas y 800
+    de ancho, y es un código de catálogo VÁLIDO. La comprobación está para cazar
+    emparejamientos por patrón que no cuadran, no para estorbar a los códigos
+    buenos: si esto se pusiera rojo, el analizador mandaría a revisión manual
+    justo los muebles que sí sabe cotizar."""
+    real = {"code": "7B2P800", "name": "Bajo 2 puertas 800mm", "category": "BAJOS"}
+    assert ia._es_del_mueble_detectado(real, width=800, tipo="BAJO") is True
+
+
+def test_solo_se_rechaza_lo_que_PARECE_de_otra_familia(ia):
+    """Conservador a propósito. Si el nombre del producto no dice de qué familia
+    es, no se rechaza: se rechaza cuando dice que es de OTRA. Al revés se
+    tirarían productos buenos con el nombre mal puesto en el catálogo."""
+    sin_pistas = {"code": "X800", "name": "Modulo inferior 800", "category": ""}
+    assert ia._es_del_mueble_detectado(sin_pistas, width=800, tipo="BAJO") is True

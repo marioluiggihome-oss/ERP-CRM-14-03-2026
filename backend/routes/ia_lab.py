@@ -236,19 +236,26 @@ def _es_del_mueble_detectado(producto: dict, width: int, tipo: str) -> bool:
 
     EL CÓDIGO QUE PROPONE LA IA ES UNA PISTA, NO UNA IDENTIDAD.
 
-    La IA no lee el código en el plano: lo CONSTRUYE por patrón. El master lo vio
-    escrito en su propia pantalla: «se ha interpretado que 'nP' se refiere al
-    número de frentes, resultando en 7B2P800». Ese código no está en el plano; se
-    ha deducido.
+    Ojo, que esto se entendió mal la primera vez: la IA NO se inventa el código.
+    Lo CONSTRUYE aplicando la nomenclatura ZC, y normalmente bien — «7B2P800» es
+    un bajo de 70 de alto, 2 puertas y 800 de ancho, y es un código de catálogo
+    perfectamente válido (lo aclaró el master). El problema no es la forma del
+    código: es qué pasa cuando ESE código NO ESTÁ en el catálogo de la
+    biblioteca activa.
 
-    Y luego se buscaba con patrones sueltos —`.*B.*800$`, o sea cualquier código
-    que lleve una B y acabe en 800—, así que un código inventado podía casar con
-    un producto REAL que no es ese mueble. Y ahí no falla nada: sale un nombre de
-    catálogo y un precio de catálogo, creíbles los dos, para un mueble que no es.
+    Ahí entraban los respaldos, y buscaban con patrones muy sueltos:
+
+        pattern_simple = f".*{tipo_code}.*{ancho}$"   ->   .*B.*800$
+
+    o sea cualquier código que lleve una B y acabe en 800 — un ALTO incluido.
+    Así, un código deducido que no existe podía casar con un producto REAL que
+    no es ese mueble. Y ahí no falla nada: sale un nombre de catálogo y un
+    precio de catálogo, creíbles los dos, para un mueble que no es.
 
     Por eso lo que se encuentra POR PATRÓN se comprueba contra lo que se vio en
     el plano: el ancho y la familia. Lo que se encuentra por código EXACTO no
-    pasa por aquí — ahí el código sí es una identidad.
+    pasa por aquí — ahí el código sí identifica, y verificarlo mandaría a
+    revisión manual códigos buenos.
     """
     if not producto:
         return False
