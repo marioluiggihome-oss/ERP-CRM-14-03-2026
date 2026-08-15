@@ -230,7 +230,7 @@ const _es_pieza_suelta = (desc) => {
   return _ES_PUERTA.test(t) || _ES_COSTADO.test(t) || _ES_REGLETA.test(t) || _ES_TABLERO.test(t);
 };
 
-const _tipo_acb_auto = (desc, tipo, grosor) => {
+const _tipo_acb_auto = (desc, tipo, grosor, alto) => {
   // Se clasifica por el MUEBLE, sin su cola de variantes: si no, un «BAJO
   // RINCON … Tirador T000» podía decidirse por palabras del tirador.
   const t = _may(_sin_variantes(desc));
@@ -273,6 +273,28 @@ const _tipo_acb_auto = (desc, tipo, grosor) => {
     if (_kit) return 'Semicolumna 1300/1500 X580';
     return (/HORNO/.test(t) || _micro) ? 'Semicolumna (Horno-Micro)' : 'Semicolumna Despensa';
   }
+  // EL SOBREMÓDULO VA ANTES QUE LA COLUMNA, y no es un capricho de orden: la
+  // regla de abajo busca «COLUMNA» en cualquier parte, así que un «SOBRE
+  // COLUMNA HORNO» caía en ella y se valoraba como la columna entera.
+  //
+  // UN SOBREMÓDULO NO ES UN ALTO. Aquí devolvía «Alto Con Balda», que es un
+  // mueble colgado de 330 de FONDO. El sobremódulo va encima de una columna, o
+  // sea que tiene el fondo de la columna: 580. El master (14/08/2026): «depende
+  // de la altura pero normalmente es un casco de 60 x 90 x 58».
+  //
+  // Lo que costaba: «Alto Con Balda» NO EXISTE en Blanco Esp., así que además
+  // se caía a otro color. En la proforma del master salía «Alto Con Balda 600 ·
+  // Aluminio 16» a 39,12 € donde el bueno es «Sobre Columna Horno 600x900» en
+  // Blanco Esp. a 69,40 €: 30,28 € de menos POR MUEBLE, con el aviso de color
+  // sustituido como única pista.
+  //
+  // Alturas que existen: Horno-Micro 500 y 700; Horno 700 y 900; a secas, 700.
+  if (/SOBREMODULO|SOBREMÓDULO|SOBRE MODULO|SOBRE MÓDULO|SOBRE COLUMNA/.test(t)) {
+    if (alto && alto >= 800) return 'Sobre Columna Horno';   // el único con 900
+    if (_micro) return 'Sobre Columna Horno-Micro';
+    if (/HORNO/.test(t)) return 'Sobre Columna Horno';
+    return 'Sobre Columna';
+  }
   if (/COLUMNA/.test(t)) {
     if (/HORNO/.test(t)) {
       if (_kit) return _micro ? 'Columna Horno-Micro 2000/2200' : 'Columna Horno 2000/2200';
@@ -281,7 +303,6 @@ const _tipo_acb_auto = (desc, tipo, grosor) => {
     // Despensa, escobero y demás columnas de baldas.
     return _kit ? 'Columna Con Baldas' : 'Columna Despensa';
   }
-  if (/SOBREMODULO|SOBREMÓDULO|SOBRE MODULO|SOBRE COLUMNA/.test(t)) return 'Alto Con Balda';
   if (t.includes('ALTO') && t.includes('PLATERO')) return 'Alto Platero Con Balda';
   if (t.includes('ALTO') || t.includes('ALTILLO')) return 'Alto Con Balda';
   return tipo === 'bajo' ? 'Bajo Con Balda' : (tipo === 'alto' ? 'Alto Con Balda' : (tipo === 'columna' ? 'Columna Despensa' : null));
@@ -351,6 +372,16 @@ const _valorar = (c, colorPedido, elegido = false, punto = PUNTO_POR_DEFECTO) =>
   };
 };
 
+/** Tipos equivalentes cuando el bueno no existe en la gama del proyecto.
+ *
+ * El orden es de más parecido a menos. Solo se usan para no tener que cambiar
+ * de COLOR: el color se ve en el mueble montado, el nombre del casco no. */
+const _TIPOS_ALTERNATIVOS = {
+  'Sobre Columna Horno': ['Sobre Columna Horno-Micro', 'Sobre Columna', 'Alto Con Balda'],
+  'Sobre Columna Horno-Micro': ['Sobre Columna Horno', 'Sobre Columna', 'Alto Con Balda'],
+  'Sobre Columna': ['Sobre Columna Horno', 'Alto Con Balda'],
+};
+
 const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
   const o = ov || {};
   const colorKey = o.color || colorProyecto || COLOR_CASCO_DEFECTO;
@@ -364,14 +395,29 @@ const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
     }
   }
 
-  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo, grosorTarget);
-  if (!tipoAcb) return null;
   const { ancho, alto, fondo } = _medidas_mm(it);
+  const tipoAcb = o.tipo || _tipo_acb_auto(it.descripcion, it.tipo, grosorTarget, alto);
+  if (!tipoAcb) return null;
   if (ancho == null) return null;
 
-  // 2) Buscar el casco equivalente en el tipo, grosor y color activo
-  let pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosorTarget && c.precios && c.precios[colorKey] != null);
-  if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.precios && c.precios[colorKey] != null);
+  // 2) Buscar el casco equivalente en el tipo, grosor y color activo.
+  //
+  // ANTES DE CAMBIARTE EL COLOR, SE PRUEBA OTRO TIPO PARECIDO. Hay familias que
+  // solo existen en unas gamas: «Sobre Columna» está en Diseño Grueso y en
+  // Especiales Blanco, pero NO en la gama en kit. Con un solo tipo, en una
+  // cocina en kit no se encontraba nada del color pedido y se caía directo a un
+  // casco de OTRO COLOR — que además cuesta otra cosa. Un mueble equivalente en
+  // el color bueno se parece mucho más a la verdad que el mueble exacto en un
+  // color que no es.
+  let pool = [];
+  let tipoUsado = tipoAcb;
+  for (const tp of [tipoAcb, ...(_TIPOS_ALTERNATIVOS[tipoAcb] || [])]) {
+    pool = CASCOS.filter(c => c.tipo === tp && c.grosor === grosorTarget && c.precios && c.precios[colorKey] != null);
+    if (!pool.length) pool = CASCOS.filter(c => c.tipo === tp && c.precios && c.precios[colorKey] != null);
+    if (pool.length) { tipoUsado = tp; break; }
+  }
+  // Y si en NINGÚN tipo hay nada del color pedido, entonces sí se degrada el
+  // color, con el tipo bueno, y `_valorar` lo marca como color sustituido.
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && c.grosor === grosorTarget && _precio_color(c) != null);
   if (!pool.length) pool = CASCOS.filter(c => c.tipo === tipoAcb && _precio_color(c) != null);
   if (!pool.length) return null;
@@ -390,7 +436,18 @@ const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
     }
   }
 
-  let sameWidthMatch = pool.find(c => Math.abs((c.ancho || 0) - ancho) < 5);
+  // Mismo ancho: EL DE ALTO MÁS PARECIDO, no el primero de la lista.
+  //
+  // Cogía `pool.find(...)`, o sea el primero que apareciera en el catálogo. Con
+  // un sobremódulo de 1500, donde hay cascos de 700 y de 900, se llevaba el de
+  // 700 solo por estar antes en el fichero. El de 900 se parece bastante más, y
+  // es el que dijo el master que se monta.
+  const mismoAncho = pool.filter(c => Math.abs((c.ancho || 0) - ancho) < 5);
+  let sameWidthMatch = mismoAncho[0];
+  if (alto && mismoAncho.length > 1) {
+    sameWidthMatch = mismoAncho.reduce((mejor, c) =>
+      Math.abs((c.alto || 0) - alto) < Math.abs((mejor.alto || 0) - alto) ? c : mejor);
+  }
   let best = exactMatch || sameWidthMatch || pool[0];
   if (!exactMatch && !sameWidthMatch) {
     let bd = Infinity;
@@ -407,6 +464,13 @@ const _match_acb = (it, ov, colorProyecto, punto = PUNTO_POR_DEFECTO) => {
     res._esSuperior = true;
     res._altoBuscado = alto;
     res._corteRequerido = true;
+  }
+  // Si se ha tenido que coger OTRA familia porque la buena no existe en esta
+  // gama, se dice. Cambiar de tipo en silencio es lo mismo que cambiar de color
+  // en silencio: el número sale creíble y nadie lo revisa.
+  if (res && tipoUsado !== tipoAcb) {
+    res._tipoSustituido = true;
+    res._tipoPedido = tipoAcb;
   }
   return res;
 };
@@ -1972,6 +2036,14 @@ function FilaMueble({ r, ocultarImportes, override, onOverride, onDelete, moLine
                         : undefined}>
                       {r._acb._colorSustituido && '⚠ '}{r._acb._colorLbl} {r._acb.grosor}
                     </span>
+                    {/* Cambiar de FAMILIA en silencio es tan malo como cambiar
+                        de color en silencio: el precio sale creíble. */}
+                    {r._acb._tipoSustituido && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 ml-1"
+                            title={`En esta gama no existe «${r._acb._tipoPedido}». Se ha valorado con «${r._acb.tipo}», que sí está en el color pedido. Revísalo.`}>
+                        ⚠ No hay «{r._acb._tipoPedido}»
+                      </span>
+                    )}
                     {r._acb._corteRequerido && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-900 bg-purple-100 border border-purple-300 rounded px-1.5 py-0.5 ml-1"
                             title={`Sin stock ACB en Alto ${r._acb._altoBuscado || 800} en ${r._acb._colorLbl}. Propuesta oficial: Alto ${r._acb.alto} + Recorte en altura`}>

@@ -474,3 +474,100 @@ def test_los_descuentos_nacen_vacios():
     linea = src[i:src.index("\n", i)]
     assert "desc1: ''" in linea and "desc2: ''" in linea, (
         f"los descuentos vuelven a venir rellenos: {linea}")
+
+
+# ─── 6. EL SOBREMODULO NO ES UN ALTO ───────────────────────────────────────
+#
+# 14/08/2026. El master, preguntado por que casco monta encima de la columna de
+# horno-micro: «depende de la altura pero normalmente es un casco de sesenta por
+# 90 x 58 de fondo».
+#
+# Ese 58 DE FONDO lo cambia todo. Aqui se devolvia «Alto Con Balda», que es un
+# mueble COLGADO de 330 de fondo. El sobremodulo va encima de una columna, o sea
+# que lleva el fondo de la columna: 580. Son dos muebles distintos.
+#
+# Y costaba dinero por partida doble, porque «Alto Con Balda» NO EXISTE en
+# Blanco Esp.: ademas de coger el casco equivocado, se caia a otro color. En la
+# proforma del master salia «Alto Con Balda 600 · Aluminio 16» a 39,12 EUR donde
+# el bueno es «Sobre Columna Horno 600x900» en Blanco Esp. a 69,40 EUR.
+# 30,28 EUR de menos POR MUEBLE, y el unico aviso era el del color.
+
+
+def test_el_casco_que_dijo_el_master_existe_y_es_el_de_580_de_fondo():
+    """60 x 90 x 58, en su gama. Si el catalogo cambiara, esto se pone rojo."""
+    cascos = _cascos()
+    iguales = [c for c in cascos
+               if c["ancho"] == 600 and c["alto"] == 900 and c["fondo"] == 580]
+    assert iguales, "ya no hay ningun casco de 600x900x580 en el catalogo"
+    tipos = {c["tipo"] for c in iguales}
+    assert tipos == {"Sobre Columna Horno"}, (
+        f"el casco de 600x900x580 ha dejado de ser «Sobre Columna Horno»: {tipos}")
+    en_blanco = [c for c in iguales if c["precios"].get("blancoEsp") is not None]
+    assert en_blanco, "«Sobre Columna Horno» 600x900 ya no existe en Blanco Esp."
+
+
+def test_un_sobremodulo_no_se_valora_como_un_mueble_alto():
+    """CANDADO PRINCIPAL. Un alto tiene 330 de fondo; un sobremodulo, 580."""
+    src = _leer(IMPORTER)
+    i = src.index("if (/SOBREMODULO|SOBREMÓDULO")
+    cuerpo = src[i:i + 700]
+    assert "'Alto Con Balda'" not in cuerpo, (
+        "el sobremodulo vuelve a valorarse como «Alto Con Balda»: es un casco "
+        "de 330 de fondo donde va uno de 580, y en Blanco Esp. ni siquiera "
+        "existe — se caeria otra vez a otro color")
+    for familia in ("Sobre Columna Horno", "Sobre Columna Horno-Micro"):
+        assert f"'{familia}'" in cuerpo, f"ya no se contempla «{familia}»"
+
+
+def test_el_sobremodulo_se_mira_antes_que_la_columna():
+    """«SOBRE COLUMNA HORNO» lleva la palabra COLUMNA dentro: si la regla de la
+    columna va primero, un sobremodulo se valora como la columna entera."""
+    src = _leer(IMPORTER)
+    assert src.index("if (/SOBREMODULO|SOBREMÓDULO") < src.index("if (/COLUMNA/.test(t))"), (
+        "la regla de COLUMNA ha vuelto a ir delante: un «SOBRE COLUMNA HORNO» "
+        "se valorara como la columna completa")
+
+
+def test_la_altura_decide_que_sobremodulo_es():
+    """«Depende de la altura», dijo el master. Horno-Micro llega a 700; el de
+    900 solo existe como «Sobre Columna Horno»."""
+    src = _leer(IMPORTER)
+    i = src.index("if (/SOBREMODULO|SOBREMÓDULO")
+    cuerpo = src[i:i + 700]
+    assert "alto >= 800" in cuerpo, (
+        "la altura ya no decide: un sobremodulo de 900 acabara en un casco de "
+        "700 y a fabrica ira una medida que no es")
+
+
+def test_antes_de_cambiar_el_color_se_prueba_otra_familia():
+    """«Sobre Columna» no existe en la gama en kit. Con un solo tipo, esas
+    cocinas se valoraban con un casco de OTRO COLOR — y el color se ve en el
+    mueble montado; el nombre de la familia, no."""
+    src = _leer(IMPORTER)
+    assert "_TIPOS_ALTERNATIVOS" in src, \
+        "ya no hay familias alternativas: se volvera a cambiar de color"
+    i = src.index("let pool = [];")
+    cuerpo = src[i:i + 800]
+    assert "_TIPOS_ALTERNATIVOS[tipoAcb]" in cuerpo, \
+        "el emparejador ya no prueba familias alternativas antes de degradar el color"
+
+
+def test_cambiar_de_familia_no_se_hace_en_silencio():
+    """Regla de la casa: nada se corrige sin decirlo. Un tipo cambiado sin aviso
+    da un precio creible que nadie revisa."""
+    src = _leer(IMPORTER)
+    assert "_tipoSustituido" in src, \
+        "el cambio de familia ha vuelto a hacerse en silencio"
+    assert "No hay «" in src, \
+        "el aviso de familia sustituida ya no sale en pantalla"
+
+
+def test_con_el_mismo_ancho_se_coge_el_alto_MAS_PARECIDO():
+    """Cogia el primero del catalogo. Con un sobremodulo de 1500 y cascos de 700
+    y 900, se llevaba el de 700 solo por estar antes en el fichero."""
+    src = _leer(IMPORTER)
+    i = src.index("const mismoAncho = pool.filter")
+    cuerpo = src[i:i + 500]
+    assert "reduce" in cuerpo and "Math.abs" in cuerpo, (
+        "vuelve a cogerse el primer casco del mismo ancho en vez del de alto "
+        "mas parecido")
