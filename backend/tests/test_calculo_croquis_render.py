@@ -188,7 +188,7 @@ def test_el_croquis_no_se_trata_como_una_cocina_ya_montada(servicio):
         reference_mime="image/jpeg",
         provider="gemini"))
     prompt = caja.get("task_prompt", "")
-    assert "EDIT that exact image" not in prompt, (
+    assert "reference image of an EXISTING kitchen" not in prompt, (
         "el croquis se está tratando como la foto de una cocina ya montada. "
         "Es el fallo del 06/08: el modelo se inventa una cocina genérica.")
     assert "TECHNICAL 2D DRAWING" in prompt, (
@@ -287,7 +287,7 @@ def test_una_foto_de_cocina_si_se_edita(servicio):
         reference_image=_a_data_url(foto_de_cocina_blanca()),
         reference_mime="image/jpeg",
         provider="gemini"))
-    assert "EDIT that exact image" in caja.get("task_prompt", ""), (
+    assert "reference image of an EXISTING kitchen" in caja.get("task_prompt", ""), (
         "una foto real de cocina ha dejado de ir por el modo edición: ahora se "
         "rediseña entera en vez de aplicar solo el cambio pedido.")
 
@@ -330,7 +330,7 @@ def test_editar_el_render_propio_no_pasa_por_el_detector_de_croquis(servicio):
         editing_render=True,
         provider="gemini"))
     prompt = caja.get("task_prompt", "")
-    assert "EDIT that exact image" in prompt, (
+    assert "reference image of an EXISTING kitchen" in prompt, (
         "editando un render NUESTRO se ha vuelto a la rama del croquis: en vez "
         "de aplicar el cambio se rehace la cocina entera y vuelve otra")
     assert "TECHNICAL 2D DRAWING" not in prompt, \
@@ -421,3 +421,77 @@ def test_el_croquis_se_realiza_como_el_mueble_que_es(servicio, tipo, palabra):
     if tipo == "armario":
         assert "TECHNICAL 2D DRAWING of ONE specific kitchen" not in prompt, \
             "a un croquis de armario se le sigue pidiendo una cocina"
+
+
+# ── AÑADIR UN MUEBLE ES UN CAMBIO, NO UN ATAQUE AL RENDER ───────────────────
+# 14/08/2026. El master: «le he dicho que a la derecha del mueble de horno un
+# extraible de 15 y no me lo esta haciendo bien».
+#
+# El prompt de edicion decia CUATRO veces «no cambies nada» —«keeping EVERYTHING
+# ELSE strictly identical», «Do NOT add», «los frentes no cambian», y remataba
+# con «identical in composition to the reference»— y UNA sola vez el cambio
+# pedido. Cuando lo que se pide ES un cambio de composicion, gana el «no cambies
+# nada» y el mueble no aparece. Encima la pantalla lo envolvia en «manteniendo
+# el mismo diseño […] No cambies nada mas», que empujaba en la misma direccion.
+#
+# Y hay un segundo motivo por el que un extraible de 15 se pierde: los modelos
+# de imagen ensanchan los muebles estrechos «para que quede mas equilibrado», o
+# se los comen por parecerles demasiado finos para dibujarlos.
+
+
+def _prompt_de_edicion(servicio, orden):
+    caja = _capturar_prompt(servicio)
+    asyncio.run(servicio.generate_render(
+        description=orden,
+        reference_image=_a_data_url(foto_de_cocina_blanca()),
+        reference_mime="image/jpeg", editing_render=True, provider="gemini"))
+    return caja.get("task_prompt", "")
+
+
+def test_el_cambio_pedido_manda_dentro_de_lo_suyo(servicio):
+    """CANDADO. Sin esto, pedir un mueble nuevo no lo aniade nunca."""
+    p = _prompt_de_edicion(servicio, "a la derecha del mueble de horno un extraible de 15")
+    assert "THE CONTRACT HAS TWO HALVES" in p, (
+        "el prompt de edicion ha vuelto a decir solo «no cambies nada»: pedir "
+        "que se AÑADA un mueble no lo aniadira")
+    assert "(A) WINS INSIDE ITS OWN SCOPE" in p, \
+        "el cambio pedido ya no manda sobre «mantenlo todo igual»"
+    assert "shift or resize the" in p, (
+        "no se dice que los muebles de al lado pueden correrse para hacer "
+        "sitio: un mueble nuevo no cabe sin mover nada")
+
+
+def test_ya_no_se_exige_composicion_identica(servicio):
+    """Era la contradiccion de raiz: se pedia el cambio y en la misma frase se
+    exigia que la composicion fuera identica."""
+    p = _prompt_de_edicion(servicio, "aniade un extraible de 15")
+    assert "identical in composition to the reference" not in p, (
+        "vuelve a exigirse composicion identica: cualquier cambio que aniada o "
+        "quite un mueble se quedara sin hacer")
+
+
+def test_un_mueble_estrecho_no_se_ensancha_ni_se_pierde(servicio):
+    """15 cm es 15 cm. Los modelos de imagen los ensanchan «para equilibrar» o
+    directamente no los dibujan."""
+    p = _prompt_de_edicion(servicio, "un extraible de 15 a la derecha del horno")
+    assert "NEVER widen a narrow unit" in p, \
+        "se ha quitado la regla que impide ensanchar un mueble estrecho"
+    assert "15 cm unit is 15 cm" in p, \
+        "la medida en cm ha dejado de ser exacta"
+    assert "merge it" in p, \
+        "ya no se prohibe fundir el mueble estrecho con el de al lado"
+
+
+def test_la_pantalla_manda_la_orden_limpia():
+    """La pantalla envolvia el cambio en «manteniendo el mismo diseño […] No
+    cambies nada mas», o sea que empujaba contra lo que el propio usuario acababa
+    de pedir. Lo que se respeta y lo que se cambia lo dice el servidor."""
+    ruta = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "frontend", "src", "components", "AIRenderStudio.jsx")
+    with open(ruta, encoding="utf-8") as f:
+        src = f.read()
+    codigo = "\n".join(l.split("//")[0] for l in src.splitlines())
+    assert "Modifica el render adjunto manteniendo el mismo" not in codigo, (
+        "la pantalla vuelve a envolver la orden en «no cambies nada»: un mueble "
+        "pedido no se aniadira")

@@ -25,6 +25,10 @@ import { Maximize2, Minimize2 } from 'lucide-react';
  * (Safari de iPhone, por ejemplo, no lo permite). Ahí no es que sobre: es que
  * pulsarlo no haría nada.
  */
+/** ¿Estamos en pantalla completa DE VERDAD, ahora mismo? Se pregunta al DOM. */
+const enPantallaCompleta = () =>
+  Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+
 export default function BotonPantallaCompleta({ className = '', mostrarTexto = true }) {
   const [activa, setActiva] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -34,32 +38,52 @@ export default function BotonPantallaCompleta({ className = '', mostrarTexto = t
     const soportado = Boolean(raiz.requestFullscreen || raiz.webkitRequestFullscreen);
     setVisible(soportado);
 
-    const alCambiar = () => setActiva(
-      Boolean(document.fullscreenElement || document.webkitFullscreenElement)
-    );
+    const alCambiar = () => setActiva(enPantallaCompleta());
     alCambiar();
     document.addEventListener('fullscreenchange', alCambiar);
     document.addEventListener('webkitfullscreenchange', alCambiar);
+    // ADEMÁS de los eventos de pantalla completa. En Android, salir con el
+    // gesto de volver no siempre dispara `fullscreenchange`: el botón se
+    // quedaba diciendo «Reducir» para siempre. Estos dos SÍ llegan, y con ellos
+    // el estado se vuelve a sincronizar solo.
+    window.addEventListener('resize', alCambiar);
+    document.addEventListener('visibilitychange', alCambiar);
     return () => {
       document.removeEventListener('fullscreenchange', alCambiar);
       document.removeEventListener('webkitfullscreenchange', alCambiar);
+      window.removeEventListener('resize', alCambiar);
+      document.removeEventListener('visibilitychange', alCambiar);
     };
   }, []);
 
   const alternar = useCallback(async () => {
+    // SE MIRA EL ESTADO DE VERDAD, no lo que creíamos tener. Y pase lo que
+    // pase, el botón acaba sincronizado: aquí es donde se quedaba pillado.
+    //
+    // Si el navegador había salido de pantalla completa por su cuenta y no
+    // avisó, `activa` seguía en true, se llamaba a `exitFullscreen` sobre un
+    // documento que ya no estaba en pantalla completa, la promesa fallaba, el
+    // error se tragaba en silencio y el botón no volvía a funcionar NUNCA. Un
+    // botón muerto que además sigue diciendo «Reducir».
+    const raiz = document.documentElement;
+    let dentro = enPantallaCompleta();
     try {
-      if (document.fullscreenElement || document.webkitFullscreenElement) {
+      if (dentro) {
         if (document.exitFullscreen) await document.exitFullscreen();
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        return;
+      } else if (raiz.requestFullscreen) {
+        await raiz.requestFullscreen({ navigationUI: 'hide' });
+      } else if (raiz.webkitRequestFullscreen) {
+        raiz.webkitRequestFullscreen();
       }
-      const raiz = document.documentElement;
-      if (raiz.requestFullscreen) await raiz.requestFullscreen({ navigationUI: 'hide' });
-      else if (raiz.webkitRequestFullscreen) raiz.webkitRequestFullscreen();
     } catch (e) {
       // El navegador puede negarlo (iPhone no lo permite, o falta el gesto del
-      // usuario). No es un fallo del ERP: se queda como está y no se avisa.
+      // usuario). No es un fallo del ERP: se sincroniza y se sigue.
     }
+    // Se relee del DOM, no se da por hecho. Si el evento llega, mejor; si no
+    // llega —que es el caso que rompía esto—, el botón queda igualmente bien.
+    setActiva(enPantallaCompleta());
+    setTimeout(() => setActiva(enPantallaCompleta()), 250);
   }, []);
 
   if (!visible) return null;

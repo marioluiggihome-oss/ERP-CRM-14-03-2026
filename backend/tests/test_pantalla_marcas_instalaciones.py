@@ -173,3 +173,59 @@ def test_el_panel_se_puede_ensanchar_con_el_dedo():
         "el tirador del panel ha vuelto a eventos de raton"
     assert "window.addEventListener('pointermove', onMove)" in src, \
         "el redimensionado del panel ya no sigue al dedo"
+
+
+# ─── 5. El boton de pantalla completa no se queda muerto ────────────────────
+#
+# 14/08/2026, el master: «el boton de reducir y expandir se ha quedado pillado».
+#
+# `activa` salia de `document.fullscreenElement`, que es lo correcto. El agujero
+# estaba en que, si el navegador salia de pantalla completa POR SU CUENTA y no
+# disparaba `fullscreenchange` —el gesto de volver de Android no siempre lo
+# hace—, `activa` se quedaba en true. Entonces el boton decia «Reducir», al
+# pulsarlo se llamaba a `exitFullscreen` sobre un documento que ya no estaba en
+# pantalla completa, la promesa fallaba, el error se tragaba en silencio... y el
+# boton no volvia a funcionar NUNCA. Muerto, y encima con la etiqueta cambiada.
+
+BOTON = os.path.join(RAIZ, "frontend", "src", "components", "BotonPantallaCompleta.jsx")
+
+
+def test_el_estado_se_relee_del_dom_al_pulsar():
+    """CANDADO. Fiarse de lo que creiamos tener es lo que lo dejaba pillado."""
+    src = _leer(BOTON)
+    i = src.index("const alternar")
+    cuerpo = src[i:src.index("\n  }, []);", i)]
+    assert "enPantallaCompleta()" in cuerpo, (
+        "el boton vuelve a decidir por su estado interno en vez de preguntar al "
+        "navegador: si se desincroniza, se queda muerto")
+    assert cuerpo.count("setActiva") >= 1, (
+        "tras intentarlo no se vuelve a sincronizar: si el evento no llega —que "
+        "es el caso que lo rompia— el boton se queda mintiendo")
+
+
+def test_hay_mas_de_una_forma_de_enterarse_de_que_se_salio():
+    """`fullscreenchange` no siempre llega en Android. `resize` y
+    `visibilitychange` si, y con ellos el estado se recupera solo."""
+    src = _leer(BOTON)
+    for evento in ("fullscreenchange", "resize", "visibilitychange"):
+        # Se exige el ALTA, no que la palabra aparezca: buscando solo «resize»
+        # bastaba con el `removeEventListener` para dar el candado por bueno, y
+        # entonces no protege de nada.
+        assert re.search(rf"addEventListener\(\s*'{evento}'", src), (
+            f"ya no se da de alta el aviso por «{evento}»: el boton puede volver "
+            f"a quedarse pillado sin forma de recuperarse")
+        assert re.search(rf"removeEventListener\(\s*'{evento}'", src), (
+            f"«{evento}» se da de alta y no se quita: cada vez que se pinte el "
+            f"boton se acumulara otro oyente")
+
+
+def test_el_boton_nunca_se_queda_sin_salida():
+    """Aunque falle, el estado acaba sincronizado: la siguiente pulsacion
+    funciona. Antes un `return` temprano dejaba el boton en punto muerto."""
+    src = _leer(BOTON)
+    i = src.index("const alternar")
+    cuerpo = src[i:src.index("\n  }, []);", i)]
+    cuerpo_util = cuerpo[cuerpo.index("try {"):]
+    assert "return;" not in cuerpo_util, (
+        "ha vuelto un `return` dentro del intento: si esa rama falla, el estado "
+        "no se sincroniza y el boton se queda pillado")

@@ -1747,7 +1747,14 @@ export default function AIRenderStudio({ state, setState }) {
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambios solicitados: ${cambio}. No cambies nada más.`,
+          // La orden va LIMPIA. Antes se envolvía en «manteniendo el mismo
+          // diseño […] No cambies nada más», y con eso el servidor recibía
+          // cinco veces «no cambies nada» y una sola vez el cambio pedido: si
+          // lo que se pedía era AÑADIR un mueble, ganaba el «no cambies nada» y
+          // el extraíble no aparecía. Lo que hay que respetar y lo que hay que
+          // cambiar ya lo dice el prompt del servidor, y lo dice sin
+          // contradecirse.
+          description: cambio,
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,

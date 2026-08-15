@@ -1256,10 +1256,23 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
                 "- 'agua': toma de agua fría/caliente bajo el fregadero (y en isla si hay segundo fregadero).\n"
                 "- 'desague': desagüe bajo el fregadero (y lavavajillas).\n"
                 "- 'gas': solo si hay placa de GAS (llama). Si la placa es de inducción/vitrocerámica, NO pongas gas.\n\n"
+                "REPARTE LOS PUNTOS POR TODA LA COCINA:\n"
+                "- Recorre la cocina de IZQUIERDA A DERECHA y no te dejes ningún tramo. Si hay dos "
+                "paredes (cocina en L), pon puntos en LAS DOS: amontonarlos todos en un lado deja "
+                "media cocina sin instalación y el electricista pica donde no es.\n"
+                "- Dos puntos distintos NUNCA van en el mismo sitio. Si el horno y el microondas "
+                "están uno encima del otro, sepáralos en vertical, cada uno sobre su aparato.\n"
+                "- No repitas el mismo punto dos veces.\n\n"
+                "ALTURA DE CADA TOMA (`alto_cm`, desde el suelo acabado). NO todas van a 110:\n"
+                "- Enchufe sobre encimera: 110. Campana: 220. Placa de inducción: 60 (en el mueble "
+                "de al lado, nunca detrás de la placa). Horno y microondas de columna: 60 sobre el "
+                "suelo o dentro del mueble contiguo. Frigorífico: 170. Lavavajillas y lavadora: 60, "
+                "en el mueble de al lado, NO detrás del aparato (quedaría inaccesible).\n"
+                "- Agua fría/caliente del fregadero: 50. Desagüe: 40. Gas: 50.\n\n"
                 "Usa coordenadas normalizadas: x=0 borde izquierdo, x=1 borde derecho, y=0 arriba, y=1 abajo de la "
                 "imagen. Antes de devolver, VERIFICA que cada (x,y) coincide con el píxel del elemento descrito y "
                 "corrígelo si se ha desplazado. Prefiere pocos puntos bien colocados a muchos mal colocados.\n\n"
-                "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|gas\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
+                "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|gas\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"alto_cm\":110,\"nota\":\"texto corto\"}]}. "
                 "Sin puntos claros, devuelve {\"puntos\":[]}."
             )
         text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-flash")
@@ -1280,8 +1293,14 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
                 y = max(0.0, min(1.0, float(it.get("y"))))
             except (TypeError, ValueError):
                 continue
-            out.append({"type": tipo, "x": round(x * 100, 2), "y": round(y * 100, 2), "nota": str(it.get("nota") or "")[:60]})
-        return {"success": True, "marks": out}
+            out.append({"type": tipo, "x": round(x * 100, 2), "y": round(y * 100, 2),
+                        "alto_cm": it.get("alto_cm"),
+                        "nota": str(it.get("nota") or "")[:60]})
+        # Que dos marcas no se pisen NO es cosa del modelo de visión: es
+        # geometría, y la geometría se calcula. Aquí se tiran los duplicados y se
+        # separan las que chocan, que es lo que dejaba el plano ilegible.
+        from services.marcas_instalaciones import ordenar_marcas
+        return {"success": True, "marks": ordenar_marcas(out)}
     except HTTPException:
         raise
     except Exception as e:
