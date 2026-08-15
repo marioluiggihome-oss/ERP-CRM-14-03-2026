@@ -308,3 +308,83 @@ async def get_current_user_info(
 # ============================================
 # PRODUCT ENDPOINTS
 # ============================================
+
+
+# ============================================
+# CERRAR SESIONES (SOLO MASTER)
+# ============================================
+# Hasta ahora «cerrar sesión» solo vaciaba `active_sessions`, que unicamente se
+# lee AL ENTRAR (para la sesión única). El token seguía valiendo hasta 24 horas,
+# así que quien ya estaba dentro seguía dentro. La única forma real de echar a
+# todo el mundo era cambiar JWT_SECRET en Railway y reiniciar.
+#
+# Ahora se marca una fecha de corte y `require_auth` rechaza todo token emitido
+# antes. Efecto inmediato, sin redespliegue, y se puede echar a uno solo.
+
+_FLAGS_MASTER = ("isAdmin", "isPrimaryAdmin", "isMaster")
+
+
+def _exigir_master(user: Optional[dict]) -> dict:
+    """Echar a la gente del ERP es cosa del master. La guarda va AQUÍ, en el
+    endpoint: esconder el botón no cierra ninguna puerta."""
+    if not user or not any(user.get(f) for f in _FLAGS_MASTER):
+        raise HTTPException(status_code=403, detail="Solo el master puede cerrar sesiones.")
+    return user
+
+
+@router.post("/auth/sesiones/cerrar-todas")
+async def cerrar_todas_las_sesiones(request: Request,
+                                    current_user: dict = Depends(require_auth)):
+    """Echa del ERP a TODOS los usuarios, incluido quien lo pulsa."""
+    _exigir_master(current_user)
+    from services.sesiones import cerrar_todas
+    cuerpo = {}
+    try:
+        cuerpo = await request.json()
+    except Exception:
+        cuerpo = {}
+    motivo = str((cuerpo or {}).get("motivo") or "").strip()
+    corte = await cerrar_todas(motivo=motivo or f"cerrado por {current_user.get('username')}")
+    audit.log(
+        AuditAction.LOGOUT, user_id=current_user.get("id"),
+        username=current_user.get("username"),
+        resource_type="session", details={"alcance": "todas", "motivo": motivo},
+        request=request)
+    return {
+        "success": True,
+        "corte": corte,
+        "mensaje": ("Sesiones cerradas. Todo el mundo —tú incluido— tendrá que "
+                    "volver a entrar en la próxima petición."),
+    }
+
+
+@router.post("/auth/sesiones/cerrar/{user_id}")
+async def cerrar_sesiones_de_usuario(user_id: str, request: Request,
+                                     current_user: dict = Depends(require_auth)):
+    """Echa del ERP a UN usuario concreto."""
+    _exigir_master(current_user)
+    from services.sesiones import cerrar_de
+    db = _get_db_singleton()
+    ficha = await db.users.find_one({"id": user_id}, {"_id": 0, "username": 1})
+    if not ficha:
+        raise HTTPException(status_code=404, detail="No existe ese usuario.")
+    corte = await cerrar_de(user_id, motivo=f"cerrado por {current_user.get('username')}")
+    audit.log(
+        AuditAction.LOGOUT, user_id=current_user.get("id"),
+        username=current_user.get("username"),
+        resource_type="session",
+        details={"alcance": "usuario", "usuario": ficha.get("username")},
+        request=request)
+    return {"success": True, "corte": corte,
+            "mensaje": f"Sesiones de {ficha.get('username')} cerradas."}
+
+
+@router.get("/auth/sesiones")
+async def listar_sesiones(current_user: dict = Depends(require_auth)):
+    """Quién está dentro ahora mismo, para poder mirarlo antes de echar a nadie."""
+    _exigir_master(current_user)
+    db = _get_db_singleton()
+    filas = await db.active_sessions.find({}, {"_id": 0}).to_list(500)
+    doc = await db.seguridad.find_one({"_id": "sesiones"}) or {}
+    return {"success": True, "sesiones": filas, "total": len(filas),
+            "ultimoCierre": doc.get("cuando"), "motivo": doc.get("motivo")}

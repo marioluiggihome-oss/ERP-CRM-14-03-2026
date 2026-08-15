@@ -16,6 +16,62 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const SecurityTab = ({ state, setState }) => {
   const has2FAEnabled = state.currentUser?.has2FAEnabled;
 
+  // ── Sesiones abiertas (solo master) ──────────────────────────────────────
+  const u = state.currentUser || {};
+  const esMaster = !!(u.isAdmin || u.isPrimaryAdmin || u.isMaster);
+  const [sesiones, setSesiones] = React.useState(null);
+  const [ultimoCierre, setUltimoCierre] = React.useState(null);
+  const [cargando, setCargando] = React.useState(false);
+
+  const cabeceras = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${state.token}`,
+  });
+
+  const cargarSesiones = async () => {
+    setCargando(true);
+    try {
+      const r = await fetch(`${API_URL}/api/auth/sesiones`, { headers: cabeceras() });
+      const d = await r.json();
+      if (d.success) { setSesiones(d.sesiones || []); setUltimoCierre(d.ultimoCierre || null); }
+      else alert(d.detail || 'No se pudieron leer las sesiones.');
+    } catch { alert('Error de conexión al leer las sesiones.'); }
+    finally { setCargando(false); }
+  };
+
+  const cerrarTodas = async () => {
+    // Se avisa de lo que de verdad va a pasar: también echa a quien lo pulsa.
+    if (!window.confirm(
+      'Se va a echar del ERP a TODOS los usuarios, tú incluido.\n\n' +
+      'Todo el mundo tendrá que volver a entrar con su contraseña.\n\n¿Seguir?')) return;
+    setCargando(true);
+    try {
+      const r = await fetch(`${API_URL}/api/auth/sesiones/cerrar-todas`, {
+        method: 'POST', headers: cabeceras(),
+        body: JSON.stringify({ motivo: 'cerrado desde el Panel Maestro' }),
+      });
+      const d = await r.json();
+      if (d.success) { alert(d.mensaje || 'Sesiones cerradas.'); setSesiones([]); }
+      else alert(d.detail || 'No se pudieron cerrar las sesiones.');
+    } catch { alert('Error de conexión al cerrar las sesiones.'); }
+    finally { setCargando(false); }
+  };
+
+  const cerrarUno = async (userId, nombre) => {
+    if (!userId) return;
+    if (!window.confirm(`¿Echar del ERP a ${nombre || userId}? Tendrá que volver a entrar.`)) return;
+    setCargando(true);
+    try {
+      const r = await fetch(`${API_URL}/api/auth/sesiones/cerrar/${encodeURIComponent(userId)}`, {
+        method: 'POST', headers: cabeceras(),
+      });
+      const d = await r.json();
+      if (d.success) { alert(d.mensaje || 'Sesión cerrada.'); await cargarSesiones(); }
+      else alert(d.detail || 'No se pudo cerrar esa sesión.');
+    } catch { alert('Error de conexión.'); }
+    finally { setCargando(false); }
+  };
+
   const handleSetup2FA = () => {
     setState(prev => ({ ...prev, show2FASetup: true }));
   };
@@ -88,6 +144,67 @@ const SecurityTab = ({ state, setState }) => {
           <p className="text-slate-500">Gestiona la autenticación de dos factores para tu cuenta</p>
         </div>
       </div>
+
+      {/* SESIONES ABIERTAS (solo master). Hasta ahora «cerrar sesión» solo
+          vaciaba una tabla que únicamente se mira AL ENTRAR: el token seguía
+          valiendo 24 h, así que quien estaba dentro seguía dentro. */}
+      {esMaster && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-rose-700 to-rose-800 text-white px-6 py-4 flex items-center justify-between">
+            <h4 className="font-black uppercase tracking-wider">Sesiones abiertas</h4>
+            <button onClick={cargarSesiones} disabled={cargando}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-bold">
+              <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} /> Actualizar
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            {ultimoCierre && (
+              <p className="text-xs text-slate-500">
+                Último cierre general: <b className="text-slate-700">{new Date(ultimoCierre).toLocaleString('es-ES')}</b>
+              </p>
+            )}
+            {sesiones === null ? (
+              <p className="text-sm text-slate-400">Pulsa «Actualizar» para ver quién está dentro.</p>
+            ) : sesiones.length === 0 ? (
+              <p className="text-sm text-slate-500">No hay ninguna sesión registrada.</p>
+            ) : (
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto">
+                {sesiones.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-2.5 gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 truncate">{s.username || s.user_id}</p>
+                      <p className="text-[11px] text-slate-400">
+                        Desde {s.login_at ? new Date(s.login_at).toLocaleString('es-ES') : '—'}
+                        {s.ip ? ` · ${s.ip}` : ''}
+                      </p>
+                    </div>
+                    <button onClick={() => cerrarUno(s.user_id, s.username)}
+                      className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 text-xs font-bold">
+                      Echar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="font-bold text-rose-900">Cerrar TODAS las sesiones</p>
+                  <p className="text-sm text-rose-700 mb-3">
+                    Echa del ERP a todos los usuarios <b>en el acto</b>, tú incluido.
+                    Todo el mundo tendrá que volver a entrar. No hace falta reiniciar nada.
+                  </p>
+                  <button onClick={cerrarTodas} disabled={cargando}
+                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-sm">
+                    Cerrar todas las sesiones
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Estado actual del 2FA */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

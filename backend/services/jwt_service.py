@@ -208,9 +208,16 @@ async def get_current_user(
 
     try:
         payload = verify_access_token(credentials.credentials)
-        return _payload_to_user(payload)
     except HTTPException:
         return None
+    # Un token con la firma buena y sin caducar puede estar REVOCADO: si se han
+    # cerrado las sesiones, todo token emitido antes de ese momento deja de
+    # valer. Sin esto, «cerrar sesiones» no echaba a nadie — el token seguía
+    # entrando hasta 24 horas después.
+    from services.sesiones import token_revocado
+    if await token_revocado(payload):
+        return None
+    return _payload_to_user(payload)
 
 
 async def require_auth(
@@ -228,6 +235,13 @@ async def require_auth(
         raise HTTPException(status_code=401, detail="Autenticación requerida")
 
     payload = verify_access_token(credentials.credentials)
+    # Firma buena y sin caducar NO basta: si se han cerrado las sesiones, este
+    # token pudo emitirse antes del corte y ya no vale.
+    from services.sesiones import token_revocado
+    if await token_revocado(payload):
+        raise HTTPException(
+            status_code=401,
+            detail="Tu sesión se ha cerrado desde el Panel Maestro. Vuelve a entrar.")
     return _payload_to_user(payload)
 
 
