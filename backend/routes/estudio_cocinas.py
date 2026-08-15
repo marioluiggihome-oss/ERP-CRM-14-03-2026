@@ -1673,9 +1673,14 @@ async def generar_alzado(payload: ProyectoBase):
             """
             cabe = max(4, int(largo_disponible * 0.92 / _cm_por_caracter(ax, 6.5)))
             t = str(txt).replace("\n", " · ")
+            # Fondo opaco detrás del rótulo. Girado, el texto cruza la línea de
+            # encimera, las diagonales de las puertas y los frentes de los
+            # cajones: sin taparlas, «Mueble bajo» se leía encima del «16» de la
+            # altura del cajón y no se entendía ninguno de los dos.
             ax.text(cx, cy, t if len(t) <= cabe else t[:max(1, cabe - 1)] + "…",
                     ha="center", va="center", fontsize=6.5, rotation=90,
-                    color=color or C_LINE)
+                    color=color or C_LINE, zorder=6,
+                    bbox=dict(facecolor=C_BG, edgecolor="none", pad=1.2))
 
         def _texto_modulo(ax, x, w, cy, txt):
             """Etiqueta dentro del módulo, ajustada a lo ancho que sea.
@@ -1687,14 +1692,39 @@ async def generar_alzado(payload: ProyectoBase):
             """
             if w >= 45:
                 cabe = max(4, int(w * 0.92 / _cm_por_caracter(ax, 6.5)))
-                lineas = [l if len(l) <= cabe else l[:max(1, cabe - 1)] + "…"
-                          for l in txt.split("\n")]
-                ax.text(x + w / 2, cy, "\n".join(lineas), ha="center", va="center", fontsize=6.5)
+                # PARTIR POR PALABRAS ANTES DE CORTAR. Se recortaba a lo bruto y
+                # el plano salía lleno de «Bajo frega…», «Lavavaji…», «Mueble
+                # alto 2…»: al taller media palabra no le sirve, y a lo alto del
+                # módulo sobra sitio para una segunda línea.
+                lineas = []
+                for parte in str(txt).split("\n"):
+                    if len(parte) <= cabe:
+                        lineas.append(parte)
+                        continue
+                    actual = ""
+                    for palabra in parte.split(" "):
+                        if not actual:
+                            actual = palabra
+                        elif len(actual) + 1 + len(palabra) <= cabe:
+                            actual += " " + palabra
+                        else:
+                            lineas.append(actual)
+                            actual = palabra
+                    if actual:
+                        lineas.append(actual)
+                # Una palabra suelta más larga que el módulo sí hay que cortarla.
+                lineas = [l if len(l) <= cabe else l[:max(1, cabe - 1)] + "…" for l in lineas]
+                # Con fondo, por lo mismo que el rótulo girado: dentro de una
+                # cajonera el texto cae encima de las líneas de los frentes.
+                ax.text(x + w / 2, cy, "\n".join(lineas), ha="center", va="center",
+                        fontsize=6.5, zorder=6,
+                        bbox=dict(facecolor=C_BG, edgecolor="none", pad=1.2))
             elif w >= 22:
                 _texto_vertical(ax, x + w / 2, cy, txt, ENC_Y - ZOC_Y)
             # Por debajo de 22 cm no cabe ni girado: lo dice la cota, no la etiqueta.
 
         herr = {"puertas": 0, "cajones": 0}  # recuento de herraje para el resumen
+        propuestos = 0   # altos DERIVADOS: se dibujan, pero no se piden
         for idx, (ax, pared) in enumerate(zip(axes, paredes)):
             ancho = int(pared.get("ancho") or 400)
             alto = int(pared.get("alto") or 240)
@@ -1770,16 +1800,22 @@ async def generar_alzado(payload: ProyectoBase):
                     for fh in fronts:
                         yy -= fh
                         ax.plot([x, x + w], [yy, yy], color=C_FRENTE, lw=0.8, zorder=3)
+                        # La cota del frente va PEGADA AL CANTO IZQUIERDO, no en
+                        # el centro: en el centro es donde va el nombre del
+                        # módulo, y los dos se pisaban («16» encima de «Mueble
+                        # bajo», y ninguno se leía).
                         if _con_cotas and w >= 40:
-                            ax.text(x + w / 2, yy + fh / 2, f"{fh:g}", ha="center", va="center",
+                            ax.text(x + 4, yy + fh / 2, f"{fh:g}", ha="left", va="center",
                                     fontsize=6, color=C_FRENTE)
                         # Tirador horizontal centrado, junto al canto superior del frente.
                         tirador_h(ax, x + w / 2, yy + fh - 3, length=min(16, w * 0.5))
                         herr["cajones"] += 1
                     # Dentro del módulo, no debajo: ahí abajo están las cotas y se
                     # pisaban ("Módulo bajo cajone…" encima del 10 del zócalo).
-                    _texto_vertical(ax, x + w / 2, (ZOC_Y + ENC_Y) / 2, label,
-                                    ENC_Y - ZOC_Y, color=C_LINE)
+                    # Y en horizontal si el módulo es ancho: girar el rótulo de
+                    # una cajonera de 90 cm no lo hacía más legible, lo hacía
+                    # menos. `_texto_modulo` ya decide gira/no gira por el ancho.
+                    _texto_modulo(ax, x, w, (ZOC_Y + ENC_Y) / 2, label)
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
                     _txt = f"{label}\n{w}×{ENC_Y - ZOC_Y}" if _con_cotas else label
@@ -1830,7 +1866,15 @@ async def generar_alzado(payload: ProyectoBase):
                 if not (ocupado_col or ocupado_camp or ocupado_alto):
                     wire(ax, bx, ALTOS_Y0, bw, ALTOS_Y1 - ALTOS_Y0, dash=True)
                     tirador_v(ax, bx + bw - 5, ALTOS_Y0 + 12, length=16)
-                    herr["puertas"] += 1
+                    # DICE QUE ES UNA PROPUESTA. Se dibujaban en discontinuo y
+                    # sin rótulo: una fila de cajas vacías encima de los bajos,
+                    # que en el papel se lee como «aquí van altos» aunque nadie
+                    # los haya pedido. Con la palabra puesta, se sabe qué es.
+                    _texto_modulo(ax, bx, bw, (ALTOS_Y0 + ALTOS_Y1) / 2, "Alto\n(propuesto)")
+                    # Y NO se cuentan en el herraje: ese recuento se usa para
+                    # pedir bisagras y tiradores, y estos muebles puede que no
+                    # existan. Un pedido de más se paga.
+                    propuestos += 1
             # encimera y zócalo
             ax.plot([0, ancho], [ENC_Y, ENC_Y], color=C_LINE, lw=2.2, zorder=4)
             ax.plot([0, ancho], [ZOC_Y, ZOC_Y], color=C_LINE, lw=1.2, zorder=4)
@@ -1910,6 +1954,12 @@ async def generar_alzado(payload: ProyectoBase):
         tiradores = puertas + cajones          # 1 tirador por puerta y por frente
         resumen = (f"HERRAJE (aprox.):  {puertas} puertas · {cajones} cajones/gavetas   |   "
                    f"{bisagras} bisagras · {guias} juegos de guías · {tiradores} tiradores")
+        # Los altos propuestos NO entran en el recuento —con este papel se pide
+        # el herraje— pero se dice cuántos hay, para que se confirmen o se
+        # quiten a propósito y no pasen inadvertidos.
+        if propuestos:
+            resumen += (f"   |   + {propuestos} alto(s) PROPUESTO(S) sin confirmar "
+                        f"(no incluidos en el herraje)")
         fig.text(0.5, 0.005, resumen, ha="center", va="bottom", fontsize=8.5,
                  color=C_HERRAJE, fontweight="bold",
                  bbox=dict(boxstyle="round,pad=0.4", fc="#F3F1EC", ec=C_HERRAJE, lw=0.8))
