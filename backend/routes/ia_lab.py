@@ -231,12 +231,63 @@ def _elige_por_altura(productos: list, height_mm: int) -> dict:
     return sorted(productos, key=dist)[0]
 
 
+def _es_del_mueble_detectado(producto: dict, width: int, tipo: str) -> bool:
+    """¿Este producto es DE VERDAD el módulo que se ha detectado en el plano?
+
+    EL CÓDIGO QUE PROPONE LA IA ES UNA PISTA, NO UNA IDENTIDAD.
+
+    La IA no lee el código en el plano: lo CONSTRUYE por patrón. El master lo vio
+    escrito en su propia pantalla: «se ha interpretado que 'nP' se refiere al
+    número de frentes, resultando en 7B2P800». Ese código no está en el plano; se
+    ha deducido.
+
+    Y luego se buscaba con patrones sueltos —`.*B.*800$`, o sea cualquier código
+    que lleve una B y acabe en 800—, así que un código inventado podía casar con
+    un producto REAL que no es ese mueble. Y ahí no falla nada: sale un nombre de
+    catálogo y un precio de catálogo, creíbles los dos, para un mueble que no es.
+
+    Por eso lo que se encuentra POR PATRÓN se comprueba contra lo que se vio en
+    el plano: el ancho y la familia. Lo que se encuentra por código EXACTO no
+    pasa por aquí — ahí el código sí es una identidad.
+    """
+    if not producto:
+        return False
+    # ANCHO. Es el dato más fiable del plano (va rotulado) y el que más mueve el
+    # precio. Se admite el redondeo al estándar, no un mueble de otra medida.
+    if width:
+        ancho_cat = _product_width_cm(producto)
+        if ancho_cat and abs(int(ancho_cat * 10) - int(width)) > 60:
+            return False
+    # FAMILIA. Un ALTO no se valora con un BAJO por mucho que el código case:
+    # son cascos distintos y precios distintos.
+    familias = {
+        "ALTO": ("alto", "altillo", "sobre"),
+        "BAJO": ("bajo", "cajoner", "fregader", "encimera"),
+        "COLUMNA": ("columna", "torre", "despens"),
+        "SEMICOLUMNA": ("semicolumna", "media columna"),
+    }
+    pedido = str(tipo or "").upper()
+    claves = familias.get(pedido)
+    if claves:
+        texto = f"{producto.get('name', '')} {producto.get('category', '')}".lower()
+        contrarias = [p for t, ps in familias.items() if t != pedido for p in ps]
+        if not any(k in texto for k in claves) and any(c in texto for c in contrarias):
+            return False
+    return True
+
+
 async def search_product_in_catalog(code: str, width: int = None, height: int = None,
                                      library: str = None, tipo: str = None) -> dict:
     """
     Busca un producto en el catálogo.
     Orden: código exacto -> referencia -> variantes de código -> TIPO+ANCHO -> dimensiones.
     Filtra por biblioteca si se especifica.
+
+    OJO CON EL ORDEN: los pasos 1 y 2 son IDENTIDAD (el código existe tal cual).
+    Del 3 en adelante son HEURÍSTICA sobre un código que la IA ha DEDUCIDO, y
+    todo lo que salga de ahí se comprueba contra el ancho y la familia del
+    módulo detectado (ver `_es_del_mueble_detectado`). Sin esa comprobación, un
+    código inventado emparejaba con un producto real y le ponía su precio.
     """
     code = (code or '').upper().strip()
 
@@ -265,12 +316,12 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
 
             pattern = f".*{tipo_code}.*{num_puertas}.*{tipo_puerta}.*{ancho}$"
             product = await db.products.find_one({**base_filter, "code": {"$regex": pattern, "$options": "i"}}, {"_id": 0})
-            if product:
+            if _es_del_mueble_detectado(product, width, tipo):
                 return product
 
             pattern_simple = f".*{tipo_code}.*{ancho}$"
             product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_simple, "$options": "i"}}, {"_id": 0})
-            if product:
+            if _es_del_mueble_detectado(product, width, tipo):
                 return product
 
         # 3b. Variantes de código MV: LETRAS iniciales + ANCHO en cm, con o sin
@@ -288,7 +339,7 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
                 {**base_filter, "code": {"$regex": pattern_mv, "$options": "i"}}, {"_id": 0}
             ).to_list(20)
             elegido = _elige_por_altura(productos, height)
-            if elegido:
+            if _es_del_mueble_detectado(elegido, width, tipo):
                 return elegido
             # Fallback: mismas letras iniciales + mismo ancho, sufijo cualquiera.
             pattern_mv2 = f"^{letras}{ancho_mv}"
@@ -296,7 +347,7 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
                 {**base_filter, "code": {"$regex": pattern_mv2, "$options": "i"}}, {"_id": 0}
             ).to_list(20)
             elegido = _elige_por_altura(productos, height)
-            if elegido:
+            if _es_del_mueble_detectado(elegido, width, tipo):
                 return elegido
 
     # 4. Emparejamiento por TIPO + ANCHO (clave para que funcione en MV y ZC
@@ -313,7 +364,7 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
             "height": {"$gte": height - 100, "$lte": height + 100}
         }, {"_id": 0}).limit(5).to_list(5)
         elegido = _elige_por_altura(products, height)
-        if elegido:
+        if _es_del_mueble_detectado(elegido, width, tipo):
             return elegido
 
     return None
