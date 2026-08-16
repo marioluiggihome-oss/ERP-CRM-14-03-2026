@@ -24,6 +24,18 @@ const cota = (mm) => {
   return Number.isFinite(v) && v > 0 ? Math.round(v) : '?';
 };
 
+/** Todo lo que viene de la IA, como TEXTO, antes de tocarlo.
+ *
+ * Estos datos salen de un JSON que escribe un modelo. `furniture.subtipo` se
+ * pintaba con `subtipo?.replace(...)`: el `?.` protege del nulo, pero NO de un
+ * número. Si el modelo devuelve `subtipo: 2`, `2.replace` no existe, y como eso
+ * pasa DENTRO DEL RENDER, se cae la pantalla entera — «Algo ha fallado» nada más
+ * volcar desde Estudio 3D, que es lo que reportó el master.
+ *
+ * Un dato raro del modelo tiene que dar una línea rara, nunca tumbar la pantalla.
+ */
+const txt = (v) => (v == null ? '' : String(v));
+
 const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -617,7 +629,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                           )}
                         </div>
                         <p className="text-xs text-slate-600 font-medium truncate">
-                          {furniture.nombre_catalogo || `${furniture.tipo} ${furniture.subtipo?.replace(/_/g, ' ')}`}
+                          {furniture.nombre_catalogo || `${txt(furniture.tipo)} ${txt(furniture.subtipo).replace(/_/g, ' ')}`.trim()}
                         </p>
                         <p className="text-[10px] text-slate-400">
                           {/* Ancho × alto × fondo, TODO en mm. Antes se dividía
@@ -691,12 +703,30 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                             🔌 {rp.electrodomesticos} electrodoméstico(s) detectados (no son muebles del catálogo)
                           </p>
                         )}
+                        <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+                          El importe final lo pone el presupuestador con <b>tu tarifa</b>; aquí
+                          va con la tarifa base, así que no tiene por qué coincidir.
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-emerald-600 uppercase font-bold">Total Estimado</p>
+                      {/* ESTE NÚMERO NO ES EL DEL PRESUPUESTO, Y HAY QUE DECIRLO.
+                          El presupuestador vuelve a valorar cada línea CON LA
+                          TARIFA que tengas elegida (T1…T21 en MV, Z1…Z12 en
+                          ZC); aquí no se sabe cuál es, así que esto sale con la
+                          tarifa BASE. Salían dos cifras distintas para la misma
+                          cocina y ninguna decía por qué: el master lo reportó
+                          como «el precio estimado es distinto al de mv o al de
+                          zc». Se enseñan los PUNTOS, que son lo que de verdad
+                          no cambia, y los euros marcados como lo que son. */}
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] text-emerald-600 uppercase font-bold">Orientativo · tarifa base</p>
                         <p className="text-xl font-black text-emerald-700">
                           {estimado.toLocaleString('es-ES')}€
                         </p>
+                        {rp.total_puntos > 0 && (
+                          <p className="text-[10px] text-emerald-600 font-bold">
+                            {Number(rp.total_puntos).toLocaleString('es-ES')} puntos
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -725,7 +755,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                     className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg"
                   >
                     <Plus size={18} />
-                    + AÑADIR {rp.productos_encontrados} PRODUCTOS AL PRESUPUESTO ({estimado.toLocaleString('es-ES')}€)
+                    + AÑADIR {rp.productos_encontrados} PRODUCTOS AL PRESUPUESTO
                   </button>
                   );
                 })()}

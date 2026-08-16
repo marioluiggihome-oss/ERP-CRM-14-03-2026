@@ -31,6 +31,7 @@ import re
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 APP = os.path.join(RAIZ, "frontend", "src", "App.js")
+VISUALIZER = os.path.join(RAIZ, "frontend", "src", "components", "Visualizer.jsx")
 INDEX = os.path.join(RAIZ, "frontend", "src", "index.js")
 
 
@@ -87,3 +88,54 @@ def test_el_detalle_se_puede_copiar():
     src = _leer(INDEX)
     assert "clipboard.writeText" in src, \
         "ya no se puede copiar el detalle del error para mandarlo"
+
+
+# ─── El que reventaba de verdad estaba EN EL RENDER ─────────────────────────
+#
+# 15/08/2026: «en estudio 3d, da error nada mas darle al boton de volcar a
+# presupuesto». Estudio 3D lleva al Analizador, que analiza solo y PINTA los
+# muebles. Y al pintarlos hacia:
+#
+#     furniture.subtipo?.replace(/_/g, ' ')
+#
+# El `?.` protege del nulo, pero NO de un numero. Con `subtipo: 2`, `2.replace`
+# no existe. Y como pasa DENTRO DEL RENDER, no se cae una linea: se cae la
+# pantalla entera, nada mas volcar. Por eso el error salia «al instante».
+
+
+def test_al_pintar_un_mueble_no_se_dan_los_datos_por_texto():
+    """CANDADO. Un fallo en el render tumba la pantalla ENTERA, no una linea."""
+    src = _leer(VISUALIZER)
+    codigo = "\n".join(l.split("//")[0] for l in src.splitlines())
+    malas = re.findall(
+        r"\b\w+\.(?:subtipo|tipo|codigo_sugerido|codigo_catalogo|categoria)\??"
+        r"\.(?:replace|toUpperCase|toLowerCase|trim|split)\(", codigo)
+    assert not malas, (
+        "se vuelve a llamar a un metodo de texto sobre un dato de la IA al "
+        "pintarlo: con un numero, la pantalla entera se cae al volcar. "
+        f"Sitios: {malas}")
+
+
+def test_existe_el_normalizador_de_texto_del_analizador():
+    src = _leer(VISUALIZER)
+    assert "const txt = (v) =>" in src, (
+        "se ha quitado el normalizador: los datos del modelo vuelven a pintarse "
+        "dandolos por cadenas")
+
+
+# ─── Y el error se puede LEER antes de que la pagina se recargue sola ───────
+
+def test_un_error_de_verdad_no_se_auto_recarga():
+    """El master: «no me das tiempo de copiar los detalles tecnicos del error».
+    Habia una recarga automatica a los 0,8 s que se llevaba por delante la
+    pantalla del fallo. Y recargar no arregla un error de programacion: solo lo
+    esconde. El respaldo del bundle desfasado (isChunkError) SI sigue."""
+    src = _leer(INDEX)
+    i = src.index("componentDidCatch")
+    cuerpo = src[i:src.index("\n  handleManualReload", i)]
+    assert "window.location.reload" not in cuerpo, (
+        "ha vuelto la auto-recarga al capturar un error: la pantalla del fallo "
+        "desaparece antes de que nadie pueda leerla ni copiarla")
+    assert "isChunkError" in cuerpo, (
+        "se ha perdido el respaldo del bundle desfasado, que ESE si hay que "
+        "recargarlo")

@@ -67,15 +67,20 @@ class ErrorBoundary extends React.Component {
     const msg = error?.message || String(error || '');
     if (isChunkError(msg)) { tryChunkReload(msg); return; }
 
-    // Otros errores: intentar auto-recargar una vez por sesión.
-    try {
-      const reloaded = sessionStorage.getItem(AUTO_RELOAD_KEY);
-      if (!reloaded) {
-        sessionStorage.setItem(AUTO_RELOAD_KEY, '1');
-        // pequeño delay para evitar bucle infinito
-        setTimeout(() => window.location.reload(), 800);
-      }
-    } catch {}
+    // LOS DEMÁS ERRORES NO SE AUTO-RECARGAN.
+    //
+    // Aquí había una recarga automática a los 0,8 s. La idea era buena para un
+    // bundle desfasado —y ese caso sigue cubierto arriba, con `isChunkError`—,
+    // pero para un fallo de verdad hacía dos cosas malas:
+    //
+    //  · Se llevaba por delante la pantalla del error antes de que nadie
+    //    pudiera leerla. El master, literalmente: «no me das tiempo de copiar
+    //    los detalles técnicos del error». Sin traza, un fallo se reporta como
+    //    «da fallo» y hay que buscarlo a ciegas.
+    //  · Y recargar no arregla un error de programación: vuelve a salir en
+    //    cuanto se repite el gesto. Lo único que consigue es esconderlo.
+    //
+    // Un fallo se queda en pantalla hasta que alguien lo lee y decide.
   }
 
   handleManualReload = () => {
