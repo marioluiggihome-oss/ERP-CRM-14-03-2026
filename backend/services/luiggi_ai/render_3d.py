@@ -690,6 +690,17 @@ class Render3DService:
         if ref_b64 and is_sketch:
             parsed_params["briefExpanded"] = False
             parsed_params["fromSketch"] = True
+            # LA DISTRIBUCIÓN LA MANDA EL DIBUJO, Y LA PANTALLA TIENE QUE DECIRLO.
+            #
+            # La pantalla arranca con `layout: 'L-shape'` escrito a fuego y lo
+            # manda en cada petición. Con un croquis delante eso no lo decide
+            # nadie: lo decide el dibujo. Pero el pie del render seguía pintando
+            # «Layout: L-shape» — el master vio eso justo debajo de una cocina
+            # LINEAL, con la palabra «Cocina lineal» impresa en su referencia.
+            # No cambiaba el render (este valor no entra en el prompt), pero un
+            # dato falso en pantalla se cree, y encima manda a buscar el fallo
+            # donde no está.
+            parsed_params["layout"] = "según el dibujo"
             brief_txt = (description or "").strip()
 
             # QUÉ MUEBLE ES. El prompt decía «kitchen» siempre, escrito a fuego:
@@ -705,8 +716,17 @@ class Render3DService:
             transcription_block = f"\nTECHNICAL BREAKDOWN EXTRACTED DIRECTLY FROM THE SKETCH:\n{sketch_transcription}\n" if sketch_transcription else ""
 
             task_prompt = (
-                f"You are given a TECHNICAL 2D DRAWING of ONE specific {_pieza}: a hand-drawn "
-                "floor plan, elevation or blueprint, with handwritten dimensions and labels.\n"
+                f"You are given a TECHNICAL 2D DRAWING of ONE specific {_pieza}: a floor plan, "
+                "elevation or blueprint. It may be hand-drawn with handwritten dimensions, or a "
+                "printed line drawing (CAD / catalogue style).\n"
+                "ONLY THE DRAWING COUNTS. The image may be a PHONE SCREENSHOT OF A WHOLE PAGE: a "
+                "title, a brand box, priced line items, totals, buttons and the phone's own status "
+                "and navigation bars can surround the drawing. All of that is packaging — never "
+                "render it, never let it crop your attention, and never treat a price line or a "
+                "brand name as a piece of furniture. Find the drawing inside the page and work from "
+                "it alone. The ONE thing worth reading in that surrounding text is the SHAPE of the "
+                "job if it is stated ('Cocina lineal' = straight single-wall run, 'en L', 'en U'): "
+                "that confirms the layout, it never overrides what is drawn.\n"
                 + transcription_block +
                 f"Produce a single photorealistic interior photograph of THAT SAME {_pieza}, "
                 "built exactly as drawn. This is a FAITHFUL 3D realisation of the drawing, "
@@ -756,6 +776,22 @@ class Render3DService:
                 "- If the row of wall cabinets is interrupted — typically above the hob, where only the extractor hood goes — "
                 "that opening MUST appear in the photograph, at the same place and the same width. Do NOT fill it with an invented "
                 "cabinet, and do NOT stretch the neighbouring units to close it. Bare wall above the hob with the hood on it is the correct result.\n\n"
+                "HEIGHTS ARE DRAWN TOO — A TALL COLUMN IS TALLER, AND IT SHOWS:\n"
+                "- Reproduce the RELATIVE HEIGHTS exactly as drawn. A block drawn taller than its "
+                "neighbours is taller in the photograph: full-height columns normally start at the "
+                "floor and rise ABOVE the top line of the wall cabinets, often to the ceiling. "
+                "Never level everything to one height, and never shrink a full-height column down "
+                "to the height of a wall unit.\n"
+                "- A full-height column touches the floor. If the drawing shows a block running "
+                "uninterrupted from the floor line to above the wall units, it is ONE tall column, "
+                "not a base unit with a separate wall unit above it, and no countertop crosses it.\n"
+                "- The countertop stops where the column starts, butting against its side panel.\n\n"
+                "STRAIGHT SINGLE-WALL RUN — CAMERA:\n"
+                "- If the drawing is a LINEAR run against one single wall (no corner, no return, no "
+                "island), photograph it close to straight-on / slightly off-axis so the WHOLE run "
+                "reads from end to end. A steep three-quarter angle is wrong here: it foreshortens "
+                "the far end until the last modules disappear. The three-quarter corner view is "
+                "only for L, U and peninsula layouts.\n\n"
                 "BOTH ENDS OF THE RUN MUST BE IN THE PHOTOGRAPH:\n"
                 "- The LAST MODULE ON THE RIGHT and the LAST MODULE ON THE LEFT are as important as the middle ones. "
                 "The kitchen ends exactly where the drawing ends: render every module up to and including the one at each extreme edge.\n"
@@ -797,7 +833,9 @@ class Render3DService:
                 "  · 'Bajo Placa 2 Gavetas' / '2 Gavetas': 90cm wide cooktop unit with TWO large closed horizontal pull-out drawers (gavetones) and black induction cooktop on the countertop.\n"
                 "  · 'Gola Extraible 30' / 'Extraible': closed narrow 30cm pull-out bottle/spice base unit.\n"
                 "- CAMERA FOR L-SHAPES: use a three-quarter view from inside or opposite the corner, so BOTH perpendicular walls and the 90-degree return are visibly distinct. A straight-on frontal elevation is forbidden for an L-shaped kitchen.\n"
-                "- Use a wide-angle corner viewpoint so the COMPLETE layout is visible at once.\n\n"
+                "- Use a wide-angle viewpoint so the COMPLETE layout is visible at once — from the "
+                "corner if the layout turns, straight-on if it is a single straight wall. Whatever "
+                "the angle, no module may end up outside the frame.\n\n"
                 + (f"FINISHES (this is the ONLY thing the text decides — geometry comes 100% "
                    f"from the drawing): {brief_txt}\n\n" if brief_txt else
                    "Use plausible, restrained modern finishes; the geometry still comes 100% "
@@ -1183,6 +1221,14 @@ class Render3DService:
                 "8. THE TWO ENDS OF THE RUN: describe separately what is drawn at the FAR LEFT end and at the FAR RIGHT end of the drawing "
                 "— the last module of each side, its width and what it is (cabinet, tall column, appliance, open shelving, end panel, or bare wall). "
                 "Never leave an end undescribed: if a module is drawn at the very edge of the paper, it is part of the kitchen and must be listed.\n"
+                "9. RELATIVE HEIGHTS: state which blocks are FULL-HEIGHT columns (drawn from the floor line up to or "
+                "above the top of the wall cabinets) and which are wall units or base units. Say explicitly whether the "
+                "columns rise ABOVE the line of the wall cabinets. A block drawn floor-to-top in one piece is ONE tall "
+                "column, not a base unit with a wall unit above it.\n"
+                "10. IS THIS THE WHOLE PAGE? The image may be a phone screenshot of a document: a title, a brand box, "
+                "priced line items, totals and the phone's status/navigation bars around the actual drawing. Ignore all "
+                "of it and describe ONLY the drawing — except the stated SHAPE of the job if it appears in the title "
+                "('Cocina lineal' = straight single-wall run, 'en L', 'en U'), which you should report as the layout.\n"
                 "Be strictly factual, clear, and concise."
             )
             raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64

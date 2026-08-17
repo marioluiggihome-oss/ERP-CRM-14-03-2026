@@ -370,3 +370,111 @@ def test_el_ultimo_mueble_de_la_derecha_entra_en_la_foto():
         "quedara fuera de la foto, que para el master es lo mismo que faltar")
     assert "widen the lens" in cuerpo, \
         "ya no se dice que se abra el angulo en vez de quitar un mueble"
+
+
+# ─── 6. LA REFERENCIA ES UNA PAGINA ENTERA, Y LAS COLUMNAS SON MAS ALTAS ────
+#
+# Segunda pasada del master sobre lo mismo: «falla». Con la referencia ya a
+# tamano completo se ve que NO es un croquis a lapiz, es un PANTALLAZO DEL
+# MOVIL de una pagina de presupuesto de Leroy Merlin: titulo «Cocina lineal»,
+# recuadro de marca, tres lineas con precios, el total, y arriba y abajo las
+# barras del propio movil. El dibujo de la cocina ocupa un tercio de la imagen.
+#
+# Tres cosas que el prompt no cubria y que se ven en ese dibujo:
+#
+#  · LA PAGINA NO ES LA COCINA. Al modelo se le decia «lee las etiquetas
+#    manuscritas» sin decirle que ahi hay titulos, precios y botones que no son
+#    muebles. «Elementos CUBRO» y «TOTAL (IVA incluido)» no son modulos.
+#  · LAS COLUMNAS SON MAS ALTAS. En el dibujo las dos columnas de la derecha
+#    arrancan del suelo y suben POR ENCIMA de la linea de los altos. El render
+#    lo aplanaba todo a la misma altura, y una columna aplanada es una columna
+#    que ya no esta: exactamente «falta un mueble a la derecha del todo».
+#  · LA CAMARA. El prompt mandaba SIEMPRE «wide-angle corner viewpoint». En una
+#    cocina lineal esa vista en tres cuartos escorza el fondo hasta que los
+#    ultimos modulos desaparecen. La vista de esquina es para la L y la U.
+#
+# Y una mentira en pantalla: el pie del render decia «Layout: L-shape» debajo
+# de una cocina lineal, porque la pantalla manda 'L-shape' por defecto. No
+# cambiaba el render —ese valor no entra en el prompt— pero se cree, y manda a
+# buscar el fallo donde no esta.
+
+
+def test_al_leer_el_croquis_se_preguntan_las_alturas():
+    """Una columna aplanada a la altura de un alto es una columna que falta."""
+    p = _prompt_de_transcripcion()
+    assert "RELATIVE HEIGHTS" in p, (
+        "la lectura del croquis ya no pregunta que bloques son columnas de "
+        "altura completa: se aplanaran a la altura de los altos")
+    assert "rise ABOVE the line of the wall cabinets" in p, \
+        "ya no se pregunta si las columnas sobresalen por encima de los altos"
+    assert "not a base unit with a wall unit above it" in p, (
+        "una columna entera vuelve a poder leerse como bajo + alto, que es "
+        "otra forma de perderla")
+
+
+def test_al_leer_el_croquis_se_ignora_el_resto_de_la_pagina():
+    """La referencia del master es un pantallazo entero: titulo, precios,
+    total y las barras del movil. Nada de eso es un mueble."""
+    p = _prompt_de_transcripcion()
+    assert "IS THIS THE WHOLE PAGE?" in p, (
+        "ya no se avisa de que la imagen puede ser un pantallazo de una pagina "
+        "entera: los precios y el titulo vuelven a competir con el dibujo")
+    assert "Cocina lineal" in p, \
+        "se ha quitado el unico texto de la pagina que SI vale: la forma"
+
+
+def test_el_render_sabe_que_le_llega_una_pagina_y_no_solo_un_dibujo():
+    cuerpo = _prompt_del_croquis()
+    assert "ONLY THE DRAWING COUNTS" in cuerpo, (
+        "el encargo ya no distingue el dibujo del resto de la pagina")
+    assert "PHONE SCREENSHOT OF A WHOLE PAGE" in cuerpo, \
+        "ya no se contempla el caso real: un pantallazo del movil"
+    assert "never treat a price line or a brand name as a piece of furniture" in cuerpo, \
+        "un precio o una marca vuelven a poder acabar renderizados como mueble"
+    # Y el dibujo impreso: la referencia del master NO es a lapiz.
+    assert "printed line drawing" in cuerpo, (
+        "el encargo vuelve a dar por hecho que el dibujo es a mano; un plano "
+        "de catalogo impreso es igual de valido y llega igual de a menudo")
+
+
+def test_una_columna_dibujada_mas_alta_se_renderiza_mas_alta():
+    cuerpo = _prompt_del_croquis()
+    assert "HEIGHTS ARE DRAWN TOO" in cuerpo, (
+        "el encargo ya no exige respetar las alturas relativas: las columnas "
+        "se aplanaran a la altura de los altos y pareceran desaparecer")
+    assert "rise ABOVE the top line of the wall cabinets" in cuerpo, \
+        "ya no se dice que una columna sobresale por encima de los altos"
+    assert "never shrink a full-height column" in cuerpo, \
+        "vuelve a poderse encoger una columna entera"
+    assert "countertop stops where the column starts" in cuerpo, \
+        "la encimera vuelve a poder atravesar la columna"
+
+
+def test_una_cocina_lineal_no_se_fotografia_en_tres_cuartos():
+    """La vista de esquina escorza el fondo y se come los ultimos modulos.
+    Es para la L y la U, no para una fila recta."""
+    cuerpo = _prompt_del_croquis()
+    assert "STRAIGHT SINGLE-WALL RUN — CAMERA" in cuerpo, (
+        "no hay regla de camara para la cocina lineal: se seguira usando la "
+        "vista de esquina, que esconde el extremo de la fila")
+    assert "close to straight-on" in cuerpo, \
+        "ya no se pide vista frontal para una fila recta"
+    assert "only for L, U and peninsula layouts" in cuerpo, \
+        "la vista de esquina vuelve a aplicarse a todo"
+    # Y la orden global de camara ya no puede ser «siempre de esquina».
+    assert "Use a wide-angle corner viewpoint so the COMPLETE layout" not in cuerpo, (
+        "ha vuelto la orden incondicional de fotografiar desde la esquina, que "
+        "contradice la regla de la cocina lineal")
+
+
+def test_el_pie_del_render_no_inventa_la_distribucion():
+    """«Layout: L-shape» debajo de una cocina lineal. La pantalla manda
+    'L-shape' por defecto; con un croquis delante eso no lo decide ella."""
+    src = _leer(RENDER)
+    i = src.index('parsed_params["fromSketch"] = True')
+    cuerpo = src[i:i + 1200]
+    assert 'parsed_params["layout"]' in cuerpo, (
+        "el render vuelve a devolver el layout que mando la pantalla por "
+        "defecto: el pie dira «L-shape» debajo de una cocina lineal")
+    assert "según el dibujo" in cuerpo, \
+        "el pie ya no dice de donde sale la distribucion cuando hay croquis"
