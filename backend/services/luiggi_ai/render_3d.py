@@ -741,6 +741,28 @@ class Render3DService:
                 "an end panel or a bare wall past the last module, render exactly that: a side panel or "
                 "empty wall. Do not close the run with an invented cabinet or column.\n"
                 "- Empty wall is a valid, correct result. Leave it empty.\n\n"
+                "FRONT-BY-FRONT FIDELITY — A MODULE IS NOT A BOX, IT IS ITS FRONTS:\n"
+                "- Reproduce, module by module, the EXACT number of fronts drawn on its face and the EXACT kind of each one. "
+                "Count every horizontal and vertical dividing line on the face of each unit: a unit drawn with three stacked "
+                "fronts is THREE DRAWERS, not one door; a unit drawn with a vertical line down the middle is TWO side-by-side doors.\n"
+                "- NEVER merge two drawn fronts into a single flat panel, and never split a single drawn front into several. "
+                "A single plain door where the drawing shows a bank of drawers is a WRONG kitchen, not a simplification.\n"
+                "- A tall column drawn with a horizontal division is TWO stacked doors (or a door plus an appliance), not one full-height door.\n"
+                "- Drawers must read as drawers in the photograph: a continuous horizontal reveal across the full width of the unit, "
+                "aligned with the reveals of the neighbouring units, and the gola channel or handle repeated on EVERY drawer front.\n"
+                "- Reveals and joints line up across the whole run: the horizontal lines of the fronts are continuous from module to module, "
+                "exactly as drawn. Misaligned or randomly placed joints are wrong.\n\n"
+                "A GAP IN THE WALL UNITS IS PART OF THE DESIGN, NOT A MISTAKE:\n"
+                "- If the row of wall cabinets is interrupted — typically above the hob, where only the extractor hood goes — "
+                "that opening MUST appear in the photograph, at the same place and the same width. Do NOT fill it with an invented "
+                "cabinet, and do NOT stretch the neighbouring units to close it. Bare wall above the hob with the hood on it is the correct result.\n\n"
+                "BOTH ENDS OF THE RUN MUST BE IN THE PHOTOGRAPH:\n"
+                "- The LAST MODULE ON THE RIGHT and the LAST MODULE ON THE LEFT are as important as the middle ones. "
+                "The kitchen ends exactly where the drawing ends: render every module up to and including the one at each extreme edge.\n"
+                "- FRAME THE SHOT SO NOTHING IS CUT OFF. Pull the camera back until the complete run fits inside the frame with a "
+                "margin of empty room on both sides. Never crop a module at the edge of the image, never let the last unit on the right "
+                "fall outside the frame, and never zoom into the centre of the kitchen. If the whole kitchen does not fit, widen the "
+                "lens — do not drop a module.\n\n"
                 "THE DRAWING IS THE GROUND TRUTH FOR GEOMETRY:\n"
                 "- Reproduce the EXACT overall SHAPE of the kitchen (linear, L-shaped, U-shaped, "
                 "with island or peninsula) as drawn. If it is drawn as an L, it must be an L.\n"
@@ -1022,6 +1044,13 @@ class Render3DService:
                     "- IF OCR SPECIFIES 2 TALL COLUMNS SIDE-BY-SIDE (e.g. 1x Refrigerator 60cm + 1x Freezer 60cm), RENDER EXACTLY 2 FULL-HEIGHT TALL COLUMNS SIDE-BY-SIDE ON THAT WALL END. DO NOT MERGE THEM INTO ONE COLUMN!\n"
                     "- IF HANDWRITTEN TEXT WRITTEN ON PAPER SPECIFIES FINISHES (e.g. 'Blanco Mate', 'granito Nacional'), RENDER DOORS IN MATTE WHITE AND COUNTERTOP IN NATIONAL GRANITE.\n"
                     "- KEEP EXACT SEQUENCE OF OVEN, DRAWERS, SINK AND EXTRAÍBLE AS EXTRACTED ABOVE.\n"
+                    "- REPRODUCE THE FRONTS OF EACH MODULE EXACTLY AS LISTED ABOVE: the same number of fronts and the same kind. "
+                    "A module listed with 3 drawers is rendered with 3 separate drawer fronts, never as one plain door; "
+                    "a tall column listed with 2 doors is rendered split in two, never as a single full-height door.\n"
+                    "- ANY GAP OR RECESS REPORTED IN THE WALL-UNIT RUN (typically above the hob, for the hood) MUST STAY OPEN. "
+                    "Do not fill it with an invented cabinet and do not widen the neighbouring units to close it.\n"
+                    "- RENDER BOTH ENDS OF THE RUN, INCLUDING THE LAST MODULE ON THE RIGHT, AND FRAME THE SHOT WIDE ENOUGH THAT "
+                    "NO MODULE IS CROPPED AT THE EDGE OF THE IMAGE.\n"
                 )
 
         brief_txt = (description or "").strip()
@@ -1117,7 +1146,17 @@ class Render3DService:
 
     async def _transcribe_sketch_with_vision(self, raw_b64: str, mime: str = "image/png") -> str:
         """Lee el croquis manuscrito con Gemini Vision y extrae de forma
-        estructurada los módulos, cotas, frigorífico, hornos, columnas y acabados manuscritos."""
+        estructurada los módulos, cotas, frigorífico, hornos, columnas y acabados manuscritos.
+
+        LO QUE NO SE TRANSCRIBE, NO SE RENDERIZA. Este texto se antepone tal cual
+        al encargo del render, así que todo lo que aquí no se pregunte se pierde
+        para siempre: el modelo de imagen ya no vuelve a mirar el dibujo con
+        atención, mira este resumen. Por eso se piden explícitamente los FRENTES
+        de cada módulo (un mueble con tres cajones dibujados es tres cajones, no
+        una puerta), los HUECOS de la fila de altos (el de la campana sobre la
+        placa se rellenaba con un mueble inventado) y el ÚLTIMO MÓDULO DE CADA
+        EXTREMO (el de la derecha del todo desaparecía del render).
+        """
         try:
             from services.llm_vision import analyze_image_with_gemini
             prompt = (
@@ -1129,6 +1168,21 @@ class Render3DService:
                 "3. BASE CABINET SEQUENCE (left to right / around walls): list each module with label (e.g. 'Horno', '2 gavetas', 'Ex/Extraíble', 'Fregadero', 'Frigo', 'Congelador') and width in cm/mm.\n"
                 "4. WALL CABINETS & HOOD: describe upper cabinets, open shelves, and wall hood placement.\n"
                 "5. CORNER & LAYOUT SHAPE: L-shaped, U-shaped, or linear, including corner module dimensions (e.g. 93x93 cm). If the drawing visibly turns at an inside corner or shows a secondary wall/return, classify it as L-shaped even when one wall is drawn mostly frontally. State the MAIN WALL sequence and the RETURN WALL sequence separately.\n"
+                "6. FRONTS OF EACH MODULE (one line per module, this is MANDATORY and must never be summarised away): "
+                "for EVERY module of every run — base units, wall units and tall columns — state HOW MANY separate fronts it has "
+                "and WHAT KIND each one is, reading the horizontal and vertical dividing lines drawn on its face. "
+                "Use exactly this form: 'module 3, 60cm, sink base: 1 door' / 'module 4, 90cm: 3 stacked drawers' / "
+                "'tall column 1, 60cm: 2 doors, one above the other, split at oven height'. "
+                "A horizontal line across the face of a unit means the face is split into that many stacked fronts (drawers or two doors). "
+                "A vertical line down the middle means two side-by-side doors. "
+                "Count them one by one and NEVER merge several drawn fronts into a single panel.\n"
+                "7. GAPS AND RECESSES IN THE WALL-UNIT RUN: state whether the row of wall cabinets is continuous or is INTERRUPTED, "
+                "and where. A gap above the hob (normally for the extractor hood), a shorter wall unit, an open shelf or a bare stretch of wall "
+                "is a REAL part of the design and must be reported as such: e.g. 'wall run: 2 units, then a 90cm gap above the hob occupied only by the hood, then 1 unit'. "
+                "If the wall run is truly continuous with no interruption, say so explicitly.\n"
+                "8. THE TWO ENDS OF THE RUN: describe separately what is drawn at the FAR LEFT end and at the FAR RIGHT end of the drawing "
+                "— the last module of each side, its width and what it is (cabinet, tall column, appliance, open shelving, end panel, or bare wall). "
+                "Never leave an end undescribed: if a module is drawn at the very edge of the paper, it is part of the kitchen and must be listed.\n"
                 "Be strictly factual, clear, and concise."
             )
             raw = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64

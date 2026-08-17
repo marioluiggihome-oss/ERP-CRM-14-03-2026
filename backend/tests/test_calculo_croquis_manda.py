@@ -249,3 +249,124 @@ def test_la_imagen_se_reconoce_por_su_firma_y_no_por_el_content_type():
     assert "0xFF, 0xD8" in cuerpo, "ya no se reconoce el JPEG"
     # El master fotografia el croquis con el movil: en iPhone sale HEIC.
     assert "heic" in cuerpo.lower(), "ya no se reconoce el HEIC del iPhone"
+
+
+# ─── 5. EL RENDER PIERDE LOS FRENTES ────────────────────────────────────────
+#
+# El master comparo la pagina de presupuesto de Leroy Merlin que habia pasado
+# como referencia con el render que le devolvio el ERP: «no se parecen»,
+# «faltan similitudes». Puestas una al lado de la otra, la silueta si estaba —
+# la misma fila de bajos, la misma columna a la derecha, el mismo largo—, pero
+# se habian ido tres cosas:
+#
+#   · el HUECO de la campana sobre la placa, relleno con un alto inventado;
+#   · los FRENTES DE CAJON bajo el fregadero y a la derecha del horno,
+#     convertidos en una puerta lisa;
+#   · la COLUMNA partida en dos puertas, renderizada como una sola hoja;
+#
+# y, cuando volvio a mirar: «y falta un mueble a la derecha del todo».
+#
+# Ninguna de las cuatro da error. Sale una cocina bonita que no es la del
+# cliente. El que la firma cree que ese es su presupuesto, y en fabrica se
+# corta otra cosa: un cajon no cuesta lo que una puerta, y un mueble que no
+# esta en el render se le olvida a todo el mundo menos al montador.
+#
+# Se pierde en DOS sitios, y por eso se cierran los dos:
+#
+#   (a) LO QUE SE LEE del dibujo. La transcripcion se antepone tal cual al
+#       encargo; el modelo de imagen ya no vuelve a mirar el croquis con lupa,
+#       mira ese resumen. Lo que la transcripcion no pregunta, no existe.
+#   (b) LO QUE SE LE PIDE al render. Aunque la transcripcion lo cuente, si el
+#       encargo no exige frente a frente, el modelo simplifica: alisa cajones,
+#       cierra huecos y encuadra por el centro dejando fuera la ultima puerta.
+
+
+def _prompt_de_transcripcion():
+    """El prompt con el que se LEE el croquis (Vision), pegado igual que el
+    del render para leerlo como lo ve el modelo."""
+    src = _leer(RENDER)
+    i = src.index("async def _transcribe_sketch_with_vision")
+    cuerpo = src[src.index("prompt = (", i):src.index("raw = raw_b64", i)]
+    return re.sub(r'"\s*\n\s*"', "", cuerpo)
+
+
+def test_al_leer_el_croquis_se_cuentan_los_frentes_de_cada_mueble():
+    """Sin esto la transcripcion dice «modulo de 90, fregadero» y se acabo: el
+    render no tiene forma de saber si eran tres cajones o una puerta."""
+    p = _prompt_de_transcripcion()
+    assert "FRONTS OF EACH MODULE" in p, (
+        "la lectura del croquis ha dejado de pedir los frentes de cada mueble: "
+        "un banco de cajones volvera a renderizarse como una puerta lisa")
+    assert "HOW MANY separate fronts" in p, \
+        "ya no se pide CUANTOS frentes tiene cada modulo"
+    assert "NEVER merge" in p, \
+        "ya no se prohibe fundir varios frentes dibujados en uno solo"
+
+
+def test_al_leer_el_croquis_se_pregunta_por_el_hueco_de_la_campana():
+    """La fila de altos NO siempre es continua. Si no se pregunta, se
+    transcribe como continua y el render la cierra."""
+    p = _prompt_de_transcripcion()
+    assert "GAPS AND RECESSES IN THE WALL-UNIT RUN" in p, (
+        "ya no se pregunta si la fila de altos esta interrumpida: el hueco de "
+        "la campana se rellenara con un mueble que nadie ha pedido")
+    assert "continuous or is INTERRUPTED" in p, \
+        "la pregunta ya no obliga a mojarse: continua o interrumpida"
+
+
+def test_al_leer_el_croquis_se_describen_LOS_DOS_extremos():
+    """«y falta un mueble a la derecha del todo». Los extremos se cuentan
+    aparte porque son justo lo que se pierde al resumir."""
+    p = _prompt_de_transcripcion()
+    assert "THE TWO ENDS OF THE RUN" in p, (
+        "ya no se describen los extremos de la fila: el ultimo mueble de la "
+        "derecha volvera a desaparecer del render")
+    assert "FAR RIGHT" in p and "FAR LEFT" in p, \
+        "ya no se piden los dos extremos por separado"
+    assert "Never leave an end undescribed" in p, \
+        "vuelve a poderse dejar un extremo sin describir"
+
+
+def test_el_render_reproduce_frente_a_frente():
+    """Un mueble no es una caja: es sus frentes. Sin esta regla el modelo
+    'simplifica' y devuelve puertas lisas donde habia cajones."""
+    cuerpo = _prompt_del_croquis()
+    assert "FRONT-BY-FRONT FIDELITY" in cuerpo, (
+        "el encargo del render ya no exige reproducir frente a frente: los "
+        "cajones volveran a salir como una puerta lisa")
+    assert "three stacked" in cuerpo and "THREE DRAWERS" in cuerpo, \
+        "se ha quitado el caso concreto: tres frentes dibujados son tres cajones"
+    assert "NEVER merge two drawn fronts" in cuerpo, \
+        "vuelve a permitirse fundir dos frentes dibujados en un panel liso"
+    assert "horizontal division is TWO stacked doors" in cuerpo, (
+        "la columna partida vuelve a poder renderizarse como una sola hoja")
+
+
+def test_el_hueco_de_la_campana_no_se_rellena():
+    """Un hueco es diseno, no un olvido del dibujante."""
+    cuerpo = _prompt_del_croquis()
+    assert "A GAP IN THE WALL UNITS IS PART OF THE DESIGN" in cuerpo, (
+        "el hueco de la fila de altos vuelve a tratarse como un error a "
+        "corregir: el render lo cerrara con un mueble inventado")
+    assert "above the hob" in cuerpo, \
+        "se ha quitado el caso normal: el hueco de la campana sobre la placa"
+    assert "do NOT stretch the neighbouring units" in cuerpo, (
+        "ya no se prohibe ensanchar los altos de al lado para cerrar el hueco, "
+        "que es la otra forma de comerselo")
+
+
+def test_el_ultimo_mueble_de_la_derecha_entra_en_la_foto():
+    """Lo que dijo el master mirando su render: «falta un mueble a la derecha
+    del todo». Son DOS reglas, porque son dos fallos distintos: no dibujarlo,
+    y dibujarlo pero dejarlo fuera del encuadre."""
+    cuerpo = _prompt_del_croquis()
+    assert "BOTH ENDS OF THE RUN MUST BE IN THE PHOTOGRAPH" in cuerpo, (
+        "ya no se exige renderizar los dos extremos: el ultimo mueble de la "
+        "derecha volvera a faltar")
+    assert "LAST MODULE ON THE RIGHT" in cuerpo, \
+        "se ha quitado la regla del ultimo mueble de la derecha"
+    assert "FRAME THE SHOT SO NOTHING IS CUT OFF" in cuerpo, (
+        "ya no se manda encuadrar la cocina entera: el mueble se dibujara pero "
+        "quedara fuera de la foto, que para el master es lo mismo que faltar")
+    assert "widen the lens" in cuerpo, \
+        "ya no se dice que se abra el angulo en vez de quitar un mueble"
