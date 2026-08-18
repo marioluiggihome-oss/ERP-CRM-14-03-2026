@@ -613,6 +613,43 @@ class Render3DService:
                 reference_image_base64=ref_b64, reference_mime=ref_mime,
                 provider=provider,
             )
+        # ── IA 5: EL CAMINO DEL 10 DE JULIO, TAL CUAL ─────────────────────────
+        #
+        # El master, tras cuatro renders seguidos de la misma cocina: «busca lo
+        # que hacía el 10 de julio de 2026, que funcionaba mejor»; y luego,
+        # «podías poner un botón de IA 5, con el prompt del 10 de julio».
+        #
+        # Tiene razón en el método. Trece rondas de yo apretando el encargo y él
+        # diciendo que no se parece no las zanja otra teoría mía: las zanja
+        # rendir el MISMO croquis por los dos caminos y mirar las dos imágenes.
+        #
+        # Va ANTES de la rama de hoy y a propósito NO lleva nada de agosto: ni
+        # recorte del dibujo dentro de la página, ni lectura a ficha, ni lista
+        # de módulos numerada. En julio no existían. Un botón «julio con los
+        # arreglos de agosto» no contestaría a la pregunta.
+        if ref_b64 and provider == "julio":
+            from services.luiggi_ai.render_10jul import (
+                build_render_prompt as _brp_10jul, prompt_del_croquis_10jul)
+            parsed_params["motor"] = "IA 5 — camino del 10/07/2026"
+            parsed_params["fromSketch"] = bool(is_sketch)
+            # En julio el croquis pasaba por `_expand_brief` (gemini-2.5-pro),
+            # que redacta una especificación entera SIN haber visto el dibujo.
+            # Va incluido porque iba: quitarlo sería otra cosa, no julio.
+            _brief = await self._expand_brief(description, space_type)
+            parsed_params["briefExpanded"] = bool(_brief) and _brief != (description or "").strip()
+            _generico = _brp_10jul(
+                description=_brief or description,
+                style=parsed_params.get("style", "photorealistic"),
+                space_type=space_type,
+            )
+            task_prompt = prompt_del_croquis_10jul(
+                _generico, hay_referencia=True, es_croquis=bool(is_sketch))
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                reference_image_base64=ref_b64, reference_mime=ref_mime,
+                provider="gemini", reference_images=reference_images or None,
+            )
+
 
         if ref_b64 and not is_sketch:
             change = (description or "").strip()

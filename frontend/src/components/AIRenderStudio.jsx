@@ -497,6 +497,11 @@ export default function AIRenderStudio({ state, setState }) {
     if (motor === 'ia2') return 'manus';
     if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
     if (motor === 'ia4') return 'gemini_flash'; // Gemini Flash (rápido)
+    // IA 5: el camino del 10/07/2026, literal. Mismo motor (Gemini), otro
+    // encargo. Está para PROBAR, no para adornar: el master dijo que aquello
+    // funcionaba mejor y con este botón se rinde el mismo croquis por los dos
+    // caminos y se miran las dos imágenes, en vez de discutirlo.
+    if (motor === 'ia5') return 'julio';
     return 'gemini';
   };
   const [attached, setAttached] = useState(false);
@@ -3166,7 +3171,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
+                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido'], ['ia5', 'IA 5', 'Camino del 10/07/2026 — mismo motor, el encargo de entonces (sin recorte ni lectura a ficha)']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
                         className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}
