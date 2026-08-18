@@ -2466,6 +2466,41 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Adjuntar el render al presupuesto (Resumen Totales) ────────────────────
   // Volcado a presupuesto dual (P1/P2): si el usuario tiene ambos, muestra modal.
+  // COPIAR LA RELACIÓN PARA EL PEGADO MASIVO.
+  //
+  // `navigator.clipboard` no existe fuera de HTTPS y en algunos navegadores de
+  // móvil viejos, y ahí el botón se quedaba sin hacer nada —sin decirlo—. Con
+  // el respaldo de `execCommand` copia igual; y si tampoco, se dice, en vez de
+  // dejar al usuario pulsando un botón muerto.
+  // Volcar la relacion leida del plano al presupuestador, con el pegado masivo
+  // ya relleno. Un paso menos y, sobre todo, SIN una segunda adivinanza: son
+  // los muebles que se leyeron del dibujo, no lo que parezca el render.
+  const volcarRelacionA = (destino) => {
+    const texto = renderResult?.parsed_params?.relacionMV;
+    if (!texto || !setState) return;
+    irA(setState, destino, { relacionMVPendiente: texto });
+  };
+  const [relacionCopiada, setRelacionCopiada] = useState(false);
+  const copiarRelacionMV = async (texto) => {
+    const t = String(texto || '');
+    if (!t) return;
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(t); ok = true; }
+    } catch (_) { ok = false; }
+    if (!ok) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch (_) { ok = false; }
+    }
+    if (ok) { setRelacionCopiada(true); setTimeout(() => setRelacionCopiada(false), 2500); }
+    else setError('No se ha podido copiar. Selecciona el texto de la relación y cópialo a mano.');
+  };
+
   const [showDualModal, setShowDualModal] = useState(null); // null | 'choosing'
   const attachToBudget = async () => {
     const img = currentImage();
@@ -4019,6 +4054,69 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   </div>
                 )
+              )}
+
+              {/* LA MISMA LECTURA, LISTA PARA PEGAR EN EL PRESUPUESTO.
+                  El recuadro de arriba es para LEERLO; el pegado masivo de
+                  Cocina Montada 3 y Cocina Desmontada habla notación MV
+                  («1 bf60 (altura 80)»). Sale de la MISMA lectura, no de una
+                  segunda interpretación, y está probado contra el intérprete
+                  de verdad del presupuesto: un botón de copiar que produce
+                  texto que luego no pega es peor que no tener botón. */}
+              {renderResult?.parsed_params?.relacionMV && (
+                <div className="shrink-0 mt-2 text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-bold text-slate-600">
+                      Relación para el presupuesto ({renderResult.parsed_params.relacionMVLineas} muebles)
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => copiarRelacionMV(renderResult.parsed_params.relacionMV)}
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]">
+                        {relacionCopiada ? '✓ Copiado' : 'Copiar'}
+                      </button>
+                      {/* VOLCAR LA LECTURA, NO EL RENDER.
+                          El boton de «volcar a presupuesto» de arriba manda la
+                          IMAGEN del render al analizador para que adivine los
+                          muebles mirandola. Eso es dibujo -> lectura -> render
+                          -> volver a leer el render -> presupuesto: dos
+                          interpretaciones de IA en serie, y la segunda mira una
+                          cocina que la primera ya se habia inventado.
+                          Esto vuelca la LECTURA, que son los muebles del plano
+                          con sus codigos de tarifa. */}
+                      <button
+                        type="button"
+                        onClick={() => volcarRelacionA('cocinaMontada3')}
+                        className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px]">
+                        Volcar a Montada 3
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="whitespace-pre-wrap break-words text-slate-500 font-mono text-[10px] leading-snug max-h-40 overflow-y-auto">
+                    {renderResult.parsed_params.relacionMV}
+                  </pre>
+                  <div className="mt-1 text-slate-400">
+                    Pégalo en «Pegado masivo» de Cocina Montada 3 o Cocina Desmontada.
+                  </div>
+                  {/* LO DEDUCIDO SE DICE. Un ancho que el dibujo no traía sale
+                      con «?» y NO se pega: rellenarlo con un 60 sería meter una
+                      medida inventada en un presupuesto. Y la familia de
+                      cajonera se elige contando frentes, que entre BGC y BC hay
+                      200 EUR. */}
+                  {renderResult.parsed_params.relacionMVSinAncho > 0 && (
+                    <div className="mt-1 text-amber-700 font-bold">
+                      ⚠ {renderResult.parsed_params.relacionMVSinAncho} mueble(s) sin ancho en el plano: salen con «?»
+                      y no se pegarán. Escribe tú el ancho antes de pegar.
+                    </div>
+                  )}
+                  {renderResult.parsed_params.relacionMVCajoneras > 0 && (
+                    <div className="mt-1 text-amber-700">
+                      Repasa las {renderResult.parsed_params.relacionMVCajoneras} cajonera(s): la familia se ha
+                      deducido contando frentes, y entre una y otra hay diferencia de precio.
+                    </div>
+                  )}
+                </div>
               )}
               </div>
             </div>

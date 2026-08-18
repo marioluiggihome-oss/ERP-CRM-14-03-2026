@@ -526,3 +526,122 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
     if _sin_cotas(datos):
         partes.insert(0, "SIN COTAS ESCRITAS — proporciones del dibujo, no midas sobre el render")
     return " · ".join(partes)
+
+
+# ─── LA RELACIÓN MV, PARA PEGARLA EN EL PRESUPUESTO ─────────────────────────
+#
+# El master: «el texto que sale abajo, que identifica muebles por debajo del
+# diseño, haz que eso se pueda copiar para pegar en pegado masivo de
+# presupuesto de cocina montada 3 y cocina desmontada».
+#
+# El resumen que se pinta en pantalla es para LEERLO —«Bajos: 4 → 60(1p)…»— y
+# el pegado masivo no entiende eso: habla la notación MV, «1 bf60 (altura 80)».
+# Así que se genera aparte, con los códigos de familia que existen de verdad en
+# la tarifa, y se comprueba con el MISMO intérprete que usa el presupuesto
+# (`services/mv_relacion.parse_relacion`). Un botón de copiar que produce texto
+# que luego no pega es peor que no tener botón.
+#
+# LO QUE NO SE HACE: rellenar un ancho que no está. Un módulo sin cota sale con
+# «?» y no se pega —el presupuesto dirá que no lo ha leído— porque poner un 60
+# por defecto sería meter una medida inventada en un presupuesto. Es la regla
+# de oro de la casa, y aquí se paga en euros.
+
+# Códigos de familia MV, tal y como están en la tarifa (no inventados: salen de
+# `mv_tarifas.json`). Lo que no se sepa mapear cae al genérico de su fila.
+_MV_BAJO = {
+    "fregadero": "bf",      # BAJO_FREGADERO
+    "horno": "bh",          # BAJO_HORNO
+    "cajones_3": "bgc",     # BAJO_2GAV_1CAJ  -> 3 frentes
+    "cajones_5": "bc",      # BAJO_5_CAJONES  -> 5 frentes
+    "generico": "b",        # BAJO
+}
+_MV_ALTO = {
+    "campana": "asc",       # ALTO_CAMPANA
+    "escurreplatos": "ae",  # ALTO_ESCURREPLATOS
+    "vitrina": "av",        # ALTO_VITRINA
+    "abatible": "aa",       # ALTO_ABATIBLE
+    "microondas": "am",     # ALTO_MICROONDAS
+    "generico": "a",        # ALTO
+}
+_MV_COLUMNA = {
+    "horno_micro": "chm",   # COLUMNA_HORNO_MICRO
+    "horno": "ch",          # COLUMNA_HORNO
+    "frigorifico": "cf",    # COLUMNA_FRIGO
+    "generico": "cd",       # COLUMNA_DESPENSERO
+}
+_MV_ALTILLO = "l"           # ALTILLO
+
+# Alturas de fábrica cuando el dibujo no las trae. NO son medidas inventadas
+# del mueble del cliente: son el estándar con el que tarifa MV, y van escritas
+# para que se vean y se puedan cambiar antes de pegar.
+ALTURA_MV = {"bajos": 80, "altos": 70, "altillos": 35, "columnas": 200}
+
+
+def _codigo_mv(fila: str, modulo: Dict[str, Any]) -> str:
+    """Qué familia MV le toca a este módulo, mirando lo que lleva dentro."""
+    frentes = " ".join(modulo.get("frentes") or [])
+    texto = f"{modulo.get('contiene') or ''} {frentes}".lower()
+    texto = texto.translate(str.maketrans("áéíóú", "aeiou"))
+    if fila == "columnas":
+        if "horno" in texto and ("micro" in texto):
+            return _MV_COLUMNA["horno_micro"]
+        if "horno" in texto:
+            return _MV_COLUMNA["horno"]
+        if "frigo" in texto or "nevera" in texto or "combi" in texto:
+            return _MV_COLUMNA["frigorifico"]
+        return _MV_COLUMNA["generico"]
+    if fila == "altillos":
+        return _MV_ALTILLO
+    if fila == "altos":
+        for clave in ("campana", "escurreplatos", "vitrina", "abatible", "microondas"):
+            if clave in texto:
+                return _MV_ALTO[clave]
+        return _MV_ALTO["generico"]
+    # bajos
+    if "fregadero" in texto:
+        return _MV_BAJO["fregadero"]
+    if "horno" in texto:
+        return _MV_BAJO["horno"]
+    # LA CAJONERA SE ELIGE POR CUANTOS FRENTES TIENE, no «porque lleva cajones».
+    # En la tarifa hay varias familias de cajonera y se llevan 400 EUR entre
+    # ellas: BC son CINCO cajones y BGC son TRES (dos gavetas y un cajón). Un
+    # mueble dibujado con tres frentes que se presupueste como el de cinco es
+    # dinero de más en el papel que firma el cliente.
+    #
+    # Aun asi esto es una DEDUCCION, no un dato: el dibujo enseña frentes, no
+    # familias. Por eso `relacion_mv` cuenta cuántas cajoneras van deducidas y
+    # la pantalla pide que se repasen antes de pegar.
+    cajones = sum(1 for f in (modulo.get("frentes") or []) if f == "cajon")
+    if cajones >= 5:
+        return _MV_BAJO["cajones_5"]
+    if cajones >= 2:
+        return _MV_BAJO["cajones_3"]
+    return _MV_BAJO["generico"]
+
+
+def relacion_mv(datos: Dict[str, Any]) -> Dict[str, Any]:
+    """La lectura del dibujo, en notación MV lista para el pegado masivo.
+
+    Devuelve {"texto", "lineas", "sin_ancho"}. `sin_ancho` es cuántos módulos
+    salen con «?» porque el dibujo no traía su cota: esos NO se pegan, y hay
+    que decirlo en pantalla en vez de rellenarlos con un 60.
+    """
+    if not datos:
+        return {"texto": "", "lineas": 0, "sin_ancho": 0, "cajoneras": 0}
+    lineas: List[str] = []
+    sin_ancho = 0
+    cajoneras = 0
+    filas = datos.get("filas") or {}
+    for fila in FILAS:
+        for m in filas.get(fila) or []:
+            cod = _codigo_mv(fila, m)
+            if cod in (_MV_BAJO["cajones_3"], _MV_BAJO["cajones_5"]):
+                cajoneras += 1
+            ancho = m.get("ancho_cm")
+            if ancho:
+                lineas.append(f"1 {cod}{int(ancho)} (altura {ALTURA_MV[fila]})")
+            else:
+                sin_ancho += 1
+                lineas.append(f"1 {cod}? (altura {ALTURA_MV[fila]})")
+    return {"texto": "\n".join(lineas), "lineas": len(lineas),
+            "sin_ancho": sin_ancho, "cajoneras": cajoneras}

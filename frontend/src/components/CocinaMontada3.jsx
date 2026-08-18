@@ -195,6 +195,25 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   // Modales y vistas
   const [showPegadoMasivo, setShowPegadoMasivo] = useState(false);
   const [textoMasivo, setTextoMasivo] = useState('');
+
+  // ─── RELACIÓN QUE LLEGA DEL ESTUDIO 3D ──────────────────────────────────
+  //
+  // El botón «Volcar a Montada 3» del Estudio 3D manda aquí los muebles que se
+  // LEYERON DEL PLANO, ya en notación MV. Llegan al cuadro de pegado masivo y
+  // se abre solo, para que se vean ANTES de meterlos: se repasan, se corrige lo
+  // que haga falta y se procesa.
+  //
+  // NO se procesan solos a propósito. Esto acaba en un presupuesto que firma un
+  // cliente, y la relación trae cosas deducidas —la familia de cajonera se
+  // saca contando frentes—. Que entre sin que nadie la haya mirado es cómo se
+  // firma un mueble que no es.
+  useEffect(() => {
+    const texto = state?.relacionMVPendiente;
+    if (!texto) return;
+    setTextoMasivo(String(texto));
+    setShowPegadoMasivo(true);
+    if (setState) setState(p => { const { relacionMVPendiente, ...resto } = p; return resto; });
+  }, [state?.relacionMVPendiente]);   // eslint-disable-line
   const [showComparador, setShowComparador] = useState(false);
   const [showEscandallo, setShowEscandallo] = useState(false);
   const [showMuestrario, setShowMuestrario] = useState(false);

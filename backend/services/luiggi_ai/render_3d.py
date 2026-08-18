@@ -815,10 +815,21 @@ class Render3DService:
             lectura = await self._leer_cocina_del_dibujo(ref_b64, ref_mime)
             if lectura:
                 from services.luiggi_ai.lectura_cocina import (
-                    especificacion_en_texto, resumen_para_pantalla)
+                    especificacion_en_texto, relacion_mv, resumen_para_pantalla)
                 sketch_transcription = especificacion_en_texto(lectura)
                 parsed_params["lecturaDelDibujo"] = resumen_para_pantalla(lectura)
                 parsed_params["lecturaEstructurada"] = True
+                # LA MISMA LECTURA, EN NOTACIÓN MV, PARA PEGARLA EN EL
+                # PRESUPUESTO. El resumen de arriba es para leerlo; el pegado
+                # masivo de Cocina Montada 3 y Cocina Desmontada habla otra
+                # lengua («1 bf60 (altura 80)»). Se genera aquí para que salga
+                # de la MISMA lectura y no de una segunda interpretación.
+                _rel = relacion_mv(lectura)
+                if _rel.get("texto"):
+                    parsed_params["relacionMV"] = _rel["texto"]
+                    parsed_params["relacionMVLineas"] = _rel["lineas"]
+                    parsed_params["relacionMVSinAncho"] = _rel["sin_ancho"]
+                    parsed_params["relacionMVCajoneras"] = _rel["cajoneras"]
             else:
                 sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
                 parsed_params["lecturaEstructurada"] = False
