@@ -73,12 +73,44 @@ def test_la_barra_de_acciones_no_se_parte_en_movil():
         "del final quedan inalcanzables, que es peor que antes")
 
 
-def test_el_render_tiene_alto_garantizado_en_movil():
+def test_el_render_tiene_alto_garantizado_SIEMPRE():
+    """EL FALLO QUE COMETI, y merece quedar escrito.
+
+    El primer arreglo puso el alto minimo SOLO en pantallas estrechas
+    (`sm:min-h-0`). Pero al GIRAR el movil pasa a ser una pantalla ANCHA —se le
+    aplican las reglas de escritorio— y sin embargo tiene MUY POCO ALTO: unos
+    430 px. Ahi la cabecera, la barra, el cuadro de edicion y el historial
+    sumaban mas que la pantalla, y el render se quedaba en CERO de alto.
+
+    El master, con el movil en horizontal: «se ve todo mejor, LOS DISEÑOS NO SE
+    VEN». Efectivamente todo lo demas cabia mejor... porque se habia comido el
+    diseño.
+
+    LA ANCHURA NO DICE NADA DEL ALTO. El minimo va sin condicion de ancho."""
     codigo = _codigo()
-    assert "min-h-[42vh] sm:min-h-0" in codigo, (
-        "el render vuelve a quedarse sin alto minimo en el movil: encajonado "
-        "entre la cabecera, la barra y el cuadro de edicion se queda en una "
-        "franja, y es lo unico que hay que ver")
+    assert "min-h-[42vh]" in codigo, (
+        "el render vuelve a quedarse sin alto minimo: encajonado entre la "
+        "cabecera, la barra y el cuadro de edicion se queda en una franja, y "
+        "es lo unico que hay que ver")
+    assert "min-h-[42vh] sm:min-h-0" not in codigo, (
+        "el alto minimo del render ha vuelto a depender del ANCHO de pantalla: "
+        "girando el movil se desactiva y el diseño desaparece, que es "
+        "exactamente el fallo que reporto el master")
+
+
+def test_en_pantalla_baja_el_historial_deja_sitio_al_diseño():
+    """Un movil en horizontal tiene ~430 px de alto. La tira del historial se
+    encoge por ALTO DE VENTANA —no por ancho, que es lo que no dice nada."""
+    codigo = _codigo()
+    assert "tira-historial" in codigo,         "la tira del historial ya no se puede encoger en pantallas bajas"
+    ruta = os.path.join(RAIZ, "frontend", "src", "index.css")
+    with open(ruta, encoding="utf-8") as f:
+        css = f.read()
+    assert "max-height: 560px" in css, (
+        "se ha quitado la regla de pantalla baja: en el movil en horizontal el "
+        "historial vuelve a comerse el alto del render")
+    i = css.index("max-height: 560px")
+    assert ".tira-historial" in css[i:i + 400],         "la regla de pantalla baja ya no encoge la tira del historial"
 
 
 def test_en_pantalla_grande_no_se_ha_cambiado_nada():

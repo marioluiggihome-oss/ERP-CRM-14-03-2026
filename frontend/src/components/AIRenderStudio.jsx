@@ -3760,7 +3760,7 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                 </div>
               )}
-              <div className="flex-1 min-w-0 min-h-[42vh] sm:min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
+              <div className="flex-1 min-w-0 min-h-[42vh] bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
@@ -4169,8 +4169,8 @@ export default function AIRenderStudio({ state, setState }) {
 
           {/* Historial de renders: tira horizontal compacta */}
           {renderHistory.length > 0 && !isGenerating && (
-            <div className="shrink-0 border-t border-slate-200 pt-2 mt-1">
-              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            <div className="tira-historial shrink-0 border-t border-slate-200 pt-2 mt-1">
+              <div className="titulo-historial flex items-center gap-1.5 mb-1.5 flex-wrap">
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   {savedId ? 'Fotos del proyecto' : 'Historial'}
                 </h4>

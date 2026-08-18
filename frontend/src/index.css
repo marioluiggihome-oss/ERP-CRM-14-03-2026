@@ -249,3 +249,22 @@ code {
 @media (max-width: 1280px) {
   .menu-plegado .hueco-logo-centrado { padding-left: 3.75rem; }
 }
+
+/* ─── PANTALLAS BAJAS: EL MÓVIL EN HORIZONTAL ────────────────────────────────
+   El master, con el Estudio 3D en apaisado: «en móvil y posición horizontal se
+   ve todo mejor, LOS DISEÑOS NO SE VEN».
+
+   Y era exacto. Girado, el móvil pasa a ser una pantalla ANCHA —o sea que se le
+   aplican las reglas de escritorio— pero con MUY POCO ALTO: unos 430 px. La
+   cabecera, la barra de acciones, el cuadro de edición y la tira del historial
+   sumaban más que eso, y el render, que es lo único que hay que mirar, se
+   quedaba con cero de alto y desaparecía.
+
+   La anchura no dice nada del alto. Por eso esto va por ALTO de ventana y no
+   por el ancho: en apaisado la tira del historial se encoge y suelta el sitio
+   que le hace falta al diseño. Sigue estando —se puede pasar el dedo por
+   ella— pero deja de mandar sobre lo importante. */
+@media (max-height: 560px) {
+  .tira-historial { max-height: 4.25rem; overflow: hidden; }
+  .tira-historial .titulo-historial { display: none; }
+}
