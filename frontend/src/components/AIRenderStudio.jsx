@@ -2897,7 +2897,7 @@ export default function AIRenderStudio({ state, setState }) {
               <Wand2 size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-base font-black text-slate-900 uppercase tracking-wide leading-tight">Estudio 3D</h1>
+              <h1 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide leading-tight whitespace-nowrap">Estudio 3D</h1>
               <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Motor de IA</p>
             </div>
             {/* Créditos de IA del usuario (bolsa mensual).
@@ -2918,9 +2918,14 @@ export default function AIRenderStudio({ state, setState }) {
                   }`}
                 >
                   <Sparkles size={12} />
-                  {reiniciandoBolsa
-                    ? 'Recargando…'
-                    : `Créditos: ${aiCredits.restantes} restantes${aiCredits.restantes <= 0 ? ' · recargar' : ''}`}
+                  {reiniciandoBolsa ? (
+                    <span>Recargando…</span>
+                  ) : (<>
+                    <span className="sm:hidden">{aiCredits.restantes}</span>
+                    <span className="hidden sm:inline">
+                      {`Créditos: ${aiCredits.restantes} restantes${aiCredits.restantes <= 0 ? ' · recargar' : ''}`}
+                    </span>
+                  </>)}
                 </button>
               ) : (
                 <span
@@ -2932,7 +2937,10 @@ export default function AIRenderStudio({ state, setState }) {
                   }`}
                 >
                   <Sparkles size={12} />
-                  {aiCredits.ilimitado ? 'Créditos: ilimitado' : `Créditos: ${aiCredits.restantes} restantes`}
+                  <span className="sm:hidden">{aiCredits.ilimitado ? '∞' : aiCredits.restantes}</span>
+                  <span className="hidden sm:inline">
+                    {aiCredits.ilimitado ? 'Créditos: ilimitado' : `Créditos: ${aiCredits.restantes} restantes`}
+                  </span>
                 </span>
               )
             )}
@@ -2956,7 +2964,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <button onClick={() => setPaletteOpen(o => !o)}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${paletteOpen ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white hover:opacity-90'}`}
                   title="Abrir catálogo lateral de acabados ALVIC Luxe / Zenit, ACB y PORTASUR">
-                  <Palette size={12} /> ✨ Acabados
+                  <Palette size={12} /> <span className="hidden sm:inline">✨ Acabados</span>
                 </button>
                 <button onClick={saveDesign} disabled={busy}
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
@@ -3493,7 +3501,13 @@ export default function AIRenderStudio({ state, setState }) {
               <div className={`shrink-0 flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1.5 ${
                 barraLateral
                   ? 'order-2 flex-col flex-nowrap items-stretch w-[112px] overflow-y-auto overflow-x-hidden max-h-full py-2'
-                  : 'flex-wrap'}`}>
+                  /* EN MOVIL, UNA SOLA FILA QUE SE DESLIZA.
+                     Envuelta, esta barra se partia en TRES filas y se comia un
+                     tercio de la pantalla del movil, dejando el render en una
+                     franja. Deslizandose ocupa una sola fila y el alto se lo
+                     queda el render, que es lo que hay que ver. En pantalla
+                     grande sigue envolviendo como estaba. */
+                  : 'flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:overflow-y-hidden'}`}>
                 {/* Grupo IA: acciones que generan nueva imagen */}
                 <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
                   title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
@@ -3746,7 +3760,7 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                 </div>
               )}
-              <div className="flex-1 min-w-0 min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
+              <div className="flex-1 min-w-0 min-h-[42vh] sm:min-h-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
