@@ -650,6 +650,32 @@ export default function AIRenderStudio({ state, setState }) {
     lighting: 'natural',
     additional_details: '',
   });
+  // QUÉ HA ELEGIDO ALGUIEN DE VERDAD, Y QUÉ ES SOLO EL VALOR DE ARRANQUE.
+  //
+  // Este formulario arranca relleno —en L, cuarzo blanco, blanco mate, tirador
+  // de barra negro, suelo de roble— y esos valores acababan IMPRESOS en la hoja
+  // «ESPECIFICACIONES DEL DISEÑO» del PDF que se le pasa al cliente, como si
+  // fueran decisiones de diseño.
+  //
+  // En el proyecto de Rubén (18/08) esa hoja decía «Muebles: Blanco Mate,
+  // Tiradores: Barra Negro, Suelo: Roble, Distribución: En L» — y justo debajo,
+  // en la misma página, la descripción sacada de su croquis decía «Palma en
+  // acabado blanco alto brillo, gola de aluminio SIN TIRADORES, suelo de gres
+  // gris» sobre una cocina LINEAL. Las cinco líneas mentían, y contradecían al
+  // render de la página anterior.
+  //
+  // Un cliente que firma esa hoja firma un mueble que no es el suyo. Así que
+  // aquí se apunta lo que alguien ha TOCADO; lo que nadie ha tocado no se
+  // imprime. Un hueco se pregunta; un dato falso se cree.
+  const [paramsElegidos, setParamsElegidos] = useState(() => new Set());
+  const elegirParams = useCallback((cambios) => {
+    setParams(p => ({ ...p, ...cambios }));
+    setParamsElegidos(s => {
+      const n = new Set(s);
+      Object.keys(cambios || {}).forEach(k => n.add(k));
+      return n;
+    });
+  }, []);
 
   const { isListening, transcript, isSupported, startListening, stopListening, resetTranscript, setTranscript } = useSpeechRecognition();
   const textareaRef = useRef(null);
@@ -1171,7 +1197,7 @@ export default function AIRenderStudio({ state, setState }) {
   // armario anterior) para que NO entre en modo edición y salga una cocina.
   const applyPreset = (p) => {
     setDescription(prev => prev.trim() ? `${prev.trim()}\n${p.desc}` : p.desc);
-    setParams(prm => ({ ...prm, style: p.style, lighting: p.lighting }));
+    elegirParams({ style: p.style, lighting: p.lighting });
     setCamera(p.camera);
     setElectros(p.electros || []);
     setTipo3d('cocina');
@@ -1981,20 +2007,42 @@ export default function AIRenderStudio({ state, setState }) {
       pdf.setFontSize(14); pdf.setTextColor(60, 40, 120); pdf.setFont(undefined, 'bold');
       pdf.text('ESPECIFICACIONES DEL DISEÑO', M, y); y += 10;
       pdf.setFont(undefined, 'normal'); pdf.setFontSize(10); pdf.setTextColor(60);
-      const specs = [
-        ['Distribución', MATERIALS.layouts.find(l => l.id === params.layout)?.label || params.layout],
-        ['Encimera', MATERIALS.countertops.find(c => c.id === params.countertop)?.label || params.countertop],
-        ['Muebles', MATERIALS.cabinets.find(c => c.id === params.cabinets)?.label || params.cabinets],
-        ['Tiradores', MATERIALS.handles.find(h => h.id === params.handles)?.label || params.handles],
-        ['Suelo', MATERIALS.floors.find(f => f.id === params.floor)?.label || params.floor],
-        ['Estilo', MATERIALS.styles.find(s => s.id === params.style)?.label || params.style],
-        ['Iluminación', MATERIALS.lighting.find(l => l.id === params.lighting)?.label || params.lighting],
-      ];
+      // SOLO SE IMPRIME LO QUE ALGUIEN HA ELEGIDO.
+      //
+      // Antes se imprimian las siete lineas siempre, vinieran de una decision o
+      // del valor con el que arranca el formulario. En el proyecto de Ruben eso
+      // puso en la hoja del cliente «Muebles: Blanco Mate · Tiradores: Barra
+      // Negro · Suelo: Roble · Distribucion: En L» encima de una descripcion
+      // —sacada de su croquis— que decia «Palma blanco alto BRILLO, gola SIN
+      // tiradores, suelo de gres GRIS» sobre una cocina LINEAL.
+      //
+      // Cinco lineas, cinco mentiras, y todas contradiciendo al render de la
+      // pagina de al lado. Una hoja asi se firma. Lo que no se ha elegido no se
+      // imprime: un hueco se pregunta, un dato falso se cree.
+      const _lab = (lista, id) => lista.find(x => x.id === id)?.label || id;
+      const specs = ([
+        ['layout', 'Distribución', _lab(MATERIALS.layouts, params.layout)],
+        ['countertop', 'Encimera', _lab(MATERIALS.countertops, params.countertop)],
+        ['cabinets', 'Muebles', _lab(MATERIALS.cabinets, params.cabinets)],
+        ['handles', 'Tiradores', _lab(MATERIALS.handles, params.handles)],
+        ['floor', 'Suelo', _lab(MATERIALS.floors, params.floor)],
+        ['style', 'Estilo', _lab(MATERIALS.styles, params.style)],
+        ['lighting', 'Iluminación', _lab(MATERIALS.lighting, params.lighting)],
+      ]).filter(([clave]) => paramsElegidos.has(clave)).map(([, k, v]) => [k, v]);
       if (medidas.ancho) specs.push(['Ancho estancia', `${medidas.ancho} cm`]);
       if (medidas.fondo) specs.push(['Fondo estancia', `${medidas.fondo} cm`]);
       if (medidas.altura) specs.push(['Altura techo', `${medidas.altura} cm`]);
       const selElectros = MATERIALS.appliances.filter(a => electros.includes(a.id)).map(a => a.label);
       if (selElectros.length) specs.push(['Electrodomésticos', selElectros.join(', ')]);
+      // Si NADIE eligio nada, la hoja lo dice en vez de quedarse con un titulo
+      // suelto: el que la lee tiene que saber que los acabados salen de la
+      // descripcion, y no pensar que se han olvidado de rellenarla.
+      if (!specs.length) {
+        pdf.setFont(undefined, 'italic'); pdf.setTextColor(120);
+        pdf.text('No se fijaron acabados en el formulario: los de esta propuesta son los', M, y); y += 5;
+        pdf.text('que describe el texto de abajo, leidos del plano del cliente.', M, y); y += 7;
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(60);
+      }
       specs.forEach(([k, v]) => {
         pdf.setFont(undefined, 'bold'); pdf.text(`${k}:`, M, y);
         pdf.setFont(undefined, 'normal'); pdf.text(v, M + 45, y);
@@ -2099,7 +2147,7 @@ export default function AIRenderStudio({ state, setState }) {
       if (g.refImage) setRefImage(g.refImage);
       if (g.originalRef) setOriginalRef(g.originalRef);
       if (g.floorPlan) setFloorPlan(g.floorPlan);
-      if (g.params) setParams(p => ({ ...p, ...g.params }));
+      if (g.params) elegirParams(g.params);   // viene de un proyecto guardado: son elecciones
       if (g.medidas) setMedidas(m => ({ ...m, ...g.medidas }));
       if (g.tipo3d) setTipo3d(g.tipo3d);
       if (g.histInfo) setHistInfo(g.histInfo);
@@ -2343,7 +2391,7 @@ export default function AIRenderStudio({ state, setState }) {
   };
   const loadDesign = async (dsg) => {
     setCliente(dsg.cliente || ''); setRef(dsg.ref || ''); setDescription(dsg.description || '');
-    if (dsg.style) setParams(p => ({ ...p, style: dsg.style }));
+    if (dsg.style) elegirParams({ style: dsg.style });
     setSavedId(dsg.id); setSavedList(null);
     // Historial: se parte de cero y se rellena con las fotos guardadas de ESTE
     // proyecto, para no mezclarlas con las del proyecto anterior.
@@ -3089,7 +3137,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estilo</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {MATERIALS.styles.map(s => (
-                        <button key={s.id} onClick={() => setParams(p => ({ ...p, style: s.id }))}
+                        <button key={s.id} onClick={() => elegirParams({ style: s.id })}
                           className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${params.style === s.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
                           {s.label}
                         </button>
@@ -3111,7 +3159,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Iluminación</p>
                     <div className="flex flex-wrap gap-1.5">
                       {MATERIALS.lighting.map(l => (
-                        <button key={l.id} onClick={() => setParams(p => ({ ...p, lighting: l.id }))}
+                        <button key={l.id} onClick={() => elegirParams({ lighting: l.id })}
                           className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                           {l.label}
                         </button>
@@ -3209,7 +3257,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {MATERIALS.layouts.map(l => (
                     <button
                       key={l.id}
-                      onClick={() => setParams(p => ({ ...p, layout: l.id }))}
+                      onClick={() => elegirParams({ layout: l.id })}
                       className={`px-3 py-3 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-1 ${
                         params.layout === l.id
                           ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
@@ -3228,7 +3276,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Encimera</label>
                 <select
                   value={params.countertop}
-                  onChange={(e) => setParams(p => ({ ...p, countertop: e.target.value }))}
+                  onChange={(e) => elegirParams({ countertop: e.target.value })}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
                   {MATERIALS.countertops.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
@@ -3240,7 +3288,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Muebles</label>
                 <select
                   value={params.cabinets}
-                  onChange={(e) => setParams(p => ({ ...p, cabinets: e.target.value }))}
+                  onChange={(e) => elegirParams({ cabinets: e.target.value })}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
                   {MATERIALS.cabinets.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
@@ -3252,7 +3300,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Tiradores</label>
                 <select
                   value={params.handles}
-                  onChange={(e) => setParams(p => ({ ...p, handles: e.target.value }))}
+                  onChange={(e) => elegirParams({ handles: e.target.value })}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
                   {MATERIALS.handles.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
@@ -3264,7 +3312,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Suelo</label>
                 <select
                   value={params.floor}
-                  onChange={(e) => setParams(p => ({ ...p, floor: e.target.value }))}
+                  onChange={(e) => elegirParams({ floor: e.target.value })}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
                   {MATERIALS.floors.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
@@ -3278,7 +3326,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {MATERIALS.styles.map(s => (
                     <button
                       key={s.id}
-                      onClick={() => setParams(p => ({ ...p, style: s.id }))}
+                      onClick={() => elegirParams({ style: s.id })}
                       className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                         params.style === s.id
                           ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
@@ -3296,7 +3344,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Detalles adicionales</label>
                 <textarea
                   value={params.additional_details}
-                  onChange={(e) => setParams(p => ({ ...p, additional_details: e.target.value }))}
+                  onChange={(e) => elegirParams({ additional_details: e.target.value })}
                   placeholder="Ej: ventana grande con vistas, electrodomésticos integrados..."
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 />
