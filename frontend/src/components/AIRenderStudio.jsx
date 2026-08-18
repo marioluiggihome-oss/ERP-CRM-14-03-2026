@@ -491,10 +491,15 @@ export default function AIRenderStudio({ state, setState }) {
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
-  // Motor de render: 'ia1' = Gemini estándar, 'ia2' = Manus, 'ia3' = Gemini prompt ultra-premium (gratis), 'ia4' = Gemini Flash rápido.
+  // Motor de render: 'ia1' = motor estándar, 'ia3' = prompt ultra-premium, 'ia4' = rápido,
+  // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro. ('ia2' está apagada.)
   const [motor, setMotor] = useState('ia1');
   const providerOf = () => {
-    if (motor === 'ia2') return 'manus';
+    // IA 2 (Manus) esta APAGADA: es un agente, no un modelo de imagen, y cada
+    // render se iba a minutos —hasta 5— mientras Gemini tarda segundos. El
+    // motor sigue en el backend detras de MOTOR_MANUS_ACTIVO por si algun dia
+    // se quiere. Aqui ni se ofrece ni se puede pedir: si quedara un 'ia2'
+    // guardado en una pestaña vieja, cae al motor de siempre y rinde igual.
     if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
     if (motor === 'ia4') return 'gemini_flash'; // Gemini Flash (rápido)
     // IA 5: el camino del 22/07/2026, literal. Mismo motor (Gemini), otro
@@ -3223,7 +3228,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
+                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
                         className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}

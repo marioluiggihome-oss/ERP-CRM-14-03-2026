@@ -1720,7 +1720,36 @@ class Render3DService:
         # Gemini por defecto (mucho más fiel al croquis/referencia y devuelve la
         # imagen incrustada). Manus solo si se pide expresamente (IA 2) o por env.
         provider = (provider or os.environ.get("KITCHEN_RENDER_PROVIDER") or "gemini").lower()
-        manus_ready = bool(getattr(self.config, "provider_api_key", ""))
+        # IA 2 (Manus) ESTÁ APAGADA.
+        #
+        # El master, 18/08: «a la IA 2, cada vez que le mando hacer algo tarda un
+        # montón» y luego «vamos a ir apagando lo que no estamos usando, apaga
+        # la IA 2».
+        #
+        # Y tardaba por lo que es: Manus NO es un modelo de imagen, es un
+        # AGENTE. Gemini es una llamada —le mandas el encargo y devuelve la
+        # foto en unos segundos—; Manus crea una tarea, un agente se pone a
+        # trabajar, y aquí se pregunta cada 5 segundos hasta 5 MINUTOS
+        # (`wait_for_completion(timeout=300)`). Que tarde no era una avería.
+        #
+        # Lo que sí era nuestro es lo que costaba cuando NO salía: se agotaban
+        # los 300 s y solo entonces se caía a Gemini. Cinco minutos de espera
+        # para acabar con el render que Gemini habría dado al principio.
+        #
+        # APAGADA, NO BORRADA. El motor entero sigue aquí; lo único que hace
+        # falta para volver a encenderlo es poner MOTOR_MANUS_ACTIVO=1 en el
+        # entorno. Borrar una integración que costó escribir, para tener que
+        # rehacerla si algún día se quiere, es tirar trabajo.
+        _manus_encendido = os.environ.get("MOTOR_MANUS_ACTIVO", "").strip().lower() in (
+            "1", "si", "sí", "true", "on")
+        manus_ready = _manus_encendido and bool(getattr(self.config, "provider_api_key", ""))
+        if provider == "manus" and not manus_ready:
+            # Ni una palabra en silencio: si algo sigue pidiendo IA 2 —una
+            # pestaña vieja abierta, una llamada guardada— queda dicho, y el
+            # render sale igual por Gemini EN EL ACTO, sin los cinco minutos.
+            logger.info(
+                "Se ha pedido el motor IA 2 (Manus), que está apagado "
+                "(MOTOR_MANUS_ACTIVO). Se rinde con el motor de siempre.")
 
         # IA 2: Manus
         if provider == "manus" and manus_ready:
