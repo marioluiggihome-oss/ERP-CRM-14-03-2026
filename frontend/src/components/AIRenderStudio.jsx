@@ -3922,13 +3922,25 @@ export default function AIRenderStudio({ state, setState }) {
                   se acaba apretando el prompt a ciegas —que es exactamente lo
                   que pasó cuatro veces seguidas con la misma cocina—. */}
               {renderResult?.parsed_params?.lecturaDelDibujo && (
-                <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                  <span className="font-bold text-slate-600">Leído del dibujo: </span>
-                  {renderResult.parsed_params.lecturaDelDibujo}
-                  <div className="mt-1 text-slate-400">
-                    Si esto no es tu cocina, el fallo está en la lectura del plano y no en el render.
+                renderResult.parsed_params.lecturaEstructurada === false ? (
+                  /* CAERSE AL METODO VIEJO SE TIENE QUE VER. Antes, cuando la
+                     lectura a ficha fallaba, este recuadro simplemente NO
+                     aparecía — y desde fuera eso es idéntico a que la mejora no
+                     esté desplegada. Uno se queda mirando una pantalla muda y
+                     sacando conclusiones sobre la versión equivocada. */
+                  <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+                    <span className="font-bold">⚠ Lectura del plano incompleta: </span>
+                    {renderResult.parsed_params.lecturaDelDibujo}
                   </div>
-                </div>
+                ) : (
+                  <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <span className="font-bold text-slate-600">Leído del dibujo: </span>
+                    {renderResult.parsed_params.lecturaDelDibujo}
+                    <div className="mt-1 text-slate-400">
+                      Si esto no es tu cocina, el fallo está en la lectura del plano y no en el render.
+                    </div>
+                  </div>
+                )
               )}
               </div>
             </div>

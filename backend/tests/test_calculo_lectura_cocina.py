@@ -459,3 +459,64 @@ def test_una_contradiccion_del_plano_se_dice_y_no_se_tapa():
         "el aviso no dice las dos cifras que no cuadran"
     assert LC.resumen_para_pantalla(d).startswith("⚠"), \
         "el aviso no sale el primero en pantalla, asi que no se lee"
+
+
+# ─── 7. UN RESPALDO SILENCIOSO ES UN FALLO SILENCIOSO ──────────────────────
+#
+# El master mando una pantalla con su render y, debajo, NADA: ni el recuadro
+# de «leido del dibujo» ni un aviso. No salia porque la lectura a ficha habia
+# fallado y se habia caido a la lectura en prosa — sin decirlo.
+#
+# Desde fuera eso se ve EXACTAMENTE IGUAL que si la mejora no estuviera
+# desplegada. Uno se queda mirando una pantalla muda y saca conclusiones sobre
+# la version equivocada, que es peor que no tener el recuadro.
+#
+# El respaldo esta bien —quedarse sin render seria peor que perder detalle—.
+# Lo que no puede es no notarse.
+
+
+def test_si_la_lectura_a_ficha_falla_se_dice():
+    ruta = os.path.join(BACKEND, "services", "luiggi_ai", "render_3d.py")
+    with open(ruta, encoding="utf-8") as f:
+        src = f.read()
+    i = src.index("lectura = await self._leer_cocina_del_dibujo")
+    cuerpo = src[i:src.index("task_prompt = (", i)]
+    caida = cuerpo[cuerpo.index("else:"):]
+    assert '_transcribe_sketch_with_vision' in caida, \
+        "se ha quitado el respaldo en prosa: un fallo de lectura deja sin render"
+    assert 'parsed_params["lecturaDelDibujo"]' in caida, (
+        "cuando la lectura a ficha falla no se dice nada: la pantalla se queda "
+        "muda y eso es indistinguible de que la mejora no este desplegada")
+    assert "en prosa" in caida, \
+        "el aviso no explica que se ha usado el metodo antiguo"
+
+
+def test_la_pantalla_distingue_el_aviso_de_la_lectura_buena():
+    """Pintar el fallo con la misma cara que una lectura correcta seria peor
+    que no pintarlo: se leeria como si el plano se hubiera entendido."""
+    ruta = os.path.join(os.path.dirname(BACKEND), "frontend", "src", "components",
+                        "AIRenderStudio.jsx")
+    with open(ruta, encoding="utf-8") as f:
+        src = f.read()
+    codigo = "\n".join(l.split("//")[0] for l in src.splitlines())
+    assert "lecturaEstructurada === false" in codigo, (
+        "la pantalla ya no distingue una lectura fallida de una buena: un "
+        "respaldo se leera como si el plano se hubiera entendido")
+    assert "Lectura del plano incompleta" in codigo, \
+        "el aviso de lectura incompleta ha desaparecido de la pantalla"
+
+
+def test_una_lista_de_medidas_escrita_manda_sobre_las_cotas():
+    """La hoja del master lo deja escrito con todas las letras: «BAJOS:
+    60+60+60+60+60 cm». Medir las lineas del dibujo pudiendo LEER la lista es
+    tirar el dato mas fiable de la hoja."""
+    assert "A WRITTEN SCHEDULE BEATS MEASURING THE DRAWING" in LC.PROMPT_LECTURA, (
+        "ya no se aprovecha la lista de medidas escrita en la hoja, que es el "
+        "dato mas fiable que trae")
+    assert "60+60+60+60+60" in LC.PROMPT_LECTURA, \
+        "se ha quitado el ejemplo literal de la hoja del master"
+    assert "0,6 m" in LC.PROMPT_LECTURA, \
+        "ya no se avisa de las medidas escritas en metros"
+    assert "ACABADOS" in LC.PROMPT_LECTURA, (
+        "el bloque de acabados sugeridos vuelve a poder leerse como si fuera "
+        "un modulo mas")

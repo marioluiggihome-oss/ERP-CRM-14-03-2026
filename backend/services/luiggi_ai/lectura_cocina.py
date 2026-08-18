@@ -135,6 +135,13 @@ READING THE DIMENSION LINES — GET THIS RIGHT, EVERYTHING ELSE DEPENDS ON IT:
 · Cross-check before answering: the module widths of a row should add up to about
   "ancho_total_cm". If they do not, re-read the dimension lines — you have probably taken a
   height or a depth for a width, or missed a module.
+· A WRITTEN SCHEDULE BEATS MEASURING THE DRAWING. Many sheets spell the sizes out in plain text
+  in a corner — "BAJOS: 60+60+60+60+60 cm", "ALTOS: 60+60+90+60+60 cm", "TOTAL ANCHO: 330 cm",
+  "FONDO: 0,6 m". When such a list is present it is the AUTHORITATIVE source: use those numbers,
+  in that order, module by module, instead of measuring the dimension lines. Watch the units
+  there too: "3,3 m" and "330 cm" are the same thing, and "0,6 m" is a 60 cm depth.
+· A block titled "ACABADOS SUGERIDOS" / "ACABADOS" holds the finishes: PUERTAS/FRENTES go in
+  "acabados.frentes" and ENCIMERA in "acabados.encimera". Never turn a finish into a module.
 """
 
 

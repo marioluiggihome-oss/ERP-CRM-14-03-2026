@@ -801,6 +801,23 @@ class Render3DService:
             else:
                 sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
                 parsed_params["lecturaEstructurada"] = False
+                # QUE SE CAIGA AL MÉTODO VIEJO NO PUEDE SER INVISIBLE.
+                #
+                # El master mandó un render y debajo no salía el recuadro de «leído
+                # del dibujo». No salía porque la lectura a ficha había fallado y se
+                # había caído a la de prosa —en silencio—. Desde fuera eso se ve
+                # exactamente igual que si la mejora no estuviera desplegada: uno se
+                # queda mirando una pantalla que no dice nada y sacando conclusiones
+                # sobre la versión equivocada.
+                #
+                # El respaldo está bien: quedarse sin render sería peor. Lo que no
+                # puede es no notarse.
+                parsed_params["lecturaDelDibujo"] = (
+                    "No se ha podido leer el plano a ficha (módulos y cotas uno a uno). "
+                    "Se ha usado la lectura antigua, en prosa: el render puede perder la "
+                    "cuenta de módulos y las medidas. Vuelve a intentarlo, o sube el plano "
+                    "más grande y recortado."
+                )
             transcription_block = f"\nTECHNICAL BREAKDOWN EXTRACTED DIRECTLY FROM THE SKETCH:\n{sketch_transcription}\n" if sketch_transcription else ""
 
             task_prompt = (
