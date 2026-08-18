@@ -248,3 +248,80 @@ def test_la_pantalla_enseña_lo_leido():
     assert "lecturaDelDibujo" in codigo, (
         "la pantalla ya no enseña lo que el ERP ha leido del dibujo: cuando un "
         "render salga mal se volvera a adivinar si fallo la lectura o el render")
+
+
+# ─── 5. ¿Y SI EL DIBUJO NO TRAE MEDIDAS? ───────────────────────────────────
+#
+# Pregunta literal del master: «y sino tiene medidas? q hace?». Pasa a menudo:
+# un croquis rapido en una servilleta, o un dibujo de catalogo que solo enseña
+# la composicion.
+#
+# Lo que NO puede hacer es rellenar el hueco. Un render sin cotas se ve
+# EXACTAMENTE igual de bueno que uno acotado, y esa es la trampa: se firma, se
+# presupuesta y se corta sobre proporciones que puso una maquina. Por eso:
+#
+#  · al modelo se le dice que mande el dibujo (proporciones relativas) y las
+#    alturas normales del oficio, y que NO iguale los modulos —igualarlos es
+#    como se perdian los muebles de 15—;
+#  · al master se le avisa EL PRIMERO y en mayusculas.
+
+
+def _cocina_sin_una_sola_cota():
+    d = _cocina_del_master()
+    for fila in d["filas"].values():
+        for m in fila:
+            m.pop("ancho_cm", None)
+    for h in d["huecos_altos"]:
+        h.pop("ancho_cm", None)
+    return d
+
+
+def test_sin_cotas_la_composicion_se_lee_igual():
+    """Lo que se pierde son los numeros, NO los muebles. La cuenta sigue."""
+    texto = LC.especificacion_en_texto(LC.parsear_lectura(json.dumps(_cocina_sin_una_sola_cota())))
+    assert "BASE UNITS — 5 module(s)" in texto, "sin cotas se han perdido tambien los muebles"
+    assert "3 drawers" in texto, "sin cotas se han perdido los frentes"
+    assert "OPEN GAP IN THE WALL RUN" in texto, "sin cotas se ha perdido el hueco de la campana"
+
+
+def test_sin_cotas_no_se_rellena_ningun_ancho():
+    """La regla de oro: «no se sabe» no es un numero."""
+    leido = LC.parsear_lectura(json.dumps(_cocina_sin_una_sola_cota()))
+    for fila in leido["filas"].values():
+        for m in fila:
+            assert m["ancho_cm"] is None, "se ha rellenado un ancho que el dibujo no traia"
+    texto = LC.especificacion_en_texto(leido)
+    assert "width not written" in texto, "un ancho ausente ya no viaja como ausente"
+    assert " cm —" not in texto, "ha aparecido una medida en cm que nadie escribio"
+
+
+def test_sin_cotas_manda_la_proporcion_del_dibujo():
+    """Sin numeros y sin instruccion, el modelo iguala los modulos «para que
+    quede equilibrado». Asi es como desaparecia un extraible de 15."""
+    texto = LC.especificacion_en_texto(LC.parsear_lectura(json.dumps(_cocina_sin_una_sola_cota())))
+    assert "NO WIDTHS ARE WRITTEN ANYWHERE" in texto, (
+        "no se avisa de que el dibujo viene sin cotas: el modelo repartira los "
+        "anchos a su gusto sin que nadie se lo haya dicho")
+    assert "keep the RELATIVE PROPORTIONS exactly as drawn" in texto, \
+        "ya no manda la proporcion dibujada cuando no hay numeros"
+    assert "do not even out the modules" in texto, \
+        "vuelve a poderse igualar los modulos, y ahi es donde se pierden los estrechos"
+
+
+def test_con_cotas_no_aparece_el_aviso():
+    """El aviso solo cuando toca: si el dibujo viene acotado, sobra."""
+    texto = LC.especificacion_en_texto(_cocina_del_master())
+    assert "NO WIDTHS ARE WRITTEN ANYWHERE" not in texto, \
+        "se avisa de que no hay cotas en un dibujo que SI las trae"
+    assert "SIN COTAS ESCRITAS" not in LC.resumen_para_pantalla(_cocina_del_master())
+
+
+def test_sin_cotas_el_master_lo_ve_lo_primero():
+    """Un render sin cotas se ve igual de bueno que uno acotado. Si el aviso va
+    escondido al final, no lo lee nadie."""
+    r = LC.resumen_para_pantalla(LC.parsear_lectura(json.dumps(_cocina_sin_una_sola_cota())))
+    assert r.startswith("SIN COTAS ESCRITAS"), (
+        "el aviso de que no hay cotas ya no va el primero: se firmara un "
+        "presupuesto sobre proporciones que puso una maquina")
+    assert "no midas sobre el render" in r, \
+        "ya no se dice lo unico que hay que saber: que de ahi no se mide"

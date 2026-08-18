@@ -234,3 +234,78 @@ def test_la_distribucion_ya_validada_sobrevive_a_una_segunda_validacion(geom):
     suelo_2 = [(e["label"], e["ancho"]) for e in segunda["elementos"] if e.get("fila") == "bajo"]
     assert suelo_1 == suelo_2, \
         f"la segunda validación ha cambiado la composición:\n{suelo_1}\n{suelo_2}"
+
+
+# ─── UNA MEDIDA ESCRITA GANA TAMBIEN A LA TABLA DE ANCHOS FIJOS ────────────
+#
+# Encontrado el 18/08 mirando el PNG de un alzado, no buscandolo: se le paso
+# una PLACA DE 90 marcada como medida escrita y el alzado dibujo 60.
+#
+# `ANCHO_FIJO` dice lo que mide un electrodomestico CUANDO NADIE HA DICHO
+# NADA: placa 60, campana 60, frigorifico 60, lavavajillas 60... Pero se
+# miraba ANTES que `medida_escrita`, asi que pisaba lo que el cliente habia
+# escrito en su propio plano.
+#
+# No es un caso raro. El glosario de la casa tiene «Bajo Placa 2 Gavetas:
+# 90 cm», y un side by side de 120 se quedaba igual en 60. Son 30 o 60 cm de
+# encimera y de frentes que desaparecen del presupuesto.
+#
+# Y no avisaba de nada: como `medida_escrita` seguia siendo True, la cota se
+# pintaba «60» LIMPIA, sin marca de estimada. O sea que el plano que va a
+# fabrica afirmaba un 60 como dato confirmado. Peor que una estimacion: una
+# certeza falsa.
+#
+# Orden de verdad, ahora sin agujeros:
+#     usuario > cota escrita > tabla de anchos fijos > estimacion.
+
+
+def _pared_con_placa(ancho_placa, escrita):
+    """Una pared de 300 con fregadero 60 + cajonera 90 + placa + bajo 60."""
+    return {"tipo": "lineal",
+            "paredes": [{"nombre": "P", "ancho": 300, "alto": 240}],
+            "elementos": [
+                {"id": "bajo_fregadero", "label": "Bajo fregadero", "pared_idx": 0,
+                 "posicion_cm": 0, "ancho": 60, "medida_escrita": True},
+                {"id": "cajonera", "label": "Cajonera", "pared_idx": 0,
+                 "posicion_cm": 60, "ancho": 90, "medida_escrita": False},
+                {"id": "placa", "label": "Placa", "pared_idx": 0,
+                 "posicion_cm": 150, "ancho": ancho_placa, "medida_escrita": escrita},
+                {"id": "bajo", "label": "Mueble bajo", "pared_idx": 0,
+                 "posicion_cm": 240, "ancho": 60, "medida_escrita": False},
+            ]}
+
+
+def _placa(resultado):
+    return next(e for e in resultado["elementos"] if e["id"] == "placa")
+
+
+def test_una_placa_de_90_escrita_no_se_encoge_a_60(geom):
+    """EL FALLO, tal cual. 90 escrito en el plano, 60 dibujado en el alzado."""
+    r = geom.validar_distribucion(_pared_con_placa(90, escrita=True))
+    assert _placa(r)["ancho"] == 90, (
+        f"la placa de 90 escrita en el plano se ha quedado en "
+        f"{_placa(r)['ancho']} cm: la tabla de anchos fijos vuelve a pisar lo "
+        f"que escribio el cliente, y son 30 cm de encimera y de frentes que "
+        f"desaparecen del presupuesto sin un solo aviso")
+
+
+def test_un_frigorifico_de_120_escrito_se_respeta(geom):
+    """El side by side del glosario: 120 cm de dos columnas de 60."""
+    d = _pared_con_placa(60, escrita=True)
+    d["elementos"][3] = {"id": "frigorifico", "label": "Side by side", "pared_idx": 0,
+                         "posicion_cm": 240, "ancho": 120, "medida_escrita": True}
+    d["paredes"][0]["ancho"] = 360
+    r = geom.validar_distribucion(d)
+    frigo = next(e for e in r["elementos"] if e["id"] == "frigorifico")
+    assert frigo["ancho"] == 120, (
+        f"el side by side de 120 escrito se ha quedado en {frigo['ancho']} cm")
+
+
+def test_sin_medida_escrita_la_tabla_sigue_mandando(geom):
+    """La tabla NO sobra: es lo que vale cuando nadie ha dicho nada. Si esto
+    se rompe, una placa sin cota se estiraria a lo que hiciera falta para
+    cuadrar la pared, que es justo lo que la tabla evita."""
+    r = geom.validar_distribucion(_pared_con_placa(75, escrita=False))
+    assert _placa(r)["ancho"] == 60, (
+        f"una placa SIN cota escrita ya no cae al ancho de catalogo (60) sino "
+        f"a {_placa(r)['ancho']} cm: se reparte como si fuera un mueble mas")

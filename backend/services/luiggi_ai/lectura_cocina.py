@@ -211,6 +211,21 @@ _EN = {
 }
 
 
+def _sin_cotas(datos: Dict[str, Any]) -> bool:
+    """¿El dibujo no traía NI UNA medida escrita?
+
+    No es lo mismo que «faltan algunas»: es que no hay ninguna, y entonces todo
+    lo que se dibuje son proporciones. Hay que decirlo —al modelo y al master—,
+    porque de un render sin cotas no se puede medir ni presupuestar.
+    """
+    filas = (datos or {}).get("filas") or {}
+    for fila in FILAS:
+        for m in filas.get(fila) or []:
+            if m.get("ancho_cm"):
+                return False
+    return True
+
+
 def _contiene_en_texto(contiene: str) -> str:
     """Lo que lleva el mueble, en inglés si es vocabulario conocido.
 
@@ -285,6 +300,22 @@ def especificacion_en_texto(datos: Dict[str, Any]) -> str:
     if datos.get("altillos_o_techo_avisado") or datos.get("altos_llegan_al_techo"):
         lineas.append("· The wall cabinets run UP TO THE CEILING. No bare wall strip above them.")
 
+    # SIN NI UNA COTA ESCRITA. Pasa a menudo: un croquis rápido en una servilleta
+    # o un dibujo de catálogo que solo enseña la composición. Decir módulo por
+    # módulo «width not written» y callarse es dejar al modelo suelto, y entonces
+    # ensancha unos y estrecha otros hasta que «queda equilibrado» —que es como
+    # se perdían los muebles de 15—. Si no hay números, manda el DIBUJO: las
+    # proporciones relativas y las alturas normales del oficio.
+    if _sin_cotas(datos):
+        lineas.append(
+            "· NO WIDTHS ARE WRITTEN ANYWHERE ON THIS DRAWING. Do not invent numbers, and do not "
+            "even out the modules: keep the RELATIVE PROPORTIONS exactly as drawn — a module drawn "
+            "twice as wide as its neighbour is twice as wide in the photograph, and a module drawn "
+            "narrow stays narrow. Use normal cabinet proportions for the heights: base units about "
+            "72 cm plus worktop and plinth (≈90 cm to the top of the worktop, 60 cm deep), wall "
+            "units 70-90 cm tall and 35 cm deep, altillos 20-45 cm tall, tall columns floor to "
+            "ceiling and 58 cm deep.")
+
     ac = datos.get("acabados") or {}
     if ac.get("frentes"):
         lineas.append(f"· Fronts finish: {ac['frentes']}.")
@@ -351,4 +382,9 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
         partes.append(f"Frentes: {ac['frentes']}")
     if ac.get("encimera"):
         partes.append(f"Encimera: {ac['encimera']}")
+    # LO PRIMERO Y EN MAYÚSCULAS SI NO HAY COTAS. Un render sin cotas se ve
+    # exactamente igual de bueno que uno acotado, y esa es justo la trampa: se
+    # firma, se presupuesta y se corta sobre proporciones que puso una máquina.
+    if _sin_cotas(datos):
+        partes.insert(0, "SIN COTAS ESCRITAS — proporciones del dibujo, no midas sobre el render")
     return " · ".join(partes)

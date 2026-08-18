@@ -116,3 +116,56 @@ def test_el_resumen_avisa_de_los_propuestos():
     assert "PROPUESTO" in cuerpo, (
         "el resumen ya no avisa de los altos propuestos: se dibujarían sin que "
         "nadie los confirme ni los quite")
+
+
+# ─── UNA COTA ESTIMADA NO PUEDE PARECER UNA COTA MEDIDA ─────────────────────
+#
+# Pregunta del master: «y sino tiene medidas? q hace?».
+#
+# Lo que hacia era lo peor posible: pintarla igual. La cota salia «60» viniera
+# de un numero escrito por el cliente en su croquis o de una proporcion que
+# alguien dedujo mirando el dibujo. Sobre el papel, identicas. Y este papel va
+# a fabrica: quien corta no tiene forma de saber cual confirmar.
+#
+# El motor ya distinguia las dos cosas por dentro —`medida_escrita` es un DATO
+# y no se reescala para cuadrar la pared— pero esa distincion moria al dibujar.
+# Se protegia el calculo y se soltaba la mentira en el unico sitio donde
+# alguien iba a leerla.
+#
+# Ahora la cota deducida lleva «~» delante, con su leyenda. Sigue estando
+# —el alzado tiene que cerrar— pero dice lo que es.
+
+
+def test_una_cota_deducida_se_marca_con_tilde():
+    src = _leer()
+    assert 'cota_w = f"{w}" if e.get("medida_escrita") else f"~{w}"' in src, (
+        "la cota vuelve a pintarse igual venga de una medida escrita o de una "
+        "estimacion: en fabrica se cortara sobre un numero que nadie escribio")
+
+
+def test_la_cota_marcada_es_la_que_se_dibuja_de_verdad():
+    """Calcularla y no usarla seria peor que no calcularla: da sensacion de
+    estar protegido sin estarlo."""
+    src = _leer()
+    for donde in ("cotas.append((x, x + w, cota_w))",
+                  "cotas_altos.append((x, x + w, cota_w))"):
+        assert donde in src, f"la cota marcada no llega al dibujo: falta «{donde}»"
+    assert 'cotas.append((x, x + w, f"{w}"))' not in src, \
+        "ha vuelto la cota cruda, sin marcar, en la fila de suelo"
+    assert 'cotas_altos.append((x, x + w, f"{w}"))' not in src, \
+        "ha vuelto la cota cruda, sin marcar, en la fila colgada"
+    assert '{cota_w}×{ALTOS_Y1 - ALTOS_Y0}' in src, \
+        "el rotulo dentro del alto sigue enseñando la cota sin marcar"
+
+
+def test_la_tilde_lleva_su_leyenda():
+    """Una marca que nadie sabe leer no protege a nadie."""
+    src = _leer()
+    assert "Las cotas con ~ son ESTIMADAS del dibujo" in src, (
+        "la tilde de cota estimada se pinta sin explicar: quien recibe el "
+        "plano no puede saber que significa")
+    assert "confírmalas antes de cortar" in src, \
+        "la leyenda ya no dice que hay que hacer con una cota estimada"
+    assert "if _con_cotas and hay_estimadas:" in src, (
+        "la leyenda se escribe siempre: en un alzado enteramente acotado "
+        "sobra, y una advertencia que sobra deja de leerse")

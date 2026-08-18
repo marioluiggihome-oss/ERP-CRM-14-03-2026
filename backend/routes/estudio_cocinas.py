@@ -1757,8 +1757,24 @@ async def generar_alzado(payload: ProyectoBase):
             bajos_xy = []    # (x, w) de los bajos REALES → los altos se alinean con ellos
             altos_xy = []    # (x, w) de los altos que vienen DADOS (no derivados)
             cotas_altos = [] # cotas de la fila colgada, que van sobre los altos
+            hay_estimadas = False  # ¿alguna cota de esta pared es una estimación?
             for e in elems:
                 w = int(e.get("ancho") or 60)
+                # UNA COTA ESTIMADA NO PUEDE PARECER UNA COTA MEDIDA.
+                #
+                # Hasta aquí la cota se pintaba «60» viniera de donde viniera:
+                # de un número escrito por el cliente en su croquis, o de una
+                # proporción deducida mirando el dibujo. Sobre el papel eran
+                # idénticas — y este papel va a fábrica.
+                #
+                # Con «~» delante —la marca de toda la vida para una cota
+                # aproximada— el que corta ve de un vistazo cuáles son datos y
+                # cuáles hay que confirmar antes de tocar un panel. La cota
+                # estimada sigue estando, porque el alzado tiene que cerrar,
+                # pero dice lo que es. Nada se corrige en silencio.
+                cota_w = f"{w}" if e.get("medida_escrita") else f"~{w}"
+                if not e.get("medida_escrita"):
+                    hay_estimadas = True
                 tipo = str(e.get("id") or e.get("tipo") or "").lower()
                 fila = str(e.get("fila") or "bajo").lower()
                 if tipo == "campana":
@@ -1787,7 +1803,7 @@ async def generar_alzado(payload: ProyectoBase):
                     # dibujaba a ras de suelo, rotulado "30×80": un alto no mide
                     # 80 de alto (son 70 o 90) ni se apoya en el zócalo.
                     wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
-                    _ta = f"{label}\n{w}×{ALTOS_Y1 - ALTOS_Y0}" if _con_cotas else label
+                    _ta = f"{label}\n{cota_w}×{ALTOS_Y1 - ALTOS_Y0}" if _con_cotas else label
                     _texto_modulo(ax, x, w, (ALTOS_Y0 + ALTOS_Y1) / 2, _ta)
                     tirador_v(ax, x + w - 5, ALTOS_Y0 + 12, length=16)
                     herr["puertas"] += 1
@@ -1829,10 +1845,10 @@ async def generar_alzado(payload: ProyectoBase):
                         # marca de zona de cocción sobre la encimera
                         ax.plot([x + 6, x + w - 6], [ENC_Y - 2, ENC_Y - 2], color=C_LINE, lw=1.0)
                 if _es_fila_alta:
-                    cotas_altos.append((x, x + w, f"{w}"))
+                    cotas_altos.append((x, x + w, cota_w))
                     pos_alto = max(pos_alto, x + w)
                 else:
-                    cotas.append((x, x + w, f"{w}"))
+                    cotas.append((x, x + w, cota_w))
                     if tipo not in COLS:
                         bajos_xy.append((x, w))  # para alinear los altos con los bajos
                     pos = max(pos, x + w)
@@ -1946,6 +1962,15 @@ async def generar_alzado(payload: ProyectoBase):
                 ex += 90
             ax.text(0, alto + 12, f"ALZADO S{idx + 1} — {pared.get('nombre') or f'Pared {idx + 1}'} · escala orientativa · cotas en cm",
                     fontsize=9, fontweight="bold", color=C_LINE)
+            # LA LEYENDA DE LA TILDE. Una marca que nadie sabe leer no protege
+            # a nadie: quien recibe el papel tiene que saber, sin preguntar, que
+            # «~60» es una cota deducida del dibujo y hay que confirmarla antes
+            # de cortar. Solo se escribe si hay alguna, para no ensuciar un
+            # alzado enteramente acotado.
+            if _con_cotas and hay_estimadas:
+                ax.text(0, alto + 5,
+                        "Las cotas con ~ son ESTIMADAS del dibujo, no medidas escritas: confírmalas antes de cortar.",
+                        fontsize=6.8, color=C_COTA)
 
         # Resumen de herraje (recuento aproximado a partir de puertas y cajones).
         puertas = herr["puertas"]; cajones = herr["cajones"]

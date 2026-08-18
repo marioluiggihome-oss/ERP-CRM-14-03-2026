@@ -302,12 +302,23 @@ def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
     etiqueta_fila = "de suelo" if fila == "bajo" else "colgados"
 
     for e in grupo:
-        if e["id"] in ANCHO_FIJO:
-            e["ancho"] = ANCHO_FIJO[e["id"]]
-            e["anchoFijo"] = True
-        elif e.get("medida_escrita"):
+        if e.get("medida_escrita"):
             # Una medida escrita en el plano es un DATO, no una estimación: no se
             # reescala para cuadrar. Si al final no cuadra, se dice — no se falsea.
+            #
+            # Y GANA TAMBIÉN A `ANCHO_FIJO`. Antes se miraba la tabla PRIMERO, así
+            # que una placa de 90 escrita por el cliente salía dibujada de 60 —y
+            # sin marca de estimada, o sea presentando el 60 como dato
+            # confirmado—. No es un caso raro: el propio glosario de la casa
+            # tiene «Bajo Placa 2 Gavetas: 90 cm», y un side by side de 120 se
+            # quedaba igualmente en 60. Se perdían 30 cm de encimera y de
+            # frentes en el presupuesto, sin un solo aviso.
+            #
+            # `ANCHO_FIJO` es lo que mide un electrodoméstico CUANDO NADIE HA
+            # DICHO NADA. En cuanto alguien lo dice, manda quien lo dijo.
+            e["anchoFijo"] = True
+        elif e["id"] in ANCHO_FIJO:
+            e["ancho"] = ANCHO_FIJO[e["id"]]
             e["anchoFijo"] = True
     fijos = [e for e in grupo if e.get("anchoFijo")]
     flex = [e for e in grupo if not e.get("anchoFijo")]
