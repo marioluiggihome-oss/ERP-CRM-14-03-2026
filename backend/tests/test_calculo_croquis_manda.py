@@ -478,3 +478,21 @@ def test_el_pie_del_render_no_inventa_la_distribucion():
         "defecto: el pie dira «L-shape» debajo de una cocina lineal")
     assert "según el dibujo" in cuerpo, \
         "el pie ya no dice de donde sale la distribucion cuando hay croquis"
+
+
+def test_los_altos_pueden_ser_dos_filas_hasta_el_techo():
+    """En el dibujo del master los altos van partidos en DOS filas —altos y
+    altillos— hasta el techo. El render los aplanaba a una sola fila con la
+    pared desnuda encima, que es otra cocina."""
+    cuerpo = _prompt_del_croquis()
+    assert "WALL CABINETS CAN BE TWO STACKED ROWS" in cuerpo, (
+        "el encargo ya no contempla los altos partidos en dos filas: los "
+        "altillos desapareceran y quedara pared vacia hasta el techo")
+    assert "altillos" in cuerpo, \
+        "se ha quitado el nombre de casa de la segunda fila"
+    assert "Do not invent a gap" in cuerpo, (
+        "vuelve a poderse inventar un hueco entre los altos y el techo")
+    p = _prompt_de_transcripcion()
+    assert "TWO STACKED ROWS" in p, (
+        "la lectura del croquis ya no pregunta si los altos son una fila o "
+        "dos: la informacion no llega al render")

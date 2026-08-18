@@ -711,6 +711,32 @@ class Render3DService:
                 "bano": "bathroom vanity / cabinetry",
             }.get((project_type or "").strip().lower(), "kitchen")
 
+            # EL DIBUJO, A PANTALLA COMPLETA.
+            #
+            # El master sube el pantallazo del móvil de una página de
+            # presupuesto: barra de estado, título, marca, EL DIBUJO, tres
+            # líneas de precios, el total y la barra de Android. La cocina ocupa
+            # un tercio de la altura.
+            #
+            # Se le puede decir mil veces al modelo que se fije en los frentes:
+            # si en la imagen que recibe la cocina es pequeña, el detalle fino
+            # —los altos partidos en dos filas, el nicho de la campana, las
+            # divisiones de cada frente— NO SE VE. Esto no es otra regla de
+            # prompt; es darle la cocina entera de lado a lado.
+            #
+            # Recorta solo cuando lo tiene claro (ver `recorte_croquis`): ante
+            # la duda devuelve la original, porque un recorte torcido se
+            # llevaría media cocina y el render seguiría saliendo bonito.
+            try:
+                from services.recorte_croquis import recortar_dibujo_base64
+                recortado, hubo_recorte = recortar_dibujo_base64(ref_b64, ref_mime)
+                if hubo_recorte:
+                    ref_b64, ref_mime = recortado, "image/png"
+                    parsed_params["dibujoRecortado"] = True
+                    logger.info("Croquis recortado de la página: el dibujo va a pantalla completa.")
+            except Exception as e:
+                logger.warning(f"No se pudo recortar el croquis, se usa la imagen entera: {e}")
+
             # Transcripción multimodal con Vision: lee cotas, módulos, frigorífico y divisiones
             sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
             transcription_block = f"\nTECHNICAL BREAKDOWN EXTRACTED DIRECTLY FROM THE SKETCH:\n{sketch_transcription}\n" if sketch_transcription else ""
@@ -785,7 +811,14 @@ class Render3DService:
                 "- A full-height column touches the floor. If the drawing shows a block running "
                 "uninterrupted from the floor line to above the wall units, it is ONE tall column, "
                 "not a base unit with a separate wall unit above it, and no countertop crosses it.\n"
-                "- The countertop stops where the column starts, butting against its side panel.\n\n"
+                "- The countertop stops where the column starts, butting against its side panel.\n"
+                "- WALL CABINETS CAN BE TWO STACKED ROWS. If the drawing shows the upper band divided by a "
+                "horizontal line into two rows of boxes, that is a row of wall units with a second row of "
+                "shorter units (altillos) ON TOP, normally running right up to the ceiling. Render BOTH rows, "
+                "with the horizontal joint between them, and take them up to the ceiling as drawn. One single "
+                "row floating with bare wall above it is a DIFFERENT kitchen and is wrong.\n"
+                "- The top line of the wall cabinets is where the drawing puts it: if the units reach the "
+                "ceiling, they reach the ceiling; if they stop short, they stop short. Do not invent a gap.\n\n"
                 "STRAIGHT SINGLE-WALL RUN — CAMERA:\n"
                 "- If the drawing is a LINEAR run against one single wall (no corner, no return, no "
                 "island), photograph it close to straight-on / slightly off-axis so the WHOLE run "
@@ -1204,7 +1237,9 @@ class Render3DService:
                 "1. FINISHES & MATERIALS: read any handwritten text written on paper (e.g. 'Blanco Mate' -> Matte white doors/fronts, 'encimera granito Nacional' -> National granite countertop, 'Luxe', 'Zenit').\n"
                 "2. TALL COLUMNS COUNT AND TYPES: Count how many full-height tall columns are drawn side-by-side (e.g. '2 SEPARATE TALL COLUMNS: 1x Refrigerator column 60cm + 1x Freezer/Congelador column 60cm'). Explicitly state if there are 2 separate tall columns or 1 single column. DO NOT MERGE multiple tall columns into one!\n"
                 "3. BASE CABINET SEQUENCE (left to right / around walls): list each module with label (e.g. 'Horno', '2 gavetas', 'Ex/Extraíble', 'Fregadero', 'Frigo', 'Congelador') and width in cm/mm.\n"
-                "4. WALL CABINETS & HOOD: describe upper cabinets, open shelves, and wall hood placement.\n"
+                "4. WALL CABINETS & HOOD: describe upper cabinets, open shelves, and wall hood placement. State explicitly "
+                "whether the upper band is ONE row of wall units or TWO STACKED ROWS (wall units with a second row of shorter "
+                "units — altillos — on top, usually up to the ceiling), and whether they reach the ceiling or stop short.\n"
                 "5. CORNER & LAYOUT SHAPE: L-shaped, U-shaped, or linear, including corner module dimensions (e.g. 93x93 cm). If the drawing visibly turns at an inside corner or shows a secondary wall/return, classify it as L-shaped even when one wall is drawn mostly frontally. State the MAIN WALL sequence and the RETURN WALL sequence separately.\n"
                 "6. FRONTS OF EACH MODULE (one line per module, this is MANDATORY and must never be summarised away): "
                 "for EVERY module of every run — base units, wall units and tall columns — state HOW MANY separate fronts it has "
