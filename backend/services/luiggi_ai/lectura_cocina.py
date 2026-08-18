@@ -80,6 +80,9 @@ Use exactly this shape:
 
 {
   "forma": "lineal" | "L" | "U" | "peninsula" | "isla",
+  "ancho_total_cm": null,
+  "alto_total_cm": null,
+  "fondo_cm": null,
   "acabados": {"frentes": "", "encimera": ""},
   "filas": {
     "bajos":    [ {"orden":1, "ancho_cm":null, "contiene":"", "frentes":["puerta"]} ],
@@ -111,6 +114,27 @@ RULES — read them all before answering:
 · Left to right, always, and "orden" starts at 1 in every list.
 · NEVER INVENT A MEASUREMENT. If a width is not written on the drawing, put null. Do not estimate.
 · Report what is DRAWN, not what a kitchen usually has.
+
+READING THE DIMENSION LINES — GET THIS RIGHT, EVERYTHING ELSE DEPENDS ON IT:
+
+· A dimension is a WIDTH only when its line runs HORIZONTALLY along the top or the bottom of a
+  module, spanning that module from side to side. Those are the numbers that go in "ancho_cm".
+· A dimension whose line runs VERTICALLY, at the left or right edge of the drawing, is a HEIGHT
+  (worktop height, plinth height, total height) — it is NEVER the width of a module. A dimension
+  that measures the depth of the worktop is a DEPTH. Put those in "alto_total_cm" and "fondo_cm",
+  and NEVER in the "ancho_cm" of a module. Typical trap: a "600" next to the worktop on the left
+  is the DEPTH of the base units, and a "850"/"100" at the side are the worktop height and the
+  plinth — none of the three is the width of the first cabinet.
+· "ancho_total_cm" is the LONGEST horizontal dimension, the one that spans the whole run from end
+  to end (often drawn apart from the others, e.g. "2500"). This is the single most useful number
+  on the drawing: never leave it out if it is written.
+· UNITS: report EVERYTHING in centimetres. Technical drawings are usually dimensioned in
+  millimetres — 800 mm is 80 cm, 2500 mm is 250 cm. If the numbers are in mm, convert them. A
+  kitchen module is 15-120 cm wide and a run is 150-600 cm long; if your numbers come out ten
+  times bigger than that, they were millimetres.
+· Cross-check before answering: the module widths of a row should add up to about
+  "ancho_total_cm". If they do not, re-read the dimension lines — you have probably taken a
+  height or a depth for a width, or missed a module.
 """
 
 
@@ -165,7 +189,7 @@ def parsear_lectura(texto: str) -> Optional[Dict[str, Any]]:
             frentes = [str(f).strip().lower() for f in (m.get("frentes") or []) if str(f).strip()]
             limpia.append({
                 "orden": int(_numero(m.get("orden")) or (i + 1)),
-                "ancho_cm": _numero(m.get("ancho_cm")),
+                "ancho_cm": _en_centimetros(_numero(m.get("ancho_cm")), "modulo"),
                 "contiene": str(m.get("contiene") or "").strip(),
                 "frentes": frentes,
             })
@@ -176,7 +200,7 @@ def parsear_lectura(texto: str) -> Optional[Dict[str, Any]]:
         if isinstance(h, dict):
             huecos.append({
                 "despues_de": _numero(h.get("despues_de")),
-                "ancho_cm": _numero(h.get("ancho_cm")),
+                "ancho_cm": _en_centimetros(_numero(h.get("ancho_cm")), "modulo"),
                 "motivo": str(h.get("motivo") or "").strip(),
             })
 
@@ -185,8 +209,11 @@ def parsear_lectura(texto: str) -> Optional[Dict[str, Any]]:
         return None
 
     acabados = datos.get("acabados") if isinstance(datos.get("acabados"), dict) else {}
-    return {
+    limpio = {
         "forma": str(datos.get("forma") or "").strip().lower(),
+        "ancho_total_cm": _en_centimetros(_numero(datos.get("ancho_total_cm")), "ancho_pared"),
+        "alto_total_cm": _en_centimetros(_numero(datos.get("alto_total_cm")), "alto_pared"),
+        "fondo_cm": _en_centimetros(_numero(datos.get("fondo_cm")), "fondo"),
         "acabados": {
             "frentes": str(acabados.get("frentes") or "").strip(),
             "encimera": str(acabados.get("encimera") or "").strip(),
@@ -196,6 +223,81 @@ def parsear_lectura(texto: str) -> Optional[Dict[str, Any]]:
         "altos_llegan_al_techo": bool(datos.get("altos_llegan_al_techo")),
         "notas": str(datos.get("notas") or "").strip(),
     }
+    _deducir_el_ancho_que_falta(limpio)
+    return limpio
+
+
+def _en_centimetros(valor: Optional[float], que: str) -> Optional[float]:
+    """Un plano técnico va en MILÍMETROS. Este ERP trabaja en centímetros.
+
+    «2500» no es una pared de 2.500 cm: son 250 cm. Un módulo de cocina mide
+    entre 15 y 120 cm y una fila entre 150 y 600; si el número sale diez veces
+    mayor que eso, venía en mm. Se convierte SOLO cuando no hay ninguna duda,
+    porque dividir por diez un número que ya estaba bien es peor que dejarlo.
+    """
+    if not valor or valor <= 0:
+        return None
+    topes = {"ancho_pared": 700.0, "alto_pared": 400.0, "fondo": 120.0, "modulo": 130.0}
+    tope = topes.get(que, 130.0)
+    if valor > tope and valor / 10.0 >= 5:
+        return round(valor / 10.0, 1)
+    return valor
+
+
+def _deducir_el_ancho_que_falta(datos: Dict[str, Any]) -> None:
+    """Con el ancho total y una sola incógnita en la fila, la resta es exacta.
+
+    EL PLANO DEL MASTER, TAL CUAL: los altos venían acotados uno a uno (80, 80,
+    50, 40, 30) pero de los bajos solo se leía uno. Y sin embargo el dibujo
+    llevaba escrito el ancho total —2500 mm—, o sea que el que faltaba estaba
+    ahí, en una resta.
+
+    SOLO cuando queda UNA incógnita. Con dos no se sabe cómo se reparte, y
+    repartir a partes iguales seria inventar dos medidas en vez de una: lo que
+    se hace es DECIRLO, para que el render sepa cuánto sitio queda y no lo
+    reparta a su gusto igualando módulos.
+
+    Lo deducido se marca `ancho_deducido` y NUNCA pasa por medida escrita: en
+    el alzado saldrá con su «~», y en pantalla dirá de dónde sale.
+    """
+    total = datos.get("ancho_total_cm")
+    if not total:
+        return
+    avisos = datos.setdefault("avisos", [])
+    for fila in ("bajos", "altos", "altillos"):
+        modulos = (datos.get("filas") or {}).get(fila) or []
+        if not modulos:
+            continue
+        # Un hueco en la fila de altos también ocupa sitio y también cuenta.
+        ocupado = sum(m["ancho_cm"] for m in modulos if m.get("ancho_cm"))
+        if fila == "altos":
+            ocupado += sum(h["ancho_cm"] for h in (datos.get("huecos_altos") or [])
+                           if h.get("ancho_cm"))
+        faltan = [m for m in modulos if not m.get("ancho_cm")]
+        libre = round(total - ocupado, 1)
+        # NO SE TRAGA UNA CONTRADICCION DEL PLANO.
+        #
+        # En el plano del master los altos acotados suman 280 cm y el total
+        # escrito son 250. Una de las dos cosas esta mal, o los altos vuelan por
+        # encima del final de los bajos. Callarse y cuadrarlo por dentro es lo
+        # que hace que un presupuesto salga con 30 cm de mas y nadie sepa por
+        # que. Se dice, y que lo mire quien tiene el plano delante.
+        if not faltan and abs(libre) > 2:
+            avisos.append(
+                f"Los {fila} acotados suman {ocupado:.0f} cm y el ancho total escrito son "
+                f"{total:.0f} cm ({abs(libre):.0f} cm de diferencia). Revisa el plano.")
+        if faltan and libre < 0:
+            avisos.append(
+                f"Los {fila} ya acotados ({ocupado:.0f} cm) se pasan del ancho total "
+                f"({total:.0f} cm): no queda sitio para los {len(faltan)} que faltan.")
+        if not faltan or libre <= 0:
+            continue
+        if len(faltan) == 1:
+            faltan[0]["ancho_cm"] = libre
+            faltan[0]["ancho_deducido"] = True
+        else:
+            datos.setdefault("reparto_pendiente", []).append(
+                {"fila": fila, "modulos": len(faltan), "cm_libres": libre})
 
 
 # El encargo al modelo de imagen va en inglés entero. Si se cuela «fregadero»
@@ -273,6 +375,16 @@ def especificacion_en_texto(datos: Dict[str, Any]) -> str:
     forma = datos.get("forma") or ""
     if forma:
         lineas.append(f"· LAYOUT: {forma}.")
+    # EL ANCHO TOTAL PRIMERO. Es el ancla: con el, cada modulo tiene su sitio y
+    # el modelo deja de repartir a ojo.
+    if datos.get("ancho_total_cm"):
+        lineas.append(
+            f"· TOTAL WIDTH OF THE RUN: {int(datos['ancho_total_cm'])} cm, end to end. "
+            "Every module must fit inside it and the widths must add up to exactly this.")
+    if datos.get("alto_total_cm"):
+        lineas.append(f"· TOTAL HEIGHT: {int(datos['alto_total_cm'])} cm.")
+    if datos.get("fondo_cm"):
+        lineas.append(f"· DEPTH of the base units: {int(datos['fondo_cm'])} cm.")
 
     filas = datos.get("filas") or {}
     for fila in FILAS:
@@ -283,7 +395,12 @@ def especificacion_en_texto(datos: Dict[str, Any]) -> str:
             continue
         lineas.append(f"· {_ETIQUETA_FILA[fila]} — {len(modulos)} module(s), left to right:")
         for m in modulos:
-            ancho = f"{int(m['ancho_cm'])} cm" if m.get("ancho_cm") else "width not written"
+            if m.get("ancho_cm") and m.get("ancho_deducido"):
+                ancho = f"{int(m['ancho_cm'])} cm (derived from the total, not written)"
+            elif m.get("ancho_cm"):
+                ancho = f"{int(m['ancho_cm'])} cm"
+            else:
+                ancho = "width not written"
             _que = _contiene_en_texto(m.get("contiene") or "")
             que = f" — {_que}" if _que else ""
             lineas.append(f"    {m['orden']}. {ancho}{que} — {_frentes_en_texto(m.get('frentes') or [])}")
@@ -315,6 +432,12 @@ def especificacion_en_texto(datos: Dict[str, Any]) -> str:
             "72 cm plus worktop and plinth (≈90 cm to the top of the worktop, 60 cm deep), wall "
             "units 70-90 cm tall and 35 cm deep, altillos 20-45 cm tall, tall columns floor to "
             "ceiling and 58 cm deep.")
+
+    for r in (datos.get("reparto_pendiente") or []):
+        lineas.append(
+            f"· {r['cm_libres']:.0f} cm of the run are shared between the {r['modulos']} modules of "
+            f"the {r['fila']} row whose width is not written. Keep the proportions as drawn inside "
+            "that space; do NOT make them all equal.")
 
     ac = datos.get("acabados") or {}
     if ac.get("frentes"):
@@ -353,6 +476,8 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
     forma = datos.get("forma")
     if forma:
         partes.append(f"Forma: {forma}")
+    if datos.get("ancho_total_cm"):
+        partes.append(f"Ancho total: {int(datos['ancho_total_cm'])} cm")
     filas = datos.get("filas") or {}
     for fila in FILAS:
         modulos = filas.get(fila) or []
@@ -360,7 +485,11 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
             continue
         detalle = []
         for m in modulos:
-            ancho = f"{int(m['ancho_cm'])}" if m.get("ancho_cm") else "?"
+            if m.get("ancho_cm"):
+                # «~» = deducido restando del total. Misma marca que en el alzado.
+                ancho = ("~" if m.get("ancho_deducido") else "") + f"{int(m['ancho_cm'])}"
+            else:
+                ancho = "?"
             frentes = m.get("frentes") or []
             cajones = sum(1 for f in frentes if f == "cajon")
             puertas = sum(1 for f in frentes if f == "puerta")
@@ -385,6 +514,8 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
     # LO PRIMERO Y EN MAYÚSCULAS SI NO HAY COTAS. Un render sin cotas se ve
     # exactamente igual de bueno que uno acotado, y esa es justo la trampa: se
     # firma, se presupuesta y se corta sobre proporciones que puso una máquina.
+    for a in (datos.get("avisos") or []):
+        partes.insert(0, f"⚠ {a}")
     if _sin_cotas(datos):
         partes.insert(0, "SIN COTAS ESCRITAS — proporciones del dibujo, no midas sobre el render")
     return " · ".join(partes)

@@ -325,3 +325,137 @@ def test_sin_cotas_el_master_lo_ve_lo_primero():
         "presupuesto sobre proporciones que puso una maquina")
     assert "no midas sobre el render" in r, \
         "ya no se dice lo unico que hay que saber: que de ahi no se mide"
+
+
+# ─── 6. LAS COTAS DEL PLANO: MILIMETROS, ANCHO TOTAL Y LAS TRAMPAS ─────────
+#
+# El master, mirando el recuadro «Leido del dibujo» que se acababa de poner:
+# «yo creo que el fallo esta en la lectura de datos». Y tenia razon. Su plano
+# —uno acotado de verdad, en milimetros— traia esto:
+#
+#     altos:  800  800  500  400  300        (mm)
+#     total:  2500                            (mm)
+#     y en el lateral: 600 (fondo), 850 (altura de encimera), 100 (zocalo)
+#
+# Y el ERP leyo: «Bajos: 4 → 60(2p), ?(2p), ?(1c+horno), ?(1p)».
+#
+# Tres fallos, todos de lectura:
+#
+#  · EL NUMERO MAS GRANDE DEL PLANO NO TENIA DONDE IR. El esquema no pedia el
+#    ancho total, asi que el 2500 se tiraba. Es el ancla: sin el, cada modulo
+#    sin cota es un agujero; con el, el que falta sale de una resta.
+#  · LAS COTAS VERTICALES SE COLABAN COMO ANCHOS. El «600» del lateral es el
+#    FONDO de los bajos, no el ancho del primer mueble. Igual el 850 y el 100.
+#  · MILIMETROS. Un plano tecnico va en mm y este ERP en cm. 2500 no es una
+#    pared de 25 metros.
+#
+# Y una cuarta cosa que sale sola al cuadrar: los altos de su plano suman
+# 280 cm y el total escrito son 250. Una de las dos esta mal. Cuadrarlo por
+# dentro y callarse es como un presupuesto sale con 30 cm de mas y nadie sabe
+# por que.
+
+
+def test_un_plano_en_milimetros_se_lee_en_centimetros():
+    """2500 no es una pared de 25 metros."""
+    d = LC.parsear_lectura(json.dumps({
+        "forma": "lineal", "ancho_total_cm": 2500, "fondo_cm": 600,
+        "filas": {"bajos": [{"orden": 1, "ancho_cm": 800, "frentes": ["puerta"]},
+                            {"orden": 2, "ancho_cm": 600, "frentes": ["puerta"]}]}}))
+    assert d["ancho_total_cm"] == 250, \
+        f"el ancho total se ha quedado en {d['ancho_total_cm']}: no se ha pasado de mm a cm"
+    assert d["fondo_cm"] == 60, "el fondo sigue en milimetros"
+    assert [m["ancho_cm"] for m in d["filas"]["bajos"]] == [80, 60], \
+        "los anchos de modulo siguen en milimetros"
+
+
+def test_un_numero_que_ya_esta_en_centimetros_no_se_divide():
+    """Dividir por diez lo que ya estaba bien es peor que no convertir nada."""
+    d = LC.parsear_lectura(json.dumps({
+        "forma": "lineal", "ancho_total_cm": 250,
+        "filas": {"bajos": [{"orden": 1, "ancho_cm": 60, "frentes": ["puerta"]},
+                            {"orden": 2, "ancho_cm": 120, "frentes": ["puerta"]}]}}))
+    assert d["ancho_total_cm"] == 250, "un ancho total que ya venia en cm se ha dividido"
+    assert [m["ancho_cm"] for m in d["filas"]["bajos"]] == [60, 120], \
+        "un modulo de 120 cm (side by side) se ha convertido en 12"
+
+
+def test_el_ancho_total_del_plano_llega_al_render():
+    """Es el ancla. Sin el, el modelo reparte los modulos a ojo."""
+    d = LC.parsear_lectura(json.dumps({
+        "forma": "lineal", "ancho_total_cm": 2500,
+        "filas": {"bajos": [{"orden": 1, "ancho_cm": 600, "frentes": ["puerta"]}]}}))
+    texto = LC.especificacion_en_texto(d)
+    assert "TOTAL WIDTH OF THE RUN: 250 cm" in texto, (
+        "el ancho total del plano ya no viaja al encargo: cada modulo sin cota "
+        "vuelve a ser un agujero que el modelo rellena a su gusto")
+    assert "Ancho total: 250 cm" in LC.resumen_para_pantalla(d), \
+        "el ancho total no se enseña, asi que no se puede comprobar de un vistazo"
+
+
+def test_la_lectura_avisa_de_no_usar_una_cota_vertical_como_ancho():
+    """El «600» del lateral es el FONDO. Es la trampa que se comio el plano."""
+    assert "READING THE DIMENSION LINES" in LC.PROMPT_LECTURA, (
+        "se ha quitado la parte que distingue cotas horizontales de verticales: "
+        "el fondo y la altura de encimera volveran a colarse como anchos")
+    assert "it is NEVER the width of a module" in LC.PROMPT_LECTURA, \
+        "ya no se prohibe usar una cota vertical como ancho"
+    assert "is the DEPTH of the base units" in LC.PROMPT_LECTURA, \
+        "se ha quitado el caso concreto del plano del master (el 600 del lateral)"
+    assert "millimetres" in LC.PROMPT_LECTURA, \
+        "ya no se avisa de que un plano tecnico va en milimetros"
+
+
+def test_con_una_sola_incognita_el_ancho_sale_de_una_resta():
+    """250 total, 60 + 50 + 80 escritos -> el que falta mide 60. Exacto, no
+    estimado. Y marcado como deducido, que no es lo mismo que escrito."""
+    d = LC.parsear_lectura(json.dumps({
+        "forma": "lineal", "ancho_total_cm": 250,
+        "filas": {"bajos": [{"orden": 1, "ancho_cm": 60, "frentes": ["puerta"]},
+                            {"orden": 2, "ancho_cm": 50, "frentes": ["puerta"]},
+                            {"orden": 3, "ancho_cm": 80, "frentes": ["puerta"]},
+                            {"orden": 4, "frentes": ["puerta"]}]}}))
+    ultimo = d["filas"]["bajos"][3]
+    assert ultimo["ancho_cm"] == 60, (
+        f"el ancho que faltaba no se ha deducido del total: {ultimo['ancho_cm']}")
+    assert ultimo["ancho_deducido"] is True, (
+        "el ancho deducido no va marcado: se presentara como si estuviera "
+        "escrito en el plano, que es exactamente lo que no puede pasar")
+    assert "derived from the total, not written" in LC.especificacion_en_texto(d), \
+        "al modelo no se le dice que ese ancho es deducido"
+    assert "~60" in LC.resumen_para_pantalla(d), \
+        "en pantalla el ancho deducido no se distingue de uno escrito"
+
+
+def test_con_dos_incognitas_no_se_inventa_el_reparto():
+    """Con dos huecos no se sabe como se reparte. Repartir a partes iguales
+    seria inventar DOS medidas. Se dice cuanto sitio queda y ya."""
+    d = LC.parsear_lectura(json.dumps({
+        "forma": "lineal", "ancho_total_cm": 250,
+        "filas": {"bajos": [{"orden": 1, "ancho_cm": 60, "frentes": ["puerta"]},
+                            {"orden": 2, "frentes": ["puerta"]},
+                            {"orden": 3, "frentes": ["puerta"]}]}}))
+    anchos = [m["ancho_cm"] for m in d["filas"]["bajos"]]
+    assert anchos[1] is None and anchos[2] is None, \
+        f"se han inventado dos medidas repartiendo el hueco a partes iguales: {anchos}"
+    texto = LC.especificacion_en_texto(d)
+    assert "190 cm of the run are shared between the 2 modules" in texto, (
+        "no se dice cuanto sitio libre queda: el modelo repartira a su gusto y "
+        "los estrechos volveran a desaparecer")
+    assert "do NOT make them all equal" in texto, \
+        "ya no se prohibe igualarlos, que es justo lo que hace por defecto"
+
+
+def test_una_contradiccion_del_plano_se_dice_y_no_se_tapa():
+    """El plano del master: los altos suman 280 y el total escrito son 250."""
+    d = LC.parsear_lectura(json.dumps({
+        "forma": "lineal", "ancho_total_cm": 2500,
+        "filas": {"altos": [{"orden": i, "ancho_cm": w, "frentes": ["puerta"]}
+                            for i, w in enumerate([800, 800, 500, 400, 300], 1)]}}))
+    avisos = d.get("avisos") or []
+    assert avisos, (
+        "los altos suman 280 cm y el total escrito son 250, y no se dice nada: "
+        "se cuadra por dentro y el presupuesto sale descuadrado sin explicacion")
+    assert "280" in avisos[0] and "250" in avisos[0], \
+        "el aviso no dice las dos cifras que no cuadran"
+    assert LC.resumen_para_pantalla(d).startswith("⚠"), \
+        "el aviso no sale el primero en pantalla, asi que no se lee"
