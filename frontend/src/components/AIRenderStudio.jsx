@@ -3909,6 +3909,22 @@ export default function AIRenderStudio({ state, setState }) {
                       backend lo sigue devolviendo (`engine`) para el registro. */}
                 </div>
               )}
+
+              {/* LO QUE EL ERP HA LEÍDO DEL DIBUJO.
+                  Cuando un render sale mal hay DOS culpables posibles: que se
+                  haya leído mal el dibujo, o que el render no haya obedecido a
+                  lo leído. Sin esto no hay forma de saber cuál de los dos es, y
+                  se acaba apretando el prompt a ciegas —que es exactamente lo
+                  que pasó cuatro veces seguidas con la misma cocina—. */}
+              {renderResult?.parsed_params?.lecturaDelDibujo && (
+                <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <span className="font-bold text-slate-600">Leído del dibujo: </span>
+                  {renderResult.parsed_params.lecturaDelDibujo}
+                  <div className="mt-1 text-slate-400">
+                    Si esto no es tu cocina, el fallo está en la lectura del plano y no en el render.
+                  </div>
+                </div>
+              )}
               </div>
             </div>
           ) : (

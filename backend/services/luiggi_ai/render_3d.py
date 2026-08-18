@@ -737,8 +737,33 @@ class Render3DService:
             except Exception as e:
                 logger.warning(f"No se pudo recortar el croquis, se usa la imagen entera: {e}")
 
-            # Transcripción multimodal con Vision: lee cotas, módulos, frigorífico y divisiones
-            sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
+            # EL DIBUJO SE LEE A FICHA, NO A REDACCIÓN.
+            #
+            # Cuatro veces seguidas el master dijo lo mismo del mismo render, y
+            # cuatro veces se apretó el encargo con más reglas. Volvía a faltar
+            # siempre lo mismo: los altillos y el nicho de la campana. El fallo
+            # no estaba en las reglas, estaba en el camino:
+            #
+            #     dibujo -> párrafo en prosa -> modelo de imagen
+            #
+            # Un párrafo no se cuenta. «Una fila de altos con altillos encima»
+            # describe igual de bien cinco que tres. Lo que no sobrevive a la
+            # prosa son los NÚMEROS. Ahora se lee a lista de muebles y el
+            # encargo lo escribimos nosotros, numerado y contable.
+            #
+            # Si la lectura a ficha no sale (el modelo devuelve prosa, o basura),
+            # se cae a la transcripción de siempre. Perder el detalle es malo;
+            # quedarse sin render es peor.
+            lectura = await self._leer_cocina_del_dibujo(ref_b64, ref_mime)
+            if lectura:
+                from services.luiggi_ai.lectura_cocina import (
+                    especificacion_en_texto, resumen_para_pantalla)
+                sketch_transcription = especificacion_en_texto(lectura)
+                parsed_params["lecturaDelDibujo"] = resumen_para_pantalla(lectura)
+                parsed_params["lecturaEstructurada"] = True
+            else:
+                sketch_transcription = await self._transcribe_sketch_with_vision(ref_b64, ref_mime)
+                parsed_params["lecturaEstructurada"] = False
             transcription_block = f"\nTECHNICAL BREAKDOWN EXTRACTED DIRECTLY FROM THE SKETCH:\n{sketch_transcription}\n" if sketch_transcription else ""
 
             task_prompt = (
@@ -1214,6 +1239,36 @@ class Render3DService:
         except Exception as e:
             logger.debug(f"No se pudo analizar la referencia como croquis: {e}")
             return False
+
+    async def _leer_cocina_del_dibujo(self, raw_b64: str, mime: str = "image/png"):
+        """Lee el dibujo A FICHA: lista de muebles con fila, ancho y frentes.
+
+        Devuelve el diccionario ya limpio, o None si no hay lectura fiable —y
+        entonces quien llama se queda con la transcripción en prosa de siempre,
+        que es peor pero es algo. Nunca lanza: esto va en medio de un render
+        que el master está mirando.
+        """
+        try:
+            from services.llm_vision import analyze_image_with_gemini
+            from services.luiggi_ai.lectura_cocina import PROMPT_LECTURA, parsear_lectura
+            crudo = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
+            res = await analyze_image_with_gemini(
+                crudo, PROMPT_LECTURA, model="gemini-2.5-flash",
+                image_mime=mime or "image/jpeg")
+            lectura = parsear_lectura(res or "")
+            if lectura:
+                filas = lectura.get("filas") or {}
+                logger.info(
+                    "Dibujo leído a ficha: %s bajos, %s altos, %s altillos, %s columnas, %s hueco(s).",
+                    len(filas.get("bajos") or []), len(filas.get("altos") or []),
+                    len(filas.get("altillos") or []), len(filas.get("columnas") or []),
+                    len(lectura.get("huecos_altos") or []))
+            else:
+                logger.warning("La lectura a ficha no se pudo interpretar; se usa la de siempre.")
+            return lectura
+        except Exception as e:
+            logger.warning(f"Error leyendo la cocina del dibujo: {e}")
+            return None
 
     async def _transcribe_sketch_with_vision(self, raw_b64: str, mime: str = "image/png") -> str:
         """Lee el croquis manuscrito con Gemini Vision y extrae de forma
