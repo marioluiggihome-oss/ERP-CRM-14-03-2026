@@ -2,46 +2,51 @@
 # Software propietario y confidencial. Ver LICENSE.
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
-"""EL RENDER TAL Y COMO ERA EL 10 DE JULIO DE 2026. IA 5.
+"""EL RENDER TAL Y COMO ERA EL 22 DE JULIO DE 2026. IA 5.
 
-El master, mirando cuatro renders seguidos de la misma cocina: «busca lo que
-hacía el 10 de julio de 2026, que funcionaba mejor». Y luego: «podías poner un
-botón de IA 5, con el prompt del 10 de julio».
+El master: «podemos poner en IA 5 lo que hacía el programa el 22 de julio, y
+cómo interpretabas los dibujos». Antes este botón llevaba el camino del 10 de
+julio, también suyo. El 22 es mejor, y se ve al ponerlos uno al lado del otro:
 
-Tiene razón en el método. Llevábamos trece rondas de yo apretando el encargo y
-él diciendo que no se parece. Un botón que rinda el MISMO croquis por los dos
-caminos zanja la discusión en una prueba en vez de en una teoría.
+  10/07  «reproduce la distribución exacta: forma, número y orden de módulos,
+          posición de cada electrodoméstico y las columnas».
+
+  22/07  lo mismo Y ADEMÁS:
+          · MODO ESTRUCTURA ESTRICTA / PRECISO, y el dibujo es «ground truth
+            for GEOMETRY, not decoration»;
+          · LOS VANOS: cada ventana y cada puerta en la MISMA posición, ancho y
+            alto que en el dibujo. Esto no estaba el día 10 y es lo que hace
+            que una cocina con una ventana sobre el fregadero salga con la
+            ventana donde va;
+          · los anchos de módulo A ESCALA del dibujo;
+          · y la frase que lo cierra todo: «del texto SOLO salen acabados,
+            materiales y colores; la geometría viene 100% del dibujo».
+
+Esa última frase es la abuela de la regla que hoy sigue en el camino de
+agosto. O sea que el 22 de julio no es un experimento raro: es de donde salió
+lo que vino después.
 
 QUÉ ES ESTO EXACTAMENTE
 -----------------------
-El camino del croquis del commit cbdd742 (10/07/2026, 22:55). No es «parecido»
-ni «inspirado en»: las tres piezas —los principios de cocina, el constructor
-de prompt y la nota del croquis— están sacadas LITERALMENTE de ese commit, sin
-tocar una coma. Si se reescriben «mejorándolas», el botón deja de medir lo que
-tiene que medir y la comparación no vale nada.
+El camino del croquis del commit 8a48da5 (22/07/2026, 22:39). Las tres piezas
+—los principios de cocina, el constructor de prompt y la nota del croquis—
+están sacadas LITERALMENTE de ese commit, extraídas del repositorio y no
+copiadas a mano. Si se reescriben «mejorándolas», el botón deja de medir lo
+que tiene que medir.
+
+Entre el 10 y el 22 solo cambió la NOTA DEL CROQUIS: `build_render_prompt`,
+`_expand_brief` y los principios de cocina son idénticos en los dos días.
+Comprobado antes de cambiar nada, no supuesto.
 
 El motor es el mismo de entonces y el de hoy: Gemini. Lo único que cambia
 entre IA 1 e IA 5 es el ENCARGO.
 
-UNA CORRECCIÓN QUE ME DEBO
---------------------------
-Le dije al master que el prompt de julio eran 164 palabras contra las 2.262 de
-hoy, «casi catorce veces más». Era falso y decidió con ese número. Medí solo
-la nota del croquis y me dejé fuera el andamiaje de `build_render_prompt`
-—1.146 palabras más— y que el croquis pasaba además por `_expand_brief`, que
-le pide a un LLM que REDACTE una especificación entera sin haber visto el
-dibujo, y eso se sumaba encima.
-
-El total real de julio son 1.310 palabras fijas MÁS lo que escribiera el LLM.
-O sea que julio no era un prompt corto: era un prompt DISTINTO. Lo que
-funcionaba mejor —si funcionaba mejor— no era la brevedad. Por eso el botón,
-que mide, en vez de otra teoría mía.
-
-LO QUE ESTE CAMINO NO LLEVA, PORQUE EN JULIO NO EXISTÍA
---------------------------------------------------------
-Ni recorte del dibujo dentro de la página, ni lectura a ficha, ni la lista de
-módulos numerada. Va el pantallazo tal cual, como iba entonces. Es a propósito:
-un botón «julio con los arreglos de agosto» no contestaría a la pregunta.
+LO QUE NO LLEVA, PORQUE EN JULIO NO EXISTÍA
+-------------------------------------------
+Ni recorte del dibujo dentro de la página, ni lectura a ficha, ni lista de
+módulos numerada, ni ancho total como ancla. Va el pantallazo tal cual, como
+iba entonces. Es a propósito: un botón «julio con los arreglos de agosto» no
+contestaría a la pregunta.
 """
 from __future__ import annotations
 
@@ -125,39 +130,41 @@ def build_render_prompt(
     return " ".join(p for p in parts if p)
 
 
-def prompt_del_croquis_10jul(prompt_generico: str, hay_referencia: bool = True,
+def prompt_del_croquis_22jul(prompt_generico: str, hay_referencia: bool = True,
                              es_croquis: bool = True) -> str:
-    """El `task_prompt` del 10/07/2026, montado igual que aquel dia.
+    """El `task_prompt` del 22/07/2026, montado igual que aquel dia.
 
     `prompt_generico` es lo que devolvia `build_render_prompt` con el brief ya
-    expandido, que es como llegaba entonces. Los nombres de dentro se
-    conservan (`ref_b64`, `is_sketch`, `prompt`) para que el bloque siga siendo
-    IDENTICO al del commit y se pueda contrastar linea a linea.
+    expandido, que es como llegaba entonces. Los nombres de dentro se conservan
+    (`ref_b64`, `is_sketch`, `prompt`) para que el bloque siga siendo IDENTICO
+    al del commit y se pueda contrastar linea a linea.
     """
     ref_b64 = hay_referencia
     is_sketch = es_croquis
     prompt = prompt_generico
     if ref_b64 and is_sketch:
         ref_note = (
-            "A HAND-DRAWN FLOOR PLAN / SKETCH has been attached. It shows the "
-            "exact kitchen/furniture LAYOUT drawn by the designer. You MUST "
-            "reproduce the EXACT distribution shown in the sketch: the SHAPE "
-            "(linear, L-shaped, U-shaped), the NUMBER and ORDER of modules from "
-            "left to right, the POSITION of each appliance (sink, dishwasher, "
-            "washing machine, oven, hob, fridge), and the TALL COLUMNS. "
-            "The sketch is NOT decorative — it is a TECHNICAL blueprint. "
-            "Generate the kitchen EXACTLY as drawn, with the materials and "
-            "colors described in the brief below. Do NOT add, remove, or "
-            "rearrange any module. The proportions and widths of each module "
-            "must match the sketch. "
+            "A TECHNICAL 2D DRAWING (hand-drawn floor plan, elevation or blueprint) "
+            "has been attached. Treat it in STRICT STRUCTURE / PRECISE MODE: it is "
+            "the ground truth for GEOMETRY, not decoration. You MUST reproduce the "
+            "EXACT distribution drawn: the SHAPE (linear, L-shaped, U-shaped), the "
+            "NUMBER and ORDER of modules from left to right, the POSITION of each "
+            "appliance (sink, dishwasher, washing machine, oven, hob, fridge), the "
+            "TALL COLUMNS, and — critically — the OPENINGS: every window and door "
+            "(vano) must appear at the SAME position, width and height as in the "
+            "drawing, and the overall PROPORTIONS and module widths must match the "
+            "drawing to scale. Do NOT add, remove, resize or rearrange any module or "
+            "opening. Only the FINISHES, MATERIALS and COLORS come from the written "
+            "brief; the geometry comes 100% from the drawing. "
         )
     elif ref_b64:
         ref_note = (
             "An IMAGE has been attached as visual reference (a photo, a sketch or a "
-            "technical breakdown/despiece). Use it to respect the real LAYOUT, "
-            "PROPORTIONS and MEASUREMENTS of the piece (number and size of doors, "
-            "drawers, shelves and columns). Keep the geometry faithful to the "
-            "reference; apply the finishes/colors from the brief. "
+            "technical breakdown/despiece). Work in PRECISE / STRUCTURE MODE: respect "
+            "the real LAYOUT, PROPORTIONS and MEASUREMENTS of the piece (number and "
+            "size of doors, drawers, shelves and columns) and the OPENINGS (windows "
+            "and doors) at their original position and proportion. Keep the geometry "
+            "faithful to the reference; apply only the finishes/colors from the brief. "
         )
     else:
         ref_note = ""

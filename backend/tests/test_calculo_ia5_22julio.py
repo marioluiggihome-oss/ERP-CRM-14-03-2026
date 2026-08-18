@@ -2,15 +2,26 @@
 # Software propietario y confidencial. Ver LICENSE.
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
-"""CANDADO: IA 5 es el camino del 10/07/2026, y sigue siéndolo.
+"""CANDADO: IA 5 es el camino del 22/07/2026, y sigue siéndolo.
 
 POR QUÉ EXISTE ESTE BOTÓN
 -------------------------
 Trece rondas seguidas de lo mismo: el master mira un render de su cocina, dice
 que no se parece, y yo aprieto el encargo con otro párrafo. A la cuarta con la
 MISMA cocina dijo lo único que hacía falta decir: «busca lo que hacía el 10 de
-julio de 2026, que funcionaba mejor», y después «podías poner un botón de IA 5,
-con el prompt del 10 de julio».
+julio de 2026, que funcionaba mejor»; después «podías poner un botón de IA 5,
+con el prompt del 10 de julio»; y por último «podemos poner en IA 5 lo que hacía
+el programa el 22 de julio, y cómo interpretabas los dibujos».
+
+El 22 es mejor que el 10, y se ve poniéndolos uno al lado del otro: añade MODO
+ESTRUCTURA ESTRICTA, LOS VANOS —cada ventana y cada puerta en su posición,
+ancho y alto— , los anchos de módulo a escala, y la frase que lo cierra todo:
+«del texto solo salen acabados, materiales y colores; la geometría viene 100%
+del dibujo». Esa frase es la abuela de la regla que hoy sigue en agosto.
+
+Entre el 10 y el 22 SOLO cambió la nota del croquis: `build_render_prompt`,
+`_expand_brief` y los principios de cocina son identicos los dos dias.
+Comprobado antes de cambiar nada, no supuesto.
 
 Tiene razón en el método. Eso no se zanja con otra teoría mía: se zanja
 rindiendo el MISMO croquis por los dos caminos y mirando las dos imágenes.
@@ -51,7 +62,7 @@ import re
 
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAIZ = os.path.dirname(BACKEND)
-JULIO = os.path.join(BACKEND, "services", "luiggi_ai", "render_10jul.py")
+JULIO = os.path.join(BACKEND, "services", "luiggi_ai", "render_22jul.py")
 RENDER = os.path.join(BACKEND, "services", "luiggi_ai", "render_3d.py")
 ESTUDIO = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
 
@@ -63,15 +74,15 @@ def _leer(ruta):
 
 # ─── 1. El texto de julio, literal ─────────────────────────────────────────
 
-# Frases del commit cbdd742 (10/07/2026 22:55). Si alguna cambia, ya no es
+# Frases del commit 8a48da5 (22/07/2026 22:39). Si alguna cambia, ya no es
 # julio: es «julio mejorado», que es justo lo que no queremos medir.
 DE_JULIO = [
-    "A HAND-DRAWN FLOOR PLAN / SKETCH has been attached",
-    "reproduce the EXACT distribution shown in the sketch",
-    "The sketch is NOT decorative — it is a TECHNICAL blueprint",
-    "Do NOT add, remove, or rearrange any module",
-    "The proportions and widths of each module "
-    "must match the sketch",
+    "A TECHNICAL 2D DRAWING (hand-drawn floor plan, elevation or blueprint)",
+    "Treat it in STRICT STRUCTURE / PRECISE MODE",
+    "it is the ground truth for GEOMETRY, not decoration",
+    "reproduce the EXACT distribution drawn",
+    "Do NOT add, remove, resize or rearrange any module or opening",
+    "the geometry comes 100% from the drawing",
     "Generate a single high-quality, photorealistic 3D render image based "
     "STRICTLY on the following design brief",
 ]
@@ -84,6 +95,25 @@ def test_el_texto_del_croquis_es_el_de_julio_palabra_por_palabra():
         assert frase in plano, (
             f"ha cambiado el texto de julio: falta «{frase[:60]}…». IA 5 solo "
             f"vale como medida mientras sea julio de verdad")
+
+
+def test_los_vanos_son_lo_que_el_22_añadio_y_no_se_pueden_perder():
+    """Es la diferencia de verdad entre el 10 y el 22: una cocina con una
+    ventana sobre el fregadero sale con la ventana donde va, y no donde le
+    parezca al modelo. Si esto se cae, IA 5 vuelve a ser el 10 de julio."""
+    plano = re.sub(r'"\s*\n\s*"', "", _leer(JULIO))
+    assert "the OPENINGS: every window and door" in plano, \
+        "se han perdido los vanos, que es justo lo que el 22 anadia sobre el 10"
+    assert "(vano)" in plano, "se ha quitado la palabra de casa"
+    assert "SAME position, width and height as in the drawing" in plano, \
+        "los vanos ya no tienen que ir en su sitio exacto"
+
+
+def test_del_texto_solo_salen_acabados():
+    """La frase que lo cierra todo, y la abuela de la regla de agosto."""
+    plano = re.sub(r'"\s*\n\s*"', "", _leer(JULIO))
+    assert "Only the FINISHES, MATERIALS and COLORS come from the written brief" in plano, \
+        "el texto vuelve a poder mandar sobre la geometria del dibujo"
 
 
 def test_los_principios_de_cocina_de_julio_siguen_ahi():
@@ -129,9 +159,9 @@ def test_ia5_se_decide_antes_que_la_rama_de_edicion():
 
 def test_ia5_usa_las_piezas_de_julio_y_el_mismo_motor():
     rama = _rama_ia5()
-    assert "from services.luiggi_ai.render_10jul import" in rama, \
+    assert "from services.luiggi_ai.render_22jul import" in rama, \
         "IA 5 ya no usa el módulo de julio"
-    assert "prompt_del_croquis_10jul" in rama, "IA 5 ya no monta el prompt de julio"
+    assert "prompt_del_croquis_22jul" in rama, "IA 5 ya no monta el prompt de julio"
     assert 'provider="gemini"' in rama, (
         "IA 5 ha dejado de rendir con Gemini: si cambia el motor, la "
         "comparación mide el motor y no el encargo, que es lo que se quería medir")
@@ -158,7 +188,7 @@ def test_ia5_dice_en_pantalla_lo_que_es():
     """Un render de IA 5 y uno de IA 1 se parecen lo bastante como para
     confundirlos al día siguiente. Tiene que ir firmado."""
     rama = _rama_ia5()
-    assert 'parsed_params["motor"]' in rama and "10/07/2026" in rama, (
+    assert 'parsed_params["motor"]' in rama and "22/07/2026" in rama, (
         "el render de IA 5 ya no viene identificado: dentro de dos días nadie "
         "sabrá cuál era de qué camino")
 

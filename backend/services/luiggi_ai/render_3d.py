@@ -616,8 +616,11 @@ class Render3DService:
         # ── IA 5: EL CAMINO DEL 10 DE JULIO, TAL CUAL ─────────────────────────
         #
         # El master, tras cuatro renders seguidos de la misma cocina: «busca lo
-        # que hacía el 10 de julio de 2026, que funcionaba mejor»; y luego,
-        # «podías poner un botón de IA 5, con el prompt del 10 de julio».
+        # que hacía el 10 de julio de 2026, que funcionaba mejor»; luego «podías
+        # poner un botón de IA 5, con el prompt del 10 de julio»; y después,
+        # «podemos poner en IA 5 lo que hacía el programa el 22 de julio». El 22
+        # es el bueno: añade los VANOS —ventana y puerta en su sitio— y la
+        # frase que lo cierra, «la geometría viene 100% del dibujo».
         #
         # Tiene razón en el método. Trece rondas de yo apretando el encargo y él
         # diciendo que no se parece no las zanja otra teoría mía: las zanja
@@ -628,21 +631,21 @@ class Render3DService:
         # de módulos numerada. En julio no existían. Un botón «julio con los
         # arreglos de agosto» no contestaría a la pregunta.
         if ref_b64 and provider == "julio":
-            from services.luiggi_ai.render_10jul import (
-                build_render_prompt as _brp_10jul, prompt_del_croquis_10jul)
-            parsed_params["motor"] = "IA 5 — camino del 10/07/2026"
+            from services.luiggi_ai.render_22jul import (
+                build_render_prompt as _brp_22jul, prompt_del_croquis_22jul)
+            parsed_params["motor"] = "IA 5 — camino del 22/07/2026"
             parsed_params["fromSketch"] = bool(is_sketch)
             # En julio el croquis pasaba por `_expand_brief` (gemini-2.5-pro),
             # que redacta una especificación entera SIN haber visto el dibujo.
             # Va incluido porque iba: quitarlo sería otra cosa, no julio.
             _brief = await self._expand_brief(description, space_type)
             parsed_params["briefExpanded"] = bool(_brief) and _brief != (description or "").strip()
-            _generico = _brp_10jul(
+            _generico = _brp_22jul(
                 description=_brief or description,
                 style=parsed_params.get("style", "photorealistic"),
                 space_type=space_type,
             )
-            task_prompt = prompt_del_croquis_10jul(
+            task_prompt = prompt_del_croquis_22jul(
                 _generico, hay_referencia=True, es_croquis=bool(is_sketch))
             return await self._render_dispatch(
                 task_prompt, task_prompt, parsed_params,
