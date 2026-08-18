@@ -123,3 +123,58 @@ def test_en_pantalla_grande_no_se_ha_cambiado_nada():
         "barra de acciones se saldra por un lado")
     assert 'hidden sm:inline' in codigo, \
         "los rotulos completos han desaparecido tambien de la pantalla grande"
+
+
+# ─── EL RENDER SE ESCALA, NO SE RECORTA ────────────────────────────────────
+#
+# Segunda vuelta del master: «sigue viendose mal en horizontal». Y ya NO era
+# falta de sitio: el hueco estaba, pero se veia una franja del centro de la
+# cocina, cortada arriba y abajo.
+#
+# El recuadro que envuelve al render ABRAZA a la imagen a proposito: las marcas
+# de instalaciones se colocan en % de ese recuadro, asi que si no coincide
+# clavado con la foto, cada enchufe cae donde no es (el fallo del «letterbox»,
+# que ya costo arreglar una vez).
+#
+# Pero abrazandola, el `max-h-full` de la imagen NO SE RESUELVE contra nada
+# —el padre tiene alto automatico— y en vez de encogerse, la imagen se RECORTA.
+#
+# Sabiendo la PROPORCION REAL de la foto, el recuadro se dimensiona por CSS y
+# hace las dos cosas: entra entero y sigue abrazandola.
+
+
+def test_el_recuadro_del_render_lleva_la_proporcion_de_la_imagen():
+    codigo = _codigo()
+    assert "aspectRatio: String(ratioRender)" in codigo, (
+        "el recuadro del render ya no lleva la proporcion de la imagen: sin "
+        "ella no se puede escalar sin recortar, y en horizontal se vuelve a "
+        "ver solo una franja")
+    assert "setRatioRender" in codigo, \
+        "ya no se lee la proporcion real del render"
+
+
+def test_la_proporcion_se_lee_de_la_imagen_y_no_se_supone():
+    """No todos los renders son 16:9 —los 4K y las laminas tecnicas no— y
+    suponerlo devolveria el recorte por otro lado."""
+    codigo = _codigo()
+    # ACOTADO AL SITIO. `naturalWidth` sale en otros tres puntos del fichero
+    # (el marcado de agua, la descarga con marcas), asi que buscarlo suelto
+    # daba verde aunque se vaciara justo esta parte: el candado no mordia.
+    i = codigo.index("setRatioRender(")
+    bloque = codigo[max(0, i - 300):i + 120]
+    assert "naturalWidth" in bloque and "naturalHeight" in bloque, (
+        "la proporcion vuelve a darse por supuesta en vez de leerse de la "
+        "imagen: con un render que no sea 16:9 se recorta otra vez")
+
+
+def test_colocar_y_arrastrar_una_marca_miden_LO_MISMO():
+    """Al colocar se medía sobre la IMAGEN y al arrastrar sobre el RECUADRO.
+    Coincidian solo mientras el recuadro abrazase la foto clavada — y eso es
+    justo lo que acaba de cambiar. Dos formas de medir lo mismo es un fallo
+    esperando a que algo se mueva."""
+    codigo = _codigo()
+    i = codigo.index("const seguirArrastre")
+    cuerpo = codigo[i:i + 700]
+    assert "render-annot-img" in cuerpo, (
+        "el arrastre de marcas vuelve a medir sobre el recuadro y no sobre la "
+        "imagen: los enchufes se moveran a donde no van")

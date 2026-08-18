@@ -537,6 +537,22 @@ export default function AIRenderStudio({ state, setState }) {
   //
   // Se usan eventos de PUNTERO (no de ratón) para que funcione igual con el
   // dedo en la tablet, que es donde se revisa la obra.
+  // LA PROPORCION DE VERDAD DEL RENDER.
+  //
+  // El envoltorio de la imagen ABRAZA a la imagen a proposito: las marcas de
+  // instalaciones se colocan en % de ese recuadro, asi que si el recuadro no
+  // coincide con la foto, cada enchufe cae donde no es (el fallo del
+  // «letterbox» que ya costo arreglar una vez).
+  //
+  // Pero abrazandola, el `max-h-full` de la imagen no se resuelve contra nada
+  // —el padre tiene alto automatico— y en vez de ENCOGERSE, la imagen se
+  // RECORTA. Con el movil en horizontal se veia una franja del centro de la
+  // cocina y punto: «sigue viendose mal en horizontal».
+  //
+  // Sabiendo la proporcion, el recuadro se puede dimensionar por CSS
+  // (`aspect-ratio` + max-w + max-h): entra entero, se escala, y sigue
+  // abrazando la imagen al milimetro. Las dos cosas a la vez.
+  const [ratioRender, setRatioRender] = useState(16 / 9);
   const capaMarcasRef = useRef(null);
   const arrastreRef = useRef(null);
 
@@ -548,7 +564,10 @@ export default function AIRenderStudio({ state, setState }) {
 
   const seguirArrastre = (e) => {
     const a = arrastreRef.current;
-    const capa = capaMarcasRef.current;
+    // MEDIR SOBRE LA IMAGEN, igual que `placeMark`. Uno media el recuadro y el
+    // otro la foto: coincidian solo mientras el recuadro la abrazase clavada.
+    // Dos formas de medir lo mismo es un fallo esperando a que algo cambie.
+    const capa = document.getElementById('render-annot-img') || capaMarcasRef.current;
     if (!a || !capa) return;
     const r = capa.getBoundingClientRect();
     if (!r.width || !r.height) return;
@@ -3799,15 +3818,19 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   </div>
                 ) : renderResult?.result?.images?.[0] && !imgError ? (
-                  <div ref={capaMarcasRef} className="relative inline-flex items-center justify-center max-w-full max-h-full overflow-hidden" onClick={placeMark}>
+                  <div ref={capaMarcasRef} className="relative flex items-center justify-center max-w-full max-h-full overflow-hidden" style={{ aspectRatio: String(ratioRender) }} onClick={placeMark}>
                   <img
                     id="render-annot-img"
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
-                    className="max-w-full max-h-full object-contain transition-transform block"
+                    className="w-full h-full object-contain transition-transform block"
                     style={{
                       ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
                       ...(schematic ? { filter: 'grayscale(100%) contrast(115%) brightness(88%)' } : {}),
+                    }}
+                    onLoad={(e) => {
+                      const w = e.target?.naturalWidth, h = e.target?.naturalHeight;
+                      if (w && h) setRatioRender(w / h);
                     }}
                     onError={() => setImgError(true)}
                   />
