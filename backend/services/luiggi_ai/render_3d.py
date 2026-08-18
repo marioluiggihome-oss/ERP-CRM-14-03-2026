@@ -150,6 +150,24 @@ _PREMIUM_PROMPT_PREFIX = (
 )
 
 
+def _etiqueta_de_motor(modelo: str) -> str:
+    """El nombre de casa de un modelo de imagen.
+
+    Qué modelo hay detrás no se le enseña a nadie que no sea master (secreto
+    industrial, y está en las condiciones de uso). Pero para comparar dos
+    renders hace falta saber si son del mismo motor o no, así que sube una
+    etiqueta y no el identificador.
+    """
+    m = (modelo or "").lower()
+    if "3-pro-image" in m:
+        return "Pro"
+    if "flash-image" in m:
+        return "Estándar"
+    if "flux" in m:
+        return "Flux"
+    return "otro"
+
+
 class Render3DService:
     """Servicio de generación de renders 3D fotorrealistas."""
 
@@ -1482,6 +1500,7 @@ class Render3DService:
         start = time.time()
         # Aplicar prefijo de prompt si se especifica (IA 3 premium)
         final_prompt = f"{prompt_prefix}\n\n{task_prompt}" if prompt_prefix else task_prompt
+        _info_modelo = {}
         try:
             data_url = await generate_image_with_gemini(
                 final_prompt,
@@ -1489,6 +1508,7 @@ class Render3DService:
                 reference_mime=reference_mime or "image/png",
                 reference_images=reference_images,
                 model_override=model_override,
+                salida=_info_modelo,
             )
         except Exception as e:
             logger.error(f"Render (Gemini) error: {e}")
@@ -1507,6 +1527,19 @@ class Render3DService:
             "prompt_used": prompt,
         }
         if parsed_params is not None:
+            # El modelo que ha pintado la imagen viaja con el render. Sin esto,
+            # un motor que falla y cae al de respaldo devuelve una imagen que
+            # parece la buena, y comparar dos motores deja de tener sentido.
+            # POR NOMBRE DE CASA, NO POR EL DEL MODELO. Qué motor hay detrás
+            # es secreto industrial y el Estudio 3D lo ve cualquier carpintero
+            # con cuenta: el nombre técnico se queda en el log y en Ajustes →
+            # Consumo de IA, que está cerrado a master. Aquí sube una etiqueta,
+            # que es lo único que hace falta para comparar dos renders.
+            if _info_modelo.get("modelo"):
+                parsed_params["motorUsado"] = _etiqueta_de_motor(_info_modelo["modelo"])
+                if _info_modelo.get("de_respaldo"):
+                    parsed_params["motorDeRespaldo"] = _etiqueta_de_motor(
+                        _info_modelo.get("modelo_pedido") or "")
             out["parsed_params"] = parsed_params
         return out
 
@@ -1719,6 +1752,32 @@ class Render3DService:
                 reference_image_base64=reference_image_base64, reference_mime=reference_mime,
                 reference_images=reference_images,
                 prompt_prefix=_PREMIUM_PROMPT_PREFIX,
+            )
+
+        # IA 7: NANO BANANA PRO (gemini-3-pro-image).
+        #
+        # El master: «ponlo en la IA 7 con banana pro». Viene de preguntar en
+        # qué se diferencia el ERP de abrir AI Studio y darle el dibujo a mano.
+        # Se diferencia en el modelo: el ERP renderiza con `gemini-2.5-flash-
+        # image` —Nano Banana normal— y AI Studio con Pro va con otro modelo,
+        # mejor en detalle fino y en obedecer instrucciones largas.
+        #
+        # En `llm_vision` está escrita la decisión de NO usarlo: «gemini-3-pro-
+        # image es más creativo e ignora el layout: se inventa la distribución
+        # del cliente». Puede ser verdad, pero es una frase en un comentario y
+        # no tiene ni una prueba detrás. Este botón la pone a prueba: MISMO
+        # encargo que IA 1 —recorte, lectura a ficha y lista numerada— y solo
+        # cambia el modelo. Si lo único que cambia es el modelo, lo que se ve
+        # en las dos imágenes es el modelo.
+        #
+        # No se pone de motor por defecto: cuesta 0,12 $ por imagen frente a
+        # 0,036 $, tres veces y pico. Que se elija a sabiendas.
+        if provider == "banana_pro":
+            return await self._render_with_gemini(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+                reference_images=reference_images,
+                model_override="gemini-3-pro-image-preview",
             )
 
         # IA 4: Gemini Flash (más rápido)

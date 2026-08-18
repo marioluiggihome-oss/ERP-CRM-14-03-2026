@@ -502,6 +502,10 @@ export default function AIRenderStudio({ state, setState }) {
     // funcionaba mejor y con este botón se rinde el mismo croquis por los dos
     // caminos y se miran las dos imágenes, en vez de discutirlo.
     if (motor === 'ia5') return 'julio';
+    // IA 7: el motor Pro. MISMO encargo que IA 1 —con
+    // recorte y lectura a ficha—, solo cambia el modelo, para que lo que se vea
+    // en las dos imágenes sea el modelo y no otra cosa. Cuesta 3,3x por render.
+    if (motor === 'ia7') return 'banana_pro';
     return 'gemini';
   };
   const [attached, setAttached] = useState(false);
@@ -3219,7 +3223,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
+                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia2', 'IA 2', 'Motor alternativo (Manus)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal'], ['ia2', 'IA 2', 'Motor alternativo']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
                         className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}
@@ -3960,6 +3964,27 @@ export default function AIRenderStudio({ state, setState }) {
                   {/* El nombre del motor no se muestra: no aporta nada a quien
                       mira el render y no tiene por qué salir en pantalla. El
                       backend lo sigue devolviendo (`engine`) para el registro. */}
+                  {/* EL MODELO SÍ, PERO SOLO CUANDO NO ES EL DE SIEMPRE.
+                      Comparando dos motores hace falta saber cuál pintó cada
+                      imagen; el resto del tiempo es ruido. */}
+                  {isMaster && renderResult?.parsed_params?.motorUsado
+                    && renderResult.parsed_params.motorUsado !== 'Estándar' && (
+                    <span>Motor: {renderResult.parsed_params.motorUsado}</span>
+                  )}
+                </div>
+              )}
+
+              {/* SI EL MODELO PEDIDO FALLÓ, SE DICE.
+                  La cascada de modelos existe para que un modelo retirado no
+                  deje al ERP sin renders, y está bien. Pero cuando se están
+                  comparando dos motores es una trampa: se pide Banana Pro,
+                  falla, pinta el pequeño, y sale una imagen con toda la pinta
+                  de ser la buena. Quien compara sacaría la conclusión al revés. */}
+              {renderResult?.parsed_params?.motorDeRespaldo && (
+                <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+                  <span className="font-bold">⚠ Este render NO es del motor que pediste: </span>
+                  falló el motor <b>{renderResult.parsed_params.motorDeRespaldo}</b> y lo ha pintado el{' '}
+                  <b>{renderResult.parsed_params.motorUsado}</b>. No lo uses para comparar motores.
                 </div>
               )}
 

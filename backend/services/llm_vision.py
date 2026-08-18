@@ -553,6 +553,7 @@ async def generate_image_with_gemini(
     reference_images: Optional[list] = None,
     image_size: Optional[str] = None,
     model_override: Optional[str] = None,
+    salida: Optional[dict] = None,
 ) -> str:
     """
     Genera una imagen con Gemini a partir de un prompt (y opcionalmente una
@@ -661,6 +662,19 @@ async def generate_image_with_gemini(
                 # no se veía en ningún sitio salvo en Consumo de IA a toro
                 # pasado. Si el principal falla o tarda, queda dicho AQUÍ y en
                 # voz alta, porque el render sí sale y parece bueno.
+                # QUE MODELO HA PINTADO ESTO, DICHO HACIA ARRIBA.
+                #
+                # El aviso de abajo va al log del servidor, donde no lo ve
+                # nadie mientras mira un render. Y la cascada es traicionera
+                # justo cuando mas importa: si se pide Banana Pro y falla, sale
+                # una imagen del modelo pequeño con toda la pinta de ser la
+                # buena. Quien esta comparando dos motores sacaria la
+                # conclusion al reves. Asi que el modelo que ha pintado la
+                # imagen sube hasta la pantalla.
+                if salida is not None:
+                    salida["modelo"] = model_name
+                    salida["modelo_pedido"] = _model_cascade[0]
+                    salida["de_respaldo"] = (model_name != _model_cascade[0])
                 if model_name != _model_cascade[0]:
                     logger.error(
                         "RENDER CON MODELO DE RESPALDO: '%s' en vez de '%s'. La "
