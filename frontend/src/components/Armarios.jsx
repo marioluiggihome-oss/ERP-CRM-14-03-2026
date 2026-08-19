@@ -2137,7 +2137,18 @@ const Armarios = ({ state, setState }) => {
   // maletero por módulo. Se envía siempre a la IA como referencia estructural
   // para que el render respete la configuración exacta (en vez de fiarse solo
   // de la descripción en texto, que el modelo de imagen puede ignorar).
-  const generateBlueprintDataUrl = () => {
+  // EL PLANO TIENE QUE ENSEÑAR LAS PUERTAS COMO SE PIDEN.
+  //
+  // Se dibujaba SIEMPRE con el interior entero a la vista, pasara lo que
+  // pasara: se pidiera el armario cerrado o con una sola puerta abierta. Y una
+  // imagen pesa más que un párrafo: por mucho que el texto dijera «la puerta 1
+  // abierta y las otras dos cerradas», el modelo tenía delante un dibujo con
+  // todo abierto y devolvía dos huecos de tres de par en par.
+  //
+  // Ahora el plano y el texto dicen lo mismo: las puertas cerradas se pintan
+  // como paneles macizos que TAPAN su tramo, y solo el tramo de la puerta
+  // abierta enseña el interior.
+  const generateBlueprintDataUrl = (doorsOpenParam = true, openDoorIndex = 0) => {
     try {
       const { width, height, modules, doorType, depth } = wardrobeConfig;
       const numDoors = wardrobeConfig.numDoors || modules;
@@ -2215,11 +2226,30 @@ const Armarios = ({ state, setState }) => {
       // frente. Copiada, sale bien. Roja, discontinua y con letras, salía como
       // lo que parecía: una anotación pegada encima de la foto.
       const doorW = W / numDoors;
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      for (let d = 1; d < numDoors; d++) {
+      for (let d = 0; d < numDoors; d++) {
         const dx = ox + d * doorW;
-        ctx.beginPath(); ctx.moveTo(dx, oy); ctx.lineTo(dx, oy + H); ctx.stroke();
+        const abierta = doorsOpenParam && d === openDoorIndex;
+        if (!abierta) {
+          // Puerta CERRADA: panel macizo que tapa su tramo. Lo que hay detrás
+          // no se ve, que es justo lo que tiene que pasar en la foto.
+          ctx.fillStyle = '#e2e8f0';
+          ctx.fillRect(dx, oy, doorW, H);
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(dx, oy, doorW, H);
+          // Tirador, para que se lea como puerta y no como pared.
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(dx + doorW - 14, oy + H * 0.45);
+          ctx.lineTo(dx + doorW - 14, oy + H * 0.55);
+          ctx.stroke();
+        } else if (d > 0) {
+          // Puerta ABIERTA: solo la junta con la de al lado.
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(dx, oy); ctx.lineTo(dx, oy + H); ctx.stroke();
+        }
       }
 
       // NI UNA LETRA EN ESTE DIBUJO. Las medidas, el número de puertas y el de
@@ -2458,7 +2488,7 @@ const Armarios = ({ state, setState }) => {
 
     // Plano esquemático autogenerado a partir de la config real: SIEMPRE se
     // envía como referencia estructural (puertas, módulos, interior exactos).
-    const blueprint = generateBlueprintDataUrl();
+    const blueprint = generateBlueprintDataUrl(doorsOpenParam, openDoorIndex ?? 0);
     if (blueprint) {
       payload.blueprintImage = blueprint;
       payload.blueprintMime = 'image/png';

@@ -540,22 +540,22 @@ async def ia_render_armario(request: IARenderRequest):
             blueprint_block = """
 BLUEPRINT (FIRST IMAGE) - THIS IS MANDATORY:
 - The FIRST image provided is a SCHEMATIC ELEVATION of THIS EXACT wardrobe,
-  drawn with the doors "transparent" (dashed red lines) purely so the
-  INTERNAL layout is visible for reference. It is NOT a depiction of the
-  final photo's door state — it does NOT mean the doors are open in the
-  photo. Whether each door is OPEN or CLOSED in the final image is defined
-  ONLY by the "DOORS - CRITICAL" section below; follow that section, not the
-  blueprint, for the door state.
-- It is the AUTHORITATIVE BLUEPRINT for everything else. Reproduce it EXACTLY
-  in photorealistic form.
-- Same number of doors and same door widths.
+  drawn to scale, IN THE SAME DOOR STATE as the photograph you must produce.
+- READ THE DOOR STATE OFF THE BLUEPRINT: every section drawn as a SOLID FILLED
+  PANEL with a small handle is a CLOSED door — whatever is behind it is hidden
+  in the photograph too. Only the section drawn showing shelves, rails or
+  drawers is the one standing OPEN. Reproduce that state exactly: the same
+  panels closed, the same single section open.
+- It is the AUTHORITATIVE BLUEPRINT. Reproduce it EXACTLY in photorealistic
+  form.
+- Same number of doors and same door widths — including the ones drawn as
+  solid panels. A closed door is still a door.
 - Same vertical module divisions (in the same positions).
 - Same count, order and vertical position of every shelf, drawer, hanging rod,
-  top "maletero" storage box and accessory, module by module — this interior
-  must be reproduced even behind a CLOSED door (it defines what is hidden).
+  top storage box and accessory in the section that is open.
 - Same width:height proportions. DO NOT add, remove, move or resize anything.
 - Only add realistic materials, light and textures. NEVER invent a different
-  interior.
+  interior, and never open a section the blueprint draws closed.
 """
 
         has_consistency = bool(getattr(request, "consistencyImage", None))

@@ -613,3 +613,84 @@ def test_el_plano_de_referencia_no_lleva_letras_ni_rojo():
     assert "setLineDash" not in plano, (
         "vuelven las líneas discontinuas, que es exactamente lo que salió "
         "cruzando la fotografía")
+
+
+# ─── 12. El plano enseña las puertas COMO SE PIDEN ─────────────────────────
+#
+# El master pidió la puerta 1 abierta de un armario de TRES, y volvieron DOS
+# huecos de tres abiertos de par en par. Las reglas escritas ya estaban puestas
+# y aun así falló, porque el plano de referencia se dibujaba SIEMPRE con el
+# interior entero a la vista. Una imagen pesa más que un párrafo: el modelo
+# tenía delante un dibujo con todo abierto.
+
+def test_con_una_puerta_abierta_se_cuentan_las_cerradas(ra):
+    r = ra.reglas_de_puertas_y_cuerpos(3, 3, "sliding", 2400, todas_cerradas=False)
+    assert "exactly 2 CLOSED door panel" in r, (
+        "«las otras se quedan cerradas» no es comprobable; hay que decir "
+        "cuántos paneles cerrados tienen que verse")
+    assert "more than one section showing its interior, the image is WRONG" in r
+
+
+def test_con_una_sola_puerta_no_se_pide_contar_nada(ra):
+    """Un armario de una hoja abierta no tiene paneles cerrados que contar."""
+    r = ra.reglas_de_puertas_y_cuerpos(1, 1, "hinged", 600, todas_cerradas=False)
+    assert "COUNT THE CLOSED PANELS" not in r, (
+        "se pide contar 0 paneles cerrados, que es una orden absurda y resta "
+        "fuerza a las demás")
+
+
+def test_cerrado_y_abierto_no_se_mezclan(ra):
+    cerrado = ra.reglas_de_puertas_y_cuerpos(3, 3, "sliding", 2400, todas_cerradas=True)
+    assert "COUNT THE CLOSED PANELS" not in cerrado, (
+        "con todo cerrado se manda contar como si hubiera una abierta")
+    assert "ALL 3 DOORS ARE CLOSED" in cerrado
+
+
+def test_el_encargo_lee_el_estado_de_las_puertas_en_el_plano():
+    ruta = os.path.join(BACKEND, "routes", "armarios.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+    i = codigo.find("BLUEPRINT (FIRST IMAGE)")
+    assert i != -1, "ha desaparecido el bloque del plano"
+    bloque = codigo[i:i + 1600]
+    assert "IN THE SAME DOOR STATE" in bloque, (
+        "el encargo ya no dice que el plano viene en el estado de puertas "
+        "pedido; si el dibujo y el texto no dicen lo mismo, gana el dibujo")
+    assert "SOLID FILLED\n  PANEL" in bloque or "SOLID FILLED PANEL" in bloque, (
+        "no se explica que un panel macizo es una puerta cerrada")
+    assert "never open a section the blueprint draws closed" in bloque
+    assert 'doors "transparent"' not in bloque, (
+        "sigue diciendo que el plano lleva las puertas transparentes, que era "
+        "verdad antes y ahora es mentira: órdenes contradictorias otra vez")
+
+
+def test_el_plano_se_dibuja_segun_el_estado_pedido():
+    ruta = os.path.join(
+        os.path.dirname(BACKEND), "frontend", "src", "components", "Armarios.jsx")
+    if not os.path.exists(ruta):
+        pytest.skip("Armarios.jsx no está en este entorno")
+    with open(ruta, encoding="utf-8") as f:
+        jsx = f.read()
+    i = jsx.find("const generateBlueprintDataUrl")
+    j = jsx.find("canvas.toDataURL('image/png')", i)
+    plano = jsx[i:j]
+    assert "generateBlueprintDataUrl = (doorsOpenParam" in jsx, (
+        "el plano vuelve a dibujarse igual pidas lo que pidas: con el interior "
+        "entero a la vista aunque el armario vaya cerrado")
+    assert "const abierta = doorsOpenParam && d === openDoorIndex" in plano, (
+        "el plano no distingue la puerta abierta de las cerradas")
+    assert "ctx.fillRect(dx, oy, doorW, H)" in plano, (
+        "las puertas cerradas ya no se pintan como panel macizo, así que el "
+        "dibujo vuelve a enseñar lo que hay que tapar")
+
+
+def test_el_render_le_pasa_al_plano_el_estado_pedido():
+    ruta = os.path.join(
+        os.path.dirname(BACKEND), "frontend", "src", "components", "Armarios.jsx")
+    if not os.path.exists(ruta):
+        pytest.skip("Armarios.jsx no está en este entorno")
+    with open(ruta, encoding="utf-8") as f:
+        jsx = f.read()
+    assert "generateBlueprintDataUrl(doorsOpenParam, openDoorIndex ?? 0)" in jsx, (
+        "se dibuja el plano sin decirle qué puerta va abierta: se queda con la "
+        "de por defecto y vuelve a contradecir al texto")

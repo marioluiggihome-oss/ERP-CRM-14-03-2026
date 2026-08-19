@@ -211,21 +211,31 @@ def reglas_de_puertas_y_cuerpos(n_puertas: int, n_cuerpos: int,
     }.get(tipo, "doors of any other type")
     divisores = max(0, int(n_cuerpos) - 1)
 
-    # CON TODO CERRADO, EL PLANO ENSEÑA JUSTO LO QUE HAY QUE TAPAR. El plano de
-    # referencia se dibuja con las puertas «transparentes» para que se vea el
-    # reparto interior. Pidiendo el armario CERRADO, el modelo se quedaba a
-    # medias: media fachada cerrada y la otra media abierta de par en par,
-    # enseñando las baldas del plano.
+    # CON TODO CERRADO NO SE VE NADA DEL INTERIOR. El plano de referencia ya se
+    # dibuja con las puertas cerradas cuando se piden cerradas, pero se repite
+    # por escrito: el interior sigue descrito más abajo en el encargo, y
+    # describirlo es media invitación a enseñarlo.
     cerradas = (
-        f"- IN THIS PHOTOGRAPH ALL {n_puertas} DOORS ARE CLOSED. The reference drawing shows "
-        "the interior only because it is drawn with the doors transparent; here that interior "
-        "is exactly what must be HIDDEN. The front is one continuous run of "
+        f"- IN THIS PHOTOGRAPH ALL {n_puertas} DOORS ARE CLOSED. The interior described below "
+        "exists, but here it is exactly what must be HIDDEN. The front is one continuous run of "
         f"{n_puertas} closed door panels from the left edge to the right edge — no open bay, no "
         "gap, not one shelf, rail, drawer or garment visible anywhere.\n"
         if todas_cerradas else "")
 
+    # CON UNA PUERTA ABIERTA, LAS DEMÁS SE PUEDEN CONTAR. «Las otras se quedan
+    # cerradas» no es comprobable; «tienen que verse 2 paneles cerrados» sí, y
+    # es lo único que el modelo puede repasar antes de dar la imagen por buena.
+    # El master pidió la puerta 1 de tres abierta y volvieron DOS huecos de tres
+    # de par en par.
+    abiertas = (
+        f"- COUNT THE CLOSED PANELS: exactly ONE door is open, so the photograph must show "
+        f"exactly {int(n_puertas) - 1} CLOSED door panel(s) covering the rest of the front. If "
+        "you can count fewer closed panels than that, or more than one section showing its "
+        "interior, the image is WRONG.\n"
+        if (not todas_cerradas and int(n_puertas) > 1) else "")
+
     return (
-        cerradas +
+        cerradas + abiertas +
         "\nFRONT COVERAGE — THIS RULE OVERRIDES THE OTHERS:\n"
         f"- The {n_puertas} doors ARE the entire front of the wardrobe. Side by side they span "
         f"the full {ancho_mm}mm from the left edge to the right edge, with no gap between them "
