@@ -4155,7 +4155,7 @@ const Armarios = ({ state, setState }) => {
                   Tablero estándar: {boardsCalculation.boardSize} ({boardsCalculation.boardAreaM2.toFixed(2)} m²)
                 </p>
                 
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   {/* Tablero 18mm Estructura */}
                   <div className="bg-white/10 rounded-xl p-4">
                     <h5 className="font-bold text-xs uppercase tracking-widest text-blue-200 mb-3">
@@ -4426,7 +4426,7 @@ const Armarios = ({ state, setState }) => {
       {/* ========== MODAL CONFIGURACIÓN IA ========== */}
       {showIAModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-5 flex justify-between items-center">
               <div className="flex items-center gap-4">
@@ -4673,11 +4673,15 @@ const Armarios = ({ state, setState }) => {
 
       {showRenderModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
+          {/* Tope de alto + contenido deslizable: sin esto, en el móvil la caja
+              salía más alta que la pantalla y, al ir centrada, se cortaba por
+              arriba Y por abajo. El botón GENERAR quedaba fuera — el modal decía
+              «Pulsa Generar» y el botón no estaba en ninguna parte. */}
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-5 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white/20 rounded-xl">
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-4 sm:px-8 sm:py-5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="p-3 bg-white/20 rounded-xl shrink-0">
                   <Image size={24} />
                 </div>
                 <div>
@@ -4694,9 +4698,11 @@ const Armarios = ({ state, setState }) => {
             </div>
 
             {/* Contenido */}
-            <div className="p-8">
-              {/* Configuración del render */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="p-4 sm:p-8 flex-1 overflow-y-auto">
+              {/* Configuración del render. En tres columnas sobre 390 px de
+                  ancho, los rótulos «CONFIGURACIÓN ACTUAL» e «IMAGEN DE
+                  REFERENCIA» se salían de su columna y se pisaban entre ellos. */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div>
                   <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Estilo de habitación</label>
                   <select
@@ -4771,7 +4777,7 @@ const Armarios = ({ state, setState }) => {
               )}
 
               {/* Área de render */}
-              <div className="bg-slate-100 rounded-xl min-h-[400px] flex items-center justify-center">
+              <div className="bg-slate-100 rounded-xl min-h-[220px] sm:min-h-[400px] flex items-center justify-center">
                 {(renderLoading || renderBothLoading) ? (
                   <div className="text-center">
                     <RefreshCw size={48} className="animate-spin text-cyan-500 mx-auto mb-4" />
@@ -4801,11 +4807,11 @@ const Armarios = ({ state, setState }) => {
             </div>
 
             {/* Footer */}
-            <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-between items-center">
-              <div className="text-xs text-slate-400">
+            <div className="bg-slate-50 px-4 sm:px-8 py-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 shrink-0">
+              <div className="text-xs text-slate-400 max-sm:hidden">
                 Generado con IA • Los renders son aproximaciones visuales
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 max-sm:w-full">
                 {renderImage && (
                   <a
                     href={renderImage}

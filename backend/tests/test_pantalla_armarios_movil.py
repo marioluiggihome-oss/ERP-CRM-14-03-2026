@@ -198,3 +198,80 @@ def test_el_dibujo_del_armario_no_se_deforma(fuente):
         "se ha quitado la proporción fija del marco. El armario se dibuja en "
         "porcentajes de ese marco: si el marco se estira, el armario sale "
         "achatado, y eso es enseñarle al cliente un armario que no es el suyo")
+
+
+# ─── 6. Los modales caben en la pantalla del móvil ─────────────────────────
+#
+# El master abrió RENDER con el móvil: los tres rótulos —«ESTILO DE
+# HABITACIÓN», «CONFIGURACIÓN ACTUAL», «IMAGEN DE REFERENCIA»— salían pisados
+# unos encima de otros, y el botón GENERAR no aparecía por ninguna parte. La
+# caja iba centrada, sin tope de alto y con `overflow-hidden`: más alta que la
+# pantalla, se cortaba por arriba Y por abajo. El modal decía «Pulsa Generar» y
+# el botón estaba fuera de la pantalla.
+
+def _modales(fuente):
+    """Cada caja blanca de un modal, con su clase."""
+    trozos = []
+    marca = 'className="fixed inset-0 bg-black/70'
+    i = fuente.find(marca)
+    while i != -1:
+        j = fuente.find('className="bg-white rounded-3xl', i)
+        if j == -1:
+            break
+        fin = fuente.find('"', j + len('className="'))
+        trozos.append(fuente[j + len('className="'):fin])
+        i = fuente.find(marca, j)
+    return trozos
+
+
+def test_ningun_modal_se_sale_de_la_pantalla(fuente):
+    cajas = _modales(fuente)
+    assert len(cajas) >= 5, (
+        f"solo se han encontrado {len(cajas)} modales; si se han reescrito hay "
+        "que revisar este candado, no borrarlo")
+    sin_tope = [c for c in cajas if "max-h-[" not in c]
+    assert not sin_tope, (
+        "hay modales sin tope de alto. Centrados y sin tope se cortan por "
+        f"arriba y por abajo, y el botón de abajo no se puede pulsar: {sin_tope}")
+
+
+def test_un_modal_con_tope_tiene_que_poder_desplazarse(fuente):
+    """Un tope de alto sin desplazamiento no enseña lo de abajo: lo esconde."""
+    cajas = _modales(fuente)
+    mudos = [c for c in cajas
+             if "max-h-[" in c and "overflow-y-auto" not in c and "flex-col" not in c]
+    assert not mudos, (
+        "modal con tope de alto que ni se desplaza ni reparte el alto entre "
+        f"cabecera/contenido/pie: lo que sobra se pierde. {mudos}")
+
+
+def test_el_modal_de_render_no_apila_tres_columnas_en_el_movil(fuente):
+    bloque = _region(fuente, "{/* Configuración del render", "{/* Toggle por puerta")
+    assert "grid-cols-1 sm:grid-cols-3" in bloque, (
+        "los tres rótulos vuelven a ir en tres columnas sobre 390 px: "
+        "«CONFIGURACIÓN ACTUAL» e «IMAGEN DE REFERENCIA» se salen de su "
+        "columna y se pisan")
+
+
+def test_el_boton_de_generar_queda_dentro(fuente):
+    """El pie del modal de render no puede quedarse fuera de la caja.
+
+    Se busca HACIA ATRÁS desde el texto que solo tiene este pie. Buscando hacia
+    delante desde «{/* Footer */}» se cogía el pie de OTRO modal —el primero del
+    fichero— y la prueba pasaba en verde con este roto: comprobado quitándole el
+    `shrink-0` a este pie y viendo que no se enteraba.
+    """
+    i = fuente.find("Generado con IA • Los renders son aproximaciones visuales")
+    assert i != -1, "ha desaparecido el pie del modal de render"
+    apertura = fuente.rfind('<div className="bg-slate-50', 0, i)
+    assert apertura != -1, "no se encuentra la apertura del pie del modal de render"
+    clase = fuente[apertura:fuente.find('"', apertura + len('<div className="'))]
+    assert "shrink-0" in clase, (
+        "el pie del modal de render puede encogerse hasta desaparecer; ahí "
+        f"está el botón GENERAR, que es a lo que se entra. Clase: {clase}")
+
+
+def test_el_area_del_render_no_empuja_el_boton_fuera(fuente):
+    assert "min-h-[220px] sm:min-h-[400px]" in fuente, (
+        "el hueco del render vuelve a pedir 400 px de alto en un móvil: entre "
+        "la cabecera y ese hueco, el botón de abajo se va de la pantalla")
