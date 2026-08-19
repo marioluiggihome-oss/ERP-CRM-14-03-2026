@@ -8,6 +8,7 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Hammer, Plus, Trash2, Download, Columns, Package, Ruler, Sparkles, Image as ImageIcon, Loader, Lock, Maximize2, X, FolderOpen, Save } from 'lucide-react';
 import { getToken } from '../services/api';
 import { WARDROBE_COLORS, COLOR_BRANDS } from './Armarios';
+import { despiece } from './armarios2_despiece';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const authH = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
@@ -184,20 +185,14 @@ const Armarios2 = ({ state }) => {
     const ivaRate = tarifa('ivaRate', 21);
     const base = coste * (1 + (Number(cfg.adminMargin) || 0) / 100); // base imponible (coste+margen)
     const pvp = base * (1 + ivaRate / 100);
-    // Despiece
-    const t = cfg.thickness; const cut = [
-      { p: 'Costado Izq.', q: 1, w: cfg.depth, h: cfg.height },
-      { p: 'Costado Der.', q: 1, w: cfg.depth, h: cfg.height },
-      { p: 'Techo', q: 1, w: cfg.depth, h: cfg.width - t * 2 },
-      { p: 'Base', q: 1, w: cfg.depth, h: cfg.width - t * 2 },
-    ];
-    comps.forEach(c => {
-      if (c.type === 'divider-v') cut.push({ p: 'Divisor vertical', q: 1, w: cfg.depth, h: cfg.height - t * 2 });
-      else if (c.type === 'shelf') cut.push({ p: 'Balda', q: 1, w: cfg.depth - 10, h: 400 });
-      else if (c.type === 'drawer') cut.push({ p: 'Frente cajón', q: 1, w: 400, h: 180 });
-    });
+    // Despiece — cada pieza se corta sobre el HUECO LIBRE del cuerpo donde está
+    // dibujada. La cuenta vive en `armarios2_despiece.js` porque es una cuenta y
+    // hay que poder probarla: aquí dentro nadie la miraba, y lo que hacía era
+    // sacar TODA balda de 400 mm y TODO frente de cajón de 400 × 180, dibujaras
+    // el cuerpo que dibujaras.
+    const cut = despiece({ cfg, comps, boundaries });
     return { baseCost, accesorios, puertas, coste, base: Math.round(base), iva: Math.round(pvp - base), ivaRate, pvp: Math.round(pvp), counts, cut };
-  }, [cfg, comps, material, state?.settings]);
+  }, [cfg, comps, material, boundaries, state?.settings]);
 
   const readFile = (file) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(file); });
 
@@ -247,8 +242,8 @@ const Armarios2 = ({ state }) => {
   };
 
   const exportCut = () => {
-    const rows = budget.cut.map(x => [x.p, x.q, x.w, x.h, material.name].join(';'));
-    const csv = ['Pieza;Uds;Ancho(mm);Alto(mm);Material', ...rows].join('\n');
+    const rows = budget.cut.map(x => [x.p, x.q, x.medida, x.nota || '', x.tablero ? material.name : '—'].join(';'));
+    const csv = ['Pieza;Uds;Medida(mm);Detalle;Material', ...rows].join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
     a.download = `despiece_armario_${(cfg.ref || 'proyecto')}.csv`; a.click();
@@ -324,8 +319,8 @@ const Armarios2 = ({ state }) => {
     const tableY = Math.max(y + (vbH / vbW) * 90 + 8, ry + 12);
     autoTable(pdf, {
       startY: tableY,
-      head: [['Pieza', 'Uds', 'Ancho', 'Alto', 'Material']],
-      body: budget.cut.map(x => [x.p, String(x.q), `${x.w} mm`, `${x.h} mm`, material.name]),
+      head: [['Pieza', 'Uds', 'Medida (mm)', 'Detalle', 'Material']],
+      body: budget.cut.map(x => [x.p, String(x.q), x.medida, x.nota || '', x.tablero ? material.name : '—']),
       styles: { fontSize: 8.5, cellPadding: 1.6 }, headStyles: { fillColor: [88, 28, 135], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 243, 250] }, margin: { left: M, right: M },
     });
