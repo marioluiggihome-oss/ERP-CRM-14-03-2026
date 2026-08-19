@@ -141,20 +141,47 @@ def test_el_camino_de_julio_no_lleva_nada_de_agosto():
 
 def _rama_ia5():
     src = _leer(RENDER)
-    i = src.index('if ref_b64 and provider == "julio":')
+    i = src.index('if ref_b64 and is_sketch and provider == "julio":')
     return src[i:src.index("\n        if ref_b64", i + 10)]
 
 
-def test_ia5_se_decide_antes_que_la_rama_de_edicion():
-    """SI VA DESPUÉS, NO SE DISPARA NUNCA con una referencia que el detector
-    clasifique como foto — y el master compararía dos renders del mismo camino
-    creyendo que son de caminos distintos."""
+def test_ia5_NO_se_traga_las_ediciones():
+    """EL FALLO QUE METI CON ESTE BOTON, y merece quedar escrito.
+
+    Puse la rama de IA 5 antes que la de edicion para que se disparase pasara
+    lo que pasara. Con eso se trago TODAS las ediciones. El master: «cuando le
+    doy al boton de decorador/a, cambia el diseño totalmente con la IA 5».
+
+    Y era exacto. Decorador manda el render con la orden «NO cambies NADA del
+    mobiliario, solo el ambiente». Con IA 5 puesta, esa orden ni se leia: la
+    imagen entraba por el camino de julio, que trata lo que le llega como UN
+    PLANO QUE HAY QUE REALIZAR DESDE CERO. Salia otra cocina. Lo mismo le
+    pasaba a HD, a «aplicar cambio» y a los planos tecnicos.
+
+    `is_sketch` es la pregunta que faltaba: ¿esto es un dibujo, o es una foto
+    que hay que retocar?"""
     src = _leer(RENDER)
-    assert src.index('if ref_b64 and provider == "julio":') < src.index("if ref_b64 and not is_sketch:"), (
-        "la rama de IA 5 ha quedado DESPUÉS de la de edición: con una foto por "
-        "referencia el botón no hará nada y la comparación saldrá al revés")
-    assert src.index('if ref_b64 and provider == "julio":') < src.index("if ref_b64 and is_sketch:"), \
-        "la rama de IA 5 ha quedado después de la del croquis de hoy"
+    assert 'if ref_b64 and is_sketch and provider == "julio":' in src, (
+        "IA 5 vuelve a dispararse con CUALQUIER referencia: se tragara otra vez "
+        "el boton de Decorador, el HD y «aplicar cambio», y devolvera una cocina "
+        "distinta en vez de la del cliente retocada")
+    # Y sigue por delante de la rama de croquis de hoy, que es lo que compara.
+    assert src.index('if ref_b64 and is_sketch and provider == "julio":') < src.index("\n        if ref_b64 and is_sketch:"), \
+        "la rama de IA 5 ha quedado despues de la del croquis de hoy: no se dispararia nunca"
+
+
+def test_una_edicion_sigue_siendo_una_edicion_con_ia5_puesta():
+    """La rama de edicion tiene que quedar ALCANZABLE con provider=julio: es
+    donde vive el contrato de «lo que no se pide, no se toca»."""
+    src = _leer(RENDER)
+    i = src.index('if ref_b64 and is_sketch and provider == "julio":')
+    j = src.index("if ref_b64 and not is_sketch:")
+    entre = src[i:j]
+    # Entre una y otra no puede haber un `return` incondicional que se coma la
+    # edicion: el `return` de IA 5 vive DENTRO de su `if`.
+    assert entre.count("if ref_b64") >= 1, "estructura inesperada entre las dos ramas"
+    assert "is_sketch" in src[i:i + 120], \
+        "la rama de IA 5 ya no comprueba que la referencia sea un dibujo"
 
 
 def test_ia5_usa_las_piezas_de_julio_y_el_mismo_motor():

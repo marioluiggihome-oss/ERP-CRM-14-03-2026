@@ -648,7 +648,24 @@ class Render3DService:
         # recorte del dibujo dentro de la página, ni lectura a ficha, ni lista
         # de módulos numerada. En julio no existían. Un botón «julio con los
         # arreglos de agosto» no contestaría a la pregunta.
-        if ref_b64 and provider == "julio":
+        # ...PERO SOLO CUANDO LA REFERENCIA ES UN DIBUJO.
+        #
+        # Aqui la lie ayer. Puse esta rama ANTES que la de edicion para que IA 5
+        # se disparase pasara lo que pasara, y con eso se trago TODAS las
+        # ediciones: el master, «cuando le doy al boton de decorador/a, cambia
+        # el diseño totalmente con la IA 5».
+        #
+        # Y era exacto. El boton de Decorador manda el render con la orden «NO
+        # cambies NADA del mobiliario, solo el ambiente». Con IA 5 puesta, esa
+        # orden ni se leia: la imagen entraba por el camino de julio, que trata
+        # lo que le llega como UN PLANO QUE HAY QUE REALIZAR DESDE CERO. Salia
+        # otra cocina. Lo mismo le pasaba a HD, a «aplicar cambio» y a los
+        # planos tecnicos.
+        #
+        # `is_sketch` es justo la pregunta que faltaba: ¿esto es un dibujo o es
+        # una foto que hay que retocar? Cuando es una foto, esta rama se aparta
+        # y la edicion sigue su camino de siempre.
+        if ref_b64 and is_sketch and provider == "julio":
             from services.luiggi_ai.render_22jul import (
                 build_render_prompt as _brp_22jul, prompt_del_croquis_22jul)
             parsed_params["motor"] = "IA 5 — camino del 22/07/2026"
