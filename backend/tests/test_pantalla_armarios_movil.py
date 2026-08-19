@@ -305,3 +305,51 @@ def test_el_precio_privado_sigue_bajo_permiso(fuente):
     assert "const canSeeCost = state?.currentUser?.isAdmin === true" in fuente, (
         "quien puede ver el precio de distribución ya no depende del permiso "
         "del usuario")
+
+
+# ─── 8. Los botones del pie del render caben en el móvil ───────────────────
+#
+# «Cuando pido el render de todas las puertas en móvil no se ven los botones.»
+# El pie tiene CUATRO: DESCARGAR, CERRAR, GENERAR TODAS LAS PUERTAS y GENERAR
+# RENDER, en una fila que no se envolvía. Los dos primeros se comían el ancho y
+# los otros dos salían cortados por la derecha — entre ellos, justamente el que
+# él quería pulsar.
+
+def _pie_del_render(fuente):
+    """La botonera del pie del modal de render, por su texto propio."""
+    i = fuente.find("Generado con IA • Los renders son aproximaciones visuales")
+    assert i != -1, "ha desaparecido el pie del modal de render"
+    j = fuente.find("</div>\n          </div>", i)
+    return fuente[i:j if j != -1 else i + 4000]
+
+
+def test_los_botones_del_pie_se_envuelven(fuente):
+    pie = _pie_del_render(fuente)
+    grupo = pie[pie.find('<div className="'):pie.find('>', pie.find('<div className="'))]
+    assert "flex-wrap" in grupo, (
+        "los cuatro botones del pie vuelven a ir en una fila que no se "
+        f"envuelve: los últimos se salen de la pantalla. Grupo: {grupo}")
+
+
+def test_cada_boton_del_pie_ocupa_media_fila(fuente):
+    pie = _pie_del_render(fuente)
+    clases = [c for c in re.findall(r'className="([^"]*)"', pie)
+              if "py-2.5 rounded-xl font-bold text-xs uppercase" in c]
+    assert len(clases) >= 4, (
+        f"se esperaban 4 botones en el pie del render y hay {len(clases)}; si "
+        "han cambiado, hay que revisar este candado, no borrarlo")
+    sin_ancho = [c for c in clases if "max-sm:basis-" not in c]
+    assert not sin_ancho, (
+        "hay botones del pie sin ancho de móvil: sin él se reparten a lo ancho "
+        f"y el texto largo se sale. Ejemplo: {sin_ancho[0][:90]}")
+
+
+def test_el_texto_de_los_botones_no_se_estira_en_el_movil(fuente):
+    """«GENERAR TODAS LAS PUERTAS» con letra espaciada no cabe en media fila."""
+    pie = _pie_del_render(fuente)
+    clases = [c for c in re.findall(r'className="([^"]*)"', pie)
+              if "py-2.5 rounded-xl font-bold text-xs uppercase" in c]
+    sin_compactar = [c for c in clases if "max-sm:tracking-normal" not in c]
+    assert not sin_compactar, (
+        "el espaciado ancho de letra se mantiene en el móvil; «GENERAR TODAS "
+        f"LAS PUERTAS» sale en cuatro líneas. Ejemplo: {sin_compactar[0][:90]}")

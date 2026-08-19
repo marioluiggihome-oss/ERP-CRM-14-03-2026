@@ -4817,12 +4817,16 @@ const Armarios = ({ state, setState }) => {
               <div className="text-xs text-slate-400 max-sm:hidden">
                 Generado con IA • Los renders son aproximaciones visuales
               </div>
-              <div className="flex gap-3 max-sm:w-full">
+              {/* Cuatro botones en una fila que no se envolvía: en el móvil,
+                  DESCARGAR y CERRAR ocupaban el ancho y GENERAR TODAS LAS
+                  PUERTAS y GENERAR RENDER se salían por la derecha, cortados.
+                  Ahora se envuelven de dos en dos y ocupan el ancho entero. */}
+              <div className="flex flex-wrap gap-2 sm:gap-3 max-sm:w-full">
                 {renderImage && (
                   <a
                     href={renderImage}
                     download="armario_render.png"
-                    className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-500 transition-colors flex items-center gap-2"
+                    className="bg-green-600 text-white px-6 max-sm:px-3 max-sm:flex-1 max-sm:basis-[45%] max-sm:tracking-normal justify-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-500 transition-colors flex items-center gap-2"
                   >
                     <Download size={14} />
                     Descargar
@@ -4830,14 +4834,14 @@ const Armarios = ({ state, setState }) => {
                 )}
                 <button
                   onClick={() => setShowRenderModal(false)}
-                  className="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-colors"
+                  className="bg-slate-200 text-slate-700 px-6 max-sm:px-3 max-sm:flex-1 max-sm:basis-[45%] max-sm:tracking-normal py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-colors"
                 >
                   Cerrar
                 </button>
                 <button
                   onClick={generateAllDoorRenders}
                   disabled={renderLoading || renderBothLoading}
-                  className="bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-slate-700 text-white px-6 max-sm:px-3 max-sm:flex-1 max-sm:basis-[45%] max-sm:tracking-normal justify-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                   title="Genera una foto por cada puerta abierta (sin solapes) y otra con todas cerradas"
                 >
                   {renderBothLoading ? (
@@ -4855,7 +4859,7 @@ const Armarios = ({ state, setState }) => {
                 <button
                   onClick={() => generateRender(true, 0)}
                   disabled={renderLoading || renderBothLoading}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-cyan-400 hover:to-blue-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 max-sm:px-3 max-sm:flex-1 max-sm:basis-[45%] max-sm:tracking-normal justify-center py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-cyan-400 hover:to-blue-400 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {renderLoading ? (
                     <>
