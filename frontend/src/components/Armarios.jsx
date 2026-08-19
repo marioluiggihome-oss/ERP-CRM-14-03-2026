@@ -688,10 +688,18 @@ const Armarios = ({ state, setState }) => {
     setDropTargetModule(null);
   };
   
-  const handleDrop = (e, moduleIndex) => {
-    e.preventDefault();
+  // Mete el accesorio elegido en un módulo.
+  //
+  // Está separado del `handleDrop` a propósito: al móvil NO le llega nunca un
+  // evento de arrastre. El arrastre de HTML5 (`draggable` + `onDragStart`) no
+  // existe en una pantalla táctil, así que el panel «ARRASTRA ACCESORIOS AL
+  // ARMARIO» estaba muerto en el móvil — no fallaba, sencillamente no pasaba
+  // nada al tocarlo. En el móvil el mismo trabajo se hace tocando el accesorio
+  // y luego el módulo, y los dos caminos tienen que acabar en esta función o
+  // uno de los dos se queda a medias.
+  const colocarAccesorio = (moduleIndex) => {
     if (!draggedAccessory) return;
-    
+
     setModuleConfigs(prev => {
       const newConfigs = [...prev];
       const moduleConfig = { ...newConfigs[moduleIndex] };
@@ -718,6 +726,19 @@ const Armarios = ({ state, setState }) => {
     setDraggedAccessory(null);
     setDropTargetModule(null);
     setSelectedModule(moduleIndex);
+  };
+
+  const handleDrop = (e, moduleIndex) => {
+    e.preventDefault();
+    colocarAccesorio(moduleIndex);
+  };
+
+  // Toque en un módulo del armario. Si hay un accesorio ARMADO (elegido con el
+  // dedo en el panel de abajo), lo coloca; si no, el toque hace lo de siempre:
+  // seleccionar el módulo.
+  const tocarModulo = (moduleIndex) => {
+    if (draggedAccessory) colocarAccesorio(moduleIndex);
+    else setSelectedModule(moduleIndex);
   };
 
   // ========== PLANTILLAS PREDEFINIDAS ==========
@@ -2651,14 +2672,14 @@ const Armarios = ({ state, setState }) => {
     if (wardrobeW > 92) { wardrobeW = 92; wardrobeH = 92 / (0.75 * ar); }
 
     return (
-      <div className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-100 to-slate-200 rounded-xl overflow-hidden border border-slate-300 shadow-inner">
+      <div className="relative w-full max-w-[95vh] mx-auto aspect-[4/3] bg-gradient-to-b from-slate-100 to-slate-200 rounded-xl overflow-hidden border border-slate-300 shadow-inner">
         {/* Pared de fondo */}
         <div className="absolute inset-4 bg-gradient-to-b from-slate-50 to-slate-100 rounded-lg shadow-inner" />
         
         {/* Indicador de arrastre activo */}
         {draggedAccessory && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
-            Arrastra {draggedAccessory.icon} {draggedAccessory.name} a un módulo
+            Toca el módulo donde va {draggedAccessory.icon} {draggedAccessory.name}
           </div>
         )}
         
@@ -2677,7 +2698,7 @@ const Armarios = ({ state, setState }) => {
             {moduleConfigs.slice(0, modules).map((mod, i) => (
               <div 
                 key={i}
-                onClick={() => setSelectedModule(i)}
+                onClick={() => tocarModulo(i)}
                 onDragOver={(e) => handleDragOver(e, i)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, i)}
@@ -2689,13 +2710,20 @@ const Armarios = ({ state, setState }) => {
                   dropTargetModule === i 
                     ? 'ring-2 ring-green-500 ring-offset-2 bg-green-100/50' 
                     : ''
+                } ${
+                  /* Con el dedo no hay «pasar por encima»: si hay un accesorio
+                     armado, se marcan TODOS los módulos como sitio donde soltarlo,
+                     o en el móvil no se ve dónde hay que tocar. */
+                  draggedAccessory && dropTargetModule !== i
+                    ? 'ring-2 ring-green-400'
+                    : ''
                 }`}
-                style={{ 
-                  backgroundColor: dropTargetModule === i 
-                    ? 'rgba(34, 197, 94, 0.2)' 
+                style={{
+                  backgroundColor: dropTargetModule === i
+                    ? 'rgba(34, 197, 94, 0.2)'
                     : getColorByName(wardrobeConfig.interiorColor).hex,
-                  border: dropTargetModule === i 
-                    ? '2px dashed #22c55e' 
+                  border: dropTargetModule === i
+                    ? '2px dashed #22c55e'
                     : '1px solid rgba(0,0,0,0.1)'
                 }}
               >
@@ -2833,14 +2861,19 @@ const Armarios = ({ state, setState }) => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2 flex-1 min-w-0 ml-4">
+        {/* En móvil la cabecera va en DOS filas: arriba cliente/ref/IVA, abajo la
+            botonera. Los nueve botones no caben en 390 px de ancho, y hasta ahora
+            no se envolvían ni se deslizaban: se aplastaban unos contra otros y los
+            últimos —GUARDAR, PDF, ENVIAR AL PRESUPUESTO— quedaban fuera de la
+            pantalla, sin manera de llegar a ellos con el dedo. */}
+        <div className="flex items-center gap-2 flex-1 min-w-0 ml-4 max-lg:ml-0 max-lg:flex-wrap">
           {/* Cliente — estilo presupuestador de cocinas (campo blanco ancho) */}
           <input
             type="text"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
             placeholder="👤 Cliente…"
-            className="flex-1 min-w-0 max-w-[20rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-slate-200 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 uppercase"
+            className="flex-1 min-w-0 max-w-[20rem] max-lg:basis-32 px-3 py-1.5 bg-white rounded-xl ring-1 ring-slate-200 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 uppercase"
           />
           {/* Referencia del proyecto */}
           <input
@@ -2865,10 +2898,13 @@ const Armarios = ({ state, setState }) => {
             </select>
           </div>
           
-          {/* Botones */}
+          {/* Botones. En móvil es una TIRA QUE SE DESLIZA CON EL DEDO, no una
+              pila: apilados en cuatro filas se comían la pantalla del armario,
+              que es lo que hay que mirar. */}
+          <div className="flex items-center gap-2 ml-auto max-lg:w-full max-lg:ml-0 max-lg:overflow-x-auto max-lg:flex-nowrap max-lg:pb-1">
           <button
             onClick={() => setShowIAModal(true)}
-            className="ml-auto shrink-0 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-ia-config-btn"
             title="Configurar con IA"
           >
@@ -2877,7 +2913,7 @@ const Armarios = ({ state, setState }) => {
           </button>
           <button
             onClick={() => setShowRenderModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-render-btn"
             title="Generar render 3D"
           >
@@ -2895,7 +2931,7 @@ const Armarios = ({ state, setState }) => {
                 const desc = `Render 3D fotorrealista de un ARMARIO a medida de ${c.width}×${c.height}×${c.depth} mm, ${c.modules} módulos, puerta ${puerta}. Frente en ${getColorByName(c.exteriorColor).name} e interior en ${getColorByName(c.interiorColor).name}. Interior con ${nB} baldas, ${nC} cajones y ${nR} barras de colgar. Diseño contemporáneo, iluminación LED cálida, estilo estudio de interiorismo.`;
                 setState(p => ({ ...p, currentTab: 'renderStudio', estudio3dPreset: { tipo: 'armario', description: desc, cliente: customerName || '', ref: projectRef || '' } }));
               }}
-              className="flex items-center gap-2 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+              className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
               title="Diseñar este armario en Estudio 3D (render IA fotorrealista)"
             >
               <Sparkles size={16} />
@@ -2910,7 +2946,7 @@ const Armarios = ({ state, setState }) => {
               generateTechnicalElevation(false);
               setShowPlanosModal(true);
             }}
-            className="flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 px-4 py-2 rounded-lg font-bold text-sm text-white transition-colors"
             data-testid="armarios-planos-btn"
             title="Ver planta y alzado acotados"
           >
@@ -2919,7 +2955,7 @@ const Armarios = ({ state, setState }) => {
           </button>
           <button 
             onClick={() => setShowProjectsModal(true)}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="shrink-0 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 ring-1 ring-slate-200 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-proyectos-btn"
           >
             <FolderOpen size={16} />
@@ -2928,7 +2964,7 @@ const Armarios = ({ state, setState }) => {
           {canDespiece && (
             <button
               onClick={() => setShowDespieceModal(true)}
-              className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+              className="shrink-0 flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
               data-testid="armarios-despiece-btn"
               title="Despiece de tableros (solo Fábrica)"
             >
@@ -2939,7 +2975,7 @@ const Armarios = ({ state, setState }) => {
           <button 
             onClick={saveProject}
             disabled={saving}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+            className="shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
             data-testid="armarios-guardar-btn"
           >
             {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
@@ -2947,7 +2983,7 @@ const Armarios = ({ state, setState }) => {
           </button>
           <button
             onClick={exportToPDF}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="shrink-0 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 ring-1 ring-slate-200 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
           >
             <Download size={16} />
             PDF
@@ -2956,7 +2992,7 @@ const Armarios = ({ state, setState }) => {
             <button
               onClick={sendToBudget}
               disabled={!(pricing?.subtotal > 0)}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+              className="shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
               data-testid="armarios-enviar-presupuesto-btn"
               title="Añadir este armario como línea en el Presupuestador"
             >
@@ -2967,20 +3003,25 @@ const Armarios = ({ state, setState }) => {
           
           {/* Mensaje de guardado */}
           {saveMessage && (
-            <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold ${
+            <div className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white ${
               saveMessage.type === 'success' ? 'bg-green-500' : 'bg-red-500'
             }`}>
               {saveMessage.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
               {saveMessage.text}
             </div>
           )}
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Content — tres columnas fijas de 320 px en escritorio. En el móvil (y en
+          el móvil APAISADO, que es ancho pero mide unos 850 px, no 1400) las dos
+          columnas laterales aplastaban la del centro: el armario se quedaba en
+          una tira estrecha y no se veía. Por debajo de `lg` se apilan, y la zona
+          entera pasa a poder deslizarse — antes tampoco podía. */}
+      <div className="flex-1 flex overflow-hidden max-lg:flex-col max-lg:overflow-y-auto">
         {/* Panel izquierdo - Configuración */}
-        <div className="w-80 bg-white border-r border-slate-200 overflow-y-auto">
+        <div className="w-80 max-lg:w-full max-lg:shrink-0 bg-white border-r border-slate-200 overflow-y-auto max-lg:overflow-visible">
           {/* Dimensiones */}
           <div className="p-4 border-b border-slate-200">
             <button
@@ -3500,7 +3541,7 @@ const Armarios = ({ state, setState }) => {
         </div>
 
         {/* Panel central - Visualización */}
-        <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col p-6 max-lg:p-3 overflow-hidden max-lg:overflow-visible">
           {/* Visualización del armario */}
           <div className="flex-1 flex items-center justify-center">
             {renderWardrobeVisual()}
@@ -3579,42 +3620,52 @@ const Armarios = ({ state, setState }) => {
             )}
           </div>
 
-          {/* Panel de accesorios arrastrables */}
+          {/* Panel de accesorios: se arrastran con el ratón y se TOCAN con el
+              dedo. En el móvil el arrastre de HTML5 no existe, así que aquí un
+              toque deja el accesorio armado y el siguiente toque, en el módulo
+              del armario, lo coloca. */}
           <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <GripVertical size={16} className="text-emerald-600" />
               <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider">
-                ARRASTRA ACCESORIOS AL ARMARIO
+                <span className="lg:hidden">TOCA UN ACCESORIO Y LUEGO EL MÓDULO</span>
+                <span className="max-lg:hidden">ARRASTRA ACCESORIOS AL ARMARIO</span>
               </h4>
             </div>
             <div className="flex flex-wrap gap-2">
               {DRAGGABLE_ACCESSORIES.map((acc) => (
-                <div
+                <button
                   key={acc.id}
+                  type="button"
                   draggable
                   onDragStart={() => handleDragStart(acc)}
                   onDragEnd={handleDragEnd}
+                  onClick={() => setDraggedAccessory(prev => (prev?.id === acc.id ? null : acc))}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab active:cursor-grabbing
-                    bg-white border-2 border-emerald-300 shadow-sm
+                    bg-white border-2 shadow-sm
                     hover:border-emerald-500 hover:shadow-md hover:scale-105
                     transition-all duration-150 select-none
-                    ${draggedAccessory?.id === acc.id ? 'opacity-50 scale-95' : ''}
+                    ${draggedAccessory?.id === acc.id
+                      ? 'border-emerald-600 ring-2 ring-emerald-400 scale-105'
+                      : 'border-emerald-300'}
                   `}
                 >
                   <span className="text-lg">{acc.icon}</span>
                   <span className="text-xs font-bold text-slate-700">{acc.name}</span>
-                </div>
+                </button>
               ))}
             </div>
             <p className="mt-2 text-[10px] text-emerald-600">
-              💡 Arrastra cualquier accesorio y suéltalo en el módulo deseado del armario
+              {draggedAccessory
+                ? `👆 Ahora toca el módulo del armario donde va ${draggedAccessory.icon} ${draggedAccessory.name} (toca otra vez el accesorio para dejarlo)`
+                : '💡 Toca un accesorio y luego el módulo del armario. Con ratón, también puedes arrastrarlo.'}
             </p>
           </div>
         </div>
 
         {/* Panel derecho - Resumen precio (rediseño blanco, sistema "Estudio 3D") */}
-        <div className="w-80 bg-white border-l border-slate-200 text-slate-900 p-5 overflow-y-auto">
+        <div className="w-80 max-lg:w-full max-lg:shrink-0 bg-white border-l border-slate-200 text-slate-900 p-5 overflow-y-auto max-lg:overflow-visible">
           <h3 className="text-[11px] font-medium uppercase tracking-wider mb-4 flex items-center gap-2 text-slate-400">
             <Calculator size={13} />
             Resumen presupuesto
