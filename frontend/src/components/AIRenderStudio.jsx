@@ -4087,7 +4087,9 @@ export default function AIRenderStudio({ state, setState }) {
                     <span className="font-bold text-slate-600">Leído del dibujo: </span>
                     {renderResult.parsed_params.lecturaDelDibujo}
                     <div className="mt-1 text-slate-400">
-                      Si esto no es tu cocina, el fallo está en la lectura del plano y no en el render.
+                      {/* El mueble por su nombre: en un armario poner «si esto no
+                          es tu cocina» hace dudar de si el aviso va con uno. */}
+                      Si esto no es {renderResult.parsed_params.pieza === 'armario' ? 'tu armario' : 'tu cocina'}, el fallo está en la lectura del plano y no en el render.
                     </div>
                   </div>
                 )

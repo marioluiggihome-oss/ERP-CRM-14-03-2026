@@ -694,3 +694,74 @@ def test_el_render_le_pasa_al_plano_el_estado_pedido():
     assert "generateBlueprintDataUrl(doorsOpenParam, openDoorIndex ?? 0)" in jsx, (
         "se dibuja el plano sin decirle qué puerta va abierta: se queda con la "
         "de por defecto y vuelve a contradecir al texto")
+
+
+# ─── 13. El divisor no tiene por qué llegar arriba ─────────────────────────
+#
+# El master dibujó DOS cuerpos con un altillo corrido encima y la pantalla dijo
+# «Armario de 1 cuerpo». No fue el modelo: fue la regla que se le dio, que
+# decía «toda línea vertical QUE VA DE ARRIBA ABAJO separa un cuerpo del
+# siguiente». En un armario con altillo los divisores arrancan DEBAJO de la
+# banda y bajan al suelo: no cruzan nunca el alto entero. El modelo aplicó bien
+# una regla mal escrita y contó cero divisiones.
+#
+# Esto no se puede probar sin llamar al modelo, así que se protege el ENCARGO:
+# que la regla siga diciendo lo correcto, que es donde estuvo el fallo.
+
+def test_el_divisor_no_tiene_que_tocar_el_techo(la):
+    p = la.PROMPT_LECTURA
+    assert "A DIVIDER DOES NOT HAVE TO REACH THE TOP" in p, (
+        "ha vuelto la regla que exige que el divisor cruce el alto entero: con "
+        "un altillo encima, eso no pasa nunca y el armario se lee de un cuerpo")
+    assert "dividers start UNDER that band" in p
+    assert "Never dismiss it for not touching the top edge" in p
+
+
+def test_no_se_exige_que_la_linea_vaya_de_arriba_abajo(la):
+    p = la.PROMPT_LECTURA
+    assert "runs from top to bottom of the" not in p, (
+        "la redacción vieja excluía justamente el dibujo del master")
+
+
+def test_se_cuenta_por_intencion_no_por_precision(la):
+    """Dibujado con el dedo en un móvil: las líneas son temblorosas."""
+    p = la.PROMPT_LECTURA
+    assert "Judge\n  by INTENT" in p or "Judge by INTENT" in p, (
+        "sin esto, una línea torcida o rota por el medio deja de contar como "
+        "divisor, y el armario se lee de un cuerpo")
+    assert "broken in the middle" in p
+
+
+# ─── 14. El recuadro de pantalla está bien escrito ─────────────────────────
+#
+# Es lo que el master lee para decidir si el fallo está en la lectura o en el
+# render. Un recuadro que pone «Armario de 1 cuerpo(s)» y «1 secciones» pierde
+# crédito justo cuando más falta hace que se lo crea.
+
+def test_un_cuerpo_va_en_singular(la):
+    d = la.parsear_lectura(_ficha(
+        altillo={"hay": True, "alto_cm": None, "divisiones": 1},
+        cuerpos=[{"orden": 1, "ancho_cm": None, "interior": []}]))
+    r = la.resumen_para_pantalla(d)
+    assert "Armario de 1 cuerpo." in r, f"pone: {r.splitlines()[0]}"
+    assert "cuerpo(s)" not in r
+    assert "1 sección." in r, f"el altillo de una sección va en plural: {r}"
+
+
+def test_dos_cuerpos_van_en_plural(la):
+    d = la.parsear_lectura(_ficha())
+    r = la.resumen_para_pantalla(d)
+    assert "Armario de 2 cuerpos." in r
+    assert "2 secciones" in r
+
+
+def test_el_aviso_de_pantalla_nombra_el_mueble():
+    ruta = os.path.join(
+        os.path.dirname(BACKEND), "frontend", "src", "components", "AIRenderStudio.jsx")
+    if not os.path.exists(ruta):
+        pytest.skip("AIRenderStudio.jsx no está en este entorno")
+    with open(ruta, encoding="utf-8") as f:
+        jsx = f.read()
+    assert "=== 'armario' ? 'tu armario' : 'tu cocina'" in jsx, (
+        "con un armario en pantalla el aviso dice «si esto no es tu cocina», y "
+        "quien lo lee duda de si el aviso va con él")

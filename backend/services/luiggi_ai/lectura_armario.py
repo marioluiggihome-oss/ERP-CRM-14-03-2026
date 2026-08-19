@@ -87,10 +87,20 @@ Use exactly this shape:
 
 RULES — read them all before answering:
 
-· A WARDROBE IS A ROW OF CUERPOS (bays). Every VERTICAL line that runs from top to bottom of the
-  drawing separates one cuerpo from the next. COUNT THOSE LINES: two vertical divisions inside the
-  outline means THREE cuerpos, one vertical division means TWO cuerpos, none means ONE. Report
-  exactly that many entries in "cuerpos", left to right, "orden" starting at 1.
+· A WARDROBE IS A ROW OF CUERPOS (bays). A vertical line inside the outline separates one cuerpo
+  from the next. COUNT THOSE LINES: one vertical division means TWO cuerpos, two divisions mean
+  THREE, none means ONE. Report exactly that many entries in "cuerpos", left to right, "orden"
+  starting at 1.
+· A DIVIDER DOES NOT HAVE TO REACH THE TOP. When there is an altillo band across the top, the
+  dividers start UNDER that band and run down to the floor: they never cross the full height of
+  the drawing. A vertical line that starts below the altillo and reaches the bottom IS a divider
+  and it makes TWO cuerpos. Never dismiss it for not touching the top edge — this is the single
+  most common way this reading goes wrong.
+· THE DRAWING IS HAND-MADE, OFTEN DRAWN WITH A FINGER ON A PHONE. The lines are wobbly, they
+  overshoot at the corners, and they may stop a few millimetres short of the edge they meet. Judge
+  by INTENT, not by precision: a roughly vertical stroke that clearly splits the front into a left
+  part and a right part is a divider, even if it is crooked, broken in the middle or does not
+  quite touch top or bottom.
 · "ancho_relativo" is the share of the total width that cuerpo takes, 0-100, measured on the
   drawing. Fill it ALWAYS, even when no dimension is written: it is what keeps a narrow bay narrow.
 · THE ALTILLO IS THE BAND ON TOP. A horizontal line that crosses the WHOLE width near the top,
@@ -446,7 +456,10 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
     if not datos:
         return ""
     cuerpos = datos.get("cuerpos") or []
-    L: List[str] = [f"Armario de {len(cuerpos)} cuerpo(s)."]
+    n = len(cuerpos)
+    # «Armario de 1 cuerpo(s)» y «1 secciones» le restan crédito a un recuadro
+    # cuyo trabajo es que el master se fíe de lo que se ha leído.
+    L: List[str] = [f"Armario de {n} cuerpo." if n == 1 else f"Armario de {n} cuerpos."]
 
     med = []
     if datos.get("ancho_total_cm"):
@@ -461,7 +474,9 @@ def resumen_para_pantalla(datos: Dict[str, Any]) -> str:
     alt = datos.get("altillo") or {}
     if alt.get("hay"):
         div = alt.get("divisiones")
-        L.append("Altillo corrido por encima" + (f", {div} secciones" if div else "") + ".")
+        L.append("Altillo corrido por encima"
+                 + (f", {div} sección" if div == 1 else f", {div} secciones" if div else "")
+                 + ".")
 
     for c in cuerpos:
         ancho = ""
