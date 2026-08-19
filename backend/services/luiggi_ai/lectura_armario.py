@@ -125,6 +125,45 @@ RULES — read them all before answering:
 """
 
 
+def prompt_lectura(brief: str = "") -> str:
+    """El encargo de lectura, con lo que el master haya escrito como AYUDA.
+
+    Su descripción decía, en castellano y sin margen de duda: «altillo de una
+    sola puerta que abarca todo el ancho», «dividido en dos módulos
+    asimétricos», «el de la izquierda de mayor anchura y 3 cajones», «el de la
+    derecha más estrecho, con baldas». Todo eso se archivaba bajo el epígrafe
+    FINISHES del encargo del render —o sea, se tiraba— mientras el dibujo se
+    leía a ciegas.
+
+    Un dibujo hecho con el dedo es ambiguo por naturaleza: una línea que casi
+    llega al borde ¿cruza o no cruza? Quien lo dibujó ya ha contestado a eso por
+    escrito. Dárselo a quien lee el dibujo no es hacer trampa: es dejar de
+    tirar la mitad de la información.
+
+    El dibujo sigue mandando. Si los dos se contradicen, gana el dibujo y la
+    contradicción se escribe en "notas", para que salga en pantalla en vez de
+    resolverse en silencio.
+    """
+    texto = (brief or "").strip()
+    if not texto:
+        return PROMPT_LECTURA
+    return PROMPT_LECTURA + (
+        "\nWHAT THE PERSON WHO DREW IT ALSO WROTE:\n"
+        f"\"{texto}\"\n"
+        "Use this text as a HELP to read the drawing, never as a replacement for it:\n"
+        "· When it names a count — how many cuerpos, how many drawers, how many doors in the "
+        "altillo, which side is wider — read the drawing again with that in mind before answering. "
+        "It is usually the author resolving exactly the ambiguity you are struggling with.\n"
+        "· It is written in Spanish. 'cuerpo'/'módulo' = bay, 'altillo'/'maletero' = the top band, "
+        "'balda' = shelf, 'cajón' = drawer, 'barra' = hanging rail, 'asimétricos' = of different "
+        "widths.\n"
+        "· NEVER take a measurement from this text that is not on the drawing, and never add a "
+        "cuerpo or a piece that is not drawn just because the text mentions it.\n"
+        "· If the text and the drawing genuinely contradict each other, TRUST THE DRAWING and "
+        "write the contradiction in \"notas\", in Spanish, in one line.\n"
+    )
+
+
 def _numero(valor: Any) -> Optional[float]:
     """Un número o nada. Un «60 cm» escrito a mano llega de mil maneras."""
     if valor is None or isinstance(valor, bool):

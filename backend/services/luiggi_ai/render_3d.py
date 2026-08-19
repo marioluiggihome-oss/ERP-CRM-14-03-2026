@@ -1394,7 +1394,10 @@ class Render3DService:
         except Exception as e:
             logger.warning(f"No se pudo recortar el croquis de armario: {e}")
 
-        lectura = await self._leer_armario_del_dibujo(ref_b64, ref_mime)
+        # LO QUE ÉL ESCRIBIÓ VA A LA LECTURA, NO SOLO A LOS ACABADOS. Ver
+        # `lectura_armario.prompt_lectura`: su descripción daba los cuerpos, los
+        # cajones y qué lado es más ancho, y se archivaba bajo «FINISHES».
+        lectura = await self._leer_armario_del_dibujo(ref_b64, ref_mime, brief_txt)
         if lectura:
             from services.luiggi_ai.lectura_armario import (
                 especificacion_en_texto, resumen_para_pantalla)
@@ -1420,7 +1423,8 @@ class Render3DService:
             provider=provider, reference_images=reference_images or None,
         )
 
-    async def _leer_armario_del_dibujo(self, raw_b64: str, mime: str = "image/png"):
+    async def _leer_armario_del_dibujo(self, raw_b64: str, mime: str = "image/png",
+                                       brief: str = ""):
         """Lee el croquis de un armario A FICHA: cuerpos, altillo e interior.
 
         Devuelve el diccionario ya limpio, o None si no hay lectura fiable.
@@ -1428,10 +1432,10 @@ class Render3DService:
         """
         try:
             from services.llm_vision import analyze_image_with_gemini
-            from services.luiggi_ai.lectura_armario import PROMPT_LECTURA, parsear_lectura
+            from services.luiggi_ai.lectura_armario import prompt_lectura, parsear_lectura
             crudo = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
             res = await analyze_image_with_gemini(
-                crudo, PROMPT_LECTURA, model="gemini-2.5-flash",
+                crudo, prompt_lectura(brief), model="gemini-2.5-flash",
                 image_mime=mime or "image/jpeg")
             lectura = parsear_lectura(res or "")
             if lectura:

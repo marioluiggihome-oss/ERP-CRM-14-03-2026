@@ -30,11 +30,29 @@ def prompt_croquis_armario(transcripcion: str = "", brief: str = "") -> str:
     """El encargo completo para realizar EN FOTO el armario dibujado."""
     bloque = (f"\nWARDROBE SPECIFICATION EXTRACTED DIRECTLY FROM THE DRAWING:\n{transcripcion}\n"
               if transcripcion else "")
+    # QUÉ HACE EL TEXTO. Decía «FINISHES: esto es lo ÚNICO que decide el texto»,
+    # y bajo ese epígrafe se metía la descripción entera del master. La suya
+    # decía «altillo de una sola puerta que abarca todo el ancho», «dividido en
+    # dos módulos asimétricos», «el de la izquierda de mayor anchura y 3
+    # cajones». Eso no son acabados: es la misma geometría del dibujo, escrita
+    # por quien lo dibujó. Archivarla como acabado era tirarla.
+    #
+    # El dibujo sigue mandando —la regla existe porque la pantalla mandaba sus
+    # valores por defecto («En L», «Cuarzo Blanco») contradiciendo el croquis—.
+    # Lo que cambia es que cuando el texto CONFIRMA lo leído, se dice que
+    # confirma, en vez de degradarlo a decoración.
     acabados = (
-        f"FINISHES (this is the ONLY thing the text decides — the geometry comes 100% from the "
-        f"drawing): {brief}\n\n" if (brief or "").strip() else
-        "Use restrained real materials (matt lacquer, natural oak veneer); the geometry still "
-        "comes 100% from the drawing.\n\n")
+        "WHAT THE WRITTEN TEXT IS FOR:\n"
+        "- The GEOMETRY comes 100% from the drawing. The text never overrides it.\n"
+        "- But this text was written by the SAME person who made the drawing, and it has already "
+        "been used to read it. Where it names a count — how many cuerpos, how many drawers, how "
+        "many doors in the altillo, which side is wider — it CONFIRMS the specification above. "
+        "Those numbers agree from two independent sources: treat them as certain, not as "
+        "suggestions.\n"
+        "- FINISHES, MATERIALS, COLOURS and the HANDLE SYSTEM come from this text.\n"
+        f"- The text: {brief}\n\n" if (brief or "").strip() else
+        "No text was written: use restrained real materials (matt lacquer, natural oak veneer). "
+        "The geometry comes 100% from the drawing.\n\n")
 
     return (
         "You are given a TECHNICAL 2D DRAWING of ONE specific fitted wardrobe / built-in closet: "

@@ -360,3 +360,89 @@ def test_el_armario_tambien_recorta_el_dibujo():
     assert "recortar_dibujo_base64" in trozo, (
         "el croquis de armario ya no se recorta de la página: el armario "
         "vuelve a ocupar un tercio de la imagen y el detalle no se ve")
+
+
+# ─── 9. Lo que él escribe AYUDA A LEER el dibujo ───────────────────────────
+#
+# Su descripción decía, sin margen de duda: «altillo de una sola puerta que
+# abarca todo el ancho», «dividido en dos módulos asimétricos», «el de la
+# izquierda de mayor anchura y 3 cajones», «el de la derecha más estrecho, con
+# baldas». Todo eso se archivaba bajo el epígrafe FINISHES del encargo del
+# render —o sea, se tiraba— mientras el dibujo se leía a ciegas. Salieron seis
+# módulos. Dos pérdidas apiladas: el texto no llegaba a la lectura, y la
+# lectura era de cocina.
+
+BRIEF = ("La parte superior es un altillo o maletero de una sola puerta que abarca todo el "
+         "ancho. Debajo, dividido en dos módulos asimétricos: uno a la izquierda de mayor "
+         "anchura y 3 cajones, y otro a la derecha más estrecho con baldas. Laca blanca mate "
+         "sin tiradores visibles.")
+
+
+def test_lo_escrito_llega_a_quien_lee_el_dibujo(la):
+    p = la.prompt_lectura(BRIEF)
+    assert BRIEF in p, (
+        "lo que el master escribe no le llega a quien lee el dibujo. Un dibujo "
+        "hecho con el dedo es ambiguo; quien lo dibujó ya ha contestado por "
+        "escrito a esa ambigüedad")
+    assert "HELP to read the drawing" in p
+
+
+def test_sin_texto_el_encargo_de_lectura_no_cambia(la):
+    """Nadie está obligado a escribir nada."""
+    assert la.prompt_lectura("") == la.PROMPT_LECTURA
+    assert la.prompt_lectura(None) == la.PROMPT_LECTURA
+
+
+def test_el_texto_no_puede_meter_medidas_ni_muebles(la):
+    p = la.prompt_lectura(BRIEF)
+    assert "NEVER take a measurement from this text that is not on the drawing" in p, (
+        "el texto podría colar una medida que no está en el papel: eso es "
+        "dinero viajando sobre una medida inventada")
+    assert "never add a cuerpo or a piece that is not drawn" in p
+
+
+def test_si_el_texto_y_el_dibujo_se_pelean_gana_el_dibujo(la):
+    p = la.prompt_lectura(BRIEF)
+    assert "TRUST THE DRAWING" in p, (
+        "sin esta regla, un texto viejo pegado de otro presupuesto mandaría "
+        "sobre el croquis que se acaba de dibujar")
+    assert "notas" in p.split("TRUST THE DRAWING")[1], (
+        "la contradicción se resolvería en silencio; tiene que salir en pantalla")
+
+
+def test_lo_que_el_escribe_ya_no_se_archiva_como_acabado(ra):
+    p = ra.prompt_croquis_armario(transcripcion="(ficha)", brief=BRIEF)
+    assert "this is the ONLY thing the text decides" not in p, (
+        "la descripción del master vuelve a entrar entera bajo el epígrafe "
+        "FINISHES: «dos módulos asimétricos» y «3 cajones» no son acabados")
+    assert "CONFIRMS the specification above" in p, (
+        "cuando el texto y el dibujo dicen lo mismo hay que decir que "
+        "coinciden, no degradar el texto a decoración")
+    assert "The GEOMETRY comes 100% from the drawing" in p, (
+        "se ha perdido la regla de que manda el dibujo; existe porque la "
+        "pantalla mandaba sus valores por defecto («En L», «Cuarzo Blanco») "
+        "contradiciendo el croquis")
+
+
+def test_sin_texto_no_se_promete_un_texto_que_no_hay(ra):
+    p = ra.prompt_croquis_armario(transcripcion="(ficha)", brief="")
+    assert "No text was written" in p
+    assert "The text:" not in p, (
+        "se anuncia un texto vacío; una orden en blanco es una invitación a "
+        "rellenarla")
+
+
+def test_el_render_le_pasa_el_texto_a_la_lectura():
+    import os
+    ruta = os.path.join(BACKEND, "services", "luiggi_ai", "render_3d.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+    i = codigo.find("_render_croquis_de_armario(self")
+    trozo = codigo[i:i + 4000]
+    assert "_leer_armario_del_dibujo(ref_b64, ref_mime, brief_txt)" in trozo, (
+        "el Estudio 3D vuelve a leer el dibujo sin lo que el master escribió")
+    j = codigo.find("async def _leer_armario_del_dibujo")
+    lector = codigo[j:j + 1500]
+    assert "prompt_lectura(brief)" in lector, (
+        "el lector recibe el texto y no lo usa, que es peor que no recibirlo: "
+        "parece arreglado y no lo está")
