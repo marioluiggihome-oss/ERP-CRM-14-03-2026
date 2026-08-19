@@ -786,6 +786,30 @@ class Render3DService:
                 "bano": "bathroom vanity / cabinetry",
             }.get((project_type or "").strip().lower(), "kitchen")
 
+            # UN ARMARIO NO SE LEE NI SE ENCARGA COMO UNA COCINA.
+            #
+            # Decir «esto es un armario» en una línea y seguir con mil palabras
+            # de cocina —el hueco de la campana sobre la placa, la encimera que
+            # muere contra la columna, el diccionario de Frigo / Combi /
+            # Lavavajillas / Bajo Fregadero— son órdenes contradictorias, y el
+            # modelo se queda con las mil palabras. El master mandó un armario
+            # de DOS cuerpos con altillo corrido y una cajonera abajo a la
+            # izquierda: volvió un frente de SEIS módulos con la cajonera en el
+            # centro. Esa es la composición de una cocina, no de su armario.
+            #
+            # Desde aquí, el croquis de armario tiene su propio lector y su
+            # propio encargo. El camino de cocina no se toca: es el que lleva
+            # años funcionando y no se arregla un módulo rompiendo el otro.
+            from services.luiggi_ai.render_armario import (
+                es_armario as _es_armario, prompt_croquis_armario)
+            if _es_armario(project_type, space_type):
+                return await self._render_croquis_de_armario(
+                    ref_b64=ref_b64, ref_mime=ref_mime, brief_txt=brief_txt,
+                    parsed_params=parsed_params, provider=provider,
+                    reference_images=reference_images,
+                    prompt_croquis_armario=prompt_croquis_armario,
+                )
+
             # EL DIBUJO, A PANTALLA COMPLETA.
             #
             # El master sube el pantallazo del móvil de una página de
@@ -1342,6 +1366,84 @@ class Render3DService:
         except Exception as e:
             logger.debug(f"No se pudo analizar la referencia como croquis: {e}")
             return False
+
+    async def _render_croquis_de_armario(self, *, ref_b64, ref_mime, brief_txt,
+                                         parsed_params, provider, reference_images,
+                                         prompt_croquis_armario):
+        """Realiza EN FOTO el armario dibujado, con reglas de armario.
+
+        Mismo esqueleto que el camino de cocina —recortar el dibujo de la
+        página, leerlo a ficha, encargar la foto— pero preguntando lo que tiene
+        un armario: cuerpos, altillo corrido, barra, baldas, cajonera. Ver
+        `render_armario.py` para por qué esto no podía seguir compartiendo el
+        encargo de cocina.
+        """
+        parsed_params["pieza"] = "armario"
+
+        # EL DIBUJO, A PANTALLA COMPLETA. El master dibuja con el dedo en una app
+        # que ocupa la pantalla entera de barras de herramientas y paletas de
+        # color: el armario es un tercio de la imagen. Recorta solo cuando lo
+        # tiene claro; ante la duda devuelve la original.
+        try:
+            from services.recorte_croquis import recortar_dibujo_base64
+            recortado, hubo_recorte = recortar_dibujo_base64(ref_b64, ref_mime)
+            if hubo_recorte:
+                ref_b64, ref_mime = recortado, "image/png"
+                parsed_params["dibujoRecortado"] = True
+                logger.info("Croquis de armario recortado de la página.")
+        except Exception as e:
+            logger.warning(f"No se pudo recortar el croquis de armario: {e}")
+
+        lectura = await self._leer_armario_del_dibujo(ref_b64, ref_mime)
+        if lectura:
+            from services.luiggi_ai.lectura_armario import (
+                especificacion_en_texto, resumen_para_pantalla)
+            transcripcion = especificacion_en_texto(lectura)
+            parsed_params["lecturaDelDibujo"] = resumen_para_pantalla(lectura)
+            parsed_params["lecturaEstructurada"] = True
+        else:
+            # QUE SE CAIGA AL MÉTODO VIEJO NO PUEDE SER INVISIBLE. Sin ficha no
+            # hay recuento de cuerpos, y sin recuento el render vuelve a poder
+            # inventarse módulos. Que se vea en pantalla.
+            transcripcion = ""
+            parsed_params["lecturaEstructurada"] = False
+            parsed_params["lecturaDelDibujo"] = (
+                "No se ha podido leer el armario a ficha (cuerpos y medidas uno a uno). "
+                "El render puede perder la cuenta de cuerpos. Vuelve a intentarlo, o sube "
+                "el dibujo más grande y recortado."
+            )
+
+        task_prompt = prompt_croquis_armario(transcripcion=transcripcion, brief=brief_txt)
+        return await self._render_dispatch(
+            task_prompt, task_prompt, parsed_params,
+            reference_image_base64=ref_b64, reference_mime=ref_mime,
+            provider=provider, reference_images=reference_images or None,
+        )
+
+    async def _leer_armario_del_dibujo(self, raw_b64: str, mime: str = "image/png"):
+        """Lee el croquis de un armario A FICHA: cuerpos, altillo e interior.
+
+        Devuelve el diccionario ya limpio, o None si no hay lectura fiable.
+        Nunca lanza: esto va en medio de un render que el master está mirando.
+        """
+        try:
+            from services.llm_vision import analyze_image_with_gemini
+            from services.luiggi_ai.lectura_armario import PROMPT_LECTURA, parsear_lectura
+            crudo = raw_b64.split(",", 1)[-1] if "," in raw_b64 else raw_b64
+            res = await analyze_image_with_gemini(
+                crudo, PROMPT_LECTURA, model="gemini-2.5-flash",
+                image_mime=mime or "image/jpeg")
+            lectura = parsear_lectura(res or "")
+            if lectura:
+                logger.info("Armario leído a ficha: %s cuerpo(s), altillo=%s.",
+                            len(lectura.get("cuerpos") or []),
+                            bool((lectura.get("altillo") or {}).get("hay")))
+            else:
+                logger.warning("La lectura del armario no se pudo interpretar.")
+            return lectura
+        except Exception as e:
+            logger.warning(f"Error leyendo el armario del dibujo: {e}")
+            return None
 
     async def _leer_cocina_del_dibujo(self, raw_b64: str, mime: str = "image/png"):
         """Lee el dibujo A FICHA: lista de muebles con fila, ancho y frentes.

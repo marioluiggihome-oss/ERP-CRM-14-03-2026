@@ -1,0 +1,362 @@
+# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
+"""CANDADO del croquis de ARMARIO en el Estudio 3D.
+
+EL FALLO QUE ESTO IMPIDE
+------------------------
+El Estudio 3D tenía UN solo camino para los croquis y era el de cocina de punta
+a punta: la lectura preguntaba por bajos, altos, altillos y columnas; la
+transcripción empezaba por «technical KITCHEN blueprint»; y el encargo del
+render llevaba mil palabras de cocina —el hueco de la campana sobre la placa,
+la encimera que muere contra la columna, el diccionario de Frigo / Combi /
+Lavavajillas / Bajo Fregadero—. Con el croquis de un armario delante, todo eso
+seguía puesto, y encima una línea suelta diciendo «esto es un armario».
+
+El master mandó un armario de DOS cuerpos con altillo corrido y una cajonera
+abajo a la izquierda. Volvió un frente de SEIS módulos, con la cajonera en el
+centro y una columna de seis baldas que no estaba dibujada — o sea, la
+composición de una cocina. No era el modelo inventando: era que se le había
+pedido una cocina.
+
+LO QUE SE PROTEGE
+-----------------
+1. UN ARMARIO NO VA POR EL CAMINO DE LA COCINA. Y al revés: la cocina, que es
+   el pan de cada día, no puede acabar leyéndose con reglas de armario.
+
+2. SE CUENTAN LOS CUERPOS. Es el número que se perdía. La ficha lo dice y el
+   encargo lo repite al final, para que el modelo pueda comprobarlo antes de
+   dibujar.
+
+3. EL ALTILLO ES UNA BANDA, NO UN CUERPO. La línea horizontal que cruza todo
+   por arriba es el maletero corrido; una que se para en un cuerpo es una balda
+   de ese cuerpo. Confundirlos cambia el armario entero.
+
+4. LO DE CADA CUERPO SE QUEDA EN SU CUERPO. La cajonera dibujada abajo a la
+   izquierda no se va al centro.
+
+5. NO SE INVENTA NI UNA MEDIDA. Sin cotas se dibujan proporciones, pero se
+   avisa de que eso NO sirve para presupuestar. Y un ancho deducido del total
+   se marca como deducido: no estaba escrito en el papel.
+
+6. LOS MILÍMETROS NO SE CUELAN. El configurador de armarios va en mm y esta
+   ficha en cm. Un 2400 de alto son 240 cm; un 240 ya son centímetros y no se
+   toca. Convertir por si acaso es cómo se cuela un armario diez veces mayor
+   sin que falle nada.
+
+7. EL NÚMERO VA PEGADO A LA PIEZA QUE CUENTA. «3 bank of drawers» se entiende
+   como tres cajoneras; lo que hay que escribir es «a bank of 3 drawers». Este
+   texto es el encargo que lee el modelo de imagen, no un adorno.
+
+8. QUE LA FICHA FALLE NO PUEDE SER INVISIBLE. Si no se puede leer, la pantalla
+   lo dice; si no, uno mira un render malo sacando conclusiones sobre la
+   versión equivocada.
+"""
+import importlib.util
+import json
+import os
+
+import pytest
+
+BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _cargar(ruta, nombre):
+    spec = importlib.util.spec_from_file_location(nombre, os.path.join(BACKEND, ruta))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.fixture(scope="module")
+def la():
+    return _cargar("services/luiggi_ai/lectura_armario.py", "_lectura_armario")
+
+
+@pytest.fixture(scope="module")
+def ra():
+    return _cargar("services/luiggi_ai/render_armario.py", "_render_armario")
+
+
+def _ficha(**kw):
+    """La lectura del croquis del master: 2 cuerpos, altillo, cajonera abajo izq."""
+    base = {
+        "ancho_total_cm": None, "alto_total_cm": None, "fondo_cm": None,
+        "acabados": {"frentes": "", "interior": ""},
+        "altillo": {"hay": True, "alto_cm": None, "divisiones": 2},
+        "puertas": {"hay": False, "tipo": "", "n": None},
+        "cuerpos": [
+            {"orden": 1, "ancho_cm": None, "ancho_relativo": 55,
+             "interior": [{"tipo": "barra", "n": 1}, {"tipo": "cajones", "n": 3}]},
+            {"orden": 2, "ancho_cm": None, "ancho_relativo": 45,
+             "interior": [{"tipo": "baldas", "n": 1}, {"tipo": "barra", "n": 1}]},
+        ],
+        "notas": "",
+    }
+    base.update(kw)
+    return json.dumps(base)
+
+
+# ─── 1. Cada mueble por su camino ──────────────────────────────────────────
+
+@pytest.mark.parametrize("tipo", ["armario", "vestidor", "ARMARIO", " Armario "])
+def test_un_armario_va_por_el_camino_de_armario(ra, tipo):
+    assert ra.es_armario(tipo, None) is True, (
+        f"«{tipo}» no se reconoce como armario, así que se le pediría al modelo "
+        "una cocina con mil palabras de encimeras y campanas")
+
+
+def test_tambien_lo_detecta_por_el_texto(ra):
+    """Si en la pantalla no se eligió tipo, lo dice el texto del encargo."""
+    assert ra.es_armario("otro", "fitted/built-in wardrobe (custom closet)") is True
+    assert ra.es_armario(None, "walk-in closet with interior shelving") is True
+
+
+@pytest.mark.parametrize("tipo,espacio", [
+    ("cocina", "modern fitted kitchen"),
+    (None, "modern fitted kitchen with island"),
+    ("bano", "bathroom vanity"),
+    ("", ""),
+])
+def test_una_cocina_no_se_va_por_el_camino_de_armario(ra, tipo, espacio):
+    """El pan de cada día no se rompe arreglando el armario."""
+    assert ra.es_armario(tipo, espacio) is False, (
+        "una cocina acabaría leída como armario: se perderían los altos, la "
+        "campana y el diccionario de electrodomésticos")
+
+
+# ─── 2. Se cuentan los cuerpos ─────────────────────────────────────────────
+
+def test_la_ficha_cuenta_los_cuerpos(la):
+    d = la.parsear_lectura(_ficha())
+    assert d is not None and len(d["cuerpos"]) == 2
+    texto = la.especificacion_en_texto(d)
+    assert "EXACTLY 2 cuerpo" in texto, (
+        "el encargo no dice cuántos cuerpos hay; sin ese número el render "
+        "vuelve a sacar seis módulos de un armario de dos")
+    assert "COUNT BEFORE YOU FINISH: 2 cuerpo" in texto, (
+        "falta el recuento final, que es lo único que el modelo puede "
+        "comprobar antes de dibujar")
+
+
+def test_un_cuerpo_de_mas_se_ve_en_pantalla(la):
+    d = la.parsear_lectura(_ficha())
+    assert "Armario de 2 cuerpo" in la.resumen_para_pantalla(d), (
+        "la pantalla no dice cuántos cuerpos se han leído; es lo que le deja "
+        "al master ver de un vistazo si el fallo está en la lectura")
+
+
+def test_sin_cuerpos_no_hay_ficha(la):
+    """Mejor la lectura de siempre que una ficha vacía."""
+    assert la.parsear_lectura(_ficha(cuerpos=[])) is None
+    assert la.parsear_lectura("no soy json") is None
+    assert la.parsear_lectura("") is None
+
+
+def test_se_entiende_aunque_venga_envuelto(la):
+    """Los modelos envuelven en ```json y se disculpan antes."""
+    d = la.parsear_lectura("Aquí tienes:\n```json\n" + _ficha() + "\n```\nEspero que sirva.")
+    assert d is not None and len(d["cuerpos"]) == 2
+
+
+# ─── 3. El altillo es una banda ────────────────────────────────────────────
+
+def test_el_altillo_no_se_cuenta_como_cuerpo(la):
+    d = la.parsear_lectura(_ficha())
+    texto = la.especificacion_en_texto(d)
+    assert "NOT one of the cuerpos" in texto, (
+        "el encargo no aclara que el altillo es una banda; contado como cuerpo "
+        "cambia el armario entero")
+    assert len(d["cuerpos"]) == 2, "el altillo se ha colado en la lista de cuerpos"
+
+
+def test_sin_altillo_se_dice_que_no_lo_hay(la):
+    d = la.parsear_lectura(_ficha(altillo={"hay": False, "alto_cm": None, "divisiones": None}))
+    texto = la.especificacion_en_texto(d)
+    assert "NO altillo" in texto, (
+        "callarse que no hay altillo es una invitación a añadir uno: casi "
+        "todos los armarios de catálogo lo llevan")
+
+
+# ─── 4. Lo de cada cuerpo se queda en su cuerpo ────────────────────────────
+
+def test_cada_cuerpo_lleva_lo_suyo(la):
+    d = la.parsear_lectura(_ficha())
+    texto = la.especificacion_en_texto(d)
+    # Solo la línea de cada cuerpo: el recuento final también nombra cajoneras,
+    # y buscar en todo el texto daría por buena una prueba que no mira nada.
+    lineas = {n: [l for l in texto.splitlines() if l.strip().startswith(f"{n}. Cuerpo {n}")]
+              for n in (1, 2)}
+    assert lineas[1] and lineas[2], "los cuerpos no salen numerados de izquierda a derecha"
+    assert texto.find(lineas[1][0]) < texto.find(lineas[2][0]), (
+        "los cuerpos no salen en orden de izquierda a derecha")
+    assert "drawers" in lineas[1][0], (
+        "la cajonera del cuerpo 1 no aparece en el cuerpo 1")
+    assert "drawers" not in lineas[2][0], (
+        "la cajonera se ha copiado al cuerpo 2; así es como acaba en el centro "
+        f"del render. Línea: {lineas[2][0]}")
+    assert "THIS bay only" in texto, (
+        "no se le dice al modelo que el contenido es de ese cuerpo y de ningún otro")
+
+
+def test_el_encargo_prohibe_anadir_interior(ra):
+    p = ra.prompt_croquis_armario(transcripcion="loquesea", brief="")
+    assert "NEVER ADD INTERIOR THAT IS NOT DRAWN" in p, (
+        "sin esta orden el modelo rellena los cuerpos vacíos con columnas de "
+        "baldas y zapateros que nadie ha dibujado")
+    assert "IT DOES NOT EXIST" in p
+
+
+def test_el_encargo_cuenta_las_divisiones_verticales(ra):
+    p = ra.prompt_croquis_armario()
+    assert "ONE vertical line means TWO bays" in p, (
+        "el encargo no explica cómo se cuentan los cuerpos, que es justo lo "
+        "que se equivocaba")
+    assert "five or six narrow modules" in p, (
+        "no se nombra el fallo concreto que hay que evitar; una regla "
+        "abstracta se diluye entre las demás")
+
+
+def test_el_encargo_de_armario_no_arrastra_la_cocina(ra):
+    """Ni una palabra de cocina en el encargo de un armario."""
+    p = ra.prompt_croquis_armario(transcripcion="x", brief="roble y blanco").lower()
+    for palabra in ("kitchen", "countertop", "worktop", "hob", "cooktop", "extractor hood",
+                    "fregadero", "campana", "lavavajillas", "frigo", "island"):
+        assert palabra not in p, (
+            f"el encargo del armario todavía dice «{palabra}»: son las órdenes "
+            "contradictorias que hacían que volviera una cocina")
+
+
+def test_las_puertas_solo_si_estan_dibujadas(la, ra):
+    d = la.parsear_lectura(_ficha())
+    texto = la.especificacion_en_texto(d)
+    assert "render this wardrobe OPEN" in texto, (
+        "el croquis enseña el interior y el encargo no lo dice; el render lo "
+        "tapa con puertas y no se ve nada de lo diseñado")
+    con_puertas = la.parsear_lectura(_ficha(puertas={"hay": True, "tipo": "corredera", "n": 3}))
+    assert "OPEN" not in la.especificacion_en_texto(con_puertas)
+    assert "corredera" in la.especificacion_en_texto(con_puertas)
+
+
+# ─── 5. Ni una medida inventada ────────────────────────────────────────────
+
+def test_sin_cotas_se_avisa(la):
+    d = la.parsear_lectura(_ficha())
+    assert la.sin_cotas(d) is True
+    assert "no para presupuestar" in la.resumen_para_pantalla(d), (
+        "un dibujo sin una sola medida sale igual de bonito; si no se avisa, "
+        "alguien presupuesta sobre proporciones")
+    assert "do not invent numbers" in la.especificacion_en_texto(d)
+
+
+def test_el_ancho_que_falta_se_deduce_y_se_marca(la):
+    d = la.parsear_lectura(_ficha(
+        ancho_total_cm=240,
+        cuerpos=[{"orden": 1, "ancho_cm": 130, "interior": []},
+                 {"orden": 2, "ancho_cm": None, "interior": []}]))
+    assert d["cuerpos"][1]["ancho_cm"] == 110
+    assert d["cuerpos"][1].get("ancho_deducido") is True, (
+        "el ancho deducido no se marca; en pantalla parecería una medida "
+        "escrita en el papel")
+    assert "deducido" in la.resumen_para_pantalla(d)
+
+
+def test_con_dos_anchos_que_faltan_no_se_reparte(la):
+    """Dos incógnitas y una ecuación: repartir a partes iguales es inventar."""
+    d = la.parsear_lectura(_ficha(
+        ancho_total_cm=240,
+        cuerpos=[{"orden": 1, "ancho_cm": None, "interior": []},
+                 {"orden": 2, "ancho_cm": None, "interior": []}]))
+    assert all(c["ancho_cm"] is None for c in d["cuerpos"]), (
+        "se han repartido los anchos a ojo; eso es dinero viajando sobre una "
+        "medida inventada")
+
+
+def test_con_dos_que_faltan_el_resto_no_se_le_da_al_primero(la):
+    """El caso que de verdad hace daño: UNO escrito y DOS sin escribir.
+
+    Es el que se cuela solo, porque hay un ancho conocido y la resta «sale».
+    Pero ese resto es de los DOS cuerpos que faltan, no del primero de ellos:
+    dárselo entero es inventarle 140 cm a un cuerpo y dejar el otro en blanco.
+    """
+    d = la.parsear_lectura(_ficha(
+        ancho_total_cm=240,
+        cuerpos=[{"orden": 1, "ancho_cm": 100, "interior": []},
+                 {"orden": 2, "ancho_cm": None, "interior": []},
+                 {"orden": 3, "ancho_cm": None, "interior": []}]))
+    assert d["cuerpos"][1]["ancho_cm"] is None and d["cuerpos"][2]["ancho_cm"] is None, (
+        "se le ha dado a un cuerpo el resto que era de dos: "
+        f"{[c['ancho_cm'] for c in d['cuerpos']]}")
+
+
+def test_si_los_anchos_no_cuadran_se_avisa(la):
+    d = la.parsear_lectura(_ficha(
+        ancho_total_cm=240,
+        cuerpos=[{"orden": 1, "ancho_cm": 200, "interior": []},
+                 {"orden": 2, "ancho_cm": 150, "interior": []}]))
+    assert d["avisos"], (
+        "los cuerpos suman 350 y el total dice 240, y no se dice nada: nada se "
+        "corrige en silencio")
+
+
+# ─── 6. Los milímetros no se cuelan ────────────────────────────────────────
+
+@pytest.mark.parametrize("entra,sale", [(2400, 240.0), (240, 240.0), (2000, 200.0)])
+def test_el_alto_en_milimetros_se_pasa_a_centimetros(la, entra, sale):
+    d = la.parsear_lectura(_ficha(alto_total_cm=entra))
+    assert d["alto_total_cm"] == sale, (
+        f"{entra} de alto ha salido como {d['alto_total_cm']}; el "
+        "configurador va en mm y esta ficha en cm")
+
+
+def test_un_alto_normal_no_se_divide(la):
+    """220 cm es un armario alto. 22 cm no es nada."""
+    d = la.parsear_lectura(_ficha(alto_total_cm=220))
+    assert d["alto_total_cm"] == 220.0
+
+
+# ─── 7. El número va pegado a la pieza ─────────────────────────────────────
+
+def test_tres_cajones_no_son_tres_cajoneras(la):
+    d = la.parsear_lectura(_ficha())
+    en = la.especificacion_en_texto(d)
+    assert "a bank of 3 drawers" in en, (
+        "pone «3 bank of drawers», que se entiende como TRES cajoneras y el "
+        "modelo dibuja tres")
+    es = la.resumen_para_pantalla(d)
+    assert "cajonera de 3 cajones" in es, f"en pantalla pone: {es}"
+
+
+def test_una_sola_balda_no_va_en_plural(la):
+    d = la.parsear_lectura(_ficha())
+    assert "1 shelf" in la.especificacion_en_texto(d)
+    assert "1 balda" in la.resumen_para_pantalla(d)
+
+
+# ─── 8. Que falle no puede ser invisible ───────────────────────────────────
+
+def test_el_render_avisa_cuando_no_hay_ficha():
+    ruta = os.path.join(BACKEND, "services", "luiggi_ai", "render_3d.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+    i = codigo.find("_render_croquis_de_armario(self")
+    assert i != -1, "ha desaparecido el camino de armario del Estudio 3D"
+    trozo = codigo[i:i + 4000]
+    assert 'parsed_params["lecturaEstructurada"] = False' in trozo, (
+        "si la ficha falla no se marca; desde fuera se ve igual que si la "
+        "mejora no estuviera desplegada")
+    assert "No se ha podido leer el armario a ficha" in trozo, (
+        "el aviso no llega a la pantalla")
+
+
+def test_el_armario_tambien_recorta_el_dibujo():
+    """El master dibuja con el dedo en una app llena de barras y paletas."""
+    ruta = os.path.join(BACKEND, "services", "luiggi_ai", "render_3d.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+    i = codigo.find("_render_croquis_de_armario(self")
+    trozo = codigo[i:i + 4000]
+    assert "recortar_dibujo_base64" in trozo, (
+        "el croquis de armario ya no se recorta de la página: el armario "
+        "vuelve a ocupar un tercio de la imagen y el detalle no se ve")
