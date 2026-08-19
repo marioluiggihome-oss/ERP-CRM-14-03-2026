@@ -579,16 +579,21 @@ CONSISTENCY REFERENCE (LAST IMAGE) - THIS IS MANDATORY:
         # `render_armario.reglas_de_puertas_y_cuerpos`: sin estas dos reglas, un
         # encargo de «2 puertas abatibles» volvía con una puerta abierta, otra
         # cerrada y un tercio del armario sin puerta ninguna.
-        from services.luiggi_ai.render_armario import reglas_de_puertas_y_cuerpos
+        from services.luiggi_ai.render_armario import (
+            reglas_de_puertas_y_cuerpos, reglas_del_plano_esquematico)
         reglas_frente = reglas_de_puertas_y_cuerpos(
             n_puertas=doors_count, n_cuerpos=request.modules,
-            tipo_puerta=request.doorType, ancho_mm=request.width)
+            tipo_puerta=request.doorType, ancho_mm=request.width,
+            todas_cerradas=not doors_open)
+        # LO QUE ES MUEBLE Y LO QUE ES LÁPIZ. Solo cuando hay un dibujo delante.
+        reglas_plano = reglas_del_plano_esquematico() if (
+            has_blueprint or getattr(request, "referenceImage", None)) else ""
 
         prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
 
 CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY. This is a technical product
 render: accuracy to the specification matters more than artistic freedom.
-{blueprint_block}{consistency_block}
+{blueprint_block}{consistency_block}{reglas_plano}
 DIMENSIONS:
 - Total width: {request.width}mm ({request.width/10}cm / {round(request.width/25.4, 1)} inches)
 - Total height: {request.height}mm ({request.height/10}cm)

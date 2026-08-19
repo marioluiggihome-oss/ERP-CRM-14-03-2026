@@ -148,8 +148,45 @@ def prompt_croquis_armario(transcripcion: str = "", brief: str = "") -> str:
     )
 
 
+def reglas_del_plano_esquematico() -> str:
+    """Lo que es MUEBLE y lo que es ANOTACIÓN en el plano de referencia.
+
+    El master pidió el armario CERRADO y en la foto salió, pintada encima, una
+    línea roja discontinua con el rótulo «Puerta 2» en rojo y una «M2» arriba:
+    las anotaciones del plano esquemático que se le manda como referencia,
+    copiadas literalmente dentro de la fotografía.
+
+    Y era razonable. Al modelo se le da un dibujo técnico y se le dice
+    «reprodúcelo EXACTAMENTE en forma fotorrealista». Nadie le había dicho qué
+    partes de ese dibujo son el mueble y cuáles son el lápiz del delineante.
+
+    El dibujo ya se ha limpiado de rótulos y de rojo (ver
+    `generateBlueprintDataUrl`), pero esta regla se queda igualmente: el
+    cliente puede subir su propio plano acotado, y ese sí viene lleno de cotas,
+    flechas y números.
+    """
+    return (
+        "\nTHE REFERENCE DRAWING: WHAT IS FURNITURE AND WHAT IS PENCIL:\n"
+        "- A technical drawing has two layers. One is the FURNITURE: the outline, the door "
+        "joints, the shelves, the drawer fronts, the rails. The other is NOTATION — the "
+        "draughtsman's pencil: dimension lines and their arrows, the millimetre figures, module "
+        "or door labels (M1, M2, 'Puerta 1'), dashed construction lines, captions, colour "
+        "coding, and the white paper itself.\n"
+        "- READ the notation. NEVER RENDER IT. The finished photograph contains no text, no "
+        "digits, no arrows, no dashed lines and no labels of any colour — a red dashed line or "
+        "the word 'Puerta' painted across the furniture makes the image WRONG, no matter how "
+        "good the rest looks.\n"
+        "- The drawing's colours are notation too: reds, ambers, greys and the white background "
+        "are drawing conventions, never the finishes of the wardrobe. The finishes are the ones "
+        "named in the COLORS section below.\n"
+        "- The output is a PHOTOGRAPH of a real wardrobe in a real room, not a drawing and not a "
+        "drawing with photographic texture on top.\n"
+    )
+
+
 def reglas_de_puertas_y_cuerpos(n_puertas: int, n_cuerpos: int,
-                                tipo_puerta: str, ancho_mm) -> str:
+                                tipo_puerta: str, ancho_mm,
+                                todas_cerradas: bool = False) -> str:
     """Las dos reglas que faltaban en el render del configurador de Armarios.
 
     El master encargó DOS PUERTAS ABATIBLES en un armario de 1000 mm y volvió
@@ -174,7 +211,21 @@ def reglas_de_puertas_y_cuerpos(n_puertas: int, n_cuerpos: int,
     }.get(tipo, "doors of any other type")
     divisores = max(0, int(n_cuerpos) - 1)
 
+    # CON TODO CERRADO, EL PLANO ENSEÑA JUSTO LO QUE HAY QUE TAPAR. El plano de
+    # referencia se dibuja con las puertas «transparentes» para que se vea el
+    # reparto interior. Pidiendo el armario CERRADO, el modelo se quedaba a
+    # medias: media fachada cerrada y la otra media abierta de par en par,
+    # enseñando las baldas del plano.
+    cerradas = (
+        f"- IN THIS PHOTOGRAPH ALL {n_puertas} DOORS ARE CLOSED. The reference drawing shows "
+        "the interior only because it is drawn with the doors transparent; here that interior "
+        "is exactly what must be HIDDEN. The front is one continuous run of "
+        f"{n_puertas} closed door panels from the left edge to the right edge — no open bay, no "
+        "gap, not one shelf, rail, drawer or garment visible anywhere.\n"
+        if todas_cerradas else "")
+
     return (
+        cerradas +
         "\nFRONT COVERAGE — THIS RULE OVERRIDES THE OTHERS:\n"
         f"- The {n_puertas} doors ARE the entire front of the wardrobe. Side by side they span "
         f"the full {ancho_mm}mm from the left edge to the right edge, with no gap between them "

@@ -520,3 +520,96 @@ def test_el_render_del_configurador_usa_estas_reglas():
     assert j != -1 and j - i < 700, (
         "las reglas del frente se han separado del bloque de PUERTAS; juntas "
         "se leen como una sola orden")
+
+
+# ─── 11. El lápiz del plano no se pinta en la foto ─────────────────────────
+#
+# El master pidió el armario CERRADO y en la foto salió, pintada encima, una
+# línea ROJA DISCONTINUA con el rótulo «Puerta 2» en rojo y una «M2» arriba:
+# las anotaciones del plano esquemático que se manda como referencia, copiadas
+# literalmente dentro de la fotografía. Y encima media fachada abierta.
+#
+# No fue el modelo desobedeciendo. Se le da un dibujo técnico y se le dice
+# «reprodúcelo EXACTAMENTE»; nadie le había dicho qué parte de ese dibujo es el
+# mueble y cuál es el lápiz del delineante.
+
+def test_la_anotacion_no_se_renderiza(ra):
+    r = ra.reglas_del_plano_esquematico()
+    assert "NEVER RENDER IT" in r, (
+        "no se prohíbe pintar la anotación: vuelven las líneas rojas y los "
+        "rótulos dentro de la foto")
+    for pieza in ("dimension lines", "dashed", "labels", "no text", "no digits"):
+        assert pieza in r, f"la anotación «{pieza}» no se nombra, y lo que no se nombra se copia"
+
+
+def test_se_nombra_el_fallo_concreto(ra):
+    r = ra.reglas_del_plano_esquematico()
+    assert "'Puerta 1'" in r and "M1" in r, (
+        "una regla abstracta sobre «anotaciones» se diluye; hay que nombrar "
+        "los rótulos que de verdad salieron pintados")
+    assert "red dashed line" in r
+
+
+def test_los_colores_del_plano_no_son_los_acabados(ra):
+    r = ra.reglas_del_plano_esquematico()
+    # Se comprueban las DOS mitades de la frase. Mirando solo el final,
+    # borrando la primera línea la prueba seguía en verde: la regla estaba
+    # medio rota y no se enteraba.
+    assert "colours are notation too" in r, (
+        "no se dice que los colores del plano también son lápiz")
+    assert "never the finishes" in r, (
+        "el ámbar del maletero o el rojo de las puertas acabarían siendo el "
+        "color del mueble")
+
+
+def test_con_todo_cerrado_no_se_ve_nada_del_interior(ra):
+    r = ra.reglas_de_puertas_y_cuerpos(2, 2, "hinged", 1000, todas_cerradas=True)
+    assert "ALL 2 DOORS ARE CLOSED" in r
+    assert "exactly what must be HIDDEN" in r, (
+        "el plano se dibuja con las puertas transparentes; sin decir que eso "
+        "es justo lo que hay que tapar, sale media fachada abierta")
+    assert "not one shelf, rail, drawer or garment visible" in r
+
+
+def test_con_una_puerta_abierta_no_se_manda_cerrar_todo(ra):
+    """La orden de cerrar todo solo aparece cuando se ha pedido cerrado."""
+    r = ra.reglas_de_puertas_y_cuerpos(2, 2, "hinged", 1000, todas_cerradas=False)
+    assert "ALL 2 DOORS ARE CLOSED" not in r, (
+        "se manda cerrar todo cuando el master ha pedido una puerta abierta")
+
+
+def test_el_render_del_configurador_avisa_de_la_anotacion():
+    ruta = os.path.join(BACKEND, "routes", "armarios.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+    assert "reglas_del_plano_esquematico()" in codigo, (
+        "el render del configurador ya no distingue mueble de anotación")
+    assert "{reglas_plano}" in codigo, (
+        "la regla se calcula y no se mete en el encargo")
+    assert "todas_cerradas=not doors_open" in codigo, (
+        "el encargo ya no sabe si se han pedido las puertas cerradas")
+
+
+# El plano que se manda como referencia no puede llevar letras ni rojo: lo que
+# no está en el dibujo no se puede copiar. La regla de arriba es el cinturón;
+# esto son los tirantes.
+def test_el_plano_de_referencia_no_lleva_letras_ni_rojo():
+    ruta = os.path.join(
+        os.path.dirname(BACKEND), "frontend", "src", "components", "Armarios.jsx")
+    if not os.path.exists(ruta):
+        pytest.skip("Armarios.jsx no está en este entorno")
+    with open(ruta, encoding="utf-8") as f:
+        jsx = f.read()
+    i = jsx.find("const generateBlueprintDataUrl")
+    j = jsx.find("canvas.toDataURL('image/png')", i)
+    assert i != -1 and j != -1, "ha desaparecido el plano de referencia para la IA"
+    plano = jsx[i:j]
+    assert "fillText" not in plano, (
+        "el plano que se manda a la IA vuelve a llevar rótulos; el modelo los "
+        "pinta dentro de la foto")
+    assert "#dc2626" not in plano, (
+        "vuelve el rojo al plano: una línea roja discontinua se lee como "
+        "anotación y sale pintada encima del mueble")
+    assert "setLineDash" not in plano, (
+        "vuelven las líneas discontinuas, que es exactamente lo que salió "
+        "cruzando la fotografía")

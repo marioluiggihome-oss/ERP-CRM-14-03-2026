@@ -2166,10 +2166,7 @@ const Armarios = ({ state, setState }) => {
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(mx, oy); ctx.lineTo(mx, oy + H); ctx.stroke();
         }
-        ctx.fillStyle = '#475569';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.fillText(`M${i + 1}`, mx + 4, oy + 14);
-
+        // Aquí iba un rótulo «M1», «M2»… Se ha quitado: ver la nota de arriba.
         const mod = moduleConfigs[i] || {};
         const layout = getModuleLayout(mod);
         const rows = layout.length || 1;
@@ -2177,11 +2174,12 @@ const Armarios = ({ state, setState }) => {
         layout.forEach((tok, j) => {
           const ry = oy + 18 + j * rowH;
           if (tok === 'maletero') {
-            ctx.fillStyle = '#fde68a';
-            ctx.fillRect(mx + 4, ry + 2, modW - 8, Math.min(18, rowH - 4));
-            ctx.fillStyle = '#92400e';
-            ctx.font = '9px sans-serif';
-            ctx.fillText('maletero', mx + 6, ry + 14);
+            // Caja del maletero: un rectángulo más, del mismo gris que el resto.
+            // Antes iba relleno de ámbar con la palabra «maletero» encima, y el
+            // modelo pintaba las dos cosas dentro de la foto.
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(mx + 4, ry + 2, modW - 8, Math.min(18, rowH - 4));
           } else if (tok === 'rod') {
             ctx.strokeStyle = '#64748b';
             ctx.lineWidth = 3;
@@ -2204,29 +2202,28 @@ const Armarios = ({ state, setState }) => {
         });
       }
 
-      // Puertas superpuestas (líneas rojas discontinuas + numeración)
+      // JUNTAS DE LAS PUERTAS: LÍNEAS DE MUEBLE, NO DE ANOTACIÓN.
+      //
+      // Aquí iban líneas ROJAS DISCONTINUAS que salían por arriba y por abajo
+      // del marco, y debajo «Puerta 1», «Puerta 2» en rojo. El master pidió el
+      // armario CERRADO y en la foto salió, pintada encima, la línea roja de
+      // puntos con el rótulo «Puerta 2» y la «M2» de arriba. El modelo no se
+      // equivocó: se le mandó un dibujo y se le dijo «reprodúcelo exactamente».
+      //
+      // Una junta entre dos puertas SÍ existe en el mueble real, así que se
+      // dibuja como lo que es: una línea continua, oscura y del alto exacto del
+      // frente. Copiada, sale bien. Roja, discontinua y con letras, salía como
+      // lo que parecía: una anotación pegada encima de la foto.
       const doorW = W / numDoors;
-      ctx.setLineDash([6, 4]);
-      ctx.strokeStyle = '#dc2626';
+      ctx.strokeStyle = '#334155';
       ctx.lineWidth = 2;
       for (let d = 1; d < numDoors; d++) {
         const dx = ox + d * doorW;
-        ctx.beginPath(); ctx.moveTo(dx, oy - 8); ctx.lineTo(dx, oy + H + 8); ctx.stroke();
-      }
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#dc2626';
-      ctx.font = 'bold 12px sans-serif';
-      for (let d = 0; d < numDoors; d++) {
-        ctx.fillText(`Puerta ${d + 1}`, ox + d * doorW + 6, oy + H + 22);
+        ctx.beginPath(); ctx.moveTo(dx, oy); ctx.lineTo(dx, oy + H); ctx.stroke();
       }
 
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(
-        `${width}×${height}×${depth}mm — ${numDoors} puertas ${doorType} — ${modules} módulos`,
-        ox, oy + H + 46
-      );
-
+      // NI UNA LETRA EN ESTE DIBUJO. Las medidas, el número de puertas y el de
+      // módulos van en el TEXTO del encargo, que el modelo no puede pintar.
       return canvas.toDataURL('image/png');
     } catch (e) {
       console.error('Error generando plano de referencia para IA:', e);
