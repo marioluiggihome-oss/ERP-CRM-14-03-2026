@@ -148,6 +148,53 @@ def prompt_croquis_armario(transcripcion: str = "", brief: str = "") -> str:
     )
 
 
+def reglas_de_puertas_y_cuerpos(n_puertas: int, n_cuerpos: int,
+                                tipo_puerta: str, ancho_mm) -> str:
+    """Las dos reglas que faltaban en el render del configurador de Armarios.
+
+    El master encargó DOS PUERTAS ABATIBLES en un armario de 1000 mm y volvió
+    esto: una puerta abatible abierta a la izquierda, un panel cerrado en el
+    centro que además parecía corredera, y un tercio del armario a la derecha
+    CON ESTANTERÍA A LA VISTA Y SIN PUERTA NINGUNA. Por dentro, cuatro o cinco
+    columnas de baldas donde había dos módulos.
+
+    Y era razonable: el encargo decía «EXACTLY 2 doors» y describía el interior,
+    pero en ninguna parte decía que esas dos puertas son TODO el frente. Sin esa
+    frase, «dos puertas» se puede cumplir poniendo dos puertas donde sea y
+    dejando el resto abierto — que es lo que hizo.
+
+    Se pone aparte del `routes/armarios.py` porque es una regla, no una ruta, y
+    así se puede probar sin levantar la aplicación.
+    """
+    tipo = (tipo_puerta or "").strip().lower()
+    contrario = {
+        "hinged": "sliding panels or bi-fold leaves",
+        "sliding": "hinged doors on visible hinges or bi-fold leaves",
+        "folding": "plain hinged doors or sliding panels",
+    }.get(tipo, "doors of any other type")
+    divisores = max(0, int(n_cuerpos) - 1)
+
+    return (
+        "\nFRONT COVERAGE — THIS RULE OVERRIDES THE OTHERS:\n"
+        f"- The {n_puertas} doors ARE the entire front of the wardrobe. Side by side they span "
+        f"the full {ancho_mm}mm from the left edge to the right edge, with no gap between them "
+        "and NO part of the front left uncovered.\n"
+        "- An OPEN door reveals what is behind THAT door. It does not delete the door, and it "
+        "does not turn its section into a permanently open shelving unit. Every part of the "
+        "front that is not the open door is a CLOSED door panel.\n"
+        "- NEVER render an open, doorless shelving bay beside the doors. If interior is visible "
+        "anywhere other than behind the door that is open, the image is WRONG.\n"
+        f"- All {n_puertas} doors are the SAME TYPE. This wardrobe has {tipo_puerta} doors: do "
+        f"NOT mix in {contrario}.\n"
+        "\nINTERIOR BAY COUNT:\n"
+        f"- Inside, the wardrobe is divided into EXACTLY {n_cuerpos} vertical bay(s) by "
+        f"{divisores} full-height vertical divider(s). Count them before you finish: "
+        f"{n_cuerpos}, not more.\n"
+        "- Never subdivide a bay into extra columns of shelves to fill the space, and never add "
+        "a bay that is not in the specification.\n"
+    )
+
+
 def es_armario(project_type: Optional[str], space_type: Optional[str]) -> bool:
     """¿Este croquis es de un armario?
 

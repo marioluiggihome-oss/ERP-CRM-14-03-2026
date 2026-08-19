@@ -446,3 +446,77 @@ def test_el_render_le_pasa_el_texto_a_la_lectura():
     assert "prompt_lectura(brief)" in lector, (
         "el lector recibe el texto y no lo usa, que es peor que no recibirlo: "
         "parece arreglado y no lo está")
+
+
+# ─── 10. El render del CONFIGURADOR: las puertas son todo el frente ────────
+#
+# El master encargó DOS PUERTAS ABATIBLES en un armario de 1000 mm. Volvió una
+# puerta abatible abierta a la izquierda, un panel cerrado en el centro que
+# encima parecía corredera, y un tercio del armario a la derecha CON LA
+# ESTANTERÍA A LA VISTA Y SIN PUERTA NINGUNA. Por dentro, cuatro o cinco
+# columnas de baldas donde había dos módulos.
+#
+# El encargo decía «EXACTLY 2 doors» y describía el interior, pero en ninguna
+# parte decía que esas dos puertas son TODO el frente. Sin esa frase, «dos
+# puertas» se cumple poniendo dos puertas donde sea y dejando el resto abierto.
+
+def test_las_puertas_cubren_todo_el_frente(ra):
+    r = ra.reglas_de_puertas_y_cuerpos(2, 2, "hinged", 1000)
+    assert "1000mm from the left edge to the right edge" in r, (
+        "no se dice que las puertas abarcan el ancho entero; «2 puertas» se "
+        "cumple poniéndolas donde sea")
+    assert "NO part of the front left uncovered" in r
+    assert "NEVER render an open, doorless shelving bay" in r, (
+        "falta la prohibición del hueco sin puerta, que es literalmente lo que "
+        "salió")
+
+
+def test_abrir_una_puerta_no_la_borra(ra):
+    r = ra.reglas_de_puertas_y_cuerpos(3, 3, "sliding", 2400)
+    assert "It does not delete the door" in r, (
+        "sin esto, la puerta abierta se convierte en un hueco de estantería "
+        "permanente y el armario pierde una hoja")
+
+
+@pytest.mark.parametrize("tipo,no_debe", [
+    ("hinged", "sliding panels"),
+    ("sliding", "hinged doors"),
+    ("folding", "sliding panels"),
+])
+def test_no_se_mezclan_tipos_de_puerta(ra, tipo, no_debe):
+    r = ra.reglas_de_puertas_y_cuerpos(2, 2, tipo, 1000)
+    assert "SAME TYPE" in r and no_debe in r, (
+        f"con puertas «{tipo}» no se prohíbe meter {no_debe}; salió una "
+        "abatible y una corredera en el mismo armario")
+
+
+@pytest.mark.parametrize("cuerpos,divisores", [(1, 0), (2, 1), (4, 3)])
+def test_se_cuentan_los_cuerpos_y_sus_divisores(ra, cuerpos, divisores):
+    r = ra.reglas_de_puertas_y_cuerpos(2, cuerpos, "hinged", 1000)
+    assert f"EXACTLY {cuerpos} vertical bay" in r
+    assert f"{divisores} full-height vertical divider" in r, (
+        f"{cuerpos} cuerpos llevan {divisores} divisores; si la cuenta no "
+        "cuadra, el modelo mete los que le parezca")
+    assert f"Count them before you finish: {cuerpos}" in r, (
+        "falta el recuento final, que es lo único comprobable antes de dibujar")
+
+
+def test_el_render_del_configurador_usa_estas_reglas():
+    ruta = os.path.join(BACKEND, "routes", "armarios.py")
+    with open(ruta, encoding="utf-8") as f:
+        codigo = f.read()
+    assert "reglas_de_puertas_y_cuerpos(" in codigo, (
+        "el render del configurador de Armarios ya no usa las reglas del "
+        "frente; vuelve a poder salir un armario con un lado sin puerta")
+    assert "{reglas_frente}" in codigo, (
+        "las reglas se calculan y no se meten en el encargo: parece arreglado "
+        "y no lo está")
+    # El bloque de verdad, no la mención a «DOORS - CRITICAL» que hay dentro
+    # del texto del plano: buscando la primera aparición se medía desde el
+    # sitio equivocado y la prueba se quejaba de un código que estaba bien.
+    i = codigo.find("DOORS - CRITICAL - PAY ATTENTION:")
+    j = codigo.find("{reglas_frente}", i)
+    assert i != -1, "ha desaparecido el bloque de PUERTAS del encargo"
+    assert j != -1 and j - i < 700, (
+        "las reglas del frente se han separado del bloque de PUERTAS; juntas "
+        "se leen como una sola orden")

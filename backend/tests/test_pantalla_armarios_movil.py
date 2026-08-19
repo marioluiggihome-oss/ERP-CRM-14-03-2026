@@ -275,3 +275,33 @@ def test_el_area_del_render_no_empuja_el_boton_fuera(fuente):
     assert "min-h-[220px] sm:min-h-[400px]" in fuente, (
         "el hueco del render vuelve a pedir 400 px de alto en un móvil: entre "
         "la cabecera y ese hueco, el botón de abajo se va de la pantalla")
+
+
+# ─── 7. El precio privado no se enseña ─────────────────────────────────────
+#
+# «No debe verse el precio privado con el descuento.» El importe ya se tapaba
+# con «•••» hasta pulsar el ojo, pero el rótulo iba diciendo «Precio
+# distribución (−45%)» a la vista de todos. Con ese porcentaje y el PVP, que sí
+# se ve, el neto de distribución se saca de cabeza: era un candado con la llave
+# puesta al lado. Un cliente sentado enfrente de la pantalla no tiene que saber
+# a cuánto compra la distribución.
+
+def test_el_descuento_solo_se_ve_con_el_precio_destapado(fuente):
+    i = fuente.find("Precio distribución")
+    assert i != -1, "ha desaparecido la línea del precio de distribución"
+    linea = fuente[fuente.rfind("<span", 0, i):fuente.find("</span>", i)]
+    assert "showCost &&" in linea, (
+        "el porcentaje de descuento se pinta siempre; tapar el importe y "
+        f"enseñar el −45% no tapa nada. Línea: {linea.strip()[:160]}")
+
+
+def test_el_importe_sigue_tapado_hasta_pulsar(fuente):
+    """Lo que ya estaba bien no se rompe al arreglar lo de al lado."""
+    assert "{showCost ? `${pricing.distNetTotal.toFixed(2)} €` : '•••'}" in fuente, (
+        "el importe del precio de distribución ha dejado de taparse")
+
+
+def test_el_precio_privado_sigue_bajo_permiso(fuente):
+    assert "const canSeeCost = state?.currentUser?.isAdmin === true" in fuente, (
+        "quien puede ver el precio de distribución ya no depende del permiso "
+        "del usuario")

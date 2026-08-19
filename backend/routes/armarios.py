@@ -575,6 +575,15 @@ CONSISTENCY REFERENCE (LAST IMAGE) - THIS IS MANDATORY:
   wardrobe photographed again, not a different design.
 """
 
+        # LAS PUERTAS SON TODO EL FRENTE, Y LOS CUERPOS SE CUENTAN. Ver
+        # `render_armario.reglas_de_puertas_y_cuerpos`: sin estas dos reglas, un
+        # encargo de «2 puertas abatibles» volvía con una puerta abierta, otra
+        # cerrada y un tercio del armario sin puerta ninguna.
+        from services.luiggi_ai.render_armario import reglas_de_puertas_y_cuerpos
+        reglas_frente = reglas_de_puertas_y_cuerpos(
+            n_puertas=doors_count, n_cuerpos=request.modules,
+            tipo_puerta=request.doorType, ancho_mm=request.width)
+
         prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
 
 CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY. This is a technical product
@@ -593,6 +602,7 @@ DOORS - CRITICAL - PAY ATTENTION:
 - Door color/finish: {request.exteriorColorName} (hex: {request.exteriorColorHex})
 - Handle/knob style: {request.handleColorName} color handles
 - {doors_state_desc}
+{reglas_frente}
 
 COLORS - MATCH EXACTLY:
 - EXTERIOR FINISH (doors): {request.exteriorColorName} (hex color: {request.exteriorColorHex})

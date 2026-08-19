@@ -3720,13 +3720,22 @@ const Armarios = ({ state, setState }) => {
                 <span className="text-slate-400">IVA ({ivaRate}%)</span>
                 <span className="text-slate-400 tabular-nums">{pricing.iva.toFixed(2)} €</span>
               </div>
+              {/* EL DESCUENTO ES TAN PRIVADO COMO EL IMPORTE.
+                  El importe se tapaba con «•••» hasta pulsar el ojo, pero el
+                  rótulo iba diciendo «Precio distribución (−45%)» a la vista de
+                  todos. Con esa cifra y el PVP, que sí se ve, el descuento de
+                  red se calcula de cabeza: taparlo era un candado con la llave
+                  puesta al lado. Un cliente sentado enfrente de la pantalla no
+                  tiene que saber a cuánto compra la distribución. */}
               {canSeeCost && (
                 <div className="pt-2.5 border-t border-slate-100 flex justify-between items-center">
                   <button type="button" onClick={() => setShowCost(v => !v)}
                     className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 transition-colors"
-                    title={`${showCost ? 'Ocultar' : 'Ver'} precio de distribución.${pricing.distDiscountPct > 0 ? ` El −${pricing.distDiscountPct}% es el descuento de red de distribución de tu ficha de usuario (Ajustes › Usuarios).` : ''}`}>
+                    title={showCost
+                      ? `Ocultar precio de distribución.${pricing.distDiscountPct > 0 ? ` El −${pricing.distDiscountPct}% es el descuento de red de distribución de tu ficha de usuario (Ajustes › Usuarios).` : ''}`
+                      : 'Ver precio de distribución'}>
                     {showCost ? <EyeOff size={13} /> : <Eye size={13} />}
-                    <span className="text-xs font-medium">Precio distribución{pricing.distDiscountPct > 0 ? ` (−${pricing.distDiscountPct}%)` : ''}</span>
+                    <span className="text-xs font-medium">Precio distribución{showCost && pricing.distDiscountPct > 0 ? ` (−${pricing.distDiscountPct}%)` : ''}</span>
                   </button>
                   <span className="font-semibold text-slate-900 tabular-nums">{showCost ? `${pricing.distNetTotal.toFixed(2)} €` : '•••'}</span>
                 </div>
