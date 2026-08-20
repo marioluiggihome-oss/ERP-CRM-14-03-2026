@@ -3656,9 +3656,15 @@ export default function AIRenderStudio({ state, setState }) {
                   su propia columna: el contenedor de arriba solo reparte entre
                   ESTA columna y la barra de acciones. */}
               <div className="flex-1 min-w-0 order-1 flex flex-col gap-2 min-h-0">
-              {/* Comparativa referencia vs render */}
+              {/* Comparativa referencia vs render. Mientras está puesta, todo lo
+                  que iba debajo —lectura, relación de muebles, caja de edición e
+                  historial— se esconde: este botón se pulsa para poner el dibujo
+                  al lado del render y mirarlos, y lo de abajo les robaba el alto.
+                  Alto mínimo, además, porque «lo que sobre» puede ser cero: ya
+                  pasó dos veces con el render en el móvil apaisado, y un visor
+                  que se queda en nada no da error, sencillamente no se ve. */}
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
-                <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 min-h-0">
+                <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 min-h-[45vh]">
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
                     {(originalRef || refImage).startsWith('data:image') ? (
                       <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
@@ -3974,8 +3980,11 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               )}
 
-              {/* Editar el render en lenguaje natural (con dictado y elemento por imagen) */}
-              {currentImage() && (
+              {/* Editar el render en lenguaje natural (con dictado y elemento por imagen).
+                  En la COMPARATIVA no: ese botón se pulsa para poner tu dibujo al
+                  lado del render y mirarlos, y todo lo que va debajo les quita
+                  alto. Vuelve al salir de la comparativa. */}
+              {currentImage() && !compareOn && (
                 <div className="shrink-0 flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2 flex-wrap">
                   <Wand2 size={16} className="text-purple-500 shrink-0 ml-1" />
                   {/* Miniatura del elemento subido (a copiar en la cocina) */}
@@ -4032,7 +4041,7 @@ export default function AIRenderStudio({ state, setState }) {
               )}
 
               {/* Info del render */}
-              {renderResult?.duration_seconds && (
+              {renderResult?.duration_seconds && !compareOn && (
                 <div className="shrink-0 flex items-center gap-4 text-xs text-slate-500">
                   <span>Tiempo: {renderResult.duration_seconds}s</span>
                   {renderResult?.parsed_params?.layout && (
@@ -4071,7 +4080,7 @@ export default function AIRenderStudio({ state, setState }) {
                   lo leído. Sin esto no hay forma de saber cuál de los dos es, y
                   se acaba apretando el prompt a ciegas —que es exactamente lo
                   que pasó cuatro veces seguidas con la misma cocina—. */}
-              {renderResult?.parsed_params?.lecturaDelDibujo && (
+              {renderResult?.parsed_params?.lecturaDelDibujo && !compareOn && (
                 renderResult.parsed_params.lecturaEstructurada === false ? (
                   /* CAERSE AL METODO VIEJO SE TIENE QUE VER. Antes, cuando la
                      lectura a ficha fallaba, este recuadro simplemente NO
@@ -4102,7 +4111,7 @@ export default function AIRenderStudio({ state, setState }) {
                   segunda interpretación, y está probado contra el intérprete
                   de verdad del presupuesto: un botón de copiar que produce
                   texto que luego no pega es peor que no tener botón. */}
-              {renderResult?.parsed_params?.relacionMV && (
+              {renderResult?.parsed_params?.relacionMV && !compareOn && (
                 <div className="shrink-0 mt-2 text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="font-bold text-slate-600">
@@ -4193,7 +4202,7 @@ export default function AIRenderStudio({ state, setState }) {
           )}
 
           {/* Historial de renders: tira horizontal compacta */}
-          {renderHistory.length > 0 && !isGenerating && (
+          {renderHistory.length > 0 && !isGenerating && !compareOn && (
             <div className="tira-historial shrink-0 border-t border-slate-200 pt-2 mt-1">
               <div className="titulo-historial flex items-center gap-1.5 mb-1.5 flex-wrap">
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">

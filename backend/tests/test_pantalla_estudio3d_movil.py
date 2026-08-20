@@ -32,6 +32,8 @@ pantalla grande todo se queda como estaba.
 """
 import os
 
+import pytest
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ESTUDIO = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
 
@@ -178,3 +180,72 @@ def test_colocar_y_arrastrar_una_marca_miden_LO_MISMO():
     assert "render-annot-img" in cuerpo, (
         "el arrastre de marcas vuelve a medir sobre el recuadro y no sobre la "
         "imagen: los enchufes se moveran a donde no van")
+
+
+# ─── LA COMPARATIVA ENSEÑA SOLO LAS DOS IMÁGENES ───────────────────────────
+#
+# «Cuando le doy al botón de ver diseño y dibujo subido, a veces sale la
+# relación de muebles.»
+#
+# Y el «a veces» tenía explicación exacta: la comparativa sustituía SOLO el
+# visor del render, pero todo lo que iba debajo —el recuadro «Leído del
+# dibujo», la relación de muebles, la caja de edición y la tira del historial—
+# quedaba fuera de ese cambio y se seguía pintando. Salía «a veces» porque la
+# relación solo existe cuando el render vino de leer un croquis de COCINA: un
+# armario, una edición o un render escrito no la traen.
+#
+# Ese botón se pulsa para poner el dibujo al lado del render y mirarlos. Todo
+# lo demás les quita alto, que es justo lo que no sobra en un móvil.
+
+def _fuente_estudio():
+    ruta = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "frontend", "src", "components", "AIRenderStudio.jsx")
+    if not os.path.exists(ruta):
+        pytest.skip("AIRenderStudio.jsx no está en este entorno")
+    with open(ruta, encoding="utf-8") as f:
+        return f.read()
+
+
+# El ancla de cada bloque tiene que ser ÚNICA en el fichero. `{currentImage() &&`
+# sale dos veces y la primera no es la caja de edición: buscando a ciegas, esta
+# prueba miraba el bloque equivocado y pasaba en verde con el arreglo sin hacer.
+@pytest.mark.parametrize("bloque,ancla", [
+    ("la relación de muebles", "{renderResult?.parsed_params?.relacionMV &&"),
+    ("el recuadro «Leído del dibujo»", "{renderResult?.parsed_params?.lecturaDelDibujo &&"),
+    ("la caja de edición", "lenguaje natural (con dictado y elemento por imagen)"),
+    ("la info del render", "{renderResult?.duration_seconds &&"),
+    ("la tira del historial", "{renderHistory.length > 0 && !isGenerating &&"),
+])
+def test_la_comparativa_no_arrastra_lo_de_debajo(bloque, ancla):
+    fuente = _fuente_estudio()
+    assert fuente.count(ancla) == 1, (
+        f"el ancla de {bloque} sale {fuente.count(ancla)} veces en el fichero; "
+        "una prueba que busca a ciegas puede estar mirando otro sitio")
+    i = fuente.find(ancla)
+    # La condición del bloque: desde el ancla hasta el primer `(` de apertura.
+    trozo = fuente[i:i + 400]
+    condicion = trozo[:trozo.find("(\n")] if "(\n" in trozo else trozo[:200]
+    assert "!compareOn" in condicion, (
+        f"{bloque} se sigue pintando en la comparativa y le roba alto a las dos "
+        f"imágenes, que es a lo que se entra. Condición: {condicion.strip()[:120]}")
+
+
+def test_la_comparativa_tiene_alto_minimo():
+    fuente = _fuente_estudio()
+    i = fuente.find("{compareOn && (originalRef || refImage)")
+    assert i != -1, "ha desaparecido la comparativa"
+    bloque = fuente[i:i + 400]
+    assert "min-h-[" in bloque, (
+        "la comparativa reparte «el alto que sobre», y lo que sobra puede ser "
+        "cero: sin alto mínimo el visor se queda en nada, igual que pasó dos "
+        "veces con el render en el móvil apaisado")
+
+
+def test_las_dos_imagenes_siguen_una_al_lado_de_la_otra():
+    """Apiladas dejarían de ser una comparativa."""
+    fuente = _fuente_estudio()
+    i = fuente.find("{compareOn && (originalRef || refImage)")
+    bloque = fuente[i:i + 400]
+    assert "grid-cols-2" in bloque, (
+        "el dibujo y el render se han apilado; comparar es verlos al lado")
