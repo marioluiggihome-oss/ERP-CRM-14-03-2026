@@ -4,6 +4,28 @@
 # escrita del titular.
 """CANDADO del presupuestador de ARMARIOS en el móvil.
 
+QUÉ COMPRUEBA ESTE FICHERO Y QUÉ NO (puesto al día el 23/08/2026)
+-----------------------------------------------------------------
+Esto lee el JSX y comprueba que estén las clases: `max-lg:flex-col`,
+`shrink-0`, `max-lg:overflow-x-auto`. Es barato y caza un borrado accidental
+en un segundo, y por eso sigue aquí.
+
+Lo que NO puede hacer es responder a la pregunta de verdad —«¿CABE?»—, porque
+un nombre de clase no mide nada. Tampoco lo arreglaría jsdom: no tiene motor
+de layout, así que por ahí sólo se pueden mirar los mismos nombres de clase
+con otra sintaxis.
+
+Eso se mide ahora en `frontend/e2e/armarios-movil.spec.js`, con un navegador
+de verdad y un viewport de 390 px: se le preguntan al navegador los
+rectángulos. Ahí está comprobado, con números, que los nueve botones conservan
+su ancho, que la tira se desliza y que deslizarla trae el último botón dentro
+de la pantalla, y que el armario queda DEBAJO de la configuración y no al lado
+—que sin `max-lg:flex-col` acaba en x=410 con una pantalla de 390, o sea fuera
+y sin manera de llegar a él—.
+
+Las dos cosas se llevan bien: si alguien borra una clase, salta ésta en un
+segundo; si alguien la deja pero rompe el layout de otra manera, salta la otra.
+
 El master trabaja este módulo sobre todo con el teléfono, y en el teléfono no
 fallaba nada: sencillamente no se podía usar. Un módulo que no da error pero no
 deja trabajar es peor que uno que revienta, porque nadie abre una incidencia —

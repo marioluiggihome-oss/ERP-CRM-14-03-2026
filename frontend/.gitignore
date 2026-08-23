@@ -21,3 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Pruebas de pantalla (Playwright): rastros y capturas de un fallo concreto.
+# Se suben como artefacto del CI cuando hacen falta; en el repo no pintan nada.
+/test-results/
+/playwright-report/

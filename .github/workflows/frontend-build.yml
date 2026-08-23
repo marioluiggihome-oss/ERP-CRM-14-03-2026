@@ -54,3 +54,33 @@ jobs:
 
       - name: Compilar (yarn build)
         run: yarn build
+
+      # ── PRUEBAS DE PANTALLA, EN UN NAVEGADOR DE VERDAD ────────────────────
+      #
+      # Lo que comprueban es LAYOUT: si los nueve botones de Armarios caben en
+      # un movil de 390 px, si la botonera se desliza, si el armario queda
+      # debajo de la configuracion o al lado (o sea, fuera de la pantalla).
+      #
+      # Eso NO se puede comprobar leyendo el JSX ni con jsdom, que no tiene
+      # motor de layout: por ahi solo se pueden mirar nombres de clases CSS.
+      # Las de `backend/tests/test_pantalla_*.py` hacen eso y siguen sirviendo
+      # —cazan un borrado en un segundo—, pero la VERDAD sobre si algo cabe la
+      # da un navegador con un viewport de verdad, y es esta.
+      #
+      # Se prueba sobre `build/`, que es lo que llega al movil del master, no
+      # sobre el servidor de desarrollo. Todo el backend va simulado: ninguna
+      # prueba de pantalla puede depender de que haya un Mongo levantado, o no
+      # se ejecutaria aqui — y una prueba que no se ejecuta no protege nada.
+      - name: Instalar Chromium para las pruebas de pantalla
+        run: npx playwright install --with-deps chromium
+
+      - name: Pruebas de pantalla (Playwright)
+        run: yarn test:e2e
+
+      - name: Guardar el rastro si alguna falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rastro-pruebas-pantalla
+          path: frontend/test-results/
+          retention-days: 7

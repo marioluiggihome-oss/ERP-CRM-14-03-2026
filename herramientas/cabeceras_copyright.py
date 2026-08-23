@@ -59,7 +59,12 @@ COMENTARIO = {
 }
 
 # Solo se firma lo que escribimos nosotros.
-CARPETAS = ("backend", "frontend/src", "scripts", "herramientas")
+#
+# `frontend/e2e` son las pruebas de pantalla en navegador. Van aparte de
+# `frontend/src` a proposito —no forman parte de lo que se compila y se sirve—
+# pero son codigo nuestro igual que el resto, y si no estuvieran en esta lista
+# entraria ahi un fichero sin aviso sin que nadie se enterase.
+CARPETAS = ("backend", "frontend/src", "frontend/e2e", "scripts", "herramientas")
 
 
 def _es_tercero(rel: str) -> bool:
