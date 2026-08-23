@@ -26,10 +26,11 @@ NO todas pesan igual (lo dijo el master el 06/08):
 
 · **IA 1 es la de producción.** Es la que usa para los clientes y la que tiene
   que ser fiel al boceto. Su modelo NO se toca. Cierre duro.
-· IA 2, IA 3 e IA 4 son motores de PRUEBAS del master, para comparar y mejorar.
+· IA 3, IA 4 e IA 7 son motores de PRUEBAS del master, para comparar y mejorar.
   Ahí puede cambiar lo que quiera — pero que el cambio se vea, no que aparezca
   solo. Por eso la prueba también los mira: no para prohibir, para que quien lo
   cambie tenga que decirlo aquí y el master se entere.
+  (IA 2 se apagó el 18/08; su candado es `test_calculo_ia2_apagada.py`.)
 
 Para cambiar un modelo: pedírselo al master, y actualizar este fichero a
 propósito y dejando constancia.
@@ -46,6 +47,19 @@ RENDER = os.path.join(RAIZ, "backend", "services", "luiggi_ai", "render_3d.py")
 MODELO_PRINCIPAL = "gemini-2.5-flash-image"
 # Modelo de IA 3 en Replicate. Pro, no Schnell.
 MODELO_FLUX = "black-forest-labs/flux-1.1-pro"
+# Modelo de IA 7 (Nano Banana Pro), puesto por el master el 18/08: «ponlo en la
+# IA 7 con banana pro». Se deja escrito AQUI porque es lo que pide la regla 10
+# de CLAUDE.md, y porque es justo el modelo que este fichero prohíbe en IA 1.
+#
+# Las dos cosas son verdad a la vez y conviene entender por qué:
+#   · En IA 1 está PROHIBIDO. IA 1 es producción: tiene que salir la cocina del
+#     cliente, y este modelo es más "creativo" —más bonito, menos fiel—.
+#   · En IA 7 está PUESTO A PROPÓSITO. IA 7 es el banco de pruebas del master:
+#     mismo encargo que IA 1, solo cambia el modelo, para poder comparar.
+# Entra por `model_override` en `render_3d.py`, NO por la cascada de
+# `llm_vision.py`. Esa distinción es la que hace que las dos cosas convivan, y
+# por eso hay abajo una prueba que la vigila.
+MODELO_IA7_PRO = "gemini-3-pro-image-preview"
 
 
 def _leer(ruta):
@@ -83,6 +97,49 @@ def test_el_modelo_creativo_no_se_cuela_por_delante():
     assert "gemini-3-pro-image-preview" not in modelos, (
         "gemini-3-pro-image-preview ha vuelto a la cascada: es más 'creativo' e "
         "ignora el layout, o sea que se inventa la distribución del cliente")
+
+
+def test_ia7_usa_el_modelo_pro_y_solo_por_override():
+    """AVISO — IA 7 es el banco de pruebas del master, no producción.
+
+    El 18/08 el master pidió «ponlo en la IA 7 con banana pro». Queda escrito
+    aquí, que es lo que manda la regla 10: en IA 2/3/4/7 el master cambia de
+    modelo cuando quiera, pero el cambio se escribe y así no aparece solo.
+
+    Y se comprueba una cosa más, que es la que de verdad importa: que este
+    modelo entra por `model_override` y NO por la cascada de `llm_vision.py`.
+    Es lo único que separa «el master lo ha elegido para comparar» de «se ha
+    colado en producción y ahora IA 1 se inventa la distribución»."""
+    fuente = _leer(RENDER)
+    assert MODELO_IA7_PRO in fuente, (
+        f"IA 7 ya no usa {MODELO_IA7_PRO}. Si el master lo ha cambiado, que "
+        f"quede escrito aquí; si se ha cambiado solo, esto es el aviso.")
+    assert f'model_override="{MODELO_IA7_PRO}"' in fuente, (
+        f"{MODELO_IA7_PRO} ya no entra por `model_override`. Como entre por la "
+        f"cascada, se convierte en el respaldo de IA 1 y el día que falle el "
+        f"principal la cocina del cliente deja de ser la del cliente.")
+
+
+def test_el_modelo_pro_no_se_escapa_de_IA_7():
+    """CANDADO DURO — el Pro se queda donde el master lo puso, y en ningún
+    sitio más.
+
+    La prueba de arriba mira que IA 7 lo tenga; esta mira que NADIE MÁS lo
+    tenga. Sin ella bastaría con que alguien copiase la línea del
+    `model_override` al render de IA 1 «para probar»: las dos pruebas seguirían
+    en verde y producción se habría movido de modelo."""
+    fuente = _leer(RENDER)
+    apariciones = re.findall(rf'"{re.escape(MODELO_IA7_PRO)}"', fuente)
+    assert len(apariciones) == 1, (
+        f"{MODELO_IA7_PRO} aparece {len(apariciones)} veces en render_3d.py y "
+        f"solo puede aparecer UNA, la de IA 7. Cada copia extra es un camino "
+        f"por el que el modelo creativo llega a un cliente.")
+    # Y en el trozo de IA 7, no en el de otro.
+    ini = fuente.index('if provider == "banana_pro"')
+    fin = fuente.index("if provider ==", ini + 10)
+    assert MODELO_IA7_PRO in fuente[ini:fin], (
+        f"{MODELO_IA7_PRO} ya no está dentro de la rama de IA 7: se ha movido "
+        f"a otro motor")
 
 
 def test_ia3_usa_flux_pro_y_no_la_version_barata():

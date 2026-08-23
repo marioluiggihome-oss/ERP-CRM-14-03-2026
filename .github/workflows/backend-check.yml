@@ -37,6 +37,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
 
       - name: Compilar todos los .py del backend
         run: python -m compileall -q backend
@@ -59,24 +61,62 @@ jobs:
       # Pruebas de CALCULO: precios, creditos y pedidos. Son las que protegen el
       # dinero, asi que se ejecutan en cada push. No necesitan Mongo ni red: la
       # base de datos se sustituye por un doble en memoria.
-      - name: Pruebas de calculo (pytest)
+      #
+      # Y pruebas de PANTALLA (`test_pantalla_*.py`), que hasta el 23/08 NO LAS
+      # CORRIA NADIE: el CI solo miraba `test_calculo_*`. Eran 129 candados
+      # escritos y sin vigilar, y entre ellos el de la regla 8 —Rentabilidad
+      # solo del master—, que es justo el que la propia regla pide que no sea
+      # de adorno.
+      - name: Pruebas de calculo y de pantalla (pytest)
         run: |
-          # fastapi hace falta porque las pruebas cargan los routers reales
-          # (render_packs, ai_engine) para comprobar los codigos 400/403/503.
-          # Mongo, Stripe, httpx y python-multipart si van simulados dentro de
-          # las pruebas: no se instalan.
-          # pypdf/pypdfium2/reportlab son dependencias REALES del backend y las
-          # pruebas de lectura de PDF se saltan solas si no estan: sin ellas el
-          # CI daria verde sin haber comprobado el importador de la plantilla MV,
-          # que es de donde sale el presupuesto.
-          python -m pip install --quiet pytest fastapi pypdf pypdfium2 reportlab pillow
-          python -m pytest backend/tests/test_calculo_*.py -q
+          # SE INSTALAN LAS DEPENDENCIAS DE VERDAD, NO UNA LISTA A MANO.
+          #
+          # Hasta el 23/08 aqui habia seis paquetes elegidos a dedo, con la idea
+          # de que "Mongo, Stripe, httpx y python-multipart van simulados en las
+          # pruebas". De los cuatro solo era cierto en dos, y el CI del backend
+          # estuvo EN ROJO desde el 13/08: diez dias y 28 commits entrando en
+          # main con la red de seguridad caida, sin que nadie lo viera porque el
+          # rojo ya era el color de siempre.
+          #
+          # Una lista a mano no puede funcionar: hay pruebas que cargan el
+          # BACKEND ENTERO a proposito —`test_calculo_arranque_sin_base_de_datos`
+          # arranca `server.py` en otro proceso para comprobar que el ERP levanta
+          # con Mongo caido, y `test_pantalla_plan_negocio_solo_master` importa
+          # los routers reales para comprobar que por ahi no pasa nadie que no
+          # sea el master—. Esas necesitan el arbol de imports completo, y cada
+          # vez que alguien añadia un import la lista se quedaba corta y el CI
+          # petaba por una razon que no tenia nada que ver con el cambio.
+          #
+          # Con requirements.txt eso no puede volver a pasar, y ademas se prueba
+          # contra las MISMAS versiones que corren en Railway (pytest incluido:
+          # va pineado ahi dentro). El cache de pip lo deja en segundos a partir
+          # de la segunda vez.
+          #
+          # Se quitan DOS lineas, y solo dos:
+          #   · `emergentintegrations`, que vive en un indice privado y solo
+          #     existe dentro de la plataforma Emergent. En Railway TAMPOCO
+          #     esta —el propio `server.py` lo dice: "using fallback for
+          #     Railway"— y todos sus imports estan dentro de try/except. O sea
+          #     que quitarlo no aleja el CI de produccion: lo acerca.
+          #   · su `--extra-index-url`, que sin el paquete no pinta nada. Asi el
+          #     CI no depende de que un CDN de terceros este en pie para poder
+          #     decir si nuestro codigo esta bien.
+          grep -v -e '^--extra-index-url' -e '^emergentintegrations' \
+            backend/requirements.txt > /tmp/req-ci.txt
+          python -m pip install --quiet -r /tmp/req-ci.txt
+          # Se corre UNA sola vez y se guarda la salida: antes se lanzaba la
+          # misma suite dos veces (una para el resultado y otra para cazar los
+          # "skipped"), que es el doble de CI para la misma comprobacion.
+          set -o pipefail
+          python -m pytest \
+            backend/tests/test_calculo_*.py \
+            backend/tests/test_pantalla_*.py \
+            -q 2>&1 | tee /tmp/pt.log
 
       # Ninguna prueba puede quedarse fuera por falta de librerias: si alguna se
       # salta, el CI no esta comprobando lo que cree comprobar.
       - name: Ninguna prueba saltada por falta de dependencias
         run: |
-          python -m pytest backend/tests/test_calculo_*.py -q 2>&1 | tee /tmp/pt.log
           if grep -qE '[0-9]+ skipped' /tmp/pt.log; then
             echo "::error::hay pruebas saltadas; falta alguna dependencia en el CI"
             exit 1

@@ -309,3 +309,70 @@ def test_sin_medida_escrita_la_tabla_sigue_mandando(geom):
     assert _placa(r)["ancho"] == 60, (
         f"una placa SIN cota escrita ya no cae al ancho de catalogo (60) sino "
         f"a {_placa(r)['ancho']} cm: se reparte como si fuera un mueble mas")
+
+
+# ─── Una cota dice DE DÓNDE SALE, o no se escribe ────────────────────────────
+#
+# 23/08/2026, auditoría. El alzado rotulaba «~60» tres veces por motivos
+# distintos, y una de ellas era mentira: cuando un módulo llegaba sin ancho, el
+# código ponía 60 de respaldo para poder dibujar algo y luego lo rotulaba como
+# si fuera una estimación LEÍDA DEL DIBUJO. Nadie había medido ni deducido ese
+# 60. Y el «~» hacía daño en vez de ayudar: le daba credibilidad de estimación
+# a un número de relleno.
+#
+# La regla 7 de CLAUDE.md no admite matices: lo que no se sabe va vacío o con
+# «?». Este papel va a fábrica.
+
+def test_una_medida_escrita_se_rotula_a_secas(geom):
+    """Un número que puso el cliente es un DATO: ni «~» ni nada."""
+    ancho, cota, origen = geom.cota_de_ancho({"ancho": 90, "medida_escrita": True})
+    assert (ancho, cota, origen) == (90, "90", "escrita")
+
+
+def test_un_ancho_derivado_se_rotula_con_virgulilla(geom):
+    """Lo cuadró el validador contra la pared real: estimación con fundamento."""
+    ancho, cota, origen = geom.cota_de_ancho({"ancho": 60})
+    assert (ancho, cota, origen) == (60, "~60", "estimada")
+
+
+def test_un_modulo_sin_ancho_NO_se_rotula_con_un_numero(geom):
+    """CANDADO de la regla 7: lo que no se sabe se dice, no se rellena."""
+    ancho, cota, origen = geom.cota_de_ancho({})
+    assert cota == "?", (
+        f"un módulo sin ancho se está rotulando «{cota}». Ese número no lo ha "
+        f"medido ni deducido nadie: es el valor de respaldo del código, y va "
+        f"impreso en un plano que se manda a cortar.")
+    assert origen == "sin_dato"
+    assert ancho == geom.ANCHO_DIBUJO_SIN_DATO, (
+        "el módulo tiene que seguir DIBUJÁNDOSE —un alzado con un hueco tampoco "
+        "sirve—: lo que no puede es escribirse la cota")
+
+
+def test_un_ancho_a_cero_tampoco_cuela(geom):
+    """0 no es una medida; es la forma habitual de que llegue un hueco vacío."""
+    _, cota, origen = geom.cota_de_ancho({"ancho": 0})
+    assert (cota, origen) == ("?", "sin_dato")
+
+
+def test_dibujar_y_rotular_son_DOS_cosas(geom):
+    """El fondo del asunto: se dibuja con 60 y se rotula «?». A la vez."""
+    ancho, cota, _ = geom.cota_de_ancho({"ancho": None})
+    assert ancho > 0 and cota == "?", (
+        "o se dibuja y no se rotula, o se ha vuelto a confundir el ancho de "
+        "dibujo con la medida del mueble")
+
+
+def test_el_alzado_pinta_la_cota_que_diga_el_helper(geom):
+    """Que la ruta USE esto, no que lo copie.
+
+    Un helper probado y una ruta que decide por su cuenta es tener la regla
+    escrita en dos sitios, o sea tenerla en ninguno."""
+    ruta = os.path.join(BACKEND, "routes", "estudio_cocinas.py")
+    with open(ruta, encoding="utf-8") as f:
+        fuente = f.read()
+    assert "cota_de_ancho(e)" in fuente, \
+        "el alzado ha vuelto a decidir la cota por su cuenta"
+    i = fuente.index("cota_de_ancho(e)")
+    alrededor = fuente[i - 400:i + 400]
+    assert 'or 60' not in alrededor, \
+        "ha vuelto el ancho de respaldo a mano al lado del helper"

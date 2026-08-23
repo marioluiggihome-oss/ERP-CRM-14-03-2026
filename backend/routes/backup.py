@@ -202,7 +202,10 @@ def cleanup_old_backups(keep_count=7):
 
 MONGO_URL = os.environ.get('MONGO_URL')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-BACKUP_DIR = '/app/backups'
+# Mismo sitio y mismo interruptor que `services/backup_service.py`: si se
+# cambia uno hay que cambiar el otro, o las copias se escriben en una
+# carpeta y se listan desde otra.
+BACKUP_DIR = os.environ.get('BACKUP_DIR') or '/app/backups'
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):

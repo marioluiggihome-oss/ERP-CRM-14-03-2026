@@ -276,6 +276,41 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
     }
 
 
+# Ancho de dibujo cuando un módulo llega sin ancho. NO es una medida: es lo que
+# se pinta para que el alzado cierre. Nunca se ROTULA (ver `cota_de_ancho`).
+ANCHO_DIBUJO_SIN_DATO = 60
+
+
+def cota_de_ancho(elemento):
+    """Qué ancho se DIBUJA y qué cota se ESCRIBE para un módulo.
+
+    Son dos cosas distintas y confundirlas es como se cuela una medida
+    inventada en un plano que va a fábrica. Devuelve `(ancho, cota, origen)`:
+
+    · `medida_escrita` -> ("60", "escrita")   el cliente lo puso en su croquis.
+    · ancho derivado   -> ("~60", "estimada") lo cuadró `validar_distribucion`
+      contra el ancho REAL de la pared: es una estimación con fundamento, y el
+      «~» es la marca de toda la vida para decirlo.
+    · sin ancho        -> ("?", "sin_dato")   no lo sabe nadie.
+
+    El tercer caso es el arreglo del 23/08/2026. Antes caía en el segundo y se
+    rotulaba «~60»: ese 60 no lo había medido ni deducido nadie —es el valor de
+    respaldo del código— y salía impreso como si fuera una estimación leída del
+    dibujo. Eso es inventarse una cota (regla 7 de CLAUDE.md) y encima con
+    coartada, que es peor que inventarla a pelo: el «~» le daba credibilidad.
+
+    El módulo se sigue dibujando, porque un alzado con un hueco tampoco sirve.
+    Lo que no se hace es escribir un número que nadie sabe.
+    """
+    dado = (elemento or {}).get("ancho")
+    ancho = int(dado or ANCHO_DIBUJO_SIN_DATO)
+    if (elemento or {}).get("medida_escrita"):
+        return ancho, f"{ancho}", "escrita"
+    if dado:
+        return ancho, f"~{ancho}", "estimada"
+    return ancho, "?", "sin_dato"
+
+
 def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
     """Cuadra UNA fila (suelo o colgada) de UNA pared con el ancho de la pared.
 
