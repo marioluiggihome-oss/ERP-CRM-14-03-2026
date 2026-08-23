@@ -32,7 +32,9 @@ module.exports = defineConfig({
   // que la prueba está mal escrita, y se quiere ver.
   retries: 0,
   workers: 1,
-  timeout: 60000,
+  // El Estudio 3D obliga a conducir el flujo entero —entrar, Armarios, abrir
+  // el estudio, generar— antes de poder medir nada: pasa de 40 s por prueba.
+  timeout: 120000,
   reporter: process.env.CI ? 'list' : 'line',
   use: {
     baseURL: `http://127.0.0.1:${PUERTO}`,
@@ -43,7 +45,9 @@ module.exports = defineConfig({
     command: `node e2e/servidor-estatico.js`,
     url: `http://127.0.0.1:${PUERTO}`,
     reuseExistingServer: !process.env.CI,
-    timeout: 60000,
+    // El Estudio 3D obliga a conducir el flujo entero —entrar, Armarios, abrir
+  // el estudio, generar— antes de poder medir nada: pasa de 40 s por prueba.
+  timeout: 120000,
     env: { PUERTO: String(PUERTO) },
   },
 });
