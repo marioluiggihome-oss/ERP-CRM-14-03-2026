@@ -3575,7 +3575,10 @@ const Armarios = ({ state, setState }) => {
           </div>
           
           {/* Controles de visualización */}
-          <div className="mt-3 flex items-center justify-center gap-3">
+          {/* 395 px de contenido en 366 de sitio: centrado, se salía 17 px por
+                CADA lado y el interruptor de puertas quedaba medio fuera.
+                Envolviendo, en el móvil cae a la línea de abajo y se ve entero. */}
+            <div className="mt-3 flex items-center justify-center gap-3 flex-wrap max-w-full">
             {/* Toggle puertas */}
             <button
               onClick={() => setDoorsOpen(!doorsOpen)}
