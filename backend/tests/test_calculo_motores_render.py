@@ -16,14 +16,38 @@ falta pedirselo al master y actualizar tambien este fichero, a proposito y
 dejando constancia.
 
 Mapa que se protege (frontend `providerOf()` -> backend `_render_dispatch`):
-    IA 1 -> gemini          (Gemini estandar; el de siempre)
-    IA 2 -> manus
+    IA 1 -> gemini          (Gemini estandar; el de siempre, y el UNICO que ve
+                             un usuario que no sea master)
     IA 3 -> gemini_premium  (prompt ultra-fotorrealista)
     IA 4 -> gemini_flash    (rapido)
+    IA 7 -> banana_pro      (motor Pro; mismo encargo que IA 1, cuesta 3,3x)
+
+DOS QUE NO ESTAN EN LA TABLA DE ARRIBA, Y POR QUE (puesto al dia el 23/08/2026,
+en una auditoria: la tabla llevaba desde el 18/08 diciendo algo que ya no era
+verdad, y este fichero daba VERDE a un mapa que la casa ya no usaba).
+
+· IA 2 (manus) ESTA APAGADA desde el 18/08, a peticion del master: no es un
+  modelo de imagen sino un agente, y cada render se iba hasta cinco minutos.
+  El motor sigue en el codigo detras de MOTOR_MANUS_ACTIVO. `providerOf()` ya
+  no puede devolver 'manus' y el boton no sale en pantalla. Su candado es
+  `test_calculo_ia2_apagada.py`. Aqui ya no se comprueba, porque comprobarlo
+  aqui era justo el problema: estas pruebas sustituyen `_render_dispatch` por
+  un doble, o sea que miran que la ETIQUETA llegue al repartidor, no que haya
+  un motor detras. IA 2 seguia en verde tres dias despues de apagarse.
+
+· IA 5 (julio) NO es un motor: es el ENCARGO del 22/07/2026 con el motor de
+  siempre. `generate_render_composed` lo intercepta antes del repartidor y
+  llama a Gemini a proposito. Por eso no puede estar en `MOTORES` —esperar
+  provider='julio' seria mentira— y su candado es `test_calculo_ia5_22julio.py`.
+
+QUE MOTORES EXISTEN es cosa de `test_la_pantalla_ofrece_exactamente_estos_motores`,
+mas abajo: si alguien añade un IA 8 o borra uno, esa se pone roja y este fichero
+deja de poder quedarse antiguo en silencio.
 """
 import asyncio
 import importlib.util
 import os
+import re
 import sys
 import types
 
@@ -31,12 +55,20 @@ import pytest
 
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Los motores que viajan TAL CUAL desde la pantalla hasta `_render_dispatch`.
+# IA 2 (apagada) e IA 5 (que es un encargo, no un motor) tienen su propio
+# candado; ver la nota de arriba.
 MOTORES = {
     "IA 1": "gemini",
-    "IA 2": "manus",
     "IA 3": "gemini_premium",
     "IA 4": "gemini_flash",
+    "IA 7": "banana_pro",
 }
+
+# Lo que la pantalla del Estudio 3D ofrece de verdad, por rol. El usuario normal
+# solo tiene el motor de produccion; el resto son motores de pruebas del master.
+MOTORES_EN_PANTALLA_MASTER = {"ia1", "ia3", "ia4", "ia5", "ia7"}
+MOTORES_EN_PANTALLA_USUARIO = {"ia1"}
 
 
 @pytest.fixture()
@@ -138,3 +170,69 @@ def test_las_referencias_de_acabado_viajan_con_el_plano(servicio):
 def test_el_tope_de_imagenes_juntas_no_baja_de_siete(servicio):
     """El master lo subio a 7 a proposito: no se recorta sin pedirselo."""
     assert servicio.MAX_IMAGENES_COMPUESTAS >= 7
+
+
+# ── Que motores EXISTEN, no solo a donde va cada uno ─────────────────────────
+
+ESTUDIO_3D = os.path.join(
+    os.path.dirname(BACKEND), "frontend", "src", "components", "AIRenderStudio.jsx")
+
+
+def _selector_de_motores():
+    """El trozo de JSX donde se pintan los botones de motor, partido por rol."""
+    fuente = open(ESTUDIO_3D, encoding="utf-8").read()
+    ini = fuente.index("isMaster ? [[")
+    fin = fuente.index(".map(", ini)
+    bloque = fuente[ini:fin]
+    master, _, usuario = bloque.partition("] : [")
+    return set(re.findall(r"'(ia\d+)'", master)), set(re.findall(r"'(ia\d+)'", usuario))
+
+
+def test_la_pantalla_ofrece_exactamente_estos_motores():
+    """CANDADO: un motor no aparece ni desaparece de la pantalla en silencio.
+
+    Esta prueba existe porque el 18/08 IA 2 se apago y el 18/08 nacio IA 7, y
+    ni CLAUDE.md ni este fichero se enteraron: el mapa de arriba siguio tres
+    dias diciendo `IA 2 -> manus`, en verde, mientras la pantalla ya ofrecia
+    otra cosa. Un candado que puede quedarse antiguo sin ponerse rojo no es un
+    candado.
+
+    Si el master añade o quita un motor, esto se pone rojo A PROPOSITO: hay que
+    venir aqui, cambiar la lista y dejar dicho que fue una decision suya."""
+    master, usuario = _selector_de_motores()
+    assert master == MOTORES_EN_PANTALLA_MASTER, (
+        f"los motores del master han cambiado: ahora {sorted(master)} y estaban "
+        f"documentados {sorted(MOTORES_EN_PANTALLA_MASTER)}. Si es a proposito, "
+        f"actualiza este fichero Y la regla 1 de CLAUDE.md.")
+    assert usuario == MOTORES_EN_PANTALLA_USUARIO, (
+        f"un usuario que no es master ve ahora {sorted(usuario)} y solo deberia "
+        f"ver {sorted(MOTORES_EN_PANTALLA_USUARIO)}: los demas son motores de "
+        f"pruebas del master, y uno de ellos cuesta 3,3x por render.")
+
+
+def test_cada_motor_de_la_pantalla_tiene_a_donde_ir():
+    """Un boton que no lleva a ningun sitio acaba en Gemini sin decirlo.
+
+    `_render_dispatch` termina con un `return` a Gemini estandar para lo que no
+    reconoce. Esta bien como red —mejor un render que un error— pero significa
+    que un motor mal escrito NO da error: da un render del motor de siempre con
+    la etiqueta de otro. O sea, exactamente lo que paso el 03/08."""
+    master, _ = _selector_de_motores()
+    fuente = open(os.path.join(ESTUDIO_3D), encoding="utf-8").read()
+    ini = fuente.index("const providerOf = ()")
+    cuerpo = fuente[ini:fuente.index("};", ini)]
+    dispatch = open(os.path.join(
+        BACKEND, "services", "luiggi_ai", "render_3d.py"), encoding="utf-8").read()
+    for motor in sorted(master):
+        if motor == "ia1":
+            continue  # es el `return 'gemini'` del final, no lleva `if`
+        assert f"'{motor}'" in cuerpo, (
+            f"la pantalla ofrece {motor} pero `providerOf()` no lo traduce: "
+            f"ese boton rinde con Gemini estandar y el master no se entera")
+        if motor == "ia5":
+            continue  # se intercepta antes del repartidor; ver test_calculo_ia5_22julio
+        provider = re.search(
+            rf"motor === '{motor}'\) return '([a-z_]+)'", cuerpo).group(1)
+        assert f'provider == "{provider}"' in dispatch, (
+            f"{motor} pide el motor '{provider}' y `_render_dispatch` no sabe "
+            f"que es: el render saldria por Gemini estandar sin avisar")

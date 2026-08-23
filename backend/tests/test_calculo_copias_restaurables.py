@@ -52,12 +52,29 @@ def svc():
 
     if BACKEND not in sys.path:
         sys.path.insert(0, BACKEND)
-    spec = importlib.util.spec_from_file_location("_backup_service", SERVICIO)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
 
-    s = mod.BackupService("mongodb://127.0.0.1:27017", "prueba_copias")
+    # La carpeta de usar y tirar se decide ANTES de cargar el servicio.
+    #
+    # `BackupService.__init__` CREA su carpeta de copias, y por defecto esa
+    # carpeta es /app/backups —el raiz del contenedor de Railway—. Fuera del
+    # contenedor nadie puede escribir en /app: en el CI saltaba
+    # `PermissionError: [Errno 13] Permission denied: '/app'` y estas cinco
+    # pruebas ni llegaban a empezar. Reasignar `s.backup_dir` despues no
+    # servia de nada, porque el destrozo ya estaba hecho en el __init__.
     carpeta = tempfile.mkdtemp()
+    previo = os.environ.get("BACKUP_DIR")
+    os.environ["BACKUP_DIR"] = carpeta
+    try:
+        spec = importlib.util.spec_from_file_location("_backup_service", SERVICIO)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        s = mod.BackupService("mongodb://127.0.0.1:27017", "prueba_copias")
+    finally:
+        if previo is None:
+            os.environ.pop("BACKUP_DIR", None)
+        else:
+            os.environ["BACKUP_DIR"] = previo
+
     s.backup_dir = pathlib.Path(carpeta)
     yield s
     shutil.rmtree(carpeta, ignore_errors=True)

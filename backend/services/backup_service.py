@@ -21,7 +21,18 @@ import base64
 
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = Path("/app/backups")
+# DONDE SE GUARDAN LAS COPIAS.
+#
+# En Railway el ERP corre dentro de un contenedor cuyo raiz es /app, y ahi es
+# donde tienen que ir: el valor por defecto NO cambia. Lo que cambia es que se
+# puede apuntar a otro sitio con BACKUP_DIR.
+#
+# Hace falta porque `BackupService.__init__` CREA esta carpeta, y fuera del
+# contenedor —el runner del CI, el portatil de cualquiera— nadie puede escribir
+# en /app: saltaba `PermissionError: [Errno 13] Permission denied: '/app'` y se
+# llevaba por delante las cinco pruebas de copias restaurables. Una copia de
+# seguridad que solo se puede probar en produccion no esta probada.
+BACKUP_DIR = Path(os.environ.get("BACKUP_DIR") or "/app/backups")
 BACKUP_RETENTION_DAYS = 30  # Mantener backups de los últimos 30 días
 BACKUP_EMAIL = os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
 

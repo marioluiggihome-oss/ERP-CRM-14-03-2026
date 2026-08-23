@@ -46,6 +46,7 @@ Muebles (catálogo MV / cascos ACB de este proyecto):
 | Columna (alto) | **2000 o 2200** (MV: 200/220) |
 | Mediacolumna | 1300 |
 | Sobreencimera | 1270 o 1470 |
+| Altillo (alto del casco) | **350** — la fila corta que va SOBRE los altos, hasta el techo |
 | Fondo altos | ~330 |
 | Fondo bajos | ~580 |
 | Anchos estándar (cm) | 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120 |
@@ -80,8 +81,22 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 
 1. **Motor de render del Estudio 3D.** El motor elegido en pantalla manda
    siempre, por cualquier camino (texto, referencia, plano+bocetos):
-   `IA 1 → gemini` · `IA 2 → manus` · `IA 3 → gemini_premium` · `IA 4 → gemini_flash`.
-   Todo render pasa por `_render_dispatch`; nadie llama directo a un motor.
+   `IA 1 → gemini` · `IA 3 → gemini_premium` · `IA 4 → gemini_flash` ·
+   `IA 7 → banana_pro`. Todo render pasa por `_render_dispatch`; nadie llama
+   directo a un motor.
+   - **IA 1 es la de producción y es la única que ve un usuario que no sea
+     master.** Las demás son motores de pruebas del master (IA 7 cuesta 3,3x
+     por render).
+   - **IA 2 (manus) está APAGADA** desde el 18/08, a petición del master: es un
+     agente, no un modelo de imagen, y cada render se iba hasta cinco minutos.
+     Sigue en el código detrás de `MOTOR_MANUS_ACTIVO`; en pantalla no está.
+   - **IA 5 no es un motor: es el ENCARGO del 22/07/2026** con el motor de
+     siempre (Gemini). Está para comparar los dos caminos con el mismo croquis
+     en vez de discutirlo.
+   - Esta lista la vigila `test_la_pantalla_ofrece_exactamente_estos_motores`.
+     Si se añade o se quita un motor y no se actualiza aquí, el CI se pone
+     rojo — que es justo lo que faltó del 18 al 23/08, cuando esta regla estuvo
+     cinco días diciendo `IA 2 → manus` con la prueba en verde.
 2. **Plano, bocetos, referencia de acabado y descripción se usan A LA VEZ**, cada
    uno mandando en lo suyo. No se vuelve al "o una cosa o la otra".
 3. **Tope de 7 imágenes juntas** en render y descripción de proyecto.

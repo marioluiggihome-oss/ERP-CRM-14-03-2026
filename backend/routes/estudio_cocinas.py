@@ -1553,6 +1553,7 @@ async def generar_alzado(payload: ProyectoBase):
         from services.kitchen_geometry import (
             CASCO_BAJO_ALTO, ALTOS_ALTURAS, COLUMNA_ALTURAS,
             ZOCALO_ALTO_MIN, ENCIMERA_GRUESO_MAX, SEPARACION_ENCIMERA_ALTOS_MIN,
+            cota_de_ancho,
         )
         ZOC_Y = ZOCALO_ALTO_MIN                      # 10  · cara superior del zócalo
         ENC_Y = ZOC_Y + CASCO_BAJO_ALTO              # 90  · cara superior del casco bajo
@@ -1758,23 +1759,18 @@ async def generar_alzado(payload: ProyectoBase):
             altos_xy = []    # (x, w) de los altos que vienen DADOS (no derivados)
             cotas_altos = [] # cotas de la fila colgada, que van sobre los altos
             hay_estimadas = False  # ¿alguna cota de esta pared es una estimación?
+            hay_sin_medir = False  # ¿alguna no se sabe siquiera estimar?
             for e in elems:
-                w = int(e.get("ancho") or 60)
-                # UNA COTA ESTIMADA NO PUEDE PARECER UNA COTA MEDIDA.
-                #
-                # Hasta aquí la cota se pintaba «60» viniera de donde viniera:
-                # de un número escrito por el cliente en su croquis, o de una
-                # proporción deducida mirando el dibujo. Sobre el papel eran
-                # idénticas — y este papel va a fábrica.
-                #
-                # Con «~» delante —la marca de toda la vida para una cota
-                # aproximada— el que corta ve de un vistazo cuáles son datos y
-                # cuáles hay que confirmar antes de tocar un panel. La cota
-                # estimada sigue estando, porque el alzado tiene que cerrar,
-                # pero dice lo que es. Nada se corrige en silencio.
-                cota_w = f"{w}" if e.get("medida_escrita") else f"~{w}"
-                if not e.get("medida_escrita"):
-                    hay_estimadas = True
+                # DE DÓNDE SALE CADA COTA: escrita («60»), estimada («~60»)
+                # o desconocida («?»). Quién lo decide vive en
+                # `kitchen_geometry.cota_de_ancho`, que es donde está escrita la
+                # regla de la casa y donde se puede probar de verdad. Hasta el
+                # 23/08 el tercer caso se rotulaba «~60» con un 60 que no había
+                # medido ni deducido nadie: era el respaldo del código pasando
+                # por estimación del dibujo.
+                w, cota_w, _origen = cota_de_ancho(e)
+                hay_estimadas = hay_estimadas or _origen == "estimada"
+                hay_sin_medir = hay_sin_medir or _origen == "sin_dato"
                 tipo = str(e.get("id") or e.get("tipo") or "").lower()
                 fila = str(e.get("fila") or "bajo").lower()
                 if tipo == "campana":
@@ -1964,12 +1960,19 @@ async def generar_alzado(payload: ProyectoBase):
                     fontsize=9, fontweight="bold", color=C_LINE)
             # LA LEYENDA DE LA TILDE. Una marca que nadie sabe leer no protege
             # a nadie: quien recibe el papel tiene que saber, sin preguntar, que
-            # «~60» es una cota deducida del dibujo y hay que confirmarla antes
-            # de cortar. Solo se escribe si hay alguna, para no ensuciar un
-            # alzado enteramente acotado.
-            if _con_cotas and hay_estimadas:
+            # Dos marcas que explicar: «~60» es una cota deducida del dibujo y
+            # hay que confirmarla antes de cortar; «?» es un módulo cuyo ancho
+            # no se ha podido leer y hay que ir a medirlo. La leyenda solo se
+            # escribe si hay alguna de las dos, para no ensuciar un alzado
+            # enteramente acotado — una advertencia que sobra deja de leerse.
+            if _con_cotas and (hay_estimadas or hay_sin_medir):
+                _avisos = []
+                if hay_estimadas:
+                    _avisos.append("Las cotas con ~ son ESTIMADAS del dibujo, no medidas escritas")
+                if hay_sin_medir:
+                    _avisos.append("las marcadas ? NO SE HAN PODIDO LEER y hay que medirlas")
                 ax.text(0, alto + 5,
-                        "Las cotas con ~ son ESTIMADAS del dibujo, no medidas escritas: confírmalas antes de cortar.",
+                        " · ".join(_avisos) + ": confírmalas antes de cortar.",
                         fontsize=6.8, color=C_COTA)
 
         # Resumen de herraje (recuento aproximado a partir de puertas y cajones).

@@ -137,10 +137,22 @@ def test_el_resumen_avisa_de_los_propuestos():
 
 
 def test_una_cota_deducida_se_marca_con_tilde():
+    """La cota dice de donde sale, y esa decision NO se toma aqui.
+
+    Desde el 23/08/2026 vive en `kitchen_geometry.cota_de_ancho`, que es donde
+    esta escrita la regla de la casa y donde se puede probar de verdad —con
+    tres casos, escrita / estimada / desconocida, en
+    `test_calculo_geometria_alzado.py`— en vez de comprobando que aqui hay
+    escrita una linea concreta. Lo que se protege AQUI es que el alzado siga
+    delegando en ella y no vuelva a decidirlo por su cuenta."""
     src = _leer()
-    assert 'cota_w = f"{w}" if e.get("medida_escrita") else f"~{w}"' in src, (
-        "la cota vuelve a pintarse igual venga de una medida escrita o de una "
-        "estimacion: en fabrica se cortara sobre un numero que nadie escribio")
+    assert "cota_de_ancho(e)" in src, (
+        "el alzado ha vuelto a decidir la cota por su cuenta: la cota se "
+        "pintara igual venga de una medida escrita o de una estimacion, y en "
+        "fabrica se cortara sobre un numero que nadie escribio")
+    assert 'f"~{w}"' not in src, (
+        "ha vuelto una copia de la regla dentro de la ruta: dos sitios que "
+        "deciden lo mismo son dos sitios que se van a separar")
 
 
 def test_la_cota_marcada_es_la_que_se_dibuja_de_verdad():
@@ -166,6 +178,14 @@ def test_la_tilde_lleva_su_leyenda():
         "plano no puede saber que significa")
     assert "confírmalas antes de cortar" in src, \
         "la leyenda ya no dice que hay que hacer con una cota estimada"
-    assert "if _con_cotas and hay_estimadas:" in src, (
+    # Y desde el 23/08 hay una SEGUNDA marca que explicar: la «?» de un modulo
+    # cuyo ancho no se ha podido leer. Antes esos salian como «~60» —con un 60
+    # de respaldo del codigo disfrazado de estimacion del dibujo—, asi que la
+    # leyenda hablaba de una sola cosa porque solo se admitia una.
+    assert "NO SE HAN PODIDO LEER" in src, (
+        "la «?» de una cota que no se ha podido leer se pinta sin explicar: "
+        "quien recibe el plano no sabe si es un error del PDF o una medida "
+        "que tiene que ir a tomar")
+    assert "if _con_cotas and (hay_estimadas or hay_sin_medir):" in src, (
         "la leyenda se escribe siempre: en un alzado enteramente acotado "
         "sobra, y una advertencia que sobra deja de leerse")
