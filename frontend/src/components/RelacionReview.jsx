@@ -825,7 +825,10 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
         {/* Pestañas de Filtro y Tabla */}
         <div className="px-6 pt-3 bg-white border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex gap-1 border-b border-slate-200 -mb-[1px]">
+          {/* La fila de pestañas mide 428 px: en un móvil de 390 la última se
+              queda fuera. Con `min-w-0` puede encogerse (un hijo de flex trae
+              `min-width: auto` y se niega) y con `overflow-x-auto` se desliza. */}
+          <div className="flex gap-1 border-b border-slate-200 -mb-[1px] min-w-0 max-w-full overflow-x-auto [&>*]:shrink-0">
             {['TODOS', 'BAJOS', 'ALTOS', 'COLUMNAS', 'LINEALES'].map(cat => (
               <button
                 key={cat}

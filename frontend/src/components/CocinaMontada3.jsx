@@ -1271,7 +1271,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         <div className="p-5 border-b border-slate-100 space-y-3">
           {/* Selector de Tarifa y Métricas */}
           <div className="flex items-center justify-between gap-4 flex-wrap text-xs">
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* `min-w-0` NO ES DECORACIÓN: sin él nada de lo de dentro se puede
+                deslizar. Un hijo de un flex trae `min-width: auto`, o sea que
+                se NIEGA a encogerse por debajo de su contenido: esta caja se
+                iba a 819 px dentro de un padre de 332 y desbordaba, así que el
+                `max-w-full` y el `overflow-x-auto` de la tira de tarifas de
+                abajo no tenían contra qué medirse y no hacían nada. */}
+            <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
               <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider shrink-0">Tarifa:</span>
               {/* Selector dinámico de tarifa — usa las 21 tarifas del API */}
               {tarifas.length > 0 ? (
@@ -1288,7 +1294,15 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   ))}
                 </div>
               ) : (
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                /* LAS 21 TARIFAS SE DESLIZAN EN PANTALLA ESTRECHA.
+                   Esta tira mide 819 px de ancho. En un móvil de 390 eso deja
+                   FUERA de la pantalla desde la T11 en adelante, y sin ningún
+                   contenedor deslizable no había forma de llegar a ellas: la
+                   mitad de las tarifas, inseleccionables desde el teléfono.
+                   Los botones ya llevan `shrink-0`, así que sólo faltaba
+                   dejar que la tira se desplace. La rama de arriba (la de
+                   tarifas filtradas) ya lo tenía; ésta se quedó atrás. */
+                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl max-w-full overflow-x-auto">
                   {['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12','T13','T14','T15','T16','T17','T18','T19','T20','T21'].map(t => (
                     <button
                       key={t}
@@ -1402,7 +1416,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
         {/* Pestañas de Filtro y Botón WhatsApp */}
         <div className="px-6 pt-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex gap-1 border-b border-slate-200 -mb-[1px]">
+          {/* La fila de pestañas mide 428 px: en un móvil de 390 la última se
+              queda fuera. Con `min-w-0` puede encogerse (un hijo de flex trae
+              `min-width: auto` y se niega) y con `overflow-x-auto` se desliza. */}
+          <div className="flex gap-1 border-b border-slate-200 -mb-[1px] min-w-0 max-w-full overflow-x-auto [&>*]:shrink-0">
             {['TODOS', 'BAJOS', 'ALTOS', 'COLUMNAS', 'LINEALES'].map(cat => (
               <button
                 key={cat}

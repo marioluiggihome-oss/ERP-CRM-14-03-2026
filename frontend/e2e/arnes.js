@@ -24,6 +24,16 @@ const USUARIO_MASTER = {
   // `currentTab === 'renderStudio' && currentUser?.canUseAIAnalysis`— y la
   // pantalla se queda en blanco sin dar ningún error. Costó un rato entenderlo.
   canUseAIAnalysis: true, canUseCocinasAI: true,
+  // El resto de permisos de un master de verdad. Sin ellos el menú sale corto
+  // y los módulos que faltan no se pueden ni abrir para medirlos — es lo que
+  // pasó con Archivo, que no aparecía y la prueba se quedaba esperando un
+  // botón que no existía.
+  canAccessAlmacen: true, canAccessArchivo: true, canAccessExpediente: true,
+  canAccessFloor: true, canAccessGastos: true, canAccessInvoices: true,
+  canAccessMando: true, canAccessMaster: true, canAccessMontajes: true,
+  canAccessPedidos: true, canAccessRentabilidad: true,
+  canUseAgentesIA: true, canUseCascos: true, canUseDigitalizador: true,
+  canUsePresupuestador2: true,
 };
 
 // Un PNG de verdad, 4x3, para que el render simulado tenga proporción y ocupe

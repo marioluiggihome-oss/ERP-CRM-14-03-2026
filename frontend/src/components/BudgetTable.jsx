@@ -1206,7 +1206,16 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
            </button>
         </div>
         
-        <div className="flex gap-3 items-center">
+        {/* LA BOTONERA SE DESLIZA EN PANTALLA ESTRECHA.
+            Aquí viven EXPORTAR PDF, PDF SIN PRECIOS y CONFIRMAR PEDIDO. En una
+            fila que ni se envuelve ni se desliza, con un móvil de 390 px esos
+            tres se quedaban en x=346, 478 y 605: fuera de la pantalla y sin
+            ningún contenedor deslizable, o sea SIN NINGUNA FORMA DE LLEGAR A
+            ELLOS. Se podía preparar un pedido entero en el teléfono y no había
+            manera de confirmarlo.
+            `shrink-0` en los hijos es la otra mitad: sin él no se salen, se
+            aplastan, y nueve botones repartiéndose 390 px no se leen. */}
+        <div className="flex gap-3 items-center max-lg:overflow-x-auto max-lg:flex-nowrap max-lg:pb-1 max-lg:[&>*]:shrink-0">
           {/* Pestaña ARMARIOS - Solo para usuarios con permiso específico */}
           {state.currentUser?.canAccessArmarios && (
             <button 
@@ -2166,7 +2175,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
         {catalogPosition === 'horizontal' && (
           <div style={{ height: isCatalogOpen ? catalogHeight : 50 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
              {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>}
-             <div className={`h-[50px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
+             <div className={`h-[50px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center min-w-0 max-lg:overflow-x-auto max-lg:[&>*]:shrink-0`}>
                 <div className="flex items-center gap-3">
                   {/* Botón ocultar/mostrar - Icono de panel */}
                   <button 
@@ -2443,7 +2452,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
         {/* Catálogo - POSICIÓN HORIZONTAL ARRIBA (top) */}
         {catalogPosition === 'top' && (
           <div style={{ height: isCatalogOpen ? catalogHeight : 50 }} className="absolute top-0 left-0 right-0 bg-white border-b border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
-             <div className={`h-[50px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
+             <div className={`h-[50px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center min-w-0 max-lg:overflow-x-auto max-lg:[&>*]:shrink-0`}>
                 <div className="flex items-center gap-3">
                   {/* Botón ocultar/mostrar - Icono de panel */}
                   <button 

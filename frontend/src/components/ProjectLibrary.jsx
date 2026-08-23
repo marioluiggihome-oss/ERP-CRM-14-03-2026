@@ -418,7 +418,13 @@ const ProjectLibrary = ({ state, setState }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* La barra de filtros mide 743 px de contenido: en un móvil de 390
+            dejaba fuera «Activos», «Archivados», «Todos», el buscador y
+            «Guardar Actual», sin forma de llegar a ellos. `min-w-0` es lo que
+            permite encogerla —un hijo de flex trae `min-width: auto` y se
+            niega— y `overflow-x-auto` la convierte en una tira que se desliza
+            con el dedo. */}
+        <div className="flex items-center gap-3 min-w-0 max-w-full max-lg:overflow-x-auto max-lg:[&>*]:shrink-0">
           {/* Filtros */}
           <div className="flex bg-white rounded-xl border-2 border-indigo-100 p-1">
             {[['active', 'Activos', counts.active], ['archived', 'Archivados', counts.archived], ['all', 'Todos', counts.all]].map(([val, lbl, cnt]) => (
