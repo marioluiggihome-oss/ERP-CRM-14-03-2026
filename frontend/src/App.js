@@ -1189,8 +1189,24 @@ const App = () => {
           )}
 
           <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-hidden max-h-screen`} onClick={(e) => {
-            // En móvil cerrar al hacer click en un botón de navegación
-            if (window.innerWidth < 768 && e.target.closest('button[data-nav]')) {
+            // EN MÓVIL, ELEGIR ALGO CIERRA EL MENÚ.
+            //
+            // Esto estaba escrito y NO FUNCIONABA: buscaba `button[data-nav]` y
+            // resulta que `data-nav` no lo llevaba NI UN SOLO botón — el
+            // atributo sólo existía aquí, en el selector. O sea que el menú no
+            // se cerraba nunca.
+            //
+            // Y en un móvil eso no es un detalle: la barra es `fixed` con 80 px
+            // de ancho y va POR ENCIMA del contenido, con su fondo oscuro
+            // detrás. Al pulsar un módulo se abría lo que fuera, pero el menú
+            // se quedaba puesto tapando la primera columna: el master veía
+            // «…venido, MARIO» en vez de «Bienvenido, MARIO» y el Panel Maestro
+            // medio escondido detrás de la barra.
+            //
+            // Ahora vale CUALQUIER botón de la barra, que es lo que se quería
+            // decir: todos llevan a algún sitio. Así no depende de acordarse de
+            // poner un atributo en cada botón nuevo — que es justo lo que falló.
+            if (window.innerWidth < 768 && e.target.closest('button')) {
               setTimeout(() => setSidebarOpen(false), 150);
             }
           }}>
