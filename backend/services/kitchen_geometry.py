@@ -144,10 +144,13 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             alt = 240
         paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"),
                         "ancho": anc, "alto": alt,
+                        # Ancho corregido a mano: manda sobre todo lo demás y se
+                        # dice en pantalla. Implica `ancho_escrito`.
+                        "ancho_corregido": bool(p.get("ancho_corregido")),
                         # Si la cota está ESCRITA en el plano, manda sobre la suma
                         # de módulos. La bandera tiene que sobrevivir a la ida y
                         # vuelta (detectar → dibujar), o la regla no sirve de nada.
-                        "ancho_escrito": bool(p.get("ancho_escrito"))})
+                        "ancho_escrito": bool(p.get("ancho_escrito") or p.get("ancho_corregido"))})
 
     if not paredes:
         # Sin datos válidos NO se inventa una cocina: se deja explícito.
@@ -155,6 +158,12 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
                 "avisos": avisos, "paredes": [], "elementos": []}
 
     # El dato del usuario SIEMPRE manda sobre la estimación de la IA.
+    #
+    # Salvo que haya corregido esa pared A MANO en el panel de distribución, que
+    # es más reciente y más concreto que el ancho de la estancia. Los dos los ha
+    # tecleado él: gana el último que ha dicho.
+    if paredes and paredes[0].get("ancho_corregido"):
+        ancho_real = None
     if ancho_real and en_rango(ancho_real, "ancho_pared"):
         if paredes[0]["ancho"] != ancho_real:
             avisos.append(f"Pared 1: se usa el ancho REAL del usuario ({ancho_real} cm) "
@@ -185,6 +194,14 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
                               f"se ajusta a {anc_snap} cm.")
         etiqueta = str(e.get("label") or eid or "Módulo")[:24]
         escrita = bool(e.get("medida_escrita"))
+        # CORREGIDA A MANO por el usuario. Cuenta como medida escrita —de hecho
+        # es la más fiable de todas: no la ha leído nadie, la ha dicho él— pero
+        # se distingue para poder decirlo en pantalla. Si esta bandera no
+        # sobreviviera a la ida y vuelta, el panel volvería a presentar lo que
+        # ha tecleado el master como una estimación de la IA.
+        corregida = bool(e.get("corregida"))
+        if corregida:
+            escrita = True
         # La FILA (suelo o colgado) se decide aquí, una sola vez, y viaja con el
         # módulo. El dibujo ya no tiene que adivinarlo por el id.
         fila = "alto" if es_alto(eid, etiqueta) else "bajo"
@@ -193,6 +210,7 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             "label": etiqueta,
             "fila": fila,
             "medida_escrita": escrita,
+            "corregida": corregida,
             "pared_idx": max(0, min(pidx, len(paredes) - 1)),
             "posicion_cm": max(0, int(round(pos))),
             "ancho": anc_snap,
