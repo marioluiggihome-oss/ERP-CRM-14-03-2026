@@ -526,6 +526,16 @@ export default function AIRenderStudio({ state, setState }) {
   // una fábrica. El alzado sale del motor vectorial del backend, dibujado desde
   // la distribución real, que es lo único que sabe cuánto mide cada mueble.
   const [vistaConCotas, setVistaConCotas] = useState(false);
+  // Distribución DETECTADA: las paredes y los módulos con sus anchos, leídos del
+  // croquis, del render o de la descripción. Hasta hoy esto se deducía A
+  // ESCONDIDAS dentro de cada vía (alzado, planta, ficha) y el usuario no veía
+  // NUNCA qué medidas se iban a dibujar — mientras cuatro avisos del backend le
+  // mandaban pulsar un botón «Detectar distribución» que no existía en ninguna
+  // pantalla. Ahora existe, y lo que enseña es lo mismo que se va a dibujar.
+  const [distDetectada, setDistDetectada] = useState(null); // {distribucion, via, avisos}
+  const [detectandoDist, setDetectandoDist] = useState(false);
+  const distAceptada = useRef(null);    // lo que el usuario ha visto y da por bueno
+  const viaDistribucion = useRef(null); // de dónde salió: croquis, render o descripción
   const fotoGuardada = useRef(null);   // el render tal cual, para poder volver
   const alzadoGuardado = useRef(null); // el alzado ya generado, para no repetir la llamada
   // Trazo de lápiz en los planos vectoriales. Es SOLO el trazo: mismo dibujo,
@@ -1402,12 +1412,16 @@ export default function AIRenderStudio({ state, setState }) {
       motivos.push(`${via}: ${e?.message || 'no se pudo leer'}`);
       if (fallos) fallos.push(e);
     };
+    // Si el usuario ya ha pulsado «Detectar distribución» y tiene delante lo
+    // detectado, se dibuja ESO: es lo que ha visto y ha dado por bueno. Y de
+    // paso se ahorra una llamada a la IA por cada vía.
+    if (distAceptada.current) return distAceptada.current;
     const croquis = originalRef || refImage;
     if (croquis) {
       try {
         const dataUrl = await imageToDataUrl(croquis);
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) return dj.distribucion;
+        if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
       } catch (e) { anota('del croquis', e); }
     }
     const img = currentImage();
@@ -1415,17 +1429,55 @@ export default function AIRenderStudio({ state, setState }) {
       try {
         const dataUrl = await imageToDataUrl(img);
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) return dj.distribucion;
+        if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
       } catch (e) { anota('del render', e); }
     }
     if ((description || '').trim()) {
       try {
         const dt = await postJson('/api/estudio-cocinas/distribucion-desde-texto', { descripcion: description, medidas });
-        if (dt?.success) return dt.distribucion;
+        if (dt?.success) { viaDistribucion.current = 'de tu descripción'; return dt.distribucion; }
       } catch (e) { anota('de la descripción', e); }
     }
     return null;
   };
+
+  // EL BOTÓN QUE FALTABA. El backend lleva tres avisos mandando pulsarlo
+  // («Detectar distribución») y no estaba en ninguna pantalla: el usuario leía
+  // un error que le pedía apretar algo que no existe.
+  //
+  // No dibuja nada: enseña las medidas para que se revisen ANTES de dibujar.
+  // Es el orden que pide este proyecto — primero se comprueba que la medida es
+  // real, y después se pinta.
+  const detectarDistribucion = async () => {
+    if (detectandoDist || editing) return;
+    setDetectandoDist(true); setError(null); setAvisoGeom(null);
+    // El botón es para VOLVER A MIRAR: se descarta lo aceptado antes de leer,
+    // o `deducirDistribucion` devolvería lo de la vez pasada.
+    distAceptada.current = null; viaDistribucion.current = null;
+    setDistDetectada(null);
+    const motivos = [], fallos = [];
+    try {
+      const d = await deducirDistribucion(motivos, fallos);
+      if (!d) {
+        const falta = !medidas.ancho
+          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
+          : ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").';
+        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
+        return;
+      }
+      distAceptada.current = d;
+      setDistDetectada({ distribucion: d, via: viaDistribucion.current || 'deducida', avisos: d.avisos || [] });
+    } catch (e) {
+      setError(`Error al detectar la distribución: ${e?.message || 'error desconocido'}.`);
+    } finally { setDetectandoDist(false); }
+  };
+
+  const olvidarDistribucion = () => { distAceptada.current = null; setDistDetectada(null); };
+
+  // Lo detectado caduca en cuanto cambia aquello de donde salió. Si no, se
+  // dibujarían las medidas de una cocina sobre otra.
+  useEffect(() => { olvidarDistribucion(); },
+    [originalRef, refImage, description, medidas.ancho, medidas.fondo, medidas.altura]); // eslint-disable-line
 
   // SI LAS TRES VÍAS FALLAN IGUAL, EL PROBLEMA NO ES NINGUNA DE LAS TRES.
   //
@@ -1549,7 +1601,10 @@ export default function AIRenderStudio({ state, setState }) {
     fotoGuardada.current = null;
     alzadoGuardado.current = null;
     setVistaConCotas(false);
-  }, [renderResult]);
+    // Un render nuevo es otra cocina: lo detectado sobre el anterior no vale.
+    distAceptada.current = null;
+    setDistDetectada(null);
+  }, [renderResult]); // eslint-disable-line
 
   // El interruptor: foto ⟷ alzado acotado. El alzado se genera una sola vez por
   // render; a partir de ahí ir y volver es instantáneo y no gasta créditos.
@@ -3569,6 +3624,51 @@ export default function AIRenderStudio({ state, setState }) {
               </div>
             </div>
           )}
+          {distDetectada && (
+            <div className="mb-4 p-4 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-900">
+              <div className="flex items-start gap-2 mb-2">
+                <span className="font-black shrink-0">
+                  Distribución detectada {distDetectada.via} · revísala antes de dibujar:
+                </span>
+                <button onClick={olvidarDistribucion} className="ml-auto text-teal-500 hover:text-teal-700 shrink-0">
+                  <X size={16} />
+                </button>
+              </div>
+              {(distDetectada.distribucion?.paredes || []).map((pared, i) => {
+                const mods = (distDetectada.distribucion?.elementos || []).filter(e => e.pared_idx === i);
+                const suma = mods.reduce((t, e) => t + (e.ancho || 0), 0);
+                return (
+                  <div key={i} className="mb-1.5">
+                    <div className="font-bold">
+                      {pared.nombre}: {pared.ancho} cm{' '}
+                      <span className="font-normal">
+                        ({pared.ancho_escrito ? 'medida real' : 'estimada por la IA'})
+                      </span>
+                      {/* La suma TIENE que cuadrar con la pared. El validador ya
+                          la cuadra; enseñarlo es la red por si algún día no. */}
+                      {mods.length > 0 && suma !== pared.ancho && (
+                        <span className="text-red-700 font-black"> · ojo: los módulos suman {suma} cm</span>
+                      )}
+                    </div>
+                    <div className="text-[12px]">
+                      {mods.length
+                        ? mods.map(e => `${e.label} ${e.medida_escrita ? '' : '~'}${e.ancho}`).join(' · ')
+                        : 'sin módulos'}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="text-[11px] mt-1 opacity-80">
+                Las medidas SIN «~» están escritas en tu croquis. Las que llevan «~» las ha
+                deducido la IA a ojo: compruébalas antes de fabricar.
+              </div>
+              {(distDetectada.avisos || []).length > 0 && (
+                <ul className="list-disc pl-4 mt-1.5 text-[12px] space-y-0.5">
+                  {distDetectada.avisos.map((a, i) => <li key={i}>{a}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
               <span className="text-red-500 font-bold">Error:</span> {error}
@@ -3819,6 +3919,11 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                   {tipo3d === 'cocina' && (
                   <>
+                    <button onClick={detectarDistribucion} disabled={detectandoDist || editing}
+                      title="Lee tu croquis, el render o tu descripción y saca las paredes y los módulos con su ancho. NO dibuja nada: te enseña las medidas para que las revises antes."
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1.5">
+                      {detectandoDist ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detectandoDist ? 'Leyendo…' : 'Detectar distribución'}
+                    </button>
                     <button onClick={alternarMedidas} disabled={editing || !renderResult}
                       title={vistaConCotas
                         ? 'Volver al render. Ahora estás viendo el alzado acotado.'
