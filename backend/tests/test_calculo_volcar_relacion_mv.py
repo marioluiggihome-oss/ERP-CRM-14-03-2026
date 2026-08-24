@@ -169,3 +169,96 @@ def test_los_muebles_van_en_el_MISMO_formato_que_la_pantalla_de_revision(usuario
     for m in r["muebles"]:
         for clave in ("cod", "familia", "tipo", "ancho", "alto", "qty"):
             assert clave in m, f"al mueble le falta «{clave}», que la revisión espera"
+
+
+# ── El volcado tiene que ATERRIZAR en algún sitio (24/08/2026) ──────────────
+# Se vio revisando lo que se acababa de subir: los muebles van a Cocina
+# Desmontada, y esa pestaña NO SE PINTA sin `canUseCascos` (App.js). O sea que a
+# quien tuviera permiso para volcar pero no esa pantalla se le mandaba a una
+# PANTALLA EN BLANCO con sus muebles dentro y sin forma de llegar a ellos.
+#
+# Y el botón de la pantalla de revisión decía «Volcar al Presupuesto» mientras
+# los muebles acababan en Desmontada: mentía sobre adónde iban.
+
+ESTUDIO_3D = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
+
+
+def _pantalla_3d():
+    with open(ESTUDIO_3D, encoding="utf-8") as f:
+        return f.read()
+
+
+def test_no_se_ofrece_volcar_a_quien_no_puede_abrir_el_destino():
+    """CANDADO: un volcado a una pantalla que no tienes es perder los muebles."""
+    pantalla = _pantalla_3d()
+    for guardia in ("puedeAbrirDesmontada", "puedeAbrirMontada3"):
+        assert guardia in pantalla, f"ya no se comprueba {guardia}"
+    # CADA BOTÓN con SU guarda, no la palabra suelta en algún sitio del bloque:
+    # con eso valía, porque los dos nombres salen también en la condición de
+    # fuera —`(puedeAbrirMontada3 || puedeAbrirDesmontada)`— y un botón podía
+    # quedarse sin guardia con la prueba en verde. (Se vio con un mutante.)
+    for guardia in ("{puedeAbrirDesmontada && (", "{puedeAbrirMontada3 && ("):
+        assert guardia in pantalla, (
+            f"falta la guarda «{guardia}»: ese botón de volcar sale sin mirar si "
+            "el destino se puede abrir, y los muebles acabarían en una pantalla "
+            "que el usuario no tiene.")
+
+
+def test_cada_destino_mira_SU_permiso_con_SU_polaridad():
+    """No son iguales, y copiarlas mal esconde una pantalla a quien la tiene:
+
+        Cocina Desmontada   canUseCascos === true       (hay que DARLA)
+        Cocina Montada 3    canUsePresupuestador3 !== false  (la tienen todos
+                                                              salvo que se quite)
+    """
+    pantalla = _pantalla_3d()
+    assert "canUseCascos === true" in pantalla, \
+        "Cocina Desmontada ya no exige el permiso explícito: se ofrecería a quien no la tiene"
+    assert "canUsePresupuestador3 !== false" in pantalla, \
+        "Cocina Montada 3 ya no usa su polaridad: se escondería a quien sí la tiene"
+
+
+def test_cada_destino_se_revisa_UNA_vez():
+    """Cocina Montada 3 abre su propia revisión al recibir pendientes, así que
+    revisarlos también aquí sería hacerlo dos veces seguidas. Cocina Desmontada
+    NO revisa —empareja con el catálogo y precia—, así que ahí la revisión tiene
+    que pasar antes."""
+    cuerpo = _cuerpo_jsx("volcarRelacionMV")
+    assert "cocinaMontadaPendingMuebles" in cuerpo, \
+        "Cocina Montada 3 ya no recibe los muebles por su cauce (los revisa ella)"
+    i_m3 = cuerpo.index("cocinaMontadaPendingMuebles")
+    i_rev = cuerpo.index("setRevisarRelacion")
+    assert i_m3 < i_rev, (
+        "la vía de Cocina Montada 3 pasa por la revisión de aquí: se revisaría "
+        "dos veces, aquí y allí.")
+
+
+def _cuerpo_jsx(nombre):
+    fuente = _pantalla_3d()
+    ini = fuente.index(f"const {nombre} =")
+    return fuente[ini:fuente.index("\n  };", ini)]
+
+
+def test_a_quien_no_puede_se_le_DICE_por_que_y_que_pedir():
+    """Un botón que desaparece sin explicación es un botón roto para quien lo
+    esperaba. Se dice qué falta y a quién pedírselo."""
+    pantalla = _pantalla_3d()
+    # Se busca el TEXTO DEL AVISO, no palabras sueltas: «Cocina Desmontada» sale
+    # también en el título del botón, así que buscándola se daba por bueno un
+    # aviso borrado. (Se vio con un mutante: quitar el aviso entero no ponía
+    # roja esta prueba.)
+    assert "no volcarla" in pantalla, \
+        "ya no se explica que se puede sacar la relación pero no volcarla"
+    assert "Pídele" in pantalla and "Ajustes" in pantalla, \
+        "el aviso ya no dice a quién pedir el permiso ni dónde se da"
+    assert "ninguna de las dos" in pantalla, \
+        "el aviso ya no dice que le faltan LOS DOS destinos, no uno"
+
+
+def test_el_boton_dice_ADONDE_van_los_muebles():
+    """Decía «Volcar al Presupuesto» y aterrizaban en Cocina Desmontada."""
+    pantalla = _pantalla_3d()
+    assert "onExportDesmontada={(cabs)" in pantalla, (
+        "se ha vuelto a `onConfirm`: con eso la pantalla de revisión rotula su "
+        "botón «Volcar al Presupuesto» y los muebles acaban en Cocina "
+        "Desmontada, o sea que el botón miente sobre adónde van.")
