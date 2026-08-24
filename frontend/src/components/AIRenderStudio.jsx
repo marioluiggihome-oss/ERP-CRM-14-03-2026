@@ -356,6 +356,11 @@ export default function AIRenderStudio({ state, setState }) {
   const canUse4K = true; // Exportación 8K / 4K Ultra-HD siempre disponible
   // Permiso específico para el amueblado virtual (o rol master).
   const canUseAmueblado = isMaster || state?.currentUser?.canUseAmueblado === true;
+  // ¿Puede ABRIR Cocina Desmontada? Es adonde van los muebles volcados, y la
+  // pestaña no se pinta sin este permiso: sin comprobarlo, a quien pudiera
+  // volcar pero no entrar ahí se le mandaba a una PANTALLA EN BLANCO con sus
+  // muebles dentro y sin forma de llegar a ellos.
+  const puedeAbrirDesmontada = state?.currentUser?.canUseCascos === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
   // Admin o lista vacía/ausente = todos permitidos (compatibilidad hacia atrás).
   const tiposPermitidos = (() => {
@@ -3988,13 +3993,19 @@ export default function AIRenderStudio({ state, setState }) {
                   </ul>
                 </div>
               )}
-              {relacionMV.puedeVolcar && (
+              {relacionMV.puedeVolcar && (puedeAbrirDesmontada ? (
                 <button onClick={volcarRelacionMV} disabled={cargandoMV}
-                  title="Revisar la relación y volcarla al presupuesto. Se abre la misma pantalla de revisión que usan Cascos y Cocina Montada 3, con sus avisos."
+                  title="Revisar la relación y volcarla a Cocina Desmontada, que es donde se emparejan los muebles con el catálogo y se precian. Se abre la misma pantalla de revisión que usan Cascos y Cocina Montada 3, con sus avisos."
                   className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
-                  <CheckCircle size={12} /> Revisar y volcar al presupuesto
+                  <CheckCircle size={12} /> Revisar y volcar a Cocina Desmontada
                 </button>
-              )}
+              ) : (
+                <div className="mt-2 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                  Puedes sacar la relación, pero no volcarla: los muebles van a
+                  <b> Cocina Desmontada</b> y tu usuario no tiene esa pantalla. Pídele
+                  el permiso al master (Ajustes → usuarios → «Cocina Desmontada»).
+                </div>
+              ))}
               <div className="text-[11px] mt-2 opacity-80">
                 {relacionMV.preciosOcultos
                   ? 'La tarifa MV es del master: aquí salen los muebles y sus medidas, no los precios. '
@@ -4910,10 +4921,16 @@ export default function AIRenderStudio({ state, setState }) {
             apiUrl={API_URL}
             authHeaders={getAuthHeaders()}
             onClose={() => setRevisarRelacion(null)}
-            onConfirm={(cabs) => {
-              // Al MISMO sitio que los vuelca Cascos: la relación MV es un
-              // pedido de muebles, y ahí es donde se emparejan con el catálogo
-              // por tipo y ancho.
+            // `onExportDesmontada` y no `onConfirm`: son la misma función, pero
+            // con esta la pantalla de revisión rotula su botón «Cocina
+            // Desmontada» en vez de «Volcar al Presupuesto». Con `onConfirm`
+            // decía Presupuesto y los muebles acababan en Desmontada — el botón
+            // mentía sobre adónde iban.
+            onExportDesmontada={(cabs) => {
+              // La relación MV es un pedido de MUEBLES, así que va al mismo
+              // sitio que los vuelca Cascos: ahí se emparejan con el catálogo
+              // por tipo y ancho, y se precian con el catálogo — no con la
+              // tarifa del proveedor, que es coste y no precio de venta.
               setState && setState(p => ({
                 ...p, cascosPendingCabinets: [...(p.cascosPendingCabinets || []), ...cabs],
               }));
