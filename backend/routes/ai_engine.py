@@ -1016,6 +1016,45 @@ _REF_PROMPT = (
 )
 
 
+def _recortar_si_es_una_pagina(b64: str, mime: str = "image/png") -> str:
+    """Saca el DIBUJO de dentro de la página, si lo que llega es una página.
+
+    POR QUÉ ESTO TIENE QUE ESTAR TAMBIÉN AQUÍ (24/08/2026)
+    -----------------------------------------------------
+    El recorte existía desde el 18/08, pero SOLO en el camino de RENDERIZAR
+    (`render_3d.py`). El camino de DESCRIBIR recibía la página entera, y se
+    notaba en lo que devolvía. Caso real del master: un pantallazo de un
+    presupuesto —barra de estado, título, el dibujo, tres líneas de precio,
+    total y barra de Android— y la descripción salió diciendo «sistema METOD de
+    IKEA» y «frentes de la marca CUBRO».
+
+    Eso NO estaba en el dibujo: estaba en las líneas de precio («Elementos
+    IKEA», «Elementos CUBRO»). El modelo no lo dedujo de la cocina, lo LEYÓ del
+    presupuesto — y «METOD» ni siquiera aparecía en la página, o sea que además
+    bordó encima. En la misma descripción se inventó «300 cm» repartidos en
+    cinco módulos de 60 (el dibujo no lleva ni una cota) y un «frigorífico
+    combi» que no está dibujado por ningún lado.
+
+    Con el dibujo recortado nada de eso es alcanzable: las líneas de precio
+    dejan de existir y la cocina pasa a ocupar la imagen entera en vez de un
+    tercio de la altura.
+
+    ES SEGURO PARA LAS FOTOS. `recortar_dibujo_base64` solo recorta cuando
+    reconoce un dibujo dentro de una página; con una referencia de acabado
+    —una foto de una cocina real— devuelve la imagen tal cual. Comprobado
+    contra los dos renders del master: `recortó=False`, mismas dimensiones.
+    """
+    try:
+        from services.recorte_croquis import recortar_dibujo_base64
+        recortado, hubo = recortar_dibujo_base64(b64, mime)
+        if hubo:
+            logger.info("Dibujo recortado de la página antes de describirlo.")
+            return recortado
+    except Exception as e:
+        logger.warning("No se pudo recortar el dibujo, se describe la imagen entera: %s", e)
+    return b64
+
+
 @ai_engine_router.post("/describe-reference")
 async def describe_reference(payload: dict, user=Depends(require_auth)):
     """Describe una imagen/PDF de referencia (base64) para el render 3D."""
@@ -1035,6 +1074,7 @@ async def describe_reference(payload: dict, user=Depends(require_auth)):
                     img = pages[0]
         except Exception:
             pass
+        img = _recortar_si_es_una_pagina(img)
         import uuid as _uuid
         resp = await analyze_image_with_gemini(
             image_base64=img, prompt=_REF_PROMPT,
@@ -1079,6 +1119,11 @@ async def describe_project(payload: dict, user=Depends(require_auth)):
     MAX_JUNTAS = 7
     imagenes = []
     if plano:
+        # El plano y los alzados SÍ se recortan: son dibujos, y muchas veces
+        # llegan dentro de un pantallazo de página. Las REFERENCIAS DE ACABADO
+        # no —son fotos— aunque el recorte también las dejaría en paz; no se
+        # tocan para que quede dicho que ahí no hay nada que recortar.
+        plano = _recortar_si_es_una_pagina(plano)
         imagenes.append({"data": plano, "papel":
                          "PLANO EN PLANTA acotado. Manda en la DISTRIBUCIÓN: forma de la "
                          "cocina (lineal, en L, en U, con isla), qué pared es cada una, el "
@@ -1087,7 +1132,7 @@ async def describe_project(payload: dict, user=Depends(require_auth)):
     for i, a in enumerate(alzados, start=1):
         if len(imagenes) >= MAX_JUNTAS:
             break
-        imagenes.append({"data": a, "papel":
+        imagenes.append({"data": _recortar_si_es_una_pagina(a), "papel":
                          f"ALZADO de la PARED {i}: el diseño de esa pared (muebles altos, "
                          f"bajos, columnas, electrodomésticos y acabados)."})
     for r in (referencias or [])[:2]:
