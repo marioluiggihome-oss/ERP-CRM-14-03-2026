@@ -122,6 +122,21 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    de `routes/cascos.py`); si solo se cierra la pantalla, el cierre es de
    adorno. No confundir con `/api/rentabilidad`, el informe de solo lectura,
    que sí abre el master a CONTROLLER.
+8b. **La TARIFA MV (el dinero) es SOLO del master** (24/08). Puntos, PVP, valor
+   de punto, la tarifa en crudo y el PDF de las 126 páginas: solo el master. Por
+   ahí se lee lo que le cuesta a la casa cada mueble.
+   - **El corte va en el PRECIO, no en el CÓDIGO.** Un `B60D` es cómo se llama
+     un mueble, no lo que vale. Los códigos, anchos y familias siguen abiertos:
+     sin ellos, Cocina Montada 3 y la Relación se quedan muertas para quien
+     monta pedidos. `_can_use_mv` = todos (nomenclatura) ·
+     `_ve_precios_mv` = master (dinero).
+   - Ni `require_admin` ni ninguna lista ancha: por ahí pasan gerente y director
+     comercial. Se usa el `_es_master` de `routes/cascos.py`, que es la puerta
+     del MV, también desde `routes/products.py`.
+   - Candado: `test_calculo_tarifa_mv_solo_master.py`, que LLAMA a los endpoints
+     con un usuario que no es master. Comprueba las dos mitades: que no se ve el
+     dinero **y** que sí se siguen viendo los códigos.
+
 9. **El candado de Rentabilidad OCULTA IMPORTES, no bloquea la edición**
    (05/08, a petición del master). Echado: se van precios, tarifas, coste,
    mano de obra, margen, precio de venta y €/m². Se quedan códigos,

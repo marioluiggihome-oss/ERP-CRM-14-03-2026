@@ -575,7 +575,44 @@ _MV_PATH = _mvos.path.join(_mvos.path.dirname(_mvos.path.dirname(__file__)), "da
 
 
 def _can_use_mv(user: Optional[dict]) -> bool:
+    """¿Puede usar la NOMENCLATURA MV (códigos, anchos, familias)?
+
+    Sí, todo el mundo. Un código como «B60D» no es información de coste: es cómo
+    se llama un mueble. Sin esto, quien monta un pedido no puede ni escribirlo.
+    """
     return True
+
+
+def _ve_precios_mv(user: Optional[dict]) -> bool:
+    """¿Puede ver el DINERO de la tarifa MV (puntos, PVP, valor de punto)?
+
+    SOLO EL MASTER (24/08/2026, a petición suya: «quiero que la tarifa MV sea
+    solo mía»). La tarifa es lo que le cuesta a la casa cada mueble: por ahí se
+    lee el margen entero.
+
+    El corte va donde tiene que ir —en el precio, no en el código—, así que
+    quien monta un pedido sigue pudiendo hacerlo; lo que no ve es el euro.
+    Cerrarlo entero habría dejado Cocina Montada 3 y la Relación sin funcionar
+    para todo el que no sea el master.
+    """
+    return _es_master(user)
+
+
+def sin_precios(muebles):
+    """Quita el dinero de una lista de muebles MV, dejando el mueble.
+
+    Se vacían las claves en vez de borrarlas: la pantalla espera que existan, y
+    una clave que desaparece se convierte en «undefined» y acaba pintando
+    «NaN €» — que parece un fallo, no un candado.
+    """
+    limpios = []
+    for m in muebles or []:
+        copia = dict(m)
+        for clave in ("pts", "pvp", "puntos", "importe", "precio", "pointValue"):
+            if clave in copia:
+                copia[clave] = None
+        limpios.append(copia)
+    return limpios
 
 
 # OJO: aquí estaba DOS VECES `@router.get("/cascos/mv/tarifas")`, y la primera se
@@ -633,8 +670,9 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
     de BAJO_FREGADERO que tienen precio dual [normal, chapa]. BFC* devuelve el precio
     de chapa (índice 1) como valor simple para facilitar el uso comercial.
     """
-    if not _can_use_mv(current_user):
-        raise HTTPException(status_code=403, detail="Sin permiso para ver la tarifa MV.")
+    # La tarifa en crudo ES el dinero: códigos CON sus puntos. Master.
+    if not _ve_precios_mv(current_user):
+        raise HTTPException(status_code=403, detail="La tarifa MV es solo del master.")
     try:
         with open(_MV_PATH, "r", encoding="utf-8") as f:
             data = _mvjson.load(f)
@@ -731,9 +769,16 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
     (o cualquier PDF con esa notación: '1 b25d + 1b30d (altura 80)', '1asc60x90 d'…)
     y devuelve los muebles emparejados con la tarifa MV (código canónico, tipo,
     ancho, alto, puntos y PVP). Pensado para VOLCAR al Presupuestador / Cocina
-    Desmontada sin necesidad de un dibujo. Solo master."""
+    Desmontada sin necesidad de un dibujo.
+
+    LOS MUEBLES SÍ, EL DINERO NO. Leer la relación lo puede hacer cualquiera —es
+    lo que hay que hacer para montar un pedido—, pero los puntos y el PVP salen
+    en blanco si no eres el master (24/08/2026, a petición suya). El corte va en
+    el precio y no en el código a propósito: cerrar la ruta entera dejaría a
+    quien monta pedidos sin poder leer su propia relación."""
     if not _can_use_mv(current_user):
         raise HTTPException(status_code=403, detail="Sin permiso para importar o analizar relaciones MV.")
+    _con_precios = _ve_precios_mv(current_user)
     import base64 as _b64, re as _re
     tariff = (payload or {}).get("tariff") or "T1"
     texto = (payload or {}).get("texto")
@@ -747,10 +792,14 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
             raise HTTPException(status_code=500, detail=f"No se pudo leer la relación: {e}")
         if not muebles:
             raise HTTPException(status_code=422, detail="No se reconoció ningún mueble. Escríbelo como '1 b60i (altura 80)'.")
+        total = round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2)
         return {
-            "success": True, "muebles": muebles, "count": len(muebles),
+            "success": True,
+            "muebles": muebles if _con_precios else sin_precios(muebles),
+            "count": len(muebles),
             "totalUnidades": sum(int(x.get("qty") or 1) for x in muebles),
-            "totalPvp": round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2),
+            "totalPvp": total if _con_precios else None,
+            "preciosOcultos": not _con_precios,
         }
     # Vía PDF.
     raw = (payload or {}).get("pdfBase64") or ""
@@ -775,12 +824,14 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
             status_code=422,
             detail="No se detectó ninguna relación de muebles. Rellena los recuadros con la notación (p. ej. '1 b60i + 1 a60d (altura 80)').",
         )
+    total = round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2)
     return {
         "success": True,
-        "muebles": muebles,
+        "muebles": muebles if _con_precios else sin_precios(muebles),
         "count": len(muebles),
         "totalUnidades": sum(int(x.get("qty") or 1) for x in muebles),
-        "totalPvp": round(sum((x.get("pvp") or 0) * int(x.get("qty") or 1) for x in muebles), 2),
+        "totalPvp": total if _con_precios else None,
+        "preciosOcultos": not _con_precios,
         # Lo escrito que no se ha sabido leer. Sin esto, esas lineas valian 0 y
         # el total salia corto sin que nadie se enterase.
         "noLeidas": no_leidas,
