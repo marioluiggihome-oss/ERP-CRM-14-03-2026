@@ -229,6 +229,76 @@ def montar_escena(distribucion, altura_modulo=None, fondo_modulo=None, es_alto=N
     return cajas, omitidos
 
 
+# ── Encimera y zócalo ───────────────────────────────────────────────────────
+# No estaban, y no es un detalle de estilo: una cocina sin encimera no existe,
+# y unos bajos que arrancan del suelo sin zócalo se leen como cajas apoyadas en
+# el aire. Son las dos piezas que hacen que un dibujo de muebles parezca una
+# cocina.
+#
+# Se dibujan POR MUEBLE, no por tramo. Todas a la misma altura, así que las de
+# dos muebles contiguos se juntan y se leen como una losa continua — que es lo
+# que son. Hacerlo por tramos obligaría a detectar la continuidad y a resolver
+# las esquinas de una L o una U, y por un resultado idéntico.
+ENCIMERA_GRUESO = 4.0     # CLAUDE.md: 20-40 mm
+ENCIMERA_VUELO = 2.0      # sobresale del frente, como en obra
+ZOCALO_RETRANQUEO = 5.0   # el zócalo va METIDO respecto del frente
+
+
+def _caja_desde(x0, z0, x1, z1, nx, nz, fondo, base, alto):
+    return [
+        (x0, base, z0), (x1, base, z1),
+        (x1, base + alto, z1), (x0, base + alto, z0),
+        (x0 + nx * fondo, base, z0 + nz * fondo),
+        (x1 + nx * fondo, base, z1 + nz * fondo),
+        (x1 + nx * fondo, base + alto, z1 + nz * fondo),
+        (x0 + nx * fondo, base + alto, z0 + nz * fondo),
+    ]
+
+
+def encimera_y_zocalo(cajas):
+    """Devuelve las losas de encimera y las bandas de zócalo de los muebles de
+    suelo. Mismo formato que `montar_escena`, para que el dibujo las pinte
+    igual sin saber que son otra cosa.
+
+    Un mueble COLGADO no lleva ninguna de las dos: no toca ni el suelo ni la
+    encimera.
+    """
+    extras = []
+    for c in cajas or []:
+        if c.get("base", 0) >= 100:           # colgado: ni encimera ni zócalo
+            continue
+        e = c["esquinas"]
+        x0, base, z0 = e[0]
+        x1, _b1, z1 = e[1]
+        fx, _b4, fz = e[4]
+        fondo = float(c.get("fondo") or 58.0)
+        if fondo <= 0:
+            continue
+        nx, nz = (fx - x0) / fondo, (fz - z0) / fondo
+        alto = float(c.get("alto") or 80.0)
+
+        extras.append({
+            "id": "encimera", "label": "Encimera", "pared": c.get("pared", 0),
+            "ancho": c.get("ancho"), "alto": ENCIMERA_GRUESO,
+            "fondo": fondo + ENCIMERA_VUELO, "base": base + alto,
+            "sin_tirador": True,
+            "esquinas": _caja_desde(x0, z0, x1, z1, nx, nz,
+                                    fondo + ENCIMERA_VUELO, base + alto,
+                                    ENCIMERA_GRUESO),
+        })
+        if base > 0:                           # el hueco del zócalo es `base`
+            extras.append({
+                "id": "zocalo", "label": "Zócalo", "pared": c.get("pared", 0),
+                "ancho": c.get("ancho"), "alto": base,
+                "fondo": max(fondo - ZOCALO_RETRANQUEO, 5.0), "base": 0.0,
+                "sin_tirador": True,
+                "esquinas": _caja_desde(x0, z0, x1, z1, nx, nz,
+                                        max(fondo - ZOCALO_RETRANQUEO, 5.0),
+                                        0.0, base),
+            })
+    return extras
+
+
 def camara_para(distribucion):
     """EL PUNTO DE VISTA, derivado de la cocina que hay que enseñar.
 

@@ -1504,6 +1504,14 @@ export default function AIRenderStudio({ state, setState }) {
   // vería un número distinto del que eligió.
   const ANCHOS_CATALOGO = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120];
 
+  // PIEZAS A MEDIDA: no son muebles, son tableros. Su ancho es el que sea, así
+  // que aquí NO se ofrece el catálogo — se escribe.
+  //
+  // Sin esto, un costado decorativo de 18 mm no se podía ni corregir: el
+  // desplegable empieza en 15 cm. Es la otra mitad del fallo que vio el master
+  // el 24/08 con un plano en milímetros.
+  const esPiezaAMedida = (id) => /relleno|costado|panel|lateral|tapa|remate|regleta|cornisa|z[oó]calo/i.test(String(id || ''));
+
   // Módulos que se pueden añadir a mano cuando la IA se ha dejado uno.
   const MODULOS_PARA_AÑADIR = [
     { id: 'bajo', label: 'Bajo', ancho: 60 },
@@ -3921,12 +3929,23 @@ export default function AIRenderStudio({ state, setState }) {
                             : e.medida_escrita ? 'Medida escrita en tu croquis'
                               : 'Medida deducida por la IA a ojo — compruébala'}>
                           <span className="truncate max-w-[110px]">{e.label}</span>
-                          <select value={e.ancho} disabled={corrigiendo}
-                            onChange={(ev) => cambiarAnchoModulo(e.pared_idx, e.posicion_cm, parseInt(ev.target.value, 10))}
-                            className="bg-transparent font-black text-teal-900 disabled:opacity-50">
-                            {Array.from(new Set([e.ancho, ...ANCHOS_CATALOGO])).sort((a, b) => a - b)
-                              .map(w => <option key={w} value={w}>{e.corregida || e.medida_escrita ? '' : '~'}{w}</option>)}
-                          </select>
+                          {esPiezaAMedida(e.id) ? (
+                            <input type="number" step="0.1" min="0.1" max="200"
+                              defaultValue={e.ancho} disabled={corrigiendo}
+                              title="Tablero a medida: escribe su ancho REAL en cm. Un costado son 1,6-1,9 cm (16-19 mm)."
+                              onBlur={(ev) => {
+                                const v = parseFloat(String(ev.target.value).replace(',', '.'));
+                                if (v > 0 && v !== e.ancho) cambiarAnchoModulo(e.pared_idx, e.posicion_cm, v);
+                              }}
+                              className="w-12 bg-transparent font-black text-teal-900 border-b border-teal-400 text-center disabled:opacity-50" />
+                          ) : (
+                            <select value={e.ancho} disabled={corrigiendo}
+                              onChange={(ev) => cambiarAnchoModulo(e.pared_idx, e.posicion_cm, parseInt(ev.target.value, 10))}
+                              className="bg-transparent font-black text-teal-900 disabled:opacity-50">
+                              {Array.from(new Set([e.ancho, ...ANCHOS_CATALOGO])).sort((a, b) => a - b)
+                                .map(w => <option key={w} value={w}>{e.corregida || e.medida_escrita ? '' : '~'}{w}</option>)}
+                            </select>
+                          )}
                           <button onClick={() => quitarModulo(e.pared_idx, e.posicion_cm)} disabled={corrigiendo}
                             title="Quitar este módulo. El hueco que deje lo cuadra el validador."
                             className="text-teal-400 hover:text-red-600 disabled:opacity-50 px-0.5">×</button>
@@ -4998,7 +5017,13 @@ export default function AIRenderStudio({ state, setState }) {
             muebles={revisarRelacion}
             tarifa={relacionMV?.tarifa || 'T1'}
             apiUrl={API_URL}
-            authHeaders={getAuthHeaders()}
+            // LA FUNCIÓN, NO SU RESULTADO. `RelacionReview` hace
+            // `authHeaders()` por dentro; pasándole el objeto ya construido
+            // reventaba con «authHeaders is not a function» nada más montarse,
+            // y el ErrorBoundary se comía la aplicación entera: «Algo ha
+            // fallado». Lo vio el master pulsando el botón. Así lo pasan
+            // también Cascos y Cocina Montada 3.
+            authHeaders={getAuthHeaders}
             onClose={() => setRevisarRelacion(null)}
             // `onExportDesmontada` y no `onConfirm`: son la misma función, pero
             // con esta la pantalla de revisión rotula su botón «Cocina

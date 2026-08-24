@@ -42,6 +42,27 @@ LIMITES = {
 }
 
 COLUMNAS_IDS = {"frigorifico", "congelador", "columna_hornos", "despensa", "vinoteca"}
+
+# PIEZAS A MEDIDA: su ancho es el que sea, y NO se ajusta a un estándar de
+# catálogo. No son muebles: son tableros.
+#
+# Lo vio el master el 24/08 con un plano suyo en MILÍMETROS: los costados
+# decorativos son de 18 mm, o sea 1,8 cm, y `snap_ancho` los subía al mueble
+# más estrecho que existe —15 cm—, que es OCHO VECES más. Con tres costados en
+# la cocina, eso son 45 cm de mueble que no existe; el propio validador acabó
+# avisando de que «los módulos suman 765 cm» en una pared de 425.
+#
+# Es el mismo caso que el relleno, que ya estaba exceptuado por lo mismo. Se
+# generaliza en vez de añadir un `if` más: la próxima pieza a medida que
+# aparezca (una tapa, un remate) tendría el mismo problema.
+PIEZAS_A_MEDIDA = ("relleno", "costado", "panel", "lateral", "tapa", "remate",
+                   "regleta", "cornisa", "zocalo", "zócalo")
+
+
+def es_a_medida(elem_id: str) -> bool:
+    """¿Es un tablero a medida en vez de un mueble de catálogo?"""
+    t = str(elem_id or "").lower()
+    return any(p in t for p in PIEZAS_A_MEDIDA)
 ALTOS_IDS = {"microondas"}
 
 # Palabras que delatan un mueble ALTO (va colgado a la pared). Importa mucho más
@@ -182,11 +203,24 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         except (TypeError, ValueError):
             continue
         eid = str(e.get("id") or "mueble").lower().strip().replace(" ", "_")
-        if eid == "relleno":
-            # El relleno es una pieza a medida: su ancho ES el hueco que sobra.
-            # Ajustarlo a un estándar descuadraba la pared que ya cuadraba (se
-            # veía al revalidar: "relleno: 10 cm no es fabricable, se ajusta a 15").
-            anc_snap = max(1, int(round(anc)))
+        if es_a_medida(eid):
+            # Un tablero a medida NO se ajusta al catálogo. El relleno ya estaba
+            # así —su ancho ES el hueco que sobra—, y un costado decorativo es
+            # el mismo caso por el otro extremo: 18 mm subidos a 15 cm.
+            #
+            # Se guarda con DECIMAL: redondear 1,8 a 2 y luego a entero es como
+            # empezó el problema. Un tablero de 18 mm tiene que poder decir que
+            # mide 1,8.
+            anc_snap = round(max(0.1, anc), 1)
+            if anc_snap >= 10:
+                # Un costado de 10 cm o más no existe: son 16-19 mm de tablero.
+                # Casi seguro que el plano venía en MILÍMETROS y se ha leído
+                # como centímetros. NO se convierte a la brava —eso sería
+                # inventar una medida—: se dice, y lo corrige quien lo sabe.
+                avisos.append(
+                    f"«{eid}»: {anc_snap:g} cm de tablero no existe (un costado "
+                    f"son 16-19 mm). ¿El plano estaba en milímetros? Serían "
+                    f"{anc_snap / 10:g} cm. Corrígelo antes de pedir.")
         else:
             anc_snap = snap_ancho(anc)
             if not en_rango(anc, "ancho_modulo"):
