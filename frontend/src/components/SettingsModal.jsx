@@ -30,7 +30,7 @@ const CAPABILITY_KEYS = [
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando', 'isController',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
-  'canUseRender360', 'canUse4K', 'canUseAmueblado',
+  'canUseRender360', 'canUse4K', 'canUseAmueblado', 'canVolcarMV',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -176,6 +176,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canUseRender360: false,
     canUse4K: false,
     canUseAmueblado: false,
+    canVolcarMV: false,
     canVerVinculadosCascos: false,
     canUsePropData: false,
     canUseArmarios2: false,
@@ -825,6 +826,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canUseRender360: false,
       canUse4K: false,
       canUseAmueblado: false,
+    canVolcarMV: false,
       canVerVinculadosCascos: false,
       canUsePropData: false,
       canUseArmarios2: false,
@@ -2480,6 +2482,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 </div>
                               </div>
                             )}
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canVolcarMV}
+                                onChange={(e) => setUserForm({...userForm, canVolcarMV: e.target.checked})}
+                                className="w-4 h-4 rounded accent-emerald-600"
+                              />
+                              <span title="Volcar al presupuesto la relación de muebles MV que sale del Estudio 3D. NO da acceso a la tarifa (puntos y PVP), que es solo del master: se vuelcan los muebles, no los precios." className="text-xs font-bold text-slate-700">Volcar relación MV</span>
+                            </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
                                 type="checkbox"
