@@ -529,7 +529,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Distribución DETECTADA: las paredes y los módulos con sus anchos, leídos del
   // croquis, del render o de la descripción. Hasta hoy esto se deducía A
   // ESCONDIDAS dentro de cada vía (alzado, planta, ficha) y el usuario no veía
-  // NUNCA qué medidas se iban a dibujar — mientras tres avisos del backend le
+  // NUNCA qué medidas se iban a dibujar — mientras cuatro avisos del backend le
   // mandaban pulsar un botón «Detectar distribución» que no existía en ninguna
   // pantalla. Ahora existe, y lo que enseña es lo mismo que se va a dibujar.
   const [distDetectada, setDistDetectada] = useState(null); // {distribucion, via, avisos}
