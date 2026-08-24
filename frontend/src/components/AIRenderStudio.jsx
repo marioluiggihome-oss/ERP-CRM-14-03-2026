@@ -1480,6 +1480,87 @@ export default function AIRenderStudio({ state, setState }) {
 
   const olvidarDistribucion = () => { distAceptada.current = null; setDistDetectada(null); };
 
+  // Anchos de catálogo. Un mueble no mide 67 cm: mide 60 o 70. Es la misma
+  // lista que valida el backend (kitchen_geometry.ANCHOS_STD); si aquí
+  // ofreciéramos otra cosa, el validador la corregiría por detrás y el usuario
+  // vería un número distinto del que eligió.
+  const ANCHOS_CATALOGO = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120];
+
+  // Módulos que se pueden añadir a mano cuando la IA se ha dejado uno.
+  const MODULOS_PARA_AÑADIR = [
+    { id: 'bajo', label: 'Bajo', ancho: 60 },
+    { id: 'cajonera', label: 'Cajonera', ancho: 60 },
+    { id: 'bajo_fregadero', label: 'Bajo fregadero', ancho: 90 },
+    { id: 'placa', label: 'Placa', ancho: 60 },
+    { id: 'horno', label: 'Horno', ancho: 60 },
+    { id: 'lavavajillas', label: 'Lavavajillas', ancho: 60 },
+    { id: 'lavadora', label: 'Lavadora', ancho: 60 },
+    { id: 'frigorifico', label: 'Columna frigorífico', ancho: 60 },
+    { id: 'columna_hornos', label: 'Columna hornos', ancho: 60 },
+    { id: 'despensa', label: 'Columna despensa', ancho: 60 },
+    { id: 'alto', label: 'Alto', ancho: 60 },
+    { id: 'campana', label: 'Campana', ancho: 60 },
+    { id: 'relleno', label: 'Relleno', ancho: 15 },
+  ];
+
+  const [corrigiendo, setCorrigiendo] = useState(false);
+
+  // CORREGIR A MANO lo que ha leído la IA. Es el paso que convierte «la IA lo
+  // ha leído así» en «esto es lo que se fabrica».
+  //
+  // Lo corregido se marca `corregida`, y el backend lo trata como MEDIDA REAL:
+  // `_cuadrar_fila` no reescala nunca una medida real, así que tu número se
+  // respeta y los demás módulos se ajustan alrededor. No hay atajo: todo vuelve
+  // a pasar por el validador de geometría, que es quien dice si una medida es
+  // fabricable y quien cuadra la suma con el ancho de la pared.
+  const corregirDistribucion = async (mutar) => {
+    if (corrigiendo) return;
+    const base = distAceptada.current;
+    if (!base) return;
+    // Copia profunda: si se muta lo que está en pantalla y luego falla la
+    // validación, se queda a medias y sin vuelta atrás.
+    const propuesta = JSON.parse(JSON.stringify(base));
+    mutar(propuesta);
+    setCorrigiendo(true); setError(null);
+    try {
+      const r = await postJson('/api/estudio-cocinas/validar-distribucion', { distribucion: propuesta });
+      if (!r?.success) { setError('No se pudo validar la corrección.'); return; }
+      distAceptada.current = r.distribucion;
+      setDistDetectada(d => ({ ...d, distribucion: r.distribucion, via: 'corregida por ti', avisos: r.avisos || [] }));
+      // El alzado guardado se dibujó con las medidas VIEJAS: ya no vale.
+      alzadoGuardado.current = null;
+      if (vistaConCotas && fotoGuardada.current) {
+        setRenderResult(fotoGuardada.current);
+        setVistaConCotas(false);
+      }
+    } catch (e) {
+      setError(`No se pudo aplicar la corrección: ${e?.message || 'error desconocido'}.`);
+    } finally { setCorrigiendo(false); }
+  };
+
+  const cambiarAnchoModulo = (pared_idx, posicion_cm, ancho) => corregirDistribucion(d => {
+    const e = (d.elementos || []).find(x => x.pared_idx === pared_idx && x.posicion_cm === posicion_cm);
+    if (e) { e.ancho = ancho; e.corregida = true; e.medida_escrita = true; }
+  });
+
+  const quitarModulo = (pared_idx, posicion_cm) => corregirDistribucion(d => {
+    d.elementos = (d.elementos || []).filter(x => !(x.pared_idx === pared_idx && x.posicion_cm === posicion_cm));
+  });
+
+  const añadirModulo = (pared_idx, modelo) => corregirDistribucion(d => {
+    const enPared = (d.elementos || []).filter(x => x.pared_idx === pared_idx);
+    const fin = enPared.reduce((t, x) => Math.max(t, (x.posicion_cm || 0) + (x.ancho || 0)), 0);
+    d.elementos = [...(d.elementos || []), {
+      id: modelo.id, label: modelo.label, pared_idx,
+      posicion_cm: fin, ancho: modelo.ancho, corregida: true, medida_escrita: true,
+    }];
+  });
+
+  const cambiarAnchoPared = (pared_idx, ancho) => corregirDistribucion(d => {
+    const p = (d.paredes || [])[pared_idx];
+    if (p) { p.ancho = ancho; p.ancho_corregido = true; p.ancho_escrito = true; }
+  });
+
   // Lo detectado caduca en cuanto cambia aquello de donde salió. Si no, se
   // dibujarían las medidas de una cocina sobre otra.
   useEffect(() => { olvidarDistribucion(); },
@@ -3661,29 +3742,73 @@ export default function AIRenderStudio({ state, setState }) {
                 const mods = (distDetectada.distribucion?.elementos || []).filter(e => e.pared_idx === i);
                 const suma = mods.reduce((t, e) => t + (e.ancho || 0), 0);
                 return (
-                  <div key={i} className="mb-1.5">
-                    <div className="font-bold">
-                      {pared.nombre}: {pared.ancho} cm{' '}
+                  <div key={i} className="mb-2 pb-2 border-b border-teal-200 last:border-0">
+                    <div className="font-bold flex items-center flex-wrap gap-x-1.5 gap-y-1">
+                      <span>{pared.nombre}:</span>
+                      <select value={pared.ancho} disabled={corrigiendo}
+                        onChange={(ev) => cambiarAnchoPared(i, parseInt(ev.target.value, 10))}
+                        title="Ancho REAL de esta pared. Si lo cambias, manda sobre lo que haya leído la IA."
+                        className="px-1 py-0.5 rounded border border-teal-300 bg-white text-teal-900 font-black text-[12px] disabled:opacity-50">
+                        {/* De 100 a 600 de 10 en 10, más el valor actual por si
+                            viene de un croquis y no cae en la rejilla. */}
+                        {Array.from(new Set([pared.ancho, ...Array.from({ length: 51 }, (_, k) => 100 + k * 10)]))
+                          .sort((a, b) => a - b)
+                          .map(w => <option key={w} value={w}>{w} cm</option>)}
+                      </select>
                       <span className="font-normal">
-                        ({pared.ancho_escrito ? 'medida real' : 'estimada por la IA'})
+                        ({pared.ancho_corregido ? 'corregida por ti'
+                          : pared.ancho_escrito ? 'medida real' : 'estimada por la IA'})
                       </span>
                       {/* La suma TIENE que cuadrar con la pared. El validador ya
                           la cuadra; enseñarlo es la red por si algún día no. */}
                       {mods.length > 0 && suma !== pared.ancho && (
-                        <span className="text-red-700 font-black"> · ojo: los módulos suman {suma} cm</span>
+                        <span className="text-red-700 font-black">· ojo: los módulos suman {suma} cm</span>
                       )}
                     </div>
-                    <div className="text-[12px]">
-                      {mods.length
-                        ? mods.map(e => `${e.label} ${e.medida_escrita ? '' : '~'}${e.ancho}`).join(' · ')
-                        : 'sin módulos'}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {mods.length === 0 && <span className="text-[12px] opacity-70">sin módulos</span>}
+                      {mods.map(e => (
+                        <span key={`${e.pared_idx}-${e.posicion_cm}`}
+                          className={`inline-flex items-center gap-1 rounded-lg pl-1.5 pr-1 py-0.5 text-[11px] border ${
+                            e.corregida ? 'bg-white border-teal-500 font-black'
+                              : e.medida_escrita ? 'bg-white border-teal-300'
+                                : 'bg-teal-100/60 border-teal-200 border-dashed'}`}
+                          title={e.corregida ? 'Medida corregida por ti: se respeta tal cual'
+                            : e.medida_escrita ? 'Medida escrita en tu croquis'
+                              : 'Medida deducida por la IA a ojo — compruébala'}>
+                          <span className="truncate max-w-[110px]">{e.label}</span>
+                          <select value={e.ancho} disabled={corrigiendo}
+                            onChange={(ev) => cambiarAnchoModulo(e.pared_idx, e.posicion_cm, parseInt(ev.target.value, 10))}
+                            className="bg-transparent font-black text-teal-900 disabled:opacity-50">
+                            {Array.from(new Set([e.ancho, ...ANCHOS_CATALOGO])).sort((a, b) => a - b)
+                              .map(w => <option key={w} value={w}>{e.corregida || e.medida_escrita ? '' : '~'}{w}</option>)}
+                          </select>
+                          <button onClick={() => quitarModulo(e.pared_idx, e.posicion_cm)} disabled={corrigiendo}
+                            title="Quitar este módulo. El hueco que deje lo cuadra el validador."
+                            className="text-teal-400 hover:text-red-600 disabled:opacity-50 px-0.5">×</button>
+                        </span>
+                      ))}
+                      <select value="" disabled={corrigiendo}
+                        onChange={(ev) => {
+                          const m = MODULOS_PARA_AÑADIR.find(x => x.id === ev.target.value);
+                          if (m) añadirModulo(i, m);
+                          ev.target.value = '';
+                        }}
+                        title="Añadir un módulo que la IA no haya visto. Se pone al final de la pared."
+                        className="rounded-lg border border-dashed border-teal-400 bg-white px-1.5 py-0.5 text-[11px] font-black text-teal-700 disabled:opacity-50">
+                        <option value="">+ añadir…</option>
+                        {MODULOS_PARA_AÑADIR.map(m => <option key={m.id} value={m.id}>{m.label} ({m.ancho})</option>)}
+                      </select>
                     </div>
                   </div>
                 );
               })}
               <div className="text-[11px] mt-1 opacity-80">
-                Las medidas SIN «~» están escritas en tu croquis. Las que llevan «~» las ha
-                deducido la IA a ojo: compruébalas antes de fabricar.
+                {corrigiendo
+                  ? 'Aplicando la corrección…'
+                  : <>Las medidas SIN «~» están escritas en tu croquis o las has corregido tú. Las que
+                    llevan «~» las ha deducido la IA a ojo. <b>Cámbialas aquí</b> y se dibujará con lo que
+                    tú digas: lo que corriges se respeta tal cual y el resto se cuadra alrededor.</>}
               </div>
               {(distDetectada.avisos || []).length > 0 && (
                 <ul className="list-disc pl-4 mt-1.5 text-[12px] space-y-0.5">

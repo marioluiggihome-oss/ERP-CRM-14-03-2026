@@ -36,6 +36,20 @@ def _cuerpo_de(nombre, fuente=None):
     return fuente[ini:fuente.index("\n  };", ini)]
 
 
+def _panel_de_lo_detectado():
+    """El bloque JSX del panel, entero.
+
+    Antes esto era `pantalla[ini:ini+3000]`, una ventana fija, y se rompio en
+    cuanto el panel crecio al hacerse editable: la prueba miraba media pantalla
+    y decia que faltaba algo que estaba justo debajo. Ahora se corta por el
+    cierre del bloque, asi que el panel puede crecer lo que haga falta.
+    """
+    fuente = _pantalla()
+    ini = fuente.index("{distDetectada && (")
+    fin = fuente.index("\n          )}", ini)
+    return fuente[ini:fin]
+
+
 def test_el_boton_que_pide_el_backend_existe_en_la_pantalla():
     """CANDADO: si el aviso nombra un botón, el botón tiene que estar."""
     with open(RUTAS, encoding="utf-8") as f:
@@ -84,9 +98,7 @@ def test_detectar_NO_dibuja_nada():
 def test_lo_detectado_se_enseña_diciendo_que_medida_es_real_y_cual_no():
     """La regla de oro en pantalla: una cota deducida por la IA no se puede
     presentar igual que una escrita por el cliente en su croquis."""
-    pantalla = _pantalla()
-    ini = pantalla.index("{distDetectada && (")
-    panel = pantalla[ini:ini + 3000]
+    panel = _panel_de_lo_detectado()
     assert "medida_escrita" in panel, \
         "el panel ya no distingue las medidas escritas de las deducidas"
     assert "ancho_escrito" in panel, \
@@ -98,9 +110,7 @@ def test_lo_detectado_se_enseña_diciendo_que_medida_es_real_y_cual_no():
 def test_la_suma_de_los_modulos_se_vigila_en_pantalla():
     """CLAUDE.md: la suma de anchos de una pared DEBE cuadrar con la pared. El
     validador ya la cuadra; esto es la red por si algún día deja de hacerlo."""
-    pantalla = _pantalla()
-    ini = pantalla.index("{distDetectada && (")
-    panel = pantalla[ini:ini + 3000]
+    panel = _panel_de_lo_detectado()
     assert "suma !== pared.ancho" in panel, \
         "la pantalla ya no avisa cuando los módulos no suman el ancho de la pared"
 
@@ -129,3 +139,52 @@ def test_dibujar_reutiliza_lo_que_el_usuario_ya_ha_revisado():
         "las vías de dibujo vuelven a deducir por su cuenta y se saltan lo revisado"
     assert cuerpo.index("distAceptada.current") < cuerpo.index("detect-distribucion"), \
         "se llama a la IA antes de mirar si ya hay una distribución revisada"
+
+
+# ── Corregir a mano lo que ha leido la IA (24/08/2026) ──────────────────────
+# El comportamiento de las correcciones (que no estiren la pared, que tu medida
+# se respete, que la suma cuadre) se prueba EJECUTANDO el validador, en
+# `test_calculo_correccion_distribucion.py`. Aqui solo se vigila que la pantalla
+# ofrezca corregir y que no se lo guise por su cuenta.
+
+def test_el_panel_deja_corregir_lo_que_ha_leido_la_IA():
+    """Sin esto el panel es un cartel: te dice que la IA se ha equivocado y te
+    deja mirando. Corregir ahi es lo que convierte «la IA lo ha leido asi» en
+    «esto es lo que se fabrica»."""
+    panel = _panel_de_lo_detectado()
+    assert "cambiarAnchoModulo" in panel, "ya no se puede corregir el ancho de un módulo"
+    assert "quitarModulo" in panel, "ya no se puede quitar un módulo que la IA se ha inventado"
+    assert "añadirModulo" in panel, "ya no se puede añadir un módulo que la IA no ha visto"
+    assert "cambiarAnchoPared" in panel, "ya no se puede corregir el ancho de la pared"
+
+
+def test_solo_se_ofrecen_anchos_de_CATALOGO():
+    """Un mueble no mide 67 cm: mide 60 o 70. Si la pantalla dejara teclear
+    cualquier numero, el validador lo corregiria por detras y el usuario veria
+    un ancho distinto del que eligio."""
+    pantalla = _pantalla()
+    ini = pantalla.index("const ANCHOS_CATALOGO")
+    lista = pantalla[ini:pantalla.index("]", ini)]
+    for estandar in (15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120):
+        assert str(estandar) in lista, f"falta el ancho estándar {estandar} en la lista de la pantalla"
+
+
+def test_una_correccion_pasa_SIEMPRE_por_el_validador():
+    """CANDADO (regla de oro). Corregir a mano no puede ser un atajo para
+    saltarse la validacion de geometria: es entrar por la puerta buena, con un
+    dato real en vez de una estimacion. La pantalla no recalcula nada por su
+    cuenta — manda lo corregido al backend y dibuja lo que le devuelve."""
+    cuerpo = _cuerpo_de("corregirDistribucion")
+    assert "/api/estudio-cocinas/validar-distribucion" in cuerpo, \
+        "la pantalla aplica las correcciones sin pasarlas por el validador de geometría"
+    assert "distAceptada.current = r.distribucion" in cuerpo, \
+        "se guarda la propuesta del usuario en vez de lo que ha devuelto el validador"
+
+
+def test_corregir_tira_el_alzado_que_ya_estaba_dibujado():
+    """El alzado guardado se dibujo con las medidas VIEJAS. Si no se tira, el
+    interruptor de medidas enseñaria las cotas de antes de la correccion."""
+    cuerpo = _cuerpo_de("corregirDistribucion")
+    assert "alzadoGuardado.current = null" in cuerpo, (
+        "una corrección ya no invalida el alzado dibujado: el botón de medidas "
+        "enseñaría las cotas de antes de corregir.")

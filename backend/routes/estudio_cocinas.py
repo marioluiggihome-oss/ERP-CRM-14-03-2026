@@ -2335,6 +2335,61 @@ async def detect_distribucion(payload: dict):
         raise HTTPException(status_code=500, detail="No se pudo analizar la distribución.")
 
 
+@router.post("/validar-distribucion")
+async def validar_distribucion_corregida(payload: dict):
+    """Revalida una distribución CORREGIDA A MANO en el panel del Estudio 3D.
+
+    Aquí no interviene ninguna IA: entra lo que ha tecleado el usuario y sale
+    pasado por el validador de geometría, que es el único que decide si una
+    medida es fabricable y el que cuadra la suma de cada pared con su ancho
+    (CLAUDE.md). O sea que corregir a mano NO es saltarse la validación: es
+    entrar por la puerta buena, con un dato real en vez de una estimación.
+
+    `ancho_real` no se pasa a propósito. El ancho de pared que llega ya es el
+    bueno: o el que se aplicó al detectar (que salió de «Medidas de la
+    estancia») o el que el usuario acaba de corregir en el panel. Volver a
+    imponer el de la estancia pisaría su corrección.
+    """
+    dist = payload.get("distribucion") or {}
+    if not dist.get("paredes"):
+        raise HTTPException(status_code=422,
+                            detail="No hay ninguna pared que validar.")
+
+    # EL ANCHO DE PARED SE CLAVA. Es el fallo que tuvo esto al escribirse, y se
+    # vio probandolo: al corregir un bajo fregadero de 60 a 90, la PARED crecia
+    # sola de 300 a 330; y al quitar el lavavajillas, encogia a 270. Una pared
+    # no crece porque cambies un mueble ni encoge porque quites un
+    # electrodomestico — lo que te queda es un hueco de 60 cm.
+    #
+    # Venia de que `validar_distribucion`, cuando la pared no esta marcada como
+    # medida firme, deduce su ancho de la SUMA de los modulos con medida
+    # escrita. Ahi eso es correcto (se esta leyendo un croquis acotado). Aqui no:
+    # aqui la pared ya esta decidida —la tecleo el usuario en «Medidas de la
+    # estancia», estaba escrita en el plano, o la acaba de corregir en el panel—
+    # y lo que se esta tocando son los MUEBLES.
+    #
+    # Es el mismo agujero contra el que avisa CLAUDE.md: si la pared se estira
+    # hasta los muebles, cualquier composicion "cabe" y el validador deja de
+    # validar nada.
+    for pared in dist.get("paredes") or []:
+        pared["ancho_escrito"] = True
+
+    from services.kitchen_geometry import validar_distribucion
+    try:
+        val = validar_distribucion(dist)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"validar-distribucion error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo validar la distribución.")
+    if not val.get("ok"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{val.get('motivo') or 'La distribución no es válida.'} "
+                   + " ".join(val.get("avisos") or []))
+    return {"success": True, "distribucion": val, "avisos": val.get("avisos") or []}
+
+
 @router.post("/exportar-dxf")
 async def exportar_dxf(payload: dict):
     """
