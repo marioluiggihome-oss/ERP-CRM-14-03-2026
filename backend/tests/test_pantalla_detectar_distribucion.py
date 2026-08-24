@@ -73,13 +73,34 @@ def test_los_avisos_dicen_DONDE_esta_el_boton():
     """
     with open(RUTAS, encoding="utf-8") as f:
         codigo = f.read()
-    avisos = [n.value for n in ast.walk(ast.parse(codigo))
+    arbol = ast.parse(codigo)
+
+    # UNA EXCEPCIÓN, Y SOLO UNA: el aviso de `relacion_mv` se lee DENTRO del
+    # propio Estudio 3D —ese panel no existe en ninguna otra pantalla—, así que
+    # mandar ahí a quien ya está ahí es ruido. Todos los demás avisos pueden
+    # salir desde otra pantalla y sí tienen que decir dónde está el botón; por
+    # eso la excepción va por NOMBRE DE FUNCIÓN y no aflojando la regla: si
+    # mañana aparece otro aviso en otro sitio, esta prueba lo caza igual.
+    SOLO_DENTRO_DEL_ESTUDIO_3D = {"relacion_mv"}
+
+    fallos = []
+    for nodo in ast.walk(arbol):
+        if not isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for hijo in ast.walk(nodo):
+            if not (isinstance(hijo, ast.Constant) and isinstance(hijo.value, str)):
+                continue
+            if "«Detectar distribución»" not in hijo.value:
+                continue
+            if nodo.name in SOLO_DENTRO_DEL_ESTUDIO_3D:
+                continue
+            if "Estudio 3D" not in hijo.value:
+                fallos.append(f"{nodo.name}: …{hijo.value[:80]}…")
+    vistos = [n.value for n in ast.walk(arbol)
               if isinstance(n, ast.Constant) and isinstance(n.value, str)
               and "«Detectar distribución»" in n.value]
-    assert avisos, "ningún aviso nombra ya el botón"
-    for aviso in avisos:
-        assert "Estudio 3D" in aviso, \
-            f"este aviso no dice dónde está el botón: …{aviso[:90]}…"
+    assert vistos, "ningún aviso nombra ya el botón"
+    assert not fallos, "estos avisos no dicen dónde está el botón: " + " · ".join(fallos)
 
 
 def test_detectar_NO_dibuja_nada():

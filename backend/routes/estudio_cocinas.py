@@ -2390,6 +2390,77 @@ async def validar_distribucion_corregida(payload: dict):
     return {"success": True, "distribucion": val, "avisos": val.get("avisos") or []}
 
 
+@router.post("/relacion-mv")
+async def relacion_mv(payload: dict):
+    """La distribución del Estudio 3D, traducida a MUEBLES MV con su precio.
+
+    Cierra el circuito: lo que se ha detectado (y corregido a mano) en el panel
+    se convierte en códigos de catálogo con puntos y PVP, listos para revisar y
+    volcar al presupuesto.
+
+    No hay aquí ni una tarifa nueva. El puente (`distribucion_a_mv`) solo decide
+    QUÉ mueble es cada módulo y con qué ancho y altura; de ponerle precio se
+    encarga `mv_relacion`, que lee el catálogo oficial y ya estaba probado. Dos
+    caminos hasta el precio serían dos sitios donde equivocarse.
+
+    Dos formas de llamarlo:
+      · con `distribucion`: traduce y tarifa (primera vez).
+      · con `lineas`: vuelve a tarifar unas líneas ya revisadas por el usuario
+        (ha cambiado una mano, o ha pasado un mueble a dos puertas).
+    """
+    from services.distribucion_a_mv import distribucion_a_relacion, notacion_de
+    from services.mv_relacion import parse_relacion_text
+
+    tarifa = str((payload or {}).get("tarifa") or "T1")
+    lineas_dadas = (payload or {}).get("lineas")
+    if lineas_dadas:
+        lineas = [dict(x) for x in lineas_dadas]
+        sin_codigo = (payload or {}).get("sin_codigo") or []
+    else:
+        dist = (payload or {}).get("distribucion") or {}
+        if not dist.get("elementos"):
+            raise HTTPException(
+                status_code=422,
+                detail=("No hay módulos que traducir. Pulsa «Detectar distribución» "
+                        "antes de pedir los muebles MV."))
+        try:
+            r = distribucion_a_relacion(
+                dist, tarifa=tarifa,
+                alto_altos=int((payload or {}).get("alto_altos") or 70),
+                alto_columnas=int((payload or {}).get("alto_columnas") or 200))
+        except Exception as e:
+            logger.error(f"relacion-mv: {e}")
+            raise HTTPException(status_code=500, detail="No se pudo traducir la distribución a muebles MV.")
+        lineas, sin_codigo = r["lineas"], r["sin_codigo"]
+
+    notacion = notacion_de(lineas)
+    tarifadas = parse_relacion_text(notacion, tarifa) if lineas else []
+
+    # Se emparejan por ORDEN: `notacion_de` escribe un mueble por línea y el
+    # parser devuelve uno por línea, en el mismo orden. Si algún día dejaran de
+    # coincidir, se dice — no se reparten precios a ojo, que es como se cuela un
+    # PVP en el mueble equivocado.
+    if len(tarifadas) != len(lineas):
+        logger.error("relacion-mv: %d líneas y %d tarifadas", len(lineas), len(tarifadas))
+        raise HTTPException(
+            status_code=500,
+            detail=("No se han podido tarifar todos los muebles "
+                    f"({len(tarifadas)} de {len(lineas)}). No se dan precios a medias."))
+
+    for linea, t in zip(lineas, tarifadas):
+        linea["codigo_mv"] = t.get("cod")
+        linea["familia_mv"] = t.get("familia")
+        linea["puntos"] = t.get("pts")
+        linea["pvp"] = t.get("pvp")
+        linea["fondo"] = t.get("fondo")
+
+    total = round(sum((x.get("pvp") or 0) for x in lineas), 2)
+    sin_precio = [x["codigo"] for x in lineas if not x.get("pvp")]
+    return {"success": True, "tarifa": tarifa, "lineas": lineas,
+            "sin_codigo": sin_codigo, "notacion": notacion,
+            "totalPvp": total, "sinPrecio": sin_precio}
+
+
 @router.post("/exportar-dxf")
 async def exportar_dxf(payload: dict):
     """
