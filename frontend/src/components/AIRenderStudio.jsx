@@ -360,7 +360,13 @@ export default function AIRenderStudio({ state, setState }) {
   // pestaña no se pinta sin este permiso: sin comprobarlo, a quien pudiera
   // volcar pero no entrar ahí se le mandaba a una PANTALLA EN BLANCO con sus
   // muebles dentro y sin forma de llegar a ellos.
+  //
+  // OJO A LA POLARIDAD, que es distinta en cada uno y está copiada de App.js:
+  // Cocina Desmontada hay que DARLA (`=== true`), y Cocina Montada 3 la tienen
+  // todos salvo que se la quites (`!== false`). Igualarlas escondería una
+  // pantalla a quien sí la tiene, u ofrecería la otra a quien no.
   const puedeAbrirDesmontada = state?.currentUser?.canUseCascos === true;
+  const puedeAbrirMontada3 = state?.currentUser?.canUsePresupuestador3 !== false;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
   // Admin o lista vacía/ausente = todos permitidos (compatibilidad hacia atrás).
   const tiposPermitidos = (() => {
@@ -1583,9 +1589,23 @@ export default function AIRenderStudio({ state, setState }) {
   // no hay ninguna decisión de permisos: se mira si hay datos o no.
   const [revisarRelacion, setRevisarRelacion] = useState(null);
 
-  const volcarRelacionMV = () => {
+  // DOS DESTINOS, y cada uno se revisa UNA VEZ — que es la parte que importa.
+  //
+  // Cocina Montada 3 abre SU propia revisión al recibir muebles pendientes
+  // («siempre se abre la revisión antes de mezclar nada en el presupuesto
+  // actual», dice su código), así que ahí se mandan directos: revisarlos aquí
+  // también sería hacerlo dos veces seguidas.
+  //
+  // Cocina Desmontada NO revisa: empareja lo que le llega con el catálogo y lo
+  // precia. Así que ahí la revisión tiene que pasar ANTES, aquí.
+  const volcarRelacionMV = (destino) => {
     const muebles = relacionMV?.muebles;
     if (!muebles?.length) { setError('No hay muebles que volcar.'); return; }
+    if (destino === 'montada3') {
+      setState && setState(p => ({ ...p, cocinaMontadaPendingMuebles: muebles }));
+      irA('cocinaMontada3');
+      return;
+    }
     setRevisarRelacion(muebles);
   };
 
@@ -3993,19 +4013,34 @@ export default function AIRenderStudio({ state, setState }) {
                   </ul>
                 </div>
               )}
-              {relacionMV.puedeVolcar && (puedeAbrirDesmontada ? (
-                <button onClick={volcarRelacionMV} disabled={cargandoMV}
-                  title="Revisar la relación y volcarla a Cocina Desmontada, que es donde se emparejan los muebles con el catálogo y se precian. Se abre la misma pantalla de revisión que usan Cascos y Cocina Montada 3, con sus avisos."
-                  className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
-                  <CheckCircle size={12} /> Revisar y volcar a Cocina Desmontada
-                </button>
-              ) : (
-                <div className="mt-2 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
-                  Puedes sacar la relación, pero no volcarla: los muebles van a
-                  <b> Cocina Desmontada</b> y tu usuario no tiene esa pantalla. Pídele
-                  el permiso al master (Ajustes → usuarios → «Cocina Desmontada»).
-                </div>
-              ))}
+              {relacionMV.puedeVolcar && (
+                (puedeAbrirMontada3 || puedeAbrirDesmontada) ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wide text-indigo-500">Volcar a:</span>
+                    {puedeAbrirMontada3 && (
+                      <button onClick={() => volcarRelacionMV('montada3')} disabled={cargandoMV}
+                        title="Volcar a Cocina Montada 3 (presupuesto por relación y códigos). Allí se abre la revisión antes de mezclar nada con lo que ya tengas."
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
+                        <CheckCircle size={12} /> Cocina Montada 3
+                      </button>
+                    )}
+                    {puedeAbrirDesmontada && (
+                      <button onClick={() => volcarRelacionMV('desmontada')} disabled={cargandoMV}
+                        title="Revisar aquí y volcar a Cocina Desmontada, que es donde se emparejan los muebles con el catálogo y se precian."
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
+                        <CheckCircle size={12} /> Cocina Desmontada
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                    Puedes sacar la relación, pero no volcarla: los muebles van a
+                    <b> Cocina Montada 3</b> o a <b>Cocina Desmontada</b>, y tu usuario
+                    no tiene ninguna de las dos. Pídele el permiso al master
+                    (Ajustes → usuarios).
+                  </div>
+                )
+              )}
               <div className="text-[11px] mt-2 opacity-80">
                 {relacionMV.preciosOcultos
                   ? 'La tarifa MV es del master: aquí salen los muebles y sus medidas, no los precios. '

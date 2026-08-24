@@ -191,14 +191,52 @@ def _pantalla_3d():
 def test_no_se_ofrece_volcar_a_quien_no_puede_abrir_el_destino():
     """CANDADO: un volcado a una pantalla que no tienes es perder los muebles."""
     pantalla = _pantalla_3d()
-    assert "puedeAbrirDesmontada" in pantalla, \
-        "ya no se comprueba si el usuario puede abrir Cocina Desmontada"
-    assert "canUseCascos" in pantalla, \
-        "la comprobación ya no mira el permiso real de esa pantalla (canUseCascos)"
-    ini = pantalla.index("relacionMV.puedeVolcar &&")
-    bloque = pantalla[ini:ini + 1200]
-    assert "puedeAbrirDesmontada" in bloque, \
-        "el botón de volcar ha vuelto a salir sin mirar si el destino se puede abrir"
+    for guardia in ("puedeAbrirDesmontada", "puedeAbrirMontada3"):
+        assert guardia in pantalla, f"ya no se comprueba {guardia}"
+    # CADA BOTÓN con SU guarda, no la palabra suelta en algún sitio del bloque:
+    # con eso valía, porque los dos nombres salen también en la condición de
+    # fuera —`(puedeAbrirMontada3 || puedeAbrirDesmontada)`— y un botón podía
+    # quedarse sin guardia con la prueba en verde. (Se vio con un mutante.)
+    for guardia in ("{puedeAbrirDesmontada && (", "{puedeAbrirMontada3 && ("):
+        assert guardia in pantalla, (
+            f"falta la guarda «{guardia}»: ese botón de volcar sale sin mirar si "
+            "el destino se puede abrir, y los muebles acabarían en una pantalla "
+            "que el usuario no tiene.")
+
+
+def test_cada_destino_mira_SU_permiso_con_SU_polaridad():
+    """No son iguales, y copiarlas mal esconde una pantalla a quien la tiene:
+
+        Cocina Desmontada   canUseCascos === true       (hay que DARLA)
+        Cocina Montada 3    canUsePresupuestador3 !== false  (la tienen todos
+                                                              salvo que se quite)
+    """
+    pantalla = _pantalla_3d()
+    assert "canUseCascos === true" in pantalla, \
+        "Cocina Desmontada ya no exige el permiso explícito: se ofrecería a quien no la tiene"
+    assert "canUsePresupuestador3 !== false" in pantalla, \
+        "Cocina Montada 3 ya no usa su polaridad: se escondería a quien sí la tiene"
+
+
+def test_cada_destino_se_revisa_UNA_vez():
+    """Cocina Montada 3 abre su propia revisión al recibir pendientes, así que
+    revisarlos también aquí sería hacerlo dos veces seguidas. Cocina Desmontada
+    NO revisa —empareja con el catálogo y precia—, así que ahí la revisión tiene
+    que pasar antes."""
+    cuerpo = _cuerpo_jsx("volcarRelacionMV")
+    assert "cocinaMontadaPendingMuebles" in cuerpo, \
+        "Cocina Montada 3 ya no recibe los muebles por su cauce (los revisa ella)"
+    i_m3 = cuerpo.index("cocinaMontadaPendingMuebles")
+    i_rev = cuerpo.index("setRevisarRelacion")
+    assert i_m3 < i_rev, (
+        "la vía de Cocina Montada 3 pasa por la revisión de aquí: se revisaría "
+        "dos veces, aquí y allí.")
+
+
+def _cuerpo_jsx(nombre):
+    fuente = _pantalla_3d()
+    ini = fuente.index(f"const {nombre} =")
+    return fuente[ini:fuente.index("\n  };", ini)]
 
 
 def test_a_quien_no_puede_se_le_DICE_por_que_y_que_pedir():
@@ -213,6 +251,8 @@ def test_a_quien_no_puede_se_le_DICE_por_que_y_que_pedir():
         "ya no se explica que se puede sacar la relación pero no volcarla"
     assert "Pídele" in pantalla and "Ajustes" in pantalla, \
         "el aviso ya no dice a quién pedir el permiso ni dónde se da"
+    assert "ninguna de las dos" in pantalla, \
+        "el aviso ya no dice que le faltan LOS DOS destinos, no uno"
 
 
 def test_el_boton_dice_ADONDE_van_los_muebles():
