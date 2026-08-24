@@ -1293,6 +1293,33 @@ class Render3DService:
                "hand-drawn L-shaped kitchen must come out as that same L-shaped kitchen, with two "
                "perpendicular cabinet runs visibly joined at the actual inside corner.\n"
                if hay_croquis else "")
+            # UNA FOTO NO LLEVA COTAS. NUNCA. (24/08/2026)
+            #
+            # El master: «si paso un diseño con medidas escritas, cuando lo pasa
+            # a render las escribe». Y era verdad: lo único que impedía copiar
+            # las anotaciones del dibujo era la regla de más arriba, la de «no
+            # reproduzcas el papel ni la letra manuscrita»… que SOLO se añade si
+            # `_parece_dibujo_a_mano` dice que sí. Un plano impreso de CAD —o el
+            # pantallazo de un presupuesto— no lo es, así que esa regla no se
+            # ponía y nadie le decía al modelo que no copiase las cotas.
+            #
+            # Va SIN condición y aparte de la de la letra, porque son dos cosas
+            # distintas: aquella habla del soporte (papel, lápiz), ésta habla de
+            # las ANOTACIONES TÉCNICAS, que aparecen igual en un dibujo impreso.
+            #
+            # Y es la regla de la casa: un modelo de imagen NUNCA escribe cotas
+            # —no sabe— así que las que saliesen serían números inventados sobre
+            # una foto que alguien puede acabar usando para fabricar. Las cotas
+            # de verdad las dibuja el alzado vectorial, con datos reales.
+            + "\nTHIS IS A PHOTOGRAPH, NOT A PLAN:\n"
+            "- NEVER draw dimension lines, arrows, extension lines, leaders, measurement "
+            "numbers, unit marks (mm/cm), module codes, labels, callouts, legends, title "
+            "blocks, watermarks or ANY text or annotation on the image. The reference "
+            "drawings may be covered in written dimensions: those are INSTRUCTIONS FOR YOU "
+            "about how big things are, never something to copy onto the photograph.\n"
+            "- The result must look like a photograph taken with a camera in a finished "
+            "room: real materials, real light, and not one single number or letter "
+            "printed anywhere on it.\n"
             + "\nSTRICT RULES:\n"
             "- Show the WHOLE kitchen: include EVERY wall, every cabinet run and EVERY element "
             "that appears in ANY of the reference images. Do NOT omit, crop out or leave out any "

@@ -1266,7 +1266,25 @@ export default function AIRenderStudio({ state, setState }) {
       if (data.success) {
         const etiqueta = (fin.modelo || fin.forma) ? `${fin.modelo || ''} · ${colorLabel}`.trim() : colorLabel;
         let finalImg = data.result?.images?.[0];
-        try { finalImg = await keepResolution(await imageToDataUrl(finalImg), dataUrl); } catch { /* si falla, se usa la original */ }
+        // SE GUARDA LA IMAGEN NATIVA DEL MODELO, no una reescalada.
+        //
+        // Antes esto pasaba por `keepResolution`, que agrandaba la respuesta
+        // hasta el tamaño de la que se había enviado. Agrandar no inventa
+        // detalle: lo emborrona. Y como la imagen emborronada se guardaba como
+        // la buena, era la que se mandaba en la EDICIÓN SIGUIENTE — así que la
+        // pérdida se acumulaba vuelta a vuelta.
+        //
+        // Medido sobre un render real (varianza del laplaciano, que mide
+        // detalle fino): 100% → 51% en la PRIMERA edición → 43% → 39% → 37%.
+        // El master lo dijo tal cual: «cada vez que hago una petición o un
+        // cambio, pierde intensidad».
+        //
+        // No hace falta para verlo: el <img> del render usa `object-contain`
+        // dentro de un contenedor con `aspectRatio`, o sea que el navegador lo
+        // escala igual. Lo único que se perdía era nitidez de verdad a cambio
+        // de píxeles de mentira. Para tener MÁS resolución de verdad está el
+        // botón de HD/4K, que la genera en vez de estirarla.
+        try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, se usa la original */ }
         const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Puerta] ${etiqueta}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
@@ -1655,27 +1673,6 @@ export default function AIRenderStudio({ state, setState }) {
   // Evita PERDER resolución entre peticiones: si el nuevo render sale más pequeño
   // que la imagen de la que partimos, lo reescala (Lanczos aprox. vía canvas) para
   // que nunca baje de la resolución previa. Devuelve un dataURL.
-  const keepResolution = (newSrc, refSrc) => new Promise((resolve) => {
-    if (!newSrc || !refSrc) return resolve(newSrc);
-    const ref = new window.Image();
-    ref.onload = () => {
-      const nw = new window.Image();
-      nw.onload = () => {
-        if (nw.width >= ref.width && nw.height >= ref.height) return resolve(newSrc);
-        const scale = Math.max(ref.width / nw.width, ref.height / nw.height);
-        const cw = Math.round(nw.width * scale), ch = Math.round(nw.height * scale);
-        const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
-        const ctx = cv.getContext('2d');
-        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(nw, 0, 0, cw, ch);
-        try { resolve(cv.toDataURL('image/png')); } catch { resolve(newSrc); }
-      };
-      nw.onerror = () => resolve(newSrc);
-      nw.src = newSrc;
-    };
-    ref.onerror = () => resolve(newSrc);
-    ref.src = refSrc;
-  });
 
   // ─── Visita de decorador/a: pasa el render por el "ojo" de un decorador
   // profesional. Mejora estilismo, iluminación, textiles, materiales y atmósfera
@@ -1705,7 +1702,25 @@ export default function AIRenderStudio({ state, setState }) {
       const data = await response.json();
       if (data.success) {
         let finalImg = data.result?.images?.[0];
-        try { finalImg = await keepResolution(await imageToDataUrl(finalImg), dataUrl); } catch { /* si falla, se usa la original */ }
+        // SE GUARDA LA IMAGEN NATIVA DEL MODELO, no una reescalada.
+        //
+        // Antes esto pasaba por `keepResolution`, que agrandaba la respuesta
+        // hasta el tamaño de la que se había enviado. Agrandar no inventa
+        // detalle: lo emborrona. Y como la imagen emborronada se guardaba como
+        // la buena, era la que se mandaba en la EDICIÓN SIGUIENTE — así que la
+        // pérdida se acumulaba vuelta a vuelta.
+        //
+        // Medido sobre un render real (varianza del laplaciano, que mide
+        // detalle fino): 100% → 51% en la PRIMERA edición → 43% → 39% → 37%.
+        // El master lo dijo tal cual: «cada vez que hago una petición o un
+        // cambio, pierde intensidad».
+        //
+        // No hace falta para verlo: el <img> del render usa `object-contain`
+        // dentro de un contenedor con `aspectRatio`, o sea que el navegador lo
+        // escala igual. Lo único que se perdía era nitidez de verdad a cambio
+        // de píxeles de mentira. Para tener MÁS resolución de verdad está el
+        // botón de HD/4K, que la genera en vez de estirarla.
+        try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, se usa la original */ }
         const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
@@ -1830,7 +1845,25 @@ export default function AIRenderStudio({ state, setState }) {
       const data = await response.json();
       if (data.success) {
         let finalImg = data.result?.images?.[0];
-        try { finalImg = await keepResolution(await imageToDataUrl(finalImg), dataUrl); } catch { /* si falla, se usa la original */ }
+        // SE GUARDA LA IMAGEN NATIVA DEL MODELO, no una reescalada.
+        //
+        // Antes esto pasaba por `keepResolution`, que agrandaba la respuesta
+        // hasta el tamaño de la que se había enviado. Agrandar no inventa
+        // detalle: lo emborrona. Y como la imagen emborronada se guardaba como
+        // la buena, era la que se mandaba en la EDICIÓN SIGUIENTE — así que la
+        // pérdida se acumulaba vuelta a vuelta.
+        //
+        // Medido sobre un render real (varianza del laplaciano, que mide
+        // detalle fino): 100% → 51% en la PRIMERA edición → 43% → 39% → 37%.
+        // El master lo dijo tal cual: «cada vez que hago una petición o un
+        // cambio, pierde intensidad».
+        //
+        // No hace falta para verlo: el <img> del render usa `object-contain`
+        // dentro de un contenedor con `aspectRatio`, o sea que el navegador lo
+        // escala igual. Lo único que se perdía era nitidez de verdad a cambio
+        // de píxeles de mentira. Para tener MÁS resolución de verdad está el
+        // botón de HD/4K, que la genera en vez de estirarla.
+        try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, se usa la original */ }
         const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
