@@ -81,15 +81,22 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 
 1. **Motor de render del Estudio 3D.** El motor elegido en pantalla manda
    siempre, por cualquier camino (texto, referencia, plano+bocetos):
-   `IA 1 → gemini` · `IA 3 → gemini_premium` · `IA 4 → gemini_flash` ·
-   `IA 7 → banana_pro`. Todo render pasa por `_render_dispatch`; nadie llama
-   directo a un motor.
+   `IA 1 → gemini` · `IA 3 → gemini_premium` · `IA 7 → banana_pro`. Todo
+   render pasa por `_render_dispatch`; nadie llama directo a un motor.
    - **IA 1 es la de producción y es la única que ve un usuario que no sea
      master.** Las demás son motores de pruebas del master (IA 7 cuesta 3,3x
      por render).
    - **IA 2 (manus) está APAGADA** desde el 18/08, a petición del master: es un
      agente, no un modelo de imagen, y cada render se iba hasta cinco minutos.
      Sigue en el código detrás de `MOTOR_MANUS_ACTIVO`; en pantalla no está.
+   - **IA 4 (gemini_flash) está APAGADA** desde el 24/08, a petición del
+     master. Nunca fue un motor distinto: forzaba
+     `model_override="gemini-2.5-flash-image"`, que es el modelo que la IA 1 ya
+     usa por defecto (regla 10). Mismo modelo, mismo encargo, misma imagen,
+     mientras la etiqueta decía «Gemini Flash — rápido». La correspondencia
+     `ia4 → gemini_flash` se queda en `providerOf()` para que los proyectos ya
+     guardados sigan abriendo; lo que se quitó es el botón. Candado:
+     `test_calculo_ia4_apagada.py`.
    - **IA 5 no es un motor: es el ENCARGO del 22/07/2026** con el motor de
      siempre (Gemini). Está para comparar los dos caminos con el mismo croquis
      en vez de discutirlo.
