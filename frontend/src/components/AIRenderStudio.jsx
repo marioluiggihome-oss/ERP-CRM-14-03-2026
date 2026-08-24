@@ -1584,6 +1584,44 @@ export default function AIRenderStudio({ state, setState }) {
   // Una corrección de la distribución deja la relación vieja: son otros muebles.
   const olvidarRelacionMV = () => setRelacionMV(null);
 
+  // LA RELACIÓN EN PDF RELLENABLE. Para llevársela en papel, enseñársela a un
+  // cliente o —lo que más se usa— corregirla fuera del ERP y volver a subirla
+  // para un pegado masivo. No es un PDF cerrado: los campos son AcroForm, se
+  // releen sin IA de por medio, y trae renglones en blanco para apuntar a mano
+  // lo que falte.
+  //
+  // El PDF lo arma el BACKEND. Aquí no se convierten las medidas a propósito:
+  // el papel es en milímetros y la tarifa MV viene en centímetros, así que
+  // hacerlo en dos sitios sería tener dos sitios donde equivocarse de factor
+  // diez.
+  const [pdfRelacion, setPdfRelacion] = useState(false);
+
+  const descargarRelacionPDF = async () => {
+    if (pdfRelacion) return;
+    const lineas = relacionMV?.lineas;
+    if (!lineas?.length) { setError('No hay muebles que listar.'); return; }
+    setPdfRelacion(true); setError(null);
+    try {
+      const r = await fetch(`${API_URL}/api/estudio-cocinas/relacion-mv-pdf`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ lineas, cliente, titulo: ref ? `Relación de muebles · ${ref}` : 'Relación de muebles' }),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.detail || `Error ${r.status}`);
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relacion-muebles_${(cliente || ref || 'cocina').replace(/\s+/g, '_')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(`No se pudo generar el PDF de la relación: ${e?.message || 'error desconocido'}.`);
+    } finally { setPdfRelacion(false); }
+  };
+
   // Volcar al presupuesto. El botón solo aparece si el backend ha entregado los
   // muebles listos —y solo los entrega a quien tiene el permiso—, así que aquí
   // no hay ninguna decisión de permisos: se mira si hay datos o no.
@@ -4041,6 +4079,12 @@ export default function AIRenderStudio({ state, setState }) {
                   </div>
                 )
               )}
+              <button onClick={descargarRelacionPDF} disabled={pdfRelacion || cargandoMV}
+                title="Descarga la relación en PDF RELLENABLE: se corrige a mano fuera del ERP, se vuelve a subir para un pegado masivo, y trae renglones en blanco para añadir muebles. Sin precios: puede acabar delante de un cliente."
+                className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-indigo-700 ring-1 ring-indigo-600 hover:bg-indigo-50 disabled:opacity-50 inline-flex items-center gap-1.5">
+                {pdfRelacion ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />}
+                {pdfRelacion ? 'Generando…' : 'PDF rellenable'}
+              </button>
               <div className="text-[11px] mt-2 opacity-80">
                 {relacionMV.preciosOcultos
                   ? 'La tarifa MV es del master: aquí salen los muebles y sus medidas, no los precios. '

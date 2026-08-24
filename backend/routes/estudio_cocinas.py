@@ -2530,6 +2530,72 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
             "preciosOcultos": not con_precios}
 
 
+@router.post("/relacion-mv-pdf")
+async def relacion_mv_pdf(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """La relación de muebles MV en PDF RELLENABLE.
+
+    Para tres cosas que pidió el master: llevárselo en papel, enseñárselo a un
+    cliente, y —sobre todo— corregirlo fuera del ERP y volver a subirlo para un
+    pegado masivo. Por eso NO es un PDF cerrado: los campos son AcroForm y se
+    releen de forma determinista, sin IA de por medio. Y trae seis renglones en
+    blanco al final para apuntar a mano lo que falte.
+
+    SIN PRECIOS, y no por el candado de la tarifa: es que este papel puede
+    acabar delante de un cliente. Lo que lleva es qué muebles son y cuánto
+    miden. (Regla 5: los descuentos y el coste no salen en nada que vea un
+    cliente.)
+
+    LAS MEDIDAS SE PASAN A MILÍMETROS. El PDF es en mm y `_cota` no convierte:
+    escribe el número que le den. Mandándole los centímetros de la tarifa MV, un
+    bajo de 60 cm saldría impreso como «60», que en ese papel significa 60 mm.
+    """
+    from fastapi.responses import Response as _Response
+    from services.relacion_pdf import build_relacion_pdf
+
+    lineas = (payload or {}).get("lineas") or []
+    if not isinstance(lineas, list) or not lineas:
+        raise HTTPException(
+            status_code=400,
+            detail="No hay muebles que listar. Saca antes la relación de muebles MV.")
+
+    def _mm(valor_cm):
+        try:
+            return int(round(float(valor_cm) * 10))
+        except (TypeError, ValueError):
+            return ""                      # sin dato se deja EN BLANCO, no a cero
+
+    filas = []
+    for ln in lineas[:400]:
+        avisos = []
+        if ln.get("mano_propuesta"):
+            avisos.append("mano propuesta: confirmar D/I")
+        if ln.get("confirmar_familia"):
+            avisos.append("familia a confirmar")
+        filas.append({
+            "cantidad": "1",
+            "codigo": str(ln.get("codigo") or ""),
+            "descripcion": str(ln.get("familia") or ln.get("label") or ""),
+            "ancho": _mm(ln.get("ancho")),
+            "alto": _mm(ln.get("alto")),
+            "fondo": _mm(ln.get("fondo")),
+            "observaciones": " · ".join(avisos),
+        })
+
+    try:
+        pdf = build_relacion_pdf(
+            filas,
+            titulo=str((payload or {}).get("titulo") or "Relación de muebles"),
+            cliente=str((payload or {}).get("cliente") or ""),
+            observaciones=str((payload or {}).get("observaciones") or ""),
+        )
+    except Exception as e:
+        logger.error("relacion-mv-pdf: %s", e)
+        raise HTTPException(status_code=500, detail=f"No se pudo generar el PDF: {e}")
+
+    return _Response(content=pdf, media_type="application/pdf",
+                     headers={"Content-Disposition": 'attachment; filename="relacion-muebles.pdf"'})
+
+
 @router.post("/exportar-dxf")
 async def exportar_dxf(payload: dict):
     """
