@@ -1478,7 +1478,9 @@ export default function AIRenderStudio({ state, setState }) {
     } finally { setDetectandoDist(false); }
   };
 
-  const olvidarDistribucion = () => { distAceptada.current = null; setDistDetectada(null); };
+  const olvidarDistribucion = () => {
+    distAceptada.current = null; setDistDetectada(null); setRelacionMV(null);
+  };
 
   // Anchos de catálogo. Un mueble no mide 67 cm: mide 60 o 70. Es la misma
   // lista que valida el backend (kitchen_geometry.ANCHOS_STD); si aquí
@@ -1505,6 +1507,67 @@ export default function AIRenderStudio({ state, setState }) {
 
   const [corrigiendo, setCorrigiendo] = useState(false);
 
+  // MUEBLES MV: la distribución traducida a códigos de catálogo con su precio.
+  // Cierra el circuito — lo que se ha leído y corregido en el panel se
+  // convierte en muebles que se le pueden pedir a MV.
+  //
+  // Aquí no se calcula ni un precio: el backend traduce y tarifa contra el
+  // catálogo oficial. La pantalla enseña y deja revisar.
+  const [relacionMV, setRelacionMV] = useState(null);
+  const [cargandoMV, setCargandoMV] = useState(false);
+
+  const pedirMueblesMV = async () => {
+    if (cargandoMV) return;
+    const dist = distAceptada.current;
+    if (!dist) { setError('Pulsa antes «Detectar distribución».'); return; }
+    setCargandoMV(true); setError(null);
+    try {
+      const r = await postJson('/api/estudio-cocinas/relacion-mv', { distribucion: dist });
+      if (!r?.success) { setError('No se pudo sacar la relación de muebles MV.'); return; }
+      setRelacionMV(r);
+    } catch (e) {
+      setError(`No se pudo sacar la relación de muebles MV: ${e?.message || 'error desconocido'}.`);
+    } finally { setCargandoMV(false); }
+  };
+
+  // Vuelve a tarifar unas líneas que el usuario ha tocado. Se vuelve a pedir al
+  // backend a propósito: cambiar «B60D» por «B60» es cambiar de mueble, y el
+  // precio lo dice el catálogo, no la pantalla.
+  const retarifarMV = async (lineas) => {
+    if (cargandoMV) return;
+    setCargandoMV(true); setError(null);
+    try {
+      const r = await postJson('/api/estudio-cocinas/relacion-mv',
+        { lineas, sin_codigo: relacionMV?.sin_codigo || [], tarifa: relacionMV?.tarifa || 'T1' });
+      if (r?.success) setRelacionMV(r);
+      else setError('No se pudo volver a tarifar la relación.');
+    } catch (e) {
+      setError(`No se pudo volver a tarifar: ${e?.message || 'error desconocido'}.`);
+    } finally { setCargandoMV(false); }
+  };
+
+  const cambiarMano = (i, mano) => {
+    const lineas = (relacionMV?.lineas || []).map((l, k) => k !== i ? l : {
+      ...l, mano, mano_propuesta: false,
+      codigo: `${l.codigo.replace(/[DI]$/, '')}${mano}`,
+    });
+    retarifarMV(lineas);
+  };
+
+  const alternarDosPuertas = (i) => {
+    const lineas = (relacionMV?.lineas || []).map((l, k) => {
+      if (k !== i) return l;
+      const base = l.codigo.replace(/[DI]$/, '');
+      return l.mano
+        ? { ...l, mano: null, mano_propuesta: false, codigo: base }            // 2 puertas
+        : { ...l, mano: 'D', mano_propuesta: false, codigo: `${base}D` };      // 1 puerta
+    });
+    retarifarMV(lineas);
+  };
+
+  // Una corrección de la distribución deja la relación vieja: son otros muebles.
+  const olvidarRelacionMV = () => setRelacionMV(null);
+
   // CORREGIR A MANO lo que ha leído la IA. Es el paso que convierte «la IA lo
   // ha leído así» en «esto es lo que se fabrica».
   //
@@ -1527,8 +1590,10 @@ export default function AIRenderStudio({ state, setState }) {
       if (!r?.success) { setError('No se pudo validar la corrección.'); return; }
       distAceptada.current = r.distribucion;
       setDistDetectada(d => ({ ...d, distribucion: r.distribucion, via: 'corregida por ti', avisos: r.avisos || [] }));
-      // El alzado guardado se dibujó con las medidas VIEJAS: ya no vale.
+      // El alzado guardado se dibujó con las medidas VIEJAS: ya no vale. Y la
+      // relación de muebles MV tampoco: son otros muebles.
       alzadoGuardado.current = null;
+      setRelacionMV(null);
       if (vistaConCotas && fotoGuardada.current) {
         setRenderResult(fotoGuardada.current);
         setVistaConCotas(false);
@@ -3815,6 +3880,98 @@ export default function AIRenderStudio({ state, setState }) {
                   {distDetectada.avisos.map((a, i) => <li key={i}>{a}</li>)}
                 </ul>
               )}
+              <button onClick={pedirMueblesMV} disabled={cargandoMV || corrigiendo}
+                title="Traduce esta distribución a muebles del catálogo MV, con su código, su ancho y su precio de tarifa. No cambia nada del diseño: saca la relación para que la revises."
+                className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50 flex items-center gap-1.5">
+                {cargandoMV ? <Loader size={12} className="animate-spin" /> : <BookOpen size={12} />}
+                {cargandoMV ? 'Buscando en el catálogo…' : 'Muebles MV de esta cocina'}
+              </button>
+            </div>
+          )}
+          {relacionMV && (
+            <div className="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-900">
+              <div className="flex items-start gap-2 mb-2">
+                <span className="font-black shrink-0">
+                  Muebles MV · tarifa {relacionMV.tarifa} · {relacionMV.lineas?.length || 0} muebles
+                </span>
+                <button onClick={olvidarRelacionMV} title="Cerrar la relación de muebles"
+                  className="ml-auto text-indigo-400 hover:text-indigo-700 shrink-0">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px] min-w-[420px]">
+                  <thead className="text-[10px] uppercase tracking-wide text-indigo-500">
+                    <tr>
+                      <th className="text-left py-0.5">Código</th>
+                      <th className="text-left">Mueble</th>
+                      <th className="text-right">Ancho</th>
+                      <th className="text-right">Alto</th>
+                      <th className="text-center">Puerta</th>
+                      <th className="text-right">PVP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(relacionMV.lineas || []).map((l, i) => (
+                      <tr key={`${l.codigo}-${l.pared_idx}-${l.posicion_cm}`} className="border-t border-indigo-100">
+                        <td className="py-1 font-black">{l.codigo}</td>
+                        <td className="truncate max-w-[150px]">
+                          {l.familia}
+                          {l.confirmar_familia && (
+                            <span className="ml-1 text-amber-700 font-black"
+                              title="La familia es un criterio, no un dato: confírmala antes de pedirlo.">
+                              · a confirmar
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right">{l.ancho}</td>
+                        <td className="text-right">{l.alto || '—'}</td>
+                        <td className="text-center whitespace-nowrap">
+                          {l.mano ? (
+                            <>
+                              <button onClick={() => cambiarMano(i, 'I')} disabled={cargandoMV}
+                                title="Puerta con apertura a la izquierda"
+                                className={`px-1 rounded font-black disabled:opacity-50 ${l.mano === 'I' ? 'bg-indigo-600 text-white' : 'text-indigo-500'}`}>I</button>
+                              <button onClick={() => cambiarMano(i, 'D')} disabled={cargandoMV}
+                                title="Puerta con apertura a la derecha"
+                                className={`px-1 rounded font-black disabled:opacity-50 ${l.mano === 'D' ? 'bg-indigo-600 text-white' : 'text-indigo-500'}`}>D</button>
+                              {l.mano_propuesta && <span className="ml-1 text-amber-700" title="Mano PROPUESTA, no leída del diseño: revísala.">?</span>}
+                            </>
+                          ) : <span className="text-indigo-500" title="Dos puertas: no hay mano que elegir">2 ptas</span>}
+                          {l.puede_dos_puertas && (
+                            <button onClick={() => alternarDosPuertas(i)} disabled={cargandoMV}
+                              title={l.mano ? 'Pasarlo a dos puertas (es otro mueble y otro precio)' : 'Pasarlo a una puerta'}
+                              className="ml-1 text-[10px] underline text-indigo-600 disabled:opacity-50">
+                              {l.mano ? '→2' : '→1'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="text-right font-black">{l.pvp != null ? `${l.pvp} €` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-indigo-300">
+                      <td colSpan={5} className="text-right py-1 font-black uppercase text-[11px]">Total tarifa</td>
+                      <td className="text-right font-black">{relacionMV.totalPvp} €</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              {(relacionMV.sin_codigo || []).length > 0 && (
+                <div className="mt-2 text-[12px]">
+                  <div className="font-black">Fuera de la relación, y por qué:</div>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {relacionMV.sin_codigo.map((x, i) => (
+                      <li key={i}><b>{x.label}</b>{x.ancho ? ` (${x.ancho} cm)` : ''}: {x.motivo}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="text-[11px] mt-2 opacity-80">
+                Precio de TARIFA MV, sin descuentos ni mano de obra. La mano marcada con «?» la ha
+                propuesto el programa, no sale del diseño: revísala antes de pedir.
+              </div>
             </div>
           )}
           {error && (
