@@ -520,6 +520,14 @@ export default function AIRenderStudio({ state, setState }) {
   const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
   const [detecting, setDetecting] = useState(false);
   const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
+  // Interruptor MEDIDAS del render. Alterna entre la foto y el alzado acotado.
+  // Las cotas NO se las pinta la IA encima de la foto: un modelo de imagen no
+  // sabe escribir medidas, escribe números plausibles, y eso puede acabar en
+  // una fábrica. El alzado sale del motor vectorial del backend, dibujado desde
+  // la distribución real, que es lo único que sabe cuánto mide cada mueble.
+  const [vistaConCotas, setVistaConCotas] = useState(false);
+  const fotoGuardada = useRef(null);   // el render tal cual, para poder volver
+  const alzadoGuardado = useRef(null); // el alzado ya generado, para no repetir la llamada
   // Trazo de lápiz en los planos vectoriales. Es SOLO el trazo: mismo dibujo,
   // mismos módulos y mismas cotas. El backend ya aceptaba el flag `boceto`;
   // esto es el interruptor que faltaba en pantalla.
@@ -1479,8 +1487,8 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Vista ALÁMBRICA en blanco y negro (estilo CAD tipo TeoWin), con o sin cotas.
   // Es el mismo motor vectorial determinista: nunca hay medidas inventadas.
-  const generarVistaAlambrica = async (conCotas) => {
-    if (editing) return;
+  const generarVistaAlambrica = async (conCotas, opciones = {}) => {
+    if (editing) return null;
     setEditing(true); setError(null); setAvisoGeom(null);
     try {
       // Dos vías para sacar la distribución: del render y de la descripción. La
@@ -1501,7 +1509,7 @@ export default function AIRenderStudio({ state, setState }) {
           ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
           : ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").';
         setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
-        return;
+        return null;
       }
       const ar = await postJson('/api/estudio-cocinas/alzado', {
         nombre_cliente: cliente || 'Cliente',
@@ -1509,19 +1517,63 @@ export default function AIRenderStudio({ state, setState }) {
         con_cotas: !!conCotas,
         monocromo: true,
       });
-      if (!ar?.alzadoBase64) { setError('No se pudo generar la vista alámbrica.'); return; }
+      if (!ar?.alzadoBase64) { setError('No se pudo generar la vista alámbrica.'); return null; }
       const lamina = {
         success: true,
         result: { images: [ar.alzadoBase64] },
         description: conCotas ? 'Vista alámbrica B/N (con medidas)' : 'Vista alámbrica B/N (sin medidas)',
         timestamp: new Date(),
       };
-      setRenderResult(lamina);
-      setRenderHistory(prev => [lamina, ...prev].slice(0, 14));
+      // En silencio (interruptor MEDIDAS) manda el que llama: ni pisa la
+      // pantalla ni mete el alzado en el historial, que es del render.
+      if (!opciones.silencioso) {
+        setRenderResult(lamina);
+        setRenderHistory(prev => [lamina, ...prev].slice(0, 14));
+      }
       setAvisoGeom(ar.avisos?.length ? ar.avisos : null);
+      return lamina;
     } catch (e) {
       setError(`Error al generar la vista alámbrica: ${e?.message || 'error desconocido'}.`);
+      return null;
     } finally { setEditing(false); }
+  };
+
+  // Un render nuevo deja SIN VALOR el alzado guardado: sería el de otra cocina.
+  // Sin esto, el botón enseñaría las medidas del diseño anterior sobre el nuevo,
+  // que es justo la clase de cota inventada que este proyecto no admite.
+  useEffect(() => {
+    const img = renderResult?.result?.images?.[0];
+    const propio = [fotoGuardada.current, alzadoGuardado.current]
+      .some(l => l && l.result?.images?.[0] === img);
+    if (img && propio) return;
+    fotoGuardada.current = null;
+    alzadoGuardado.current = null;
+    setVistaConCotas(false);
+  }, [renderResult]);
+
+  // El interruptor: foto ⟷ alzado acotado. El alzado se genera una sola vez por
+  // render; a partir de ahí ir y volver es instantáneo y no gasta créditos.
+  const alternarMedidas = async () => {
+    if (editing) return;
+    if (vistaConCotas) {
+      if (fotoGuardada.current) setRenderResult(fotoGuardada.current);
+      setVistaConCotas(false);
+      return;
+    }
+    const actual = renderResult;
+    if (!actual?.result?.images?.[0]) { setError('Genera primero un render.'); return; }
+    if (alzadoGuardado.current) {
+      fotoGuardada.current = actual;
+      setRenderResult(alzadoGuardado.current);
+      setVistaConCotas(true);
+      return;
+    }
+    fotoGuardada.current = actual;
+    const lamina = await generarVistaAlambrica(true, { silencioso: true });
+    if (!lamina) { fotoGuardada.current = null; return; } // el error ya está puesto
+    alzadoGuardado.current = lamina;
+    setRenderResult(lamina);
+    setVistaConCotas(true);
   };
 
   const generarPlanosExactos = async (distribucion) => {
@@ -3767,6 +3819,16 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                   {tipo3d === 'cocina' && (
                   <>
+                    <button onClick={alternarMedidas} disabled={editing || !renderResult}
+                      title={vistaConCotas
+                        ? 'Volver al render. Ahora estás viendo el alzado acotado.'
+                        : 'Ver el mismo diseño con las medidas puestas. Las cotas se dibujan en el alzado vectorial desde las medidas reales: la IA nunca escribe cotas sobre la foto.'}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black disabled:opacity-50 flex items-center gap-1.5 ${
+                        vistaConCotas
+                          ? 'bg-sky-600 text-white hover:bg-sky-700'
+                          : 'bg-white text-sky-700 ring-1 ring-sky-600 hover:bg-sky-50'}`}>
+                      {editing ? <Loader size={12} className="animate-spin" /> : <Ruler size={12} />} {vistaConCotas ? 'Quitar medidas' : 'Poner medidas'}
+                    </button>
                     <button onClick={() => generarVistaAlambrica(true)} disabled={editing}
                       title="Vista alámbrica en blanco y negro (estilo CAD) CON medidas acotadas."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-zinc-900 text-white hover:bg-black disabled:opacity-50 flex items-center gap-1.5">
