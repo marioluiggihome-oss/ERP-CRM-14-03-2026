@@ -696,7 +696,7 @@ async def generar_plano_2d(payload: ProyectoBase):
                 detail=("No puedo dibujar la planta sin las medidas de las "
                         "paredes. Elige la distribución (lineal, L, U…) y "
                         "escribe el ancho real de cada pared, o pulsa "
-                        "«Detectar distribución» sobre un render."))
+                        "«Detectar distribución» en el Estudio 3D."))
 
         _val = validar_distribucion({
             "tipo": getattr(dist, "tipo", "lineal") or "lineal",
@@ -1178,8 +1178,8 @@ async def generar_instalaciones(payload: InstalacionesInput):
             status_code=422,
             detail=("No puedo hacer el plano de instalaciones sin saber qué muebles "
                     "hay y dónde. Genera antes la distribución (elige el tipo de "
-                    "cocina y sus medidas, o pulsa «Detectar distribución» sobre un "
-                    "render) y vuelve a intentarlo."))
+                    "cocina y sus medidas, o pulsa «Detectar distribución» en el "
+                    "Estudio 3D) y vuelve a intentarlo."))
 
     ancho_pared = int(paredes[0]["ancho"]) if paredes else int(m["ancho"])
     con_isla = bool(m["isla_w"] > 0 and m["isla_h"] > 0) or \
@@ -1609,7 +1609,7 @@ async def generar_alzado(payload: ProyectoBase):
             detalle = ("No se puede dibujar el alzado sin las medidas de las paredes. "
                        "Elige la distribución (lineal, L, U…) en el panel de la "
                        "izquierda y escribe el ancho real de cada pared; o pulsa "
-                       "«Detectar distribución» sobre un render para deducirlas.")
+                       "«Detectar distribución» en el Estudio 3D para deducirlas.")
             causa = " ".join(x for x in [(_val.get("motivo") or "").strip(),
                                          *(_val.get("avisos") or [])] if x).strip()
             if causa:
@@ -2065,7 +2065,7 @@ async def generar_perspectiva(payload: ProyectoBase):
             detalle = ("No se puede dibujar la perspectiva sin las medidas de "
                        "las paredes. Elige la distribución (lineal, L, U…) y "
                        "escribe el ancho real de cada pared; o pulsa «Detectar "
-                       "distribución» sobre un render para deducirlas.")
+                       "distribución» en el Estudio 3D para deducirlas.")
             causa = " ".join(x for x in [(_val.get("motivo") or "").strip(),
                                          *(_val.get("avisos") or [])] if x).strip()
             if causa:
