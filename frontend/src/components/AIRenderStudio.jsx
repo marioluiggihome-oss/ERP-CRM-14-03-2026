@@ -491,8 +491,9 @@ export default function AIRenderStudio({ state, setState }) {
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
-  // Motor de render: 'ia1' = motor estándar, 'ia3' = prompt ultra-premium, 'ia4' = rápido,
-  // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro. ('ia2' está apagada.)
+  // Motor de render: 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
+  // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro.
+  // ('ia2' e 'ia4' están apagadas.)
   const [motor, setMotor] = useState('ia1');
   const providerOf = () => {
     // IA 2 (Manus) esta APAGADA: es un agente, no un modelo de imagen, y cada
@@ -501,7 +502,15 @@ export default function AIRenderStudio({ state, setState }) {
     // se quiere. Aqui ni se ofrece ni se puede pedir: si quedara un 'ia2'
     // guardado en una pestaña vieja, cae al motor de siempre y rinde igual.
     if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
-    if (motor === 'ia4') return 'gemini_flash'; // Gemini Flash (rápido)
+    // IA 4 APAGADA el 24/08/2026, a peticion del master. No era un motor: en
+    // `_render_dispatch` hacia `model_override="gemini-2.5-flash-image"`, que es
+    // EXACTAMENTE el modelo que la IA 1 ya usa por defecto. Mismo modelo, mismo
+    // encargo, misma imagen — mientras su etiqueta decia «Gemini Flash — rapido»
+    // y prometia algo que no existia. Es el mismo caso que la IA 2: un boton que
+    // el master pulsaba creyendo que cambiaba de motor.
+    // La correspondencia se queda: hay proyectos guardados con motor 'ia4' y al
+    // abrirlos tienen que seguir dando el mismo render de siempre (el de IA 1).
+    if (motor === 'ia4') return 'gemini_flash';
     // IA 5: el camino del 22/07/2026, literal. Mismo motor (Gemini), otro
     // encargo. Está para PROBAR, no para adornar: el master dijo que aquello
     // funcionaba mejor y con este botón se rinde el mismo croquis por los dos
@@ -1459,10 +1468,7 @@ export default function AIRenderStudio({ state, setState }) {
     try {
       const d = await deducirDistribucion(motivos, fallos);
       if (!d) {
-        const falta = !medidas.ancho
-          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
-          : ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").';
-        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
+        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${queHacerParaDeducir(fallos)}`);
         return;
       }
       distAceptada.current = d;
@@ -1486,11 +1492,31 @@ export default function AIRenderStudio({ state, setState }) {
   // cuando lo que decía en realidad es que el servidor no estaba contestando
   // —normalmente porque se estaba reiniciando tras una actualización—. El dato
   // estaba ahí y lo tapaba la propia lista.
+  // Si TODAS las vías fallaron por red, el problema es el servidor y no lo que
+  // haya escrito el usuario.
+  const esFalloDelServidor = (fallos) => fallos.length > 0 && fallos.every(esFalloDeRed);
+
   const explicarFallo = async (motivos, fallos) => {
     if (!motivos.length) return '';
-    const todosDeRed = fallos.length > 0 && fallos.every(esFalloDeRed);
-    if (todosDeRed) return ` ${await diagnosticarRed(fallos[0])}`;
+    if (esFalloDelServidor(fallos)) return ` ${await diagnosticarRed(fallos[0])}`;
     return ` (${motivos.join(' · ')})`;
+  };
+
+  // QUÉ HACER, según la causa. Y sobre todo: qué NO decir.
+  //
+  // El master lo vio en su móvil el 24/08: el aviso decía «el servidor no
+  // responde, espera un momento» y, pegado detrás, «escribe al menos el ancho
+  // de la pared». Dos causas distintas en la misma frase. Si el servidor está
+  // reiniciándose, escribir el ancho no arregla nada: se le manda a hacer algo
+  // inútil y encima se le sugiere que la culpa es suya.
+  const queHacerParaDeducir = (fallos, sugerirDescripcion = true) => {
+    if (esFalloDelServidor(fallos)) return '';   // ya lo explica el diagnóstico de red
+    if (!medidas.ancho) {
+      return ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.';
+    }
+    return sugerirDescripcion
+      ? ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").'
+      : '';
   };
 
   // BOCETO EN PERSPECTIVA a lápiz: lo que el master pidió enseñando sus
@@ -1505,10 +1531,7 @@ export default function AIRenderStudio({ state, setState }) {
       const motivos = [], fallos = [];
       const distribucion = await deducirDistribucion(motivos, fallos);
       if (!distribucion) {
-        const falta = !medidas.ancho
-          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
-          : '';
-        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
+        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${queHacerParaDeducir(fallos, false)}`);
         return;
       }
       const pr = await postJson('/api/estudio-cocinas/perspectiva', {
@@ -1557,10 +1580,7 @@ export default function AIRenderStudio({ state, setState }) {
       if (!distribucion) {
         // El alzado se dibuja con medidas REALES: si no se han podido deducir, lo
         // que hay que decir es DÓNDE se escriben, no solo que no salió.
-        const falta = !medidas.ancho
-          ? ' Escribe al menos el ancho de la pared en «Medidas de la estancia» y vuelve a intentarlo.'
-          : ' Añade a la descripción los módulos de cada pared con su ancho (p. ej. "bajo 60, fregadero 90, columna horno 60").';
-        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${falta}`);
+        setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${queHacerParaDeducir(fallos)}`);
         return null;
       }
       const ar = await postJson('/api/estudio-cocinas/alzado', {
@@ -3126,6 +3146,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <Palette size={12} /> <span className="hidden sm:inline">✨ Acabados</span>
                 </button>
                 <button onClick={saveDesign} disabled={busy}
+                  title="Guardar el proyecto (cliente, referencia, medidas, renders e historial)"
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
                   {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
                   <span className="hidden sm:inline">Guardar</span>
@@ -3430,7 +3451,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia4', 'IA 4', 'Gemini Flash — rápido'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
+                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
                         className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}
@@ -3565,6 +3586,7 @@ export default function AIRenderStudio({ state, setState }) {
               <button
                 onClick={handleGenerateParams}
                 disabled={isGenerating}
+                title="Generar el render 3D con los parámetros de arriba (consume créditos de IA)"
                 className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shrink-0"
               >
                 {isGenerating ? (
@@ -3630,7 +3652,8 @@ export default function AIRenderStudio({ state, setState }) {
                 <span className="font-black shrink-0">
                   Distribución detectada {distDetectada.via} · revísala antes de dibujar:
                 </span>
-                <button onClick={olvidarDistribucion} className="ml-auto text-teal-500 hover:text-teal-700 shrink-0">
+                <button onClick={olvidarDistribucion} title="Descartar lo detectado y cerrar este aviso"
+                  className="ml-auto text-teal-500 hover:text-teal-700 shrink-0">
                   <X size={16} />
                 </button>
               </div>
@@ -3712,6 +3735,19 @@ export default function AIRenderStudio({ state, setState }) {
                      queda el render, que es lo que hay que ver. En pantalla
                      grande sigue envolviendo como estaba. */
                   : 'flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:overflow-y-hidden'}`}>
+                {/* PANTALLA COMPLETA, EL PRIMERO Y CON SU NOMBRE.
+                    Estaba al final de la barra y era un icono sin texto. En PC
+                    esta barra es una columna estrecha con scroll a la derecha,
+                    o sea que el boton quedaba fuera de la vista: el master lo
+                    buscaba arriba a la derecha y no lo encontraba. Ver el
+                    render en grande es de lo primero que se quiere hacer con
+                    un render, asi que va el primero. */}
+                <button onClick={entrarEnPantallaCompleta}
+                  title="Ver el render a pantalla completa (oculta la barra del navegador). Se sale con Esc."
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900">
+                  <Maximize2 size={12} /> <span className="truncate">Pantalla completa</span>
+                </button>
+                <span className={barraLateral ? 'h-px w-full bg-slate-200 my-1' : 'w-px h-4 bg-slate-200 mx-0.5'} />
                 {/* Grupo IA: acciones que generan nueva imagen */}
                 <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
                   title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
@@ -3811,11 +3847,6 @@ export default function AIRenderStudio({ state, setState }) {
                   className={`p-1.5 rounded-lg transition-colors ${interactiveMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}
                   title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}>
                   <Layers size={14} className={interactiveMode ? 'text-white' : 'text-slate-600'} />
-                </button>
-                <button onClick={entrarEnPantallaCompleta}
-                  className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-                  title="Ver en pantalla completa (oculta la barra del navegador)">
-                  <Maximize2 size={14} className="text-slate-600" />
                 </button>
                 {/* Separador + nuevo render */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
@@ -3926,8 +3957,8 @@ export default function AIRenderStudio({ state, setState }) {
                     </button>
                     <button onClick={alternarMedidas} disabled={editing || !renderResult}
                       title={vistaConCotas
-                        ? 'Volver al render. Ahora estás viendo el alzado acotado.'
-                        : 'Ver el mismo diseño con las medidas puestas. Las cotas se dibujan en el alzado vectorial desde las medidas reales: la IA nunca escribe cotas sobre la foto.'}
+                        ? 'Volver a la foto. Ahora estás viendo el plano acotado del MISMO diseño; el render sigue guardado.'
+                        : 'INTERRUPTOR: enseña el mismo diseño con las medidas puestas, y al volver a pulsar recupera la foto tal cual. No genera nada nuevo ni gasta créditos. Las cotas se dibujan desde las medidas reales: la IA nunca escribe cotas sobre la foto.'}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-black disabled:opacity-50 flex items-center gap-1.5 ${
                         vistaConCotas
                           ? 'bg-sky-600 text-white hover:bg-sky-700'
@@ -3935,14 +3966,14 @@ export default function AIRenderStudio({ state, setState }) {
                       {editing ? <Loader size={12} className="animate-spin" /> : <Ruler size={12} />} {vistaConCotas ? 'Quitar medidas' : 'Poner medidas'}
                     </button>
                     <button onClick={() => generarVistaAlambrica(true)} disabled={editing}
-                      title="Vista alámbrica en blanco y negro (estilo CAD) CON medidas acotadas."
+                      title="Genera un plano CAD NUEVO en blanco y negro, con las cotas puestas, y te lo deja en el historial. No es el interruptor: esto sustituye lo que estás viendo."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-zinc-900 text-white hover:bg-black disabled:opacity-50 flex items-center gap-1.5">
-                      {editing ? <Loader size={12} className="animate-spin" /> : <Ruler size={12} />} Alámbrica c/ medidas
+                      {editing ? <Loader size={12} className="animate-spin" /> : <Ruler size={12} />} Plano CAD acotado
                     </button>
                     <button onClick={() => generarVistaAlambrica(false)} disabled={editing}
-                      title="Vista alámbrica en blanco y negro (estilo CAD) SIN medidas, dibujo limpio."
+                      title="Igual que el anterior pero sin cotas: dibujo limpio para enseñar. Genera un plano nuevo y sustituye lo que estás viendo."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-zinc-900 ring-1 ring-zinc-900 hover:bg-zinc-100 disabled:opacity-50 flex items-center gap-1.5">
-                      {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Alámbrica s/ medidas
+                      {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Plano CAD limpio
                     </button>
                     <button onClick={generarPerspectiva} disabled={editing}
                       title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, no por una IA. Sin cotas: es de presentación."

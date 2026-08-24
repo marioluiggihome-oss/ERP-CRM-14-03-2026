@@ -19,10 +19,9 @@ Mapa que se protege (frontend `providerOf()` -> backend `_render_dispatch`):
     IA 1 -> gemini          (Gemini estandar; el de siempre, y el UNICO que ve
                              un usuario que no sea master)
     IA 3 -> gemini_premium  (prompt ultra-fotorrealista)
-    IA 4 -> gemini_flash    (rapido)
     IA 7 -> banana_pro      (motor Pro; mismo encargo que IA 1, cuesta 3,3x)
 
-DOS QUE NO ESTAN EN LA TABLA DE ARRIBA, Y POR QUE (puesto al dia el 23/08/2026,
+TRES QUE NO ESTAN EN LA TABLA DE ARRIBA, Y POR QUE (puesto al dia el 23/08/2026,
 en una auditoria: la tabla llevaba desde el 18/08 diciendo algo que ya no era
 verdad, y este fichero daba VERDE a un mapa que la casa ya no usaba).
 
@@ -34,6 +33,17 @@ verdad, y este fichero daba VERDE a un mapa que la casa ya no usaba).
   aqui era justo el problema: estas pruebas sustituyen `_render_dispatch` por
   un doble, o sea que miran que la ETIQUETA llegue al repartidor, no que haya
   un motor detras. IA 2 seguia en verde tres dias despues de apagarse.
+
+· IA 4 (gemini_flash) ESTA APAGADA desde el 24/08/2026, a peticion del master.
+  Y no era un motor distinto: en `_render_dispatch` hacia
+  `model_override="gemini-2.5-flash-image"`, que es EXACTAMENTE el modelo que
+  la IA 1 usa por defecto. Mismo modelo, mismo encargo, misma imagen — mientras
+  su etiqueta decia «Gemini Flash — rapido» y prometia una velocidad que no
+  existia. Es el mismo caso que la IA 2: un boton que el master pulsaba
+  creyendo que cambiaba de motor. Ya no sale en pantalla; la correspondencia
+  'ia4' -> gemini_flash se queda en `providerOf()` porque hay proyectos
+  guardados con ese motor y al abrirlos tienen que dar el render de siempre.
+  Su candado es `test_calculo_ia4_apagada.py`.
 
 · IA 5 (julio) NO es un motor: es el ENCARGO del 22/07/2026 con el motor de
   siempre. `generate_render_composed` lo intercepta antes del repartidor y
@@ -56,18 +66,17 @@ import pytest
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Los motores que viajan TAL CUAL desde la pantalla hasta `_render_dispatch`.
-# IA 2 (apagada) e IA 5 (que es un encargo, no un motor) tienen su propio
-# candado; ver la nota de arriba.
+# IA 2 e IA 4 (apagadas) e IA 5 (que es un encargo, no un motor) tienen su
+# propio candado; ver la nota de arriba.
 MOTORES = {
     "IA 1": "gemini",
     "IA 3": "gemini_premium",
-    "IA 4": "gemini_flash",
     "IA 7": "banana_pro",
 }
 
 # Lo que la pantalla del Estudio 3D ofrece de verdad, por rol. El usuario normal
 # solo tiene el motor de produccion; el resto son motores de pruebas del master.
-MOTORES_EN_PANTALLA_MASTER = {"ia1", "ia3", "ia4", "ia5", "ia7"}
+MOTORES_EN_PANTALLA_MASTER = {"ia1", "ia3", "ia5", "ia7"}
 MOTORES_EN_PANTALLA_USUARIO = {"ia1"}
 
 

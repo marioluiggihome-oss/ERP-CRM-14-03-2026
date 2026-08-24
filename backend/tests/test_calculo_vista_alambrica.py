@@ -137,10 +137,49 @@ def test_si_falla_el_render_todavia_se_prueba_la_descripcion():
         "render salta al catch general y nunca se prueba el texto.")
 
 
+def _bloque_que_hacer():
+    """El consejo que se le da al usuario cuando no se puede deducir.
+
+    El 24/08 dejó de estar COPIADO en las tres vías (alámbrica, perspectiva y
+    el botón de detectar) y pasó a una función sola. La promesa no ha cambiado;
+    solo se ha mudado, así que la prueba se muda con ella.
+    """
+    with open(ESTUDIO_3D, encoding="utf-8") as f:
+        fuente = f.read()
+    ini = fuente.index("const queHacerParaDeducir")
+    return fuente[ini:fuente.index("\n  };", ini)]
+
+
 def test_el_aviso_dice_donde_se_escriben_las_medidas():
-    bloque = _bloque_vista_alambrica()
+    bloque = _bloque_que_hacer()
     assert "Medidas de la estancia" in bloque, \
         "el aviso ya no dice dónde se escribe el ancho de la pared"
+    # Y las tres vías tienen que seguir usándolo: si una se copia el consejo
+    # otra vez, volvemos a arreglar una y dejar dos mintiendo.
+    with open(ESTUDIO_3D, encoding="utf-8") as f:
+        fuente = f.read()
+    # Las TRES vías (alámbrica, perspectiva y el botón de detectar) lo llaman.
+    # `const queHacerParaDeducir = (` no cuenta: la definición lleva un « = »
+    # por medio y no casa con este patrón, así que esto cuenta llamadas.
+    assert fuente.count("queHacerParaDeducir(fallos") == 3, \
+        "alguna vía ha vuelto a escribirse su propio consejo en vez de usar el común"
+
+
+def test_si_el_servidor_no_responde_NO_se_le_pide_al_usuario_que_escriba_nada():
+    """CANDADO. El master lo vio en su móvil el 24/08: el aviso decía «el
+    servidor no responde, espera un momento» y, pegado detrás, «escribe al
+    menos el ancho de la pared». Dos causas distintas en la misma frase.
+
+    Si el servidor está reiniciándose, escribir el ancho no arregla nada: se le
+    manda a hacer algo inútil y encima se le sugiere que la culpa es suya."""
+    bloque = _bloque_que_hacer()
+    assert "esFalloDelServidor" in bloque, \
+        "el consejo ya no distingue un fallo del servidor de una falta de datos"
+    corte = bloque.index("esFalloDelServidor")
+    escribe = bloque.index("Escribe al menos el ancho")
+    assert corte < escribe, (
+        "el consejo de escribir el ancho se da ANTES de comprobar si el fallo "
+        "era del servidor: vuelve el aviso que se contradice a sí mismo.")
 
 
 # ── La PLANTA tenía el mismo fallo que el alzado ─────────────────────────────
