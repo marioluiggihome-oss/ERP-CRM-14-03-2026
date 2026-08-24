@@ -2391,7 +2391,7 @@ async def validar_distribucion_corregida(payload: dict):
 
 
 @router.post("/relacion-mv")
-async def relacion_mv(payload: dict):
+async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """La distribución del Estudio 3D, traducida a MUEBLES MV con su precio.
 
     Cierra el circuito: lo que se ha detectado (y corregido a mano) en el panel
@@ -2407,7 +2407,13 @@ async def relacion_mv(payload: dict):
       · con `distribucion`: traduce y tarifa (primera vez).
       · con `lineas`: vuelve a tarifar unas líneas ya revisadas por el usuario
         (ha cambiado una mano, o ha pasado un mueble a dos puertas).
+
+    LOS MUEBLES SÍ, EL DINERO NO. Los códigos MV los ve cualquiera —son el
+    nombre del mueble, no lo que cuesta—; los puntos y el PVP solo el master
+    (24/08/2026, a petición suya).
     """
+    from routes.cascos import _ve_precios_mv, sin_precios
+    con_precios = _ve_precios_mv(current_user)
     from services.distribucion_a_mv import distribucion_a_relacion, notacion_de
     from services.mv_relacion import parse_relacion_text
 
@@ -2455,10 +2461,17 @@ async def relacion_mv(payload: dict):
         linea["fondo"] = t.get("fondo")
 
     total = round(sum((x.get("pvp") or 0) for x in lineas), 2)
+    # OJO AL ORDEN: `sinPrecio` se calcula ANTES de esconder nada. Si se mirara
+    # después, con el master fuera saldrían TODAS las líneas como «sin precio» y
+    # el aviso diría que la tarifa está rota cuando lo que pasa es que no se
+    # tienen permisos para verla.
     sin_precio = [x["codigo"] for x in lineas if not x.get("pvp")]
-    return {"success": True, "tarifa": tarifa, "lineas": lineas,
+    return {"success": True, "tarifa": tarifa,
+            "lineas": lineas if con_precios else sin_precios(lineas),
             "sin_codigo": sin_codigo, "notacion": notacion,
-            "totalPvp": total, "sinPrecio": sin_precio}
+            "totalPvp": total if con_precios else None,
+            "sinPrecio": sin_precio,
+            "preciosOcultos": not con_precios}
 
 
 @router.post("/exportar-dxf")

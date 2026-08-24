@@ -219,11 +219,27 @@ async def export_products_to_pdf(
 
 
 @router.get("/products/export/mv-catalog-pdf")
-async def export_mv_catalog_pdf():
+async def export_mv_catalog_pdf(current_user: dict = Depends(require_auth)):
     """
     Sirve el "Catálogo Técnico 2026" de tarifas MV (T1-T21) en PDF: las páginas
     originales de la tarifa física (escaneadas), tal cual, con portada Luiggi Home.
+
+    SOLO MASTER (24/08/2026, a petición suya: «quiero que la tarifa MV sea solo
+    mía»). Este PDF es la tarifa ENTERA del proveedor, las 126 páginas: es el
+    sitio por donde se escapa más coste de todo el ERP, y bastaba con tener una
+    sesión cualquiera para descargarlo. El router ya exigía estar identificado
+    —`dependencies=[Depends(require_auth)]`—, pero no miraba el rol.
+
+    NO se usa `require_admin`: esa es la lista ancha (gerente, director
+    comercial, director de fábrica). Con ella el cierre sería de adorno, que es
+    exactamente lo que advierte la regla 8 de CLAUDE.md. Se usa el `_es_master`
+    de `routes/cascos.py`, que es la puerta del MV, para no tener dos ideas
+    distintas de quién es el master.
     """
+    from routes.cascos import _es_master
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403,
+                            detail="La tarifa MV es solo del master.")
     pdf_path = os.path.join(os.path.dirname(__file__), "..", "data", "Tarifa_Tecnica_MV_2026.pdf")
     if not os.path.isfile(pdf_path):
         raise HTTPException(status_code=404, detail="No se encontró el PDF de la tarifa MV.")

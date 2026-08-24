@@ -3908,7 +3908,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <th className="text-right">Ancho</th>
                       <th className="text-right">Alto</th>
                       <th className="text-center">Puerta</th>
-                      <th className="text-right">PVP</th>
+                      {!relacionMV.preciosOcultos && <th className="text-right">PVP</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -3946,16 +3946,20 @@ export default function AIRenderStudio({ state, setState }) {
                             </button>
                           )}
                         </td>
-                        <td className="text-right font-black">{l.pvp != null ? `${l.pvp} €` : '—'}</td>
+                        {!relacionMV.preciosOcultos && (
+                          <td className="text-right font-black">{l.pvp != null ? `${l.pvp} €` : '—'}</td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-indigo-300">
-                      <td colSpan={5} className="text-right py-1 font-black uppercase text-[11px]">Total tarifa</td>
-                      <td className="text-right font-black">{relacionMV.totalPvp} €</td>
-                    </tr>
-                  </tfoot>
+                  {!relacionMV.preciosOcultos && (
+                    <tfoot>
+                      <tr className="border-t-2 border-indigo-300">
+                        <td colSpan={5} className="text-right py-1 font-black uppercase text-[11px]">Total tarifa</td>
+                        <td className="text-right font-black">{relacionMV.totalPvp} €</td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
               {(relacionMV.sin_codigo || []).length > 0 && (
@@ -3969,8 +3973,11 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               )}
               <div className="text-[11px] mt-2 opacity-80">
-                Precio de TARIFA MV, sin descuentos ni mano de obra. La mano marcada con «?» la ha
-                propuesto el programa, no sale del diseño: revísala antes de pedir.
+                {relacionMV.preciosOcultos
+                  ? 'La tarifa MV es del master: aquí salen los muebles y sus medidas, no los precios. '
+                  : 'Precio de TARIFA MV, sin descuentos ni mano de obra. '}
+                La mano marcada con «?» la ha propuesto el programa, no sale del diseño:
+                revísala antes de pedir.
               </div>
             </div>
           )}

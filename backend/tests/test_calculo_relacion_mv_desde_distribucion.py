@@ -197,7 +197,11 @@ def test_el_endpoint_devuelve_la_relacion_tarifada():
         from routes.estudio_cocinas import relacion_mv
     except Exception as e:                      # pragma: no cover
         pytest.fail(f"no se pudo importar el endpoint: {e}")
-    r = asyncio.run(relacion_mv({"distribucion": _cocina()}))
+    # COMO MASTER a propósito: desde el 24/08 la tarifa MV es solo suya, así que
+    # sin usuario los precios vuelven en blanco. Lo que se prueba aquí es que se
+    # tarifa bien; de quién puede verlo se encarga
+    # `test_calculo_tarifa_mv_solo_master.py`.
+    r = asyncio.run(relacion_mv({"distribucion": _cocina()}, {"isMaster": True}))
     assert r["success"] and r["lineas"]
     assert all(x.get("pvp") for x in r["lineas"]), "alguna línea vuelve sin precio"
     assert r["totalPvp"] == round(sum(x["pvp"] for x in r["lineas"]), 2)
