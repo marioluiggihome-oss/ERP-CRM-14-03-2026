@@ -51,6 +51,11 @@ import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
+// La revisión de la relación NO se reescribe aquí: es la misma pantalla que usan
+// Cascos y Cocina Montada 3, con sus avisos (la mano sin decidir, el candado del
+// coste, la tarifa). Dos volcados distintos acabarían separándose con el tiempo,
+// y uno de los dos se quedaría sin el aviso que evita un frente mal taladrado.
+const RelacionReview = React.lazy(() => import('./RelacionReview'));
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
@@ -1567,6 +1572,17 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Una corrección de la distribución deja la relación vieja: son otros muebles.
   const olvidarRelacionMV = () => setRelacionMV(null);
+
+  // Volcar al presupuesto. El botón solo aparece si el backend ha entregado los
+  // muebles listos —y solo los entrega a quien tiene el permiso—, así que aquí
+  // no hay ninguna decisión de permisos: se mira si hay datos o no.
+  const [revisarRelacion, setRevisarRelacion] = useState(null);
+
+  const volcarRelacionMV = () => {
+    const muebles = relacionMV?.muebles;
+    if (!muebles?.length) { setError('No hay muebles que volcar.'); return; }
+    setRevisarRelacion(muebles);
+  };
 
   // CORREGIR A MANO lo que ha leído la IA. Es el paso que convierte «la IA lo
   // ha leído así» en «esto es lo que se fabrica».
@@ -3972,6 +3988,13 @@ export default function AIRenderStudio({ state, setState }) {
                   </ul>
                 </div>
               )}
+              {relacionMV.puedeVolcar && (
+                <button onClick={volcarRelacionMV} disabled={cargandoMV}
+                  title="Revisar la relación y volcarla al presupuesto. Se abre la misma pantalla de revisión que usan Cascos y Cocina Montada 3, con sus avisos."
+                  className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
+                  <CheckCircle size={12} /> Revisar y volcar al presupuesto
+                </button>
+              )}
               <div className="text-[11px] mt-2 opacity-80">
                 {relacionMV.preciosOcultos
                   ? 'La tarifa MV es del master: aquí salen los muebles y sus medidas, no los precios. '
@@ -4879,6 +4902,29 @@ export default function AIRenderStudio({ state, setState }) {
           completa al navegador (`requestFullscreen`), que es lo que hace
           desaparecer su barra. Si el aparato no lo soporta —el Safari del
           iPhone, por ejemplo— se queda la capa de antes, que ya funcionaba. */}
+      {revisarRelacion && (
+        <React.Suspense fallback={null}>
+          <RelacionReview
+            muebles={revisarRelacion}
+            tarifa={relacionMV?.tarifa || 'T1'}
+            apiUrl={API_URL}
+            authHeaders={getAuthHeaders()}
+            onClose={() => setRevisarRelacion(null)}
+            onConfirm={(cabs) => {
+              // Al MISMO sitio que los vuelca Cascos: la relación MV es un
+              // pedido de muebles, y ahí es donde se emparejan con el catálogo
+              // por tipo y ancho.
+              setState && setState(p => ({
+                ...p, cascosPendingCabinets: [...(p.cascosPendingCabinets || []), ...cabs],
+              }));
+              setRevisarRelacion(null);
+              const uds = cabs.reduce((t, m) => t + (m.qty || 1), 0);
+              alert(`✅ ${uds} mueble(s) volcados al presupuesto.\n\nSe emparejan con el catálogo por tipo y ancho; ajusta acabado, gama o cantidad si hace falta.`);
+              irA('cascos');
+            }}
+          />
+        </React.Suspense>
+      )}
       {showFullscreen && renderResult?.result?.images?.[0] && (
         <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center p-1 sm:p-4"
           onClick={() => salirDePantallaCompleta()}>

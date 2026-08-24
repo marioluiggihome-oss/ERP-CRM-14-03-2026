@@ -2390,6 +2390,41 @@ async def validar_distribucion_corregida(payload: dict):
     return {"success": True, "distribucion": val, "avisos": val.get("avisos") or []}
 
 
+# ─── Volcar la relación MV al presupuesto ────────────────────────────────────
+# Permiso PROPIO, no el de la tarifa. Son dos cosas distintas: ver lo que cuesta
+# un mueble (master) y poder meter muebles en un presupuesto (quien monta
+# pedidos). Un jefe de obra puede necesitar lo segundo sin tener lo primero, y
+# de hecho es el caso normal.
+PERMISO_VOLCAR_MV = "canVolcarMV"
+
+
+async def _puede_volcar_mv(user) -> bool:
+    """¿Puede volcar la relación MV al presupuesto?
+
+    Se mira el permiso EN VIVO en la base de datos, no en el token: el JWT no
+    lleva los `can*`, así que fiándose del token este permiso no se cumpliría
+    nunca para un usuario al que se le acaba de dar (es la misma razón por la
+    que `require_module_access` lo hace así).
+    """
+    if not user:
+        return False
+    from routes.cascos import _es_master
+    if _es_master(user):
+        return True
+    uid = user.get("id")
+    if not uid:
+        return False
+    try:
+        from services.jwt_service import _users_collection
+        fila = await _users_collection().find_one({"id": uid}, {"_id": 0, PERMISO_VOLCAR_MV: 1})
+        return bool(fila and fila.get(PERMISO_VOLCAR_MV))
+    except Exception as e:                       # pragma: no cover
+        # Si no se puede comprobar, NO se concede. Un permiso que se abre cuando
+        # falla la base de datos no es un permiso.
+        logger.error("no se pudo comprobar %s: %s", PERMISO_VOLCAR_MV, e)
+        return False
+
+
 @router.post("/relacion-mv")
 async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """La distribución del Estudio 3D, traducida a MUEBLES MV con su precio.
@@ -2414,6 +2449,7 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
     """
     from routes.cascos import _ve_precios_mv, sin_precios
     con_precios = _ve_precios_mv(current_user)
+    puede_volcar = await _puede_volcar_mv(current_user)
     from services.distribucion_a_mv import distribucion_a_relacion, notacion_de
     from services.mv_relacion import parse_relacion_text
 
@@ -2454,6 +2490,15 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
                     f"({len(tarifadas)} de {len(lineas)}). No se dan precios a medias."))
 
     for linea, t in zip(lineas, tarifadas):
+        # La MANO decidida viaja en el código canónico. Un código que acaba en
+        # «D/I» es una puerta SIN mano decidida, y si sale así hacia el taller la
+        # decide el taller: acierta la mitad de las veces y la otra mitad es un
+        # frente desmontado y taladrado otra vez en casa del cliente. Aquí ya
+        # sabemos la mano (propuesta o elegida), así que se escribe.
+        if linea.get("mano") and t.get("cod", "").endswith("D/I"):
+            t["cod"] = t["cod"][:-3] + linea["mano"]
+            t["mano"] = linea["mano"]
+        t["manoPropuesta"] = bool(linea.get("mano_propuesta"))
         linea["codigo_mv"] = t.get("cod")
         linea["familia_mv"] = t.get("familia")
         linea["puntos"] = t.get("pts")
@@ -2466,8 +2511,19 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
     # el aviso diría que la tarifa está rota cuando lo que pasa es que no se
     # tienen permisos para verla.
     sin_precio = [x["codigo"] for x in lineas if not x.get("pvp")]
+    # LOS MUEBLES LISTOS PARA VOLCAR solo se entregan a quien puede volcar. El
+    # candado va aquí y no en el botón: esconder un botón no cierra una API.
+    # Es la misma lista que devuelve el tarificador, que es lo que espera la
+    # pantalla de revisión de la relación — no se inventa un formato nuevo para
+    # que luego los dos caminos se separen con el tiempo.
+    muebles = None
+    if puede_volcar:
+        muebles = tarifadas if con_precios else sin_precios(tarifadas)
+
     return {"success": True, "tarifa": tarifa,
             "lineas": lineas if con_precios else sin_precios(lineas),
+            "muebles": muebles,
+            "puedeVolcar": puede_volcar,
             "sin_codigo": sin_codigo, "notacion": notacion,
             "totalPvp": total if con_precios else None,
             "sinPrecio": sin_precio,
