@@ -2078,6 +2078,10 @@ async def generar_perspectiva(payload: ProyectoBase):
         cajas, omitidos = pe.montar_escena(
             escena, altura_modulo=altura_modulo, fondo_modulo=fondo_modulo,
             es_alto=es_alto)
+        # ENCIMERA Y ZÓCALO. Sin ellos el dibujo son cajas apiladas: una cocina
+        # sin encimera no existe, y unos bajos que arrancan del suelo se leen
+        # como muebles apoyados en el aire.
+        cajas = cajas + pe.encimera_y_zocalo(cajas)
         if not cajas:
             raise HTTPException(
                 status_code=422,
@@ -2122,26 +2126,65 @@ async def generar_perspectiva(payload: ProyectoBase):
         ARISTAS = ((0, 1), (1, 2), (2, 3), (3, 0),        # cara contra la pared
                    (4, 5), (5, 6), (6, 7), (7, 4),        # cara vista
                    (0, 4), (1, 5), (2, 6), (3, 7))        # fondo
-        for c in pe.ordenar_por_profundidad(cajas, cam):
+        # CADA MUEBLE EN SU PROPIA CAPA.
+        #
+        # Estaba ordenado por profundidad y NO SERVÍA DE NADA: los zorder eran
+        # fijos para todos (relleno 3, aristas 4, tirador 5), y matplotlib pinta
+        # por zorder, no por orden de bucle. O sea que el relleno de un mueble
+        # CERCANO quedaba debajo de las aristas de uno LEJANO. De ahí que la
+        # cocina se viera transparente —se leía el interior de cada mueble— y
+        # que los tiradores cruzaran de un mueble a otro.
+        #
+        # Con una capa por mueble, el orden de profundidad manda de verdad.
+        ATRAS = ((0, 1), (1, 2), (2, 3), (3, 0))          # cara contra la pared
+        FRENTE = ((4, 5), (5, 6), (6, 7), (7, 4))         # cara vista
+        # LAS ARISTAS DE FONDO VAN POR DEBAJO DE TODOS LOS RELLENOS.
+        #
+        # Son las que dan la profundidad, pero entre dos muebles contiguos no se
+        # ven: las tapa el mueble de al lado. Dibujadas por encima asomaban como
+        # diagonales sueltas en cada esquina, y el dibujo parecía roto.
+        #
+        # Poniéndolas debajo de todo, el relleno del vecino las tapa solo y
+        # quedan únicamente las de los extremos del tramo — que es exactamente
+        # lo que se ve en una cocina de verdad. Sin detectar vecinos ni resolver
+        # esquinas: lo hace el propio orden de pintado.
+        FONDO = ((0, 4), (1, 5), (2, 6), (3, 7))
+        Z_FONDO = 2.5
+        for _n, c in enumerate(pe.ordenar_por_profundidad(cajas, cam)):
             e = c["esquinas"]
-            # La cara vista, rellena en color papel, es lo que tapa lo de
-            # detrás: sin relleno se transparentaría todo y se vería el fondo
-            # a través de los muebles.
-            frente = [proy(e[i]) for i in (4, 5, 6, 7)]
-            if all(p is not None for p in frente):
-                ax.fill([p[0] for p in frente], [p[1] for p in frente],
-                        facecolor=C_BG, edgecolor="none", zorder=3)
-            for i, j in ARISTAS:
-                linea(e[i], e[j], C_LAPIZ, 1.25, z=4)
+            z0 = 3 + _n * 4
+            # Las aristas de ATRÁS van DEBAJO del relleno, y por eso el mueble
+            # se ve cerrado. Dibujadas encima, como estaban, se veía el interior
+            # y cada mueble parecía una vitrina.
+            # UNA ENCIMERA ES CONTINUA. Se dibuja por tramos (uno por mueble),
+            # así que sus aristas VERTICALES son juntas que en obra no existen:
+            # se saltan y los tramos se leen como una sola losa. Igual el
+            # zócalo, que corre de punta a punta.
+            continua = bool(c.get("sin_tirador"))
+            atras = ((0, 1), (2, 3)) if continua else ATRAS
+            frente = ((4, 5), (6, 7)) if continua else FRENTE
+            for i, j in atras:
+                linea(e[i], e[j], C_LAPIZ, 1.25, z=z0)
+            cara = [proy(e[i]) for i in (4, 5, 6, 7)]
+            if all(p is not None for p in cara):
+                ax.fill([p[0] for p in cara], [p[1] for p in cara],
+                        facecolor=C_BG, edgecolor="none", zorder=z0 + 1)
+            for i, j in frente:
+                linea(e[i], e[j], C_LAPIZ, 1.25, z=z0 + 2)
+            for i, j in FONDO:
+                linea(e[i], e[j], C_LAPIZ, 1.25, z=Z_FONDO)
             # Tirador: una raya. Es lo que hace que se lea como un mueble y no
             # como una caja.
             p0, p1 = proy(e[4]), proy(e[5])
             p3 = proy(e[7])
+            # Una encimera y un zócalo no llevan tirador.
+            if c.get("sin_tirador"):
+                p0 = None
             if p0 and p1 and p3:
                 t = 0.72 if c["base"] < 100 else 0.28   # bajos abajo, altos arriba
                 ax.plot([p0[0] + (p1[0] - p0[0]) * 0.12, p0[0] + (p1[0] - p0[0]) * 0.88],
                         [p0[1] + (p3[1] - p0[1]) * t, p1[1] + (p3[1] - p1[1]) * t],
-                        color=C_LAPIZ, lw=1.6, zorder=5, solid_capstyle="round")
+                        color=C_LAPIZ, lw=1.6, zorder=z0 + 3, solid_capstyle="round")
 
         # ENCUADRE. Lo manda la COCINA, nunca el suelo: las líneas de suelo
         # llegan casi hasta el ojo y ahí la proyección se dispara, así que si
@@ -2160,7 +2203,11 @@ async def generar_perspectiva(payload: ProyectoBase):
             # Margen generoso por abajo: es donde entra el suelo, que es lo que
             # da la profundidad. Por arriba basta con no rozar el techo.
             ax.set_xlim(min(xs) - mx * 0.10, max(xs) + mx * 0.10)
-            ax.set_ylim(min(ys) - my * 0.55, max(ys) + my * 0.14)
+            # El suelo daba profundidad, sí, pero con 0.55 se comía MEDIA
+            # LÁMINA y la cocina quedaba arrinconada arriba. Con 0.20 sigue
+            # habiendo suelo y la cocina es la protagonista, que es lo que se
+            # está enseñando.
+            ax.set_ylim(min(ys) - my * 0.20, max(ys) + my * 0.12)
 
         cab = (payload.nombre_cliente or "").strip()
         titulo = f"{cab} · boceto" if cab else "Boceto en perspectiva"
