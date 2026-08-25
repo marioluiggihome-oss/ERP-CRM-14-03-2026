@@ -1193,8 +1193,8 @@ export default function RentabilidadMV({ esMaster, seed }) {
           const manoUd = Number(p.mano) || 0;
           const totalMon = Math.round(manoUd * uds * 100) / 100;
           return (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
-              <div className="flex items-center gap-1.5 mb-2 text-amber-700">
+            <div className="rounded-xl border border-dato-200 bg-dato-50/60 p-3">
+              <div className="flex items-center gap-1.5 mb-2 text-dato-600">
                 <Calculator size={14} />
                 <span className="text-[11px] font-black uppercase tracking-wide">
                   Comisiones de cooperativistas
@@ -1213,19 +1213,19 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   <input type="number" step="any" min="0" max="100" value={dtoComision}
                     onChange={e => setDtoComision(e.target.value === '' ? '' : Number(e.target.value))}
                     title="Descuento comercial que se aplicará al presupuesto. Solo sirve para saber con qué base imponible se decide el tramo de la comisión; no toca el coste ni el margen."
-                    className="w-16 px-1.5 py-1 border border-amber-300 rounded-md bg-white font-bold text-right" />
+                    className="w-16 px-1.5 py-1 border border-dato-300 rounded-md bg-white font-bold text-right" />
                   <span className="text-slate-500">%</span>
                 </label>
                 <span className="text-slate-400">=</span>
-                <span className="font-black text-amber-800" title="Base imponible: el PVP tras el descuento, sin IVA. El IVA no entra nunca en el tramo.">
+                <span className="font-black text-dato-900" title="Base imponible: el PVP tras el descuento, sin IVA. El IVA no entra nunca en el tramo.">
                   {`Base imponible ${pvpVisible ? eur(baseImponible) : '•••'}`}
                 </span>
                 <span className="text-slate-400 text-[10px]">(el IVA no cuenta)</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="rounded-lg border border-amber-200 bg-white p-2.5">
-                  <div className="text-[10px] font-black text-amber-500 uppercase">Comercial</div>
-                  <div className="text-lg font-black text-amber-800">
+                <div className="rounded-lg border border-dato-200 bg-white p-2.5">
+                  <div className="text-[10px] font-black text-dato-500 uppercase">Comercial</div>
+                  <div className="text-lg font-black text-dato-900">
                     {margenVisible ? eur(totalCom) : '•••'}
                   </div>
                   <div className="text-[10px] text-slate-500">
@@ -1235,9 +1235,9 @@ export default function RentabilidadMV({ esMaster, seed }) {
                     {`tramo: ${nombreDelTramo(valoracion)}`}
                   </div>
                 </div>
-                <div className="rounded-lg border border-amber-200 bg-white p-2.5">
-                  <div className="text-[10px] font-black text-amber-500 uppercase">Montadores</div>
-                  <div className="text-lg font-black text-amber-800">
+                <div className="rounded-lg border border-dato-200 bg-white p-2.5">
+                  <div className="text-[10px] font-black text-dato-500 uppercase">Montadores</div>
+                  <div className="text-lg font-black text-dato-900">
                     {margenVisible ? eur(totalMon) : '•••'}
                   </div>
                   <div className="text-[10px] text-slate-500">
@@ -1247,9 +1247,9 @@ export default function RentabilidadMV({ esMaster, seed }) {
                     se cambia arriba, en «Mano obra €»
                   </div>
                 </div>
-                <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-2.5">
-                  <div className="text-[10px] font-black text-amber-600 uppercase">Total comisiones</div>
-                  <div className="text-lg font-black text-amber-900">
+                <div className="rounded-lg border border-accion-200 bg-accion-50/70 p-2.5">
+                  <div className="text-[10px] font-black text-accion-700 uppercase">Total comisiones</div>
+                  <div className="text-lg font-black text-accion-900">
                     {margenVisible ? eur(totalCom + totalMon) : '•••'}
                   </div>
                   <div className="text-[10px] text-slate-500">

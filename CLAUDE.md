@@ -299,6 +299,27 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      otro candado mira cómo se VE**: todos vigilan el cálculo y lo que la
      pantalla dice, así que un cambio estético entra entero con el CI en verde.
 
+19. **El color dice POR QUÉ, no qué tono es** (25/08). Se escribe `bg-ok-600`,
+   no `bg-emerald-600`. Seis tokens en `tailwind.config.js`, todos apuntando a
+   la paleta apagada: `accion` · `ok` · `aviso` · `error` · `master` · `dato`.
+   La guía es `docs/DISENO.md`.
+   - Se midió antes de decidir: las palabras de dinero salían cerca del **46-58%
+     de TODOS los colores** (es un ERP, el dinero está en todas partes). El
+     único que significaba algo era el rojo, en el 42% junto a «error»,
+     «borrar» o «anular». O sea que esto no sustituye un sistema: monta el
+     primero que hay.
+   - **El dinero NO lleva color de estado.** Un importe no es ni bueno ni malo;
+     pintarlo de ámbar lo vuelve un aviso permanente y entonces deja de
+     destacar lo que sí lo es. Va en `dato` y destaca por tamaño y peso. Eso
+     libera el ámbar para lo que significa en todas partes: atención.
+   - La migración de los 92 componentes es a mano y larga —un script no puede
+     adivinar qué significa cada color sin equivocarse—, así que va por
+     pantallas. `herramientas/avance_semantico.py` mide cuánto queda; un plan
+     sin forma de medirlo se abandona a la mitad sin que nadie lo note.
+   - Candado: `test_pantalla_colores_con_significado.py`. Comprueba que los
+     tokens RESUELVEN de verdad (un alias mal escrito daría `undefined` y la
+     clase no pintaría nada con el CI en verde) y que el dinero sigue en gris.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

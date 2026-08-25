@@ -44,6 +44,32 @@ module.exports = {
   		},
   		colors: {
   			...paletaApagada,
+
+  			// ─── COLORES CON SIGNIFICADO ────────────────────────────────────
+  			//
+  			// Hasta ahora el color del ERP no informaba de nada: se midió, y
+  			// las palabras de dinero salían cerca del 46-58% de TODOS los
+  			// colores (es un ERP, el dinero está en todas partes). El único
+  			// que significaba algo era el rojo, en el 42% de los casos junto a
+  			// «error», «borrar» o «anular».
+  			//
+  			// Estos alias le ponen nombre al uso, no al color. Se escribe
+  			// `bg-ok-600` en vez de `bg-emerald-600`, y entonces la pantalla
+  			// dice POR QUÉ es verde. El día que el verde no convenza, se
+  			// cambia aquí y no en 92 ficheros.
+  			//
+  			// EL DINERO NO LLEVA COLOR DE ESTADO. Un importe no es ni bueno ni
+  			// malo: pintarlo de ámbar lo convierte en un aviso permanente y
+  			// deja de destacar lo que sí lo es. Va en `dato` —el gris de
+  			// siempre— y destaca por tamaño y peso, como en cualquier
+  			// pantalla de banco. Eso libera el ámbar para lo que el ámbar
+  			// significa en todas partes: atención.
+  			accion: paletaApagada.indigo,   // botón principal, enlace, foco
+  			ok: paletaApagada.emerald,      // confirmado, servido, cobrado
+  			aviso: paletaApagada.amber,     // pendiente, revisar, incompleto
+  			error: paletaApagada.red,       // error, borrar, anulado, sin tarifa
+  			master: paletaApagada.violet,   // lo que solo ve el master
+  			dato: paletaApagada.slate,      // importes, tablas, texto
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
