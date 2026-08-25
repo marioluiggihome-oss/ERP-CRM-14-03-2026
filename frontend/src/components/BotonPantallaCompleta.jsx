@@ -29,7 +29,19 @@ import { Maximize2, Minimize2 } from 'lucide-react';
 const enPantallaCompleta = () =>
   Boolean(document.fullscreenElement || document.webkitFullscreenElement);
 
-export default function BotonPantallaCompleta({ className = '', mostrarTexto = true }) {
+/**
+ * `claseTexto` y `textos` existen porque este botón vive en dos sitios con
+ * tipografías muy distintas: el carril de la izquierda, donde el rótulo es de
+ * 7 px en mayúsculas debajo del icono, y la barra del render del Estudio 3D,
+ * donde va al lado y a 11 px. Sin esto, el del Estudio 3D salía con la letra
+ * del carril —«Pantalla» en microscópico— y parecía otra cosa.
+ */
+export default function BotonPantallaCompleta({
+  className = '',
+  mostrarTexto = true,
+  claseTexto = 'text-[7px] font-black uppercase tracking-widest',
+  textos = { dentro: 'Reducir', fuera: 'Pantalla' },
+}) {
   const [activa, setActiva] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -102,8 +114,8 @@ export default function BotonPantallaCompleta({ className = '', mostrarTexto = t
         /* «Reducir», NO «Salir»: justo debajo, en la misma columna, está el
            botón de cerrar sesión, que también dice «Salir». Dos botones
            pegados con la misma palabra y distinto efecto es una trampa. */
-        <span className="text-[7px] font-black uppercase tracking-widest">
-          {activa ? 'Reducir' : 'Pantalla'}
+        <span className={claseTexto}>
+          {activa ? textos.dentro : textos.fuera}
         </span>
       )}
     </button>

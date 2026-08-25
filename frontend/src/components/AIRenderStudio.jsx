@@ -60,6 +60,7 @@ import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
 import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
 import RecargarRenders from './RecargarRenders';
+import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -443,42 +444,6 @@ export default function AIRenderStudio({ state, setState }) {
   const [avisoGeom, setAvisoGeom] = useState(null);
   // Créditos de IA del usuario (bolsa mensual ligada a su suscripción).
   const [aiCredits, setAiCredits] = useState(null);
-  const [showFullscreen, setShowFullscreen] = useState(false);
-
-  // PANTALLA COMPLETA DEL APARATO, no solo una capa encima de la pagina. En una
-  // tablet de 8" la barra del navegador y las pestanias se comen un tercio del
-  // alto: sin esto, «pantalla completa» dejaba el render en un recuadro.
-  const entrarEnPantallaCompleta = useCallback(() => {
-    setShowFullscreen(true);
-    const el = document.documentElement;
-    const pedir = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-    // Si el aparato no lo soporta (Safari de iPhone), no se rompe nada: se
-    // queda la capa CSS, que es lo que habia hasta ahora.
-    if (pedir) { try { pedir.call(el); } catch { /* sin pantalla completa nativa */ } }
-  }, []);
-
-  const salirDePantallaCompleta = useCallback(() => {
-    setShowFullscreen(false);
-    const salir = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-    if (salir && (document.fullscreenElement || document.webkitFullscreenElement)) {
-      try { salir.call(document); } catch { /* ya estaba fuera */ }
-    }
-  }, []);
-
-  // Si el usuario sale con la tecla Escape o con el gesto del sistema, el
-  // navegador NO avisa a React: sin esto la capa negra se quedaba puesta y
-  // parecia que la aplicacion se habia colgado.
-  useEffect(() => {
-    const alCambiar = () => {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) setShowFullscreen(false);
-    };
-    document.addEventListener('fullscreenchange', alCambiar);
-    document.addEventListener('webkitfullscreenchange', alCambiar);
-    return () => {
-      document.removeEventListener('fullscreenchange', alCambiar);
-      document.removeEventListener('webkitfullscreenchange', alCambiar);
-    };
-  }, []);
   const [analyzingRef, setAnalyzingRef] = useState(false);
   // Guardado de proyectos (cliente + referencia) y descarga.
   const [cliente, setCliente] = useState('');
@@ -2785,7 +2750,21 @@ export default function AIRenderStudio({ state, setState }) {
       }
       const r = await fetch(`${API_URL}/api/ai-engine/designs`, {
         method: 'POST', headers: getAuthHeaders(),
-        body: JSON.stringify({ id: savedId || undefined, cliente, ref, description: renderResult?.description || description, style: params.style, images: [imgSave], referenceImage: refSave }),
+        // MEDIDAS Y DISTRIBUCIÓN VAN AL SERVIDOR, no solo a la sesión.
+        // Hasta el 25/08 esto mandaba cliente, referencia, descripción, estilo
+        // e imágenes, y nada más — aunque el botón prometiera «medidas». El
+        // ancho, el fondo y la altura vivían solo en la sesión del navegador:
+        // al recargar o al abrir el proyecto en otro aparato salían vacíos, la
+        // pared se quedaba sin anclar y las cotas pasaban de escritas a
+        // estimadas solas. La distribución detectada y corregida a mano se
+        // perdía entera.
+        body: JSON.stringify({
+          id: savedId || undefined, cliente, ref,
+          description: renderResult?.description || description,
+          style: params.style, images: [imgSave], referenceImage: refSave,
+          medidas, tipo3d,
+          distribucion: distAceptada.current || null,
+        }),
       });
       let d = null;
       try { d = await r.json(); } catch (_) { d = null; }
@@ -2830,6 +2809,26 @@ export default function AIRenderStudio({ state, setState }) {
         const full = d.design || {};
         if (full.images?.length) setRenderResult({ success: true, result: { images: full.images }, description: full.description });
         if (full.referenceImage) { setRefImage(full.referenceImage); setOriginalRef(full.referenceImage); }
+        // Y LAS MEDIDAS DE VUELTA. Es la otra mitad del arreglo del 25/08:
+        // guardarlas no sirve de nada si al abrir el proyecto no se recuperan.
+        // Con el ancho real puesto, la pared vuelve a estar anclada y las cotas
+        // se rotulan como ESCRITAS en vez de estimadas.
+        if (full.medidas && typeof full.medidas === 'object') {
+          setMedidas(m => ({ ...m, ...full.medidas }));
+        }
+        if (full.tipo3d) setTipo3d(full.tipo3d);
+        // La distribución se devuelve tal cual se dejó, con las correcciones
+        // hechas a mano. `distAceptada` es lo que leen el alzado, la planta y
+        // la relación MV, así que se rellena ella y se pinta el panel.
+        if (full.distribucion && Array.isArray(full.distribucion.elementos)) {
+          distAceptada.current = full.distribucion;
+          viaDistribucion.current = 'guardada';
+          setDistDetectada({
+            distribucion: full.distribucion,
+            via: 'guardada con el proyecto',
+            avisos: full.distribucion.avisos || [],
+          });
+        }
       }
     } catch { /* si falla el detalle, se queda con la miniatura de la lista */ }
     await cargarHistorialGuardado(dsg.id, 0);
@@ -3333,7 +3332,11 @@ export default function AIRenderStudio({ state, setState }) {
                   {reiniciandoBolsa ? (
                     <span>Recargando…</span>
                   ) : (<>
-                    <span className="sm:hidden">{aiCredits.restantes}</span>
+                    {/* LA PALABRA «CRÉDITOS» TAMBIÉN EN EL MÓVIL (master,
+                        25/08). Antes ahí salía el número a secas y no había
+                        forma de saber de qué era: podía ser un contador de
+                        proyectos, de fotos o de cualquier cosa. */}
+                    <span className="sm:hidden">{`Créditos: ${aiCredits.restantes}`}</span>
                     <span className="hidden sm:inline">
                       {`Créditos: ${aiCredits.restantes} restantes${aiCredits.restantes <= 0 ? ' · recargar' : ''}`}
                     </span>
@@ -3349,7 +3352,9 @@ export default function AIRenderStudio({ state, setState }) {
                   }`}
                 >
                   <Sparkles size={12} />
-                  <span className="sm:hidden">{aiCredits.ilimitado ? '∞' : aiCredits.restantes}</span>
+                  <span className="sm:hidden">
+                    {aiCredits.ilimitado ? 'Créditos: ∞' : `Créditos: ${aiCredits.restantes}`}
+                  </span>
                   <span className="hidden sm:inline">
                     {aiCredits.ilimitado ? 'Créditos: ilimitado' : `Créditos: ${aiCredits.restantes} restantes`}
                   </span>
@@ -4156,18 +4161,27 @@ export default function AIRenderStudio({ state, setState }) {
                      queda el render, que es lo que hay que ver. En pantalla
                      grande sigue envolviendo como estaba. */
                   : 'flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:overflow-y-hidden'}`}>
-                {/* PANTALLA COMPLETA, EL PRIMERO Y CON SU NOMBRE.
-                    Estaba al final de la barra y era un icono sin texto. En PC
-                    esta barra es una columna estrecha con scroll a la derecha,
-                    o sea que el boton quedaba fuera de la vista: el master lo
-                    buscaba arriba a la derecha y no lo encontraba. Ver el
-                    render en grande es de lo primero que se quiere hacer con
-                    un render, asi que va el primero. */}
-                <button onClick={entrarEnPantallaCompleta}
-                  title="Ver el render a pantalla completa (oculta la barra del navegador). Se sale con Esc."
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900">
-                  <Maximize2 size={12} /> <span className="truncate">Pantalla completa</span>
-                </button>
+                {/* PANTALLA COMPLETA DE LA PANTALLA, NO DEL RENDER.
+                    El master, 25/08: «lo quiero para que expanda la pantalla
+                    completa, no para expandir el render; el render ya tiene su
+                    propio boton». Y lo tiene: el «Visor interactivo (zoom +
+                    pan)» que esta ahi al lado.
+
+                    Antes esto abria una capa negra con la foto dentro. O sea
+                    que habia DOS botones llamados «Pantalla completa» a la vez
+                    en la misma pantalla —este y el del carril de la izquierda—
+                    haciendo cosas distintas, y encima cerrar la capa te sacaba
+                    de la pantalla completa del navegador aunque hubieras
+                    entrado con el otro.
+
+                    Ahora es el MISMO componente que el del carril: una sola
+                    implementacion, un solo nombre y un solo efecto. Se
+                    encarga el tambien de cambiar a «Reducir» cuando ya estas
+                    dentro, que la capa no sabia hacer. */}
+                <BotonPantallaCompleta
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900"
+                  claseTexto="truncate"
+                  textos={{ dentro: 'Salir de pantalla completa', fuera: 'Pantalla completa' }} />
                 <span className={barraLateral ? 'h-px w-full bg-slate-200 my-1' : 'w-px h-4 bg-slate-200 mx-0.5'} />
                 {/* Grupo IA: acciones que generan nueva imagen */}
                 <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
@@ -5045,21 +5059,6 @@ export default function AIRenderStudio({ state, setState }) {
             }}
           />
         </React.Suspense>
-      )}
-      {showFullscreen && renderResult?.result?.images?.[0] && (
-        <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center p-1 sm:p-4"
-          onClick={() => salirDePantallaCompleta()}>
-          <button className="absolute top-3 right-3 p-2 rounded-full bg-white/15 text-white/90 hover:bg-white/25 z-10"
-            title="Salir de pantalla completa"
-            onClick={(e) => { e.stopPropagation(); salirDePantallaCompleta(); }}>
-            <X size={26} />
-          </button>
-          <img
-            src={assetSrc(renderResult.result.images[0])}
-            alt="Render 3D"
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
       )}
 
       {/* Saldo de renders: acceso siempre visible, para poder recargar

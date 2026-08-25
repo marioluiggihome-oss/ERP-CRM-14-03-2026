@@ -41,14 +41,20 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger("estudio_cocinas")
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
-try:
-    from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
-    _DEPS = [Depends(require_auth)]
-except Exception:
-    _DEPS = []
-    async def get_current_user():
-        return None
-    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
+# SI FALLA ESTE IMPORT, EL ERP NO ARRANCA. Y ES LO QUE QUEREMOS.
+#
+# Aquí había un `try/except` que, ante cualquier error importando `require_auth`
+# —una dependencia que no se instala en un despliegue, un cambio de nombre—,
+# dejaba `_DEPS = []` y seguía como si nada. O sea que TODOS los endpoints del
+# Estudio 3D se quedaban abiertos: render, planos, relación MV, volcado... sin
+# contraseña y sin una sola línea en el registro que lo dijera.
+#
+# Un ERP que no arranca se arregla en cinco minutos porque se ve enseguida. Uno
+# que arranca con la puerta abierta no se nota hasta que es tarde. Así que el
+# fallo se deja subir: mejor ruidoso que silencioso.
+from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
+
+_DEPS = [Depends(require_auth)]
 
 router = APIRouter(
     prefix="/estudio-cocinas",
@@ -2340,18 +2346,35 @@ async def detect_distribucion(payload: dict):
                                 "ancho_escrito": bool(p.get("ancho_escrito"))})
         elementos = []
         for e in (data.get("elementos") or [])[:40]:
+            # UN MÓDULO SIN ANCHO LLEGA SIN ANCHO. Aquí había un `or 60` que
+            # rellenaba el hueco antes de validar nada, y con eso se cargaba —sin
+            # querer— el arreglo del 23/08: `cota_de_ancho` distingue tres casos
+            # (escrita / estimada / sin dato) y el tercero rotula «?», pero como
+            # el módulo ya venía con un 60 puesto, nunca podía darse. Por el
+            # camino principal se imprimía «~60» de módulos que no había medido
+            # nadie, y la virgulilla le daba credibilidad a un número que era el
+            # valor de respaldo del código. Eso es inventarse una cota
+            # (CLAUDE.md, regla 7).
             try:
-                anc = int(round(float(e.get("ancho") or 60)))
+                bruto = e.get("ancho")
+                anc = int(round(float(bruto))) if bruto not in (None, "") else None
                 pos = int(round(float(e.get("posicion_cm") or 0)))
                 pidx = int(e.get("pared_idx") or 0)
             except (TypeError, ValueError):
                 continue
-            elementos.append({
+            elem = {
                 "id": str(e.get("id") or "mueble").lower().strip().replace(" ", "_"),
                 "label": str(e.get("label") or e.get("id") or "Módulo")[:24],
-                "pared_idx": max(0, pidx), "posicion_cm": max(0, pos), "ancho": max(10, anc),
+                "pared_idx": max(0, pidx), "posicion_cm": max(0, pos),
                 "medida_escrita": bool(e.get("medida_escrita")),
-            })
+            }
+            # La clave `ancho` solo se pone si de verdad hay un ancho. Si se
+            # pusiera a 0 o a None tampoco valdría: el validador lo tomaría por
+            # un ancho imposible y lo «corregiría» a 15, que es otra cifra que
+            # no ha medido nadie.
+            if anc is not None:
+                elem["ancho"] = max(10, anc)
+            elementos.append(elem)
         if not paredes:
             raise HTTPException(status_code=422, detail="No se pudo deducir la distribución del render.")
 
@@ -2668,57 +2691,19 @@ async def exportar_dxf(payload: dict):
         raise HTTPException(status_code=500, detail=f"Error generando archivo DXF: {e}")
 
 
-def _sanea_distribucion(data: dict, ancho_real: int, alto_real: int) -> dict:
-    """Sanea + normaliza una distribución {paredes, elementos} (mismo criterio que
-    detect-distribucion): reescala módulos a estándar y los recoloca contiguos."""
-    paredes = []
-    for p in (data.get("paredes") or [])[:4]:
-        try:
-            anc = int(round(float(p.get("ancho") or 0)))
-            alt = int(round(float(p.get("alto") or 240)))
-        except (TypeError, ValueError):
-            continue
-        if anc > 0:
-            paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"), "ancho": anc, "alto": alt or 240})
-    elementos = []
-    for e in (data.get("elementos") or [])[:40]:
-        try:
-            anc = int(round(float(e.get("ancho") or 60)))
-            pos = int(round(float(e.get("posicion_cm") or 0)))
-            pidx = int(e.get("pared_idx") or 0)
-        except (TypeError, ValueError):
-            continue
-        elementos.append({
-            "id": str(e.get("id") or "mueble").lower().strip().replace(" ", "_"),
-            "label": str(e.get("label") or e.get("id") or "Módulo")[:24],
-            "pared_idx": max(0, pidx), "posicion_cm": max(0, pos), "ancho": max(10, anc),
-        })
-    if not paredes:
-        paredes = [{"nombre": "Pared principal", "ancho": ancho_real or 400, "alto": alto_real or 240}]
-    STD = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120]
-    _snap = lambda w: min(STD, key=lambda s: abs(s - w))
-    if ancho_real and paredes:
-        paredes[0]["ancho"] = ancho_real
-        if alto_real:
-            paredes[0]["alto"] = alto_real
-    norm = []
-    for pidx, pared in enumerate(paredes):
-        grupo = sorted([e for e in elementos if e["pared_idx"] == pidx], key=lambda e: e["posicion_cm"])
-        if not grupo:
-            continue
-        suma = sum(e["ancho"] for e in grupo) or 1
-        factor = pared["ancho"] / suma
-        for e in grupo:
-            e["ancho"] = max(15, _snap(e["ancho"] * factor))
-        desfase = pared["ancho"] - sum(e["ancho"] for e in grupo)
-        if desfase and grupo:
-            i = max(range(len(grupo)), key=lambda i: grupo[i]["ancho"])
-            grupo[i]["ancho"] = max(15, grupo[i]["ancho"] + desfase)
-        x = 0
-        for e in grupo:
-            e["posicion_cm"] = x; x += e["ancho"]
-        norm.extend(grupo)
-    return {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": norm or elementos, "isla": {}, "medidasReales": bool(ancho_real)}
+# `_sanea_distribucion` SE BORRO el 25/08/2026 y no se echa de menos.
+#
+# No la llamaba nadie —cero usos en todo el repositorio— y estaba escrita para
+# hacer justo lo que prohibe la regla de oro: se inventaba medidas y se saltaba
+# el validador entero. Ejecutandola salian un bajo de 180 cm y otro de 127 cm
+# (ninguno de los dos existe) y, sin datos, una pared de 400 cm de la nada.
+# Repartia el sobrante al modulo mas ancho sin volver a ajustarlo al catalogo,
+# que es de donde salian esas cifras.
+#
+# Quien necesite sanear una distribucion llama a `validar_distribucion`, que con
+# esos mismos 127 cm ajusta a 120 y anade el relleno de 7 — la solucion de
+# carpinteria correcta. Dos caminos hasta la misma medida son dos sitios donde
+# equivocarse, y uno de los dos no miraba.
 
 
 @router.post("/distribucion-desde-texto")

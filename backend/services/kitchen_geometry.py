@@ -196,6 +196,12 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
 
     elementos = []
     for e in (dist.get("elementos") or [])[:60]:
+        # ¿VIENE SIN ANCHO, o viene con un ancho malo? No es lo mismo y hasta
+        # ahora se trataban igual: los dos acababan en 15 cm con un aviso de
+        # «no es fabricable». Un módulo del que NADIE sabe el ancho se dibuja
+        # —un alzado con un hueco tampoco sirve— pero su cota se rotula «?»,
+        # nunca un número (CLAUDE.md, regla 7).
+        sin_ancho = e.get("ancho") in (None, "")
         try:
             anc = float(e.get("ancho") or 0)
             pos = float(e.get("posicion_cm") or 0)
@@ -223,7 +229,14 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
                     f"{anc_snap / 10:g} cm. Corrígelo antes de pedir.")
         else:
             anc_snap = snap_ancho(anc)
-            if not en_rango(anc, "ancho_modulo"):
+            if sin_ancho:
+                # Se dice lo que pasa de verdad, que no es que la medida sea
+                # mala: es que no hay medida. Antes ponía «ancho 0 cm no es
+                # fabricable», que despista a quien lo lee.
+                avisos.append(f"Módulo «{eid}»: nadie ha dado su ancho. Se dibuja "
+                              f"con {anc_snap} cm para que el alzado cierre, pero "
+                              f"su cota sale como «?». Ponle la medida antes de pedir.")
+            elif not en_rango(anc, "ancho_modulo"):
                 avisos.append(f"Módulo «{eid}»: ancho {int(anc)} cm no es fabricable; "
                               f"se ajusta a {anc_snap} cm.")
         etiqueta = str(e.get("label") or eid or "Módulo")[:24]
@@ -245,6 +258,9 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             "fila": fila,
             "medida_escrita": escrita,
             "corregida": corregida,
+            # Viaja con el módulo hasta el dibujo: es lo que hace que se rotule
+            # «?» en vez de un número que no ha medido nadie.
+            "ancho_desconocido": sin_ancho,
             "pared_idx": max(0, min(pidx, len(paredes) - 1)),
             "posicion_cm": max(0, int(round(pos))),
             "ancho": anc_snap,
@@ -328,6 +344,20 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
     }
 
 
+# HASTA DÓNDE UN RELLENO SIGUE SIENDO UN RELLENO.
+#
+# Cuando los módulos no llegan al ancho de la pared, el validador mete un relleno
+# para cuadrar. Eso está bien y es lo que se hace en obra... hasta cierto punto.
+# Un relleno es una tira de tablero de unos pocos centímetros. Si lo que falta
+# son 195 cm, eso no es un relleno: es que falta un mueble, o que la lectura del
+# croquis salió mal.
+#
+# Sin este tope, una distribución así salía con `ok: True`, se dibujaba, y ese
+# «relleno» podía acabar volcado al presupuesto como una línea de material.
+# 60 cm es el ancho de mueble más corriente: si cabe un mueble entero en el
+# hueco, es que falta el mueble.
+RELLENO_MAXIMO = 60
+
 # Ancho de dibujo cuando un módulo llega sin ancho. NO es una medida: es lo que
 # se pinta para que el alzado cierre. Nunca se ROTULA (ver `cota_de_ancho`).
 ANCHO_DIBUJO_SIN_DATO = 60
@@ -356,6 +386,13 @@ def cota_de_ancho(elemento):
     """
     dado = (elemento or {}).get("ancho")
     ancho = int(dado or ANCHO_DIBUJO_SIN_DATO)
+    # `ancho_desconocido` lo pone `validar_distribucion` cuando el módulo llegó
+    # SIN ancho. Se mira lo primero porque para entonces el módulo ya lleva un
+    # ancho de dibujo puesto —hace falta para cerrar el alzado— y sin esta
+    # bandera volveríamos a rotular «~15» de algo que no sabe nadie, que es el
+    # fallo que se arregló el 23/08 y que se estaba colando otra vez.
+    if (elemento or {}).get("ancho_desconocido"):
+        return ancho, "?", "sin_dato"
     if (elemento or {}).get("medida_escrita"):
         return ancho, f"{ancho}", "escrita"
     if dado:
@@ -458,18 +495,31 @@ def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
                 avisos.append(f"Pared {pidx+1} ({etiqueta_fila}): «{e['label']}» se reduce "
                               f"a {nuevo_ancho} cm para que la composición quepa.")
         if resto > 0 and fila == "bajo":
+            if resto > RELLENO_MAXIMO:
+                no_cabe = True
+                avisos.append(
+                    f"Pared {pidx+1}: faltan {int(resto)} cm de muebles. Un relleno "
+                    f"de ese tamaño no existe (son unos pocos centímetros de "
+                    f"tablero): ahí cabe un mueble entero. Revisa la composición.")
+            else:
+                grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}",
+                              "fila": "bajo", "pared_idx": pidx,
+                              "posicion_cm": 0, "ancho": int(resto),
+                              "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
+                avisos.append(f"Pared {pidx+1}: añadido relleno de {int(resto)} cm para cuadrar.")
+    elif objetivo - suma_fijos > 0 and fila == "bajo":
+        resto = objetivo - suma_fijos
+        if resto > RELLENO_MAXIMO:
+            no_cabe = True
+            avisos.append(
+                f"Pared {pidx+1}: hay {int(resto)} cm de pared sin ningún mueble. "
+                f"Eso no se tapa con un relleno: falta composición.")
+        else:
             grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}",
                           "fila": "bajo", "pared_idx": pidx,
                           "posicion_cm": 0, "ancho": int(resto),
                           "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
-            avisos.append(f"Pared {pidx+1}: añadido relleno de {int(resto)} cm para cuadrar.")
-    elif objetivo - suma_fijos > 0 and fila == "bajo":
-        resto = objetivo - suma_fijos
-        grupo.append({"id": "relleno", "label": f"Relleno {int(resto)}",
-                      "fila": "bajo", "pared_idx": pidx,
-                      "posicion_cm": 0, "ancho": int(resto),
-                      "alto": CASCO_BAJO_ALTO, "fondo": FONDO_BAJOS})
-        avisos.append(f"Pared {pidx+1}: hueco de {int(resto)} cm sin módulo; añadido relleno.")
+            avisos.append(f"Pared {pidx+1}: hueco de {int(resto)} cm sin módulo; añadido relleno.")
 
     if fila == "bajo":
         # La fila de suelo va contigua de pared a pared: no hay huecos entre

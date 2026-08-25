@@ -379,7 +379,35 @@ async def añadir_saldo(user_id: str, renders: int) -> int:
     return await get_saldo_comprado(user_id)
 
 
-async def consume_credits(user: dict, kind: str) -> dict:
+# ─── Lo que cuesta cada motor, en créditos ───────────────────────────────────
+#
+# Hasta el 25/08/2026 el contador cobraba por TIPO de llamada («render») y punto,
+# así que un render con la IA 7 descontaba lo mismo que uno con la IA 1 aunque
+# cueste 3,3 veces más de verdad (CLAUDE.md, regla 1). El contador decía que se
+# habían gastado 10 renders y en el proveedor se habían gastado 33.
+#
+# Los números salen de la propia nota del repositorio: banana_pro es «3,3x por
+# render». Se redondea HACIA ARRIBA al descontar, que es como se cobra: nadie
+# regala el trozo suelto.
+COSTE_POR_MOTOR = {
+    "banana_pro": 3.3,
+    "flux": 1.0,
+    "manus": 1.0,
+    "gemini": 1.0,
+    "gemini_premium": 1.0,
+}
+
+
+def coste_de_motor(kind: str, base: float, motor) -> int:
+    """Créditos que cuesta una llamada, contando con el motor que la ha hecho."""
+    import math
+    if kind != "render" or not motor:
+        return int(base)
+    factor = COSTE_POR_MOTOR.get(str(motor).strip().lower(), 1.0)
+    return int(math.ceil(float(base) * factor))
+
+
+async def consume_credits(user: dict, kind: str, motor=None) -> dict:
     """Descuenta el coste (en créditos) de una llamada de tipo `kind`.
 
     Se gasta primero lo del plan (que caduca a fin de mes) y solo cuando se
@@ -397,6 +425,8 @@ async def consume_credits(user: dict, kind: str) -> dict:
         cost = int(credits_per.get(kind, 0) or 0)
     except (TypeError, ValueError):
         cost = 0
+    # Un render de la IA 7 cuesta 3,3 veces más: el contador tiene que decirlo.
+    cost = coste_de_motor(kind, cost, motor)
 
     if cost > 0:
         uid = str(user.get("id") or user.get("_id") or "")

@@ -103,7 +103,13 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
     p = payload or {}
     oid = p.get("id") or f"r3d-{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc).isoformat()
-    existing = await _db.render3d_designs.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+    # `medidas`, `distribucion` y `tipo3d` van en la proyección A PROPÓSITO: de
+    # ellas se parte para no pisarlas cuando esta llamada no las traiga. Si se
+    # quitan de aquí, la conservación de abajo lee `None` y las borra siempre.
+    existing = await _db.render3d_designs.find_one(
+        {"id": oid},
+        {"_id": 0, "createdAt": 1, "userId": 1,
+         "medidas": 1, "distribucion": 1, "tipo3d": 1})
     if existing and existing.get("userId") and current_user and current_user.get("id") \
        and existing["userId"] != current_user["id"] and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
@@ -116,10 +122,41 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
         "style": str(p.get("style") or ""),
         "images": (p.get("images") or [])[:12],
         "referenceImage": p.get("referenceImage") or None,  # plano/referencia para comparar
+        # ── LAS MEDIDAS SE GUARDAN CON EL PROYECTO ────────────────────────────
+        # Antes no. El botón decía «Guardar el proyecto (cliente, referencia,
+        # MEDIDAS, renders e historial)» y esta lista blanca no las recogía, así
+        # que se quedaban solo en la sesión del navegador. Mientras no cerraras
+        # la pestaña no se notaba; al reabrir el proyecto otro día, el ancho, el
+        # fondo y la altura salían vacíos.
+        #
+        # Y ahí es donde se torcían las cotas: sin el ancho real, la pared deja
+        # de estar anclada, `validar_distribucion` no tiene contra qué cuadrar y
+        # todos los módulos pasan de medida ESCRITA a ESTIMADA («~»). Los
+        # números cambiaban solos de una sesión a otra sin que nadie tocara
+        # nada. El master, 24/08: «mírate el último proyecto guardado, lo que
+        # pasa con las medidas».
+        #
+        # Va también la DISTRIBUCIÓN: detectarla y corregirla a mano módulo por
+        # módulo es el trabajo de una tarde, y se perdía entero al cerrar.
+        # Se conserva lo que ya hubiera si esta llamada no las trae (ver abajo).
+        "medidas": (existing or {}).get("medidas"),
+        "distribucion": (existing or {}).get("distribucion"),
+        "tipo3d": (existing or {}).get("tipo3d"),
         "createdByName": (current_user or {}).get("clientName") or (current_user or {}).get("username") or "",
         "createdAt": (existing or {}).get("createdAt") or now,
         "updatedAt": now,
     }
+    # SOLO SE PISA LO QUE VENGA EN ESTA LLAMADA. Como se guarda con `$set` del
+    # documento entero, meter las claves nuevas a secas habría BORRADO las
+    # medidas de un proyecto cada vez que algo guardara sin mandarlas. Por eso
+    # arriba se parte de lo que ya había y aquí solo se sustituye lo que llega.
+    if isinstance(p.get("medidas"), dict):
+        doc["medidas"] = p["medidas"]
+    if isinstance(p.get("distribucion"), dict):
+        doc["distribucion"] = p["distribucion"]
+    if p.get("tipo3d"):
+        doc["tipo3d"] = str(p["tipo3d"])
+
     await _db.render3d_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
     doc.pop("_id", None)
     return {"success": True, "design": doc}
@@ -559,7 +596,11 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
                 status_code=402,
                 detail=mensaje_sin_creditos(user, credits),
             )
-        await consume_credits(user, "render")
+        # SE COBRA POR EL MOTOR QUE SE VA A USAR DE VERDAD, no por el pedido:
+        # `motor_permitido` ya ha rebajado a IA 1 a quien no sea master, y sería
+        # absurdo cobrarle el 3,3x de un motor que no va a llegar a tocar.
+        await consume_credits(user, "render",
+                              motor=motor_permitido(user, request.provider))
     except HTTPException:
         raise
     except Exception:
@@ -600,7 +641,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
         params_override=overrides if overrides else None,
         reference_image=request.referenceImage,
         reference_mime=request.referenceMime,
-        provider=request.provider,
+        provider=motor_permitido(user, request.provider),
         reference_images=request.referenceImages,
         project_type=request.projectType,
         room_photo=bool(request.roomPhoto),
@@ -609,6 +650,38 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")
     return result
+
+
+# ─── El MOTOR de render lo elige el master, y se comprueba AQUÍ ──────────────
+#
+# La pantalla ya lo hacía bien: el desplegable de motores solo se le pinta al
+# master, y a todos los demás les ofrece «IA 1» a secas. El problema es que el
+# motor viaja en el CUERPO de la petición, y aquí se pasaba tal cual a
+# `generate_render` sin mirar quién lo mandaba. O sea que cualquier usuario con
+# la sesión iniciada podía pedir `banana_pro` —la IA 7, que cuesta 3,3 veces más
+# por render— desde fuera de la pantalla.
+#
+# Lo dice el propio repositorio en `routes/cascos.py`, a cuenta de la tarifa MV:
+# esconder un botón no cierra una API. Pues esto es lo mismo con el motor.
+#
+# Se usa la MISMA puerta que el MV (`_es_master` de `routes/cascos.py`) y no
+# `ADMIN_ROLE_FLAGS`, que es más ancha: por ahí pasan gerente y director
+# comercial, y los motores de pruebas son del master (CLAUDE.md, regla 1).
+MOTOR_DE_PRODUCCION = "gemini"
+
+
+def motor_permitido(user, pedido):
+    """Qué motor se usa de verdad. Para quien no es master, siempre el de producción."""
+    from routes.cascos import _es_master
+    if not pedido:
+        return None            # sin motor pedido, manda el de por defecto de siempre
+    if _es_master(user):
+        return pedido
+    if str(pedido).strip().lower() != MOTOR_DE_PRODUCCION:
+        logger.info(
+            "%s ha pedido el motor '%s' sin ser master; se rinde con %s.",
+            (user or {}).get("username") or "un usuario", pedido, MOTOR_DE_PRODUCCION)
+    return MOTOR_DE_PRODUCCION
 
 
 @ai_engine_router.get("/my-credits")
@@ -633,7 +706,7 @@ async def generate_render_compose(request: RenderComposeRequest, user=Depends(re
         wall_sketches=request.wallSketches or [],
         reference_images=request.referenceImages or [],
         params_override=overrides or None,
-        provider=request.provider,
+        provider=motor_permitido(user, request.provider),
         project_type=request.projectType,
     )
     logger.info(
@@ -674,7 +747,8 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
                 raise HTTPException(status_code=402, detail="Sin créditos de IA para generar el giro 360º.")
             n = min(n, restantes)
         for _ in range(n):
-            await consume_credits(user, "render")
+            await consume_credits(user, "render",
+                                  motor=motor_permitido(user, getattr(request, "provider", None)))
     except HTTPException:
         raise
     except Exception:
@@ -693,7 +767,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
         reference_mime=request.referenceMime,
         project_type=request.projectType,
         n=n,
-        provider=request.provider,
+        provider=motor_permitido(user, request.provider),
     )
     logger.info(f"Orbit 360º por {user.get('username')}: {result.get('count', 0)} vistas")
     return result

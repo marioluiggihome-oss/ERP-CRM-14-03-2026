@@ -56,7 +56,18 @@ svc = types.ModuleType('services'); svc.__path__ = [B + '/services']; sys.module
 dbc = types.ModuleType('services.db_client'); dbc.get_db = lambda: DBI; sys.modules['services.db_client'] = dbc
 jw = types.ModuleType('services.jwt_service')
 async def _ra(): return {'id': 'u42', 'email': 'taller@x.es'}
-jw.require_auth = _ra; jw.ADMIN_ROLE_FLAGS = ['isAdmin']; sys.modules['services.jwt_service'] = jw
+# EL DOBLE TIENE QUE TENER TODO LO QUE TIENE EL DE VERDAD.
+#
+# Este modulo falso se queda en `sys.modules` para el resto de la sesion de
+# pytest, asi que lo heredan las pruebas que se ejecuten despues. Le faltaba
+# `get_current_user` y eso reventaba la importacion de `routes.estudio_cocinas`
+# en OTRO fichero de pruebas —con un error que no se parecia en nada a su
+# causa—. Antes no se veia porque el router se importaba dentro de un
+# `try/except` que se tragaba el fallo y dejaba el Estudio 3D sin autenticar;
+# al quitar ese respaldo (auditoria del 25/08) salio a la luz.
+async def _gcu(): return {'id': 'u42', 'email': 'taller@x.es'}
+jw.require_auth = _ra; jw.get_current_user = _gcu
+jw.ADMIN_ROLE_FLAGS = ['isAdmin']; sys.modules['services.jwt_service'] = jw
 
 # ai_usage real, con su Mongo simulado
 sp = importlib.util.spec_from_file_location('services.ai_usage', B + '/services/ai_usage.py')

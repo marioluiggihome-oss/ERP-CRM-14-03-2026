@@ -1873,10 +1873,28 @@ class Render3DService:
                                reference_mime: str = "image/png",
                                provider: Optional[str] = None,
                                reference_images: Optional[list] = None) -> Dict[str, Any]:
-        """Elige el motor de render. Por defecto MANUS (preferencia del usuario);
-        si no está configurado o falla, usa Gemini como respaldo. El parámetro
-        `provider` (por petición) tiene prioridad sobre la variable de entorno
-        KITCHEN_RENDER_PROVIDER=manus|gemini."""
+        """Elige el motor de render. Por defecto GEMINI, que es la IA 1.
+
+        OJO, ESTE TEXTO ESTUVO MINTIENDO. Decía «por defecto MANUS (preferencia
+        del usuario)», que fue verdad hasta que se apagó la IA 2 el 18/08/2026 y
+        el defecto pasó a ser Gemini. El código estaba bien; la frase que lo
+        describe, no — y el lío del 03/08 empezó exactamente así, con alguien
+        creyéndose lo que ponía. Se corrigió al auditar, el 25/08/2026.
+
+        Mapa vigente (CLAUDE.md, regla 1):
+
+            IA 1 -> gemini           el de producción, y el único que ve un
+                                     usuario que no sea master
+            IA 3 -> gemini_premium   (flux si hay clave de Replicate)
+            IA 7 -> banana_pro       motor Pro, cuesta 3,3x por render
+            IA 2 -> manus            APAGADA (MOTOR_MANUS_ACTIVO)
+            IA 4 -> gemini_flash     APAGADA (era el mismo modelo que la IA 1)
+
+        `provider` (el motor elegido en pantalla) manda sobre la variable de
+        entorno KITCHEN_RENDER_PROVIDER. Quién puede pedir cada motor se decide
+        ANTES de llegar aquí, en `routes/ai_engine.motor_permitido`: a quien no
+        es master se le rebaja a la IA 1 aunque pida otra cosa por API.
+        """
         import os
         # Gemini por defecto (mucho más fiel al croquis/referencia y devuelve la
         # imagen incrustada). Manus solo si se pide expresamente (IA 2) o por env.

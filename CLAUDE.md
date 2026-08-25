@@ -29,7 +29,11 @@ rápido", ni en cambios pequeños.
   validador de geometría (`backend/services/kitchen_geometry.py`). Si un valor es
   imposible, se corrige al estándar más cercano o se rechaza — nunca se pinta.
 - **La suma cuadra:** la suma de anchos de los módulos de una pared debe coincidir
-  EXACTAMENTE con el ancho real de esa pared.
+  EXACTAMENTE con el ancho real de esa pared. Pero cuadrarla no vale a cualquier
+  precio: un relleno son unos pocos centímetros de tablero, así que por encima de
+  `RELLENO_MAXIMO` (60 cm, el ancho de mueble más corriente) la distribución se
+  RECHAZA con «faltan módulos» en vez de taparlo. Un «relleno» de 195 cm no es
+  una cocina, es una lectura mal hecha.
 
 ### Geometría real de fabricación (referencia, en mm salvo indicación)
 
@@ -115,7 +119,13 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    verlo no hay forma de saber sobre qué se está calculando el coste.
 6. **Lavavajillas = electrodoméstico** (va en hueco, sin casco). Su **puerta de
    integración = material nuestro**. Bajo fregadero y bajo horno son MUEBLES.
-7. **Nunca inventar una cota.** Lo que no se sabe va vacío o con "?".
+7. **Nunca inventar una cota.** Lo que no se sabe va vacío o con "?". Y ojo con
+   taparlo antes de tiempo: `cota_de_ancho` distingue escrita / estimada / sin
+   dato, pero hasta el 25/08 la ruta de detectar rellenaba el hueco con un 60
+   ANTES de validar, así que el caso "?" no podía darse NUNCA por el camino
+   principal y se imprimía "~60" de módulos que no había medido nadie. Un módulo
+   sin ancho llega SIN la clave `ancho`: se dibuja para que el alzado cierre y se
+   rotula "?". Candado: `test_calculo_cota_sin_dato.py`.
 8. **Rentabilidad (Cascos → Alvic/MV) es SOLO del master** (05/08). Ni gerente,
    ni director comercial, ni CONTROLLER: por ahí pasan la tarifa del proveedor,
    el descuento y el margen. Cerrado en pantalla Y en el backend (`_es_master`
@@ -153,6 +163,23 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    `gemini-2.5-flash-image`.** IA 2/3/4 son motores de pruebas del master: ahí
    puede cambiar, pero dejándolo escrito en
    `backend/tests/test_calculo_modelos_imagen.py`.
+
+11. **El MOTOR de render se comprueba en el SERVIDOR, no solo en la pantalla**
+   (25/08, al auditar). La pantalla ya solo le ofrecía los motores de pruebas al
+   master, pero el motor viaja en el cuerpo de la petición y la API lo aceptaba
+   tal cual: cualquier usuario con sesión podía pedir la IA 7 —3,3x de coste—
+   desde fuera. Ahora pasa por `motor_permitido()` de `routes/ai_engine.py`, con
+   la misma puerta que el MV (`_es_master`), y el coste en créditos depende del
+   motor. Candado: `test_calculo_motor_solo_master.py`.
+
+12. **Un proyecto guardado se abre con las medidas con las que se cerró**
+   (25/08). No se guardaban: vivían solo en la sesión del navegador, y al
+   reabrir el proyecto la pared se quedaba sin anclar y todas las cotas pasaban
+   de escritas a estimadas solas. Van al servidor `medidas`, `distribucion` y
+   `tipo3d`, y se recuperan al abrir. OJO: se guarda con `$set` del documento
+   entero, así que un guardado que no las traiga NO puede borrarlas — de ahí que
+   se parta de lo que ya había y que estén en la proyección del `find_one`.
+   Candado: `test_calculo_proyecto_guarda_medidas.py`.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

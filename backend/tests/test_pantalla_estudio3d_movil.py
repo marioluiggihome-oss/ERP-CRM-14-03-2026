@@ -31,6 +31,7 @@ Los cambios son SOLO por debajo del ancho de móvil (`sm:` / `max-sm:`): en
 pantalla grande todo se queda como estaba.
 """
 import os
+import re
 
 import pytest
 
@@ -54,12 +55,39 @@ def test_el_titulo_no_se_parte_en_dos_lineas():
 
 
 def test_los_creditos_van_cortos_en_movil():
-    """«Créditos: 37 restantes» empujaba Cliente/Ref a otra fila, y ahi es
-    donde el campo Cliente se quedaba en «Clien·»."""
+    """Cortos SI, mudos NO. Las dos cosas a la vez.
+
+    Esta prueba nacio pidiendo el numero a secas: «Creditos: 37 restantes»
+    empujaba Cliente/Ref a otra fila y ahi el campo Cliente se quedaba en
+    «Clien·». Cierto, y sigue siendolo.
+
+    Pero se paso de frenada. El master, 25/08/2026: «los creditos, que por
+    cierto quiero que ponga la palabra creditos». Y tiene razon: un `7` suelto
+    en una pastilla verde no dice de que es —podian ser proyectos, fotos o
+    cualquier cosa—.
+
+    Asi que la regla ya no es «lo mas corto posible», es «con su nombre y sin
+    la coletilla»: en el movil «Creditos: 7» y en pantalla grande «Creditos: 7
+    restantes». Lo que partia la cabecera era el «restantes», no la palabra.
+    El ancho de verdad lo vigila `e2e/estudio3d-movil.spec.js` en un navegador,
+    que es donde se mide un layout.
+    """
     codigo = _codigo()
-    assert 'className="sm:hidden">{aiCredits.restantes}' in codigo, (
-        "el contador de creditos vuelve a salir con su texto largo en el "
-        "movil: parte la cabecera en una fila mas")
+    moviles = [t for t in re.findall(r'className="sm:hidden"[^>]*>\s*\{?([^<}]*)', codigo)
+               if "aiCredits" in t]
+    assert moviles, "no se encuentra el contador de creditos de la version movil"
+    for trozo in moviles:
+        assert "Créditos" in trozo, (
+            "el contador del movil vuelve a enseñar el numero sin la palabra "
+            f"«Créditos», que es lo que pidio el master el 25/08: {trozo.strip()!r}")
+        # Se quita el NOMBRE DE LA VARIABLE antes de buscar la coletilla:
+        # `aiCredits.restantes` lleva la palabra dentro y no es texto que vea
+        # nadie. Sin esto la prueba se caza a si misma.
+        visible = trozo.replace("aiCredits.restantes", "aiCredits.N")
+        assert "restantes" not in visible, (
+            "ha vuelto la coletilla «restantes» al movil. ESO es lo que partia "
+            "la cabecera en dos filas y dejaba el campo Cliente en «Clien·» — "
+            f"la palabra «Créditos» sola cabe: {trozo.strip()!r}")
     assert 'className="hidden sm:inline"' in codigo, \
         "se ha perdido el texto completo de creditos para pantalla grande"
 
