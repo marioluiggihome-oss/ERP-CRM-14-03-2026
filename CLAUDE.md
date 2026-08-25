@@ -209,12 +209,13 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    el master** (25/08). Montadores: su comisión ES la mano de obra por mueble
    que ya se teclea en Rentabilidad MV — no tiene fórmula propia a propósito,
    porque dos números para lo mismo acaban sin cuadrar. Comerciales: cantidad
-   FIJA por mueble según la valoración del pedido (20 € por debajo de 2.500 €,
-   30 € hasta 6.000 €, 40 € por encima; tope de 50 €). El cálculo vive en
-   `services/comisiones.py` y la pantalla tiene su propia tabla: el candado
-   compara las dos, porque si se separan alguien cobra de menos. Van dentro del
-   candado de importes de Rentabilidad (regla 9). Candado:
-   `test_calculo_comisiones.py`.
+   FIJA por mueble según la valoración del pedido: **20 € por debajo de
+   2.500 €, 30 € hasta 6.000 €, 40 € hasta 9.000 € y 50 € por encima**, con un
+   tope de 50 € por mueble. El cálculo vive en `services/comisiones.py` y la
+   pantalla tiene su propia tabla: el candado compara las dos —los números Y el
+   nombre del tramo—, porque si se separan alguien cobra de menos, o cobra bien
+   con una explicación que miente. Van dentro del candado de importes de
+   Rentabilidad (regla 9). Candado: `test_calculo_comisiones.py`.
    - El tramo lo marca la **BASE IMPONIBLE**: el PVP DESPUÉS del descuento y
      SIN IVA. Costó dos correcciones del master: primero se hizo sobre el coste
      («importes de costo»), lo corrigió a PVP, y después zanjó lo del descuento
@@ -222,8 +223,14 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      coste ni el total con IVA pueden entrar: con el IVA, 5.500 € de base pasan
      a 6.655 € y saltan de tramo sin valer un euro más para la casa.
    - En el borde EXACTO se paga el tramo de arriba: en 2.500 clavados, 30 €;
-     en 6.000 clavados, 40 €. Confirmado por el master el 25/08 («en 6.000
-     euros exactos, 40 euros»).
+     en 6.000 clavados, 40 €; en 9.000 clavados, 50 €. Confirmado por el master
+     el 25/08 («en 6.000 euros exactos, 40 euros»).
+   - El tramo de 9.000 € lo añadió el master el 25/08 («9000 euros, 50 euros
+     por mueble»), y con él el TOPE de 50 € deja de ser decorativo: hasta
+     entonces el tramo más alto eran 40 y el tope no mordía nunca. Ahora tope y
+     tramo más alto coinciden, así que **un tramo nuevo por encima de 50 se
+     recortaría en silencio**: si se añade, hay que subir el tope A LA VEZ, y
+     preguntando antes al master. Hay candado para eso.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

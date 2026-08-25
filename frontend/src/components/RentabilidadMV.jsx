@@ -170,12 +170,14 @@ export const MV_COSTES_DEFAULT = {
 //
 //   valoración < 2.500 €     ->  20 € por mueble
 //   de 2.500 € a 6.000 €     ->  30 € por mueble
-//   más de 6.000 €           ->  40 € por mueble
+//   de 6.000 € a 9.000 €     ->  40 € por mueble
+//   de 9.000 € en adelante   ->  50 € por mueble
 //   tope, pase lo que pase   ->  50 € por mueble
 export const TRAMOS_COMISION_COMERCIAL = [
   { hasta: 2500, euros: 20 },
   { hasta: 6000, euros: 30 },
-  { hasta: null, euros: 40 },
+  { hasta: 9000, euros: 40 },
+  { hasta: null, euros: 50 },
 ];
 export const TOPE_COMISION_POR_MUEBLE = 50;
 
@@ -183,7 +185,7 @@ export const TOPE_COMISION_POR_MUEBLE = 50;
 export const comisionPorMueble = (valoracion) => {
   const v = Number(valoracion) || 0;
   for (const t of TRAMOS_COMISION_COMERCIAL) {
-    // En el borde exacto (2.500 o 6.000 clavados) se paga el tramo de ARRIBA:
+    // En el borde exacto (2.500, 6.000 o 9.000 clavados) se paga el de ARRIBA:
     // en la duda no se le quita dinero a quien vende. Igual que el backend.
     if (t.hasta === null || v < t.hasta) return Math.min(t.euros, TOPE_COMISION_POR_MUEBLE);
   }
@@ -195,7 +197,8 @@ export const nombreDelTramo = (valoracion) => {
   const v = Number(valoracion) || 0;
   if (v < 2500) return 'menos de 2.500 €';
   if (v < 6000) return 'de 2.500 € a 6.000 €';
-  return 'más de 6.000 €';
+  if (v < 9000) return 'de 6.000 € a 9.000 €';
+  return 'más de 9.000 €';
 };
 
 // Ancho (mm) del prefijo numérico del código

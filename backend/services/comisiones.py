@@ -49,26 +49,29 @@ DOS COSAS QUE NO PUEDEN PASAR NUNCA, y por eso hay pruebas para las dos:
 
     valoración < 2.500 €          ->  20 € por mueble
     de 2.500 € a 6.000 €          ->  30 € por mueble
-    más de 6.000 €                ->  40 € por mueble
+    de 6.000 € a 9.000 €          ->  40 € por mueble
+    de 9.000 € en adelante        ->  50 € por mueble   (25/08, el master)
 
     y un TOPE de 50 € por mueble, pase lo que pase.
+
+EL TRAMO DE 9.000 € (25/08). El master lo añadió después: «9000 euros, 50 euros
+por mueble». Con esto el TOPE de 50 € por fin coincide con el tramo más alto —
+que era justo lo que faltaba para que el tope significara algo. Ojo: ahora el
+tope y el tramo valen lo mismo, así que un tramo nuevo por encima de 50 quedaría
+recortado en silencio. Si algún día hace falta, se sube el tope A LA VEZ; hay
+una prueba que se pone roja si se separan.
 
 LOS BORDES, YA CONFIRMADOS (25/08). Al describir los tramos el master dijo
 «inferiores a 2.500» (20) y «superiores a 2.500» (30), así que el valor clavado
 quedaba sin definir. Se implementó al alza —en la duda no se le quita dinero a
 quien vende— y él lo confirmó después: «en 6.000 euros exactos, 40 euros». Por
-simetría, en 2.500 exactos se pagan 30.
+simetría, en 2.500 y en 9.000 exactos se paga también el tramo de arriba.
 
-    2.499,99 -> 20      2.500 -> 30      5.999,99 -> 30      6.000 -> 40
+    2.499,99 -> 20   2.500 -> 30   5.999,99 -> 30   6.000 -> 40
+    8.999,99 -> 40   9.000 -> 50
 
 `BORDE_AL_ALZA` sigue existiendo por si algún día se quiere lo contrario, pero
 ya no es una duda: es una decisión tomada.
-
-UNA COSA QUE SIGUE PENDIENTE:
-
-  · El tope de 50 €. Hoy NO llega a aplicarse nunca: el tramo más alto son
-     40 €, así que 50 no muerde. Se deja puesto porque el master lo pidió y
-     porque el día que se añada un tramo por encima, el tope ya está.
 """
 from __future__ import annotations
 
@@ -80,10 +83,12 @@ from typing import Optional
 TRAMOS_COMERCIAL = (
     (2500.0, 20.0),
     (6000.0, 30.0),
-    (None, 40.0),
+    (9000.0, 40.0),
+    (None, 50.0),
 )
 
-# Tope absoluto por mueble. Ver la nota 2 de arriba.
+# Tope absoluto por mueble. Desde que existe el tramo de 9.000 € coincide con
+# el tramo más alto: recorta solo si alguien mete un tramo por encima de 50.
 TOPE_COMERCIAL_POR_MUEBLE = 50.0
 
 # En el borde exacto de un tramo (2.500 o 6.000 clavados) se cobra el tramo de
@@ -186,7 +191,9 @@ def _nombre_del_tramo(valoracion: float) -> str:
         return "menos de 2.500 €"
     if (v < 6000.0) if BORDE_AL_ALZA else (v <= 6000.0):
         return "de 2.500 € a 6.000 €"
-    return "más de 6.000 €"
+    if (v < 9000.0) if BORDE_AL_ALZA else (v <= 9000.0):
+        return "de 6.000 € a 9.000 €"
+    return "más de 9.000 €"
 
 
 def resumen(valoracion: float, muebles: int, mano_por_mueble: float,
