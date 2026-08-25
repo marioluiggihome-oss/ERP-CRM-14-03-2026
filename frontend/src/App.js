@@ -941,7 +941,7 @@ const App = () => {
     // iframes externos que puedan dar 403). Si el usuario tiene una URL, iframe.
     const landingUrl = state.currentUser?.carpinteroLandingUrl || '';
     return (
-      <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
+      <div className="app-marco h-screen flex flex-col bg-slate-950 overflow-hidden">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
         {state.showCarpinterosUsers && (
           <Suspense fallback={null}>
@@ -1113,7 +1113,7 @@ const App = () => {
   const carcassMaterialName = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId)?.name || 'Blanco';
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden text-slate-800">
+    <div className="app-marco flex h-screen bg-slate-950 overflow-hidden text-slate-800">
       <style>{`
         :root {
           --brand-primary: ${activeBrandColor};
@@ -1188,7 +1188,7 @@ const App = () => {
             />
           )}
 
-          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-hidden max-h-screen`} onClick={(e) => {
+          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-y-auto overflow-x-hidden max-h-screen`} onClick={(e) => {
             // EN MÓVIL, ELEGIR ALGO CIERRA EL MENÚ.
             //
             // Esto estaba escrito y NO FUNCIONABA: buscaba `button[data-nav]` y
@@ -1720,7 +1720,7 @@ const App = () => {
               `hueco-logo` y le dejan sitio SOLO mientras esa clase esté puesta
               (ver index.css). Va aquí, en el mismo sitio y con la misma
               condición que pinta el botón, para que no puedan desincronizarse. */}
-          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 flex flex-col ${!sidebarOpen ? 'menu-plegado ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
+          <main className={`app-lienzo flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 flex flex-col ${!sidebarOpen ? 'menu-plegado ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
             {/* Miga de vuelta: si has llegado aquí desde otro módulo (Estudio 3D →
                 analizador → presupuesto), esto te devuelve al punto exacto de
                 donde saliste, con su sesión intacta. Una sola barra para todos
@@ -1740,7 +1740,7 @@ const App = () => {
                 </button>
               </div>
             )}
-            <div className="flex-1 min-h-0 relative overflow-hidden">
+            <div className="app-modulo flex-1 min-h-0 relative overflow-hidden">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
             {state.currentTab === 'welcome' && (
               <ErrorBoundary>

@@ -268,3 +268,69 @@ code {
   .tira-historial { max-height: 4.25rem; overflow: hidden; }
   .tira-historial .titulo-historial { display: none; }
 }
+
+
+/* ─── PANTALLA BAJA: QUE LA PÁGINA SE PUEDA DESLIZAR ────────────────────────
+ *
+ * El ERP está montado como una aplicación de escritorio: la ventana se llena y
+ * cada panel se desliza por dentro. En un portátil funciona. En un MÓVIL EN
+ * APAISADO no: quedan 390 px de alto, y tres `overflow: hidden` encadenados
+ * (el marco, el lienzo y el módulo) recortan todo lo que no cabe SIN dejar
+ * deslizar nada.
+ *
+ * Medido en un navegador el 24/08/2026, con el Estudio 3D abierto:
+ *
+ *     móvil apaisado  844x390   la página se desliza 0 px   58 cosas fuera
+ *     tablet apaisada 1024x600  la página se desliza 0 px   52 cosas fuera
+ *
+ * O sea que había botones a los que no se podía llegar de ninguna manera. No
+ * es que estuvieran incómodos: es que no existían para el dedo.
+ *
+ * La regla va por ALTO de ventana y no por ancho, igual que la de la tira del
+ * historial de aquí arriba: lo que estorba no es que la pantalla sea estrecha,
+ * es que sea BAJA. Un móvil vertical de 844 px de alto no la necesita; el
+ * mismo móvil girado, sí.
+ *
+ * Debajo de ese alto la aplicación deja de comportarse como una ventana fija y
+ * pasa a ser lo que es un sitio web: una página que se desliza hasta el final.
+ *
+ * SOLO SE SUELTA EL EJE VERTICAL. La primera versión de esta regla ponía
+ * `overflow: visible` a secas y soltaba los dos ejes a la vez: el alto dejaba
+ * de recortar —que era lo que se buscaba— pero el ANCHO también, y entonces
+ * Cocina Montada 2 y Armarios empezaron a desbordar a lo ancho en apaisado
+ * (lo cazó `nada-fuera-de-pantalla.spec.js`, que es justo para eso).
+ *
+ * La pareja correcta es `overflow-x: clip` + `overflow-y: visible`. Y tiene que
+ * ser `clip`, no `hidden`: con `hidden` en un eje, el `visible` del otro se
+ * convierte en `auto` por norma del CSS, el elemento vuelve a ser un contenedor
+ * que se desliza por dentro y no habríamos arreglado nada. `clip` no arrastra
+ * al otro eje, así que el ancho sigue recortado y el alto queda de verdad
+ * libre: la página crece y se desliza el documento entero.
+ */
+@media (max-height: 620px) {
+  .app-marco {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+  }
+  .app-lienzo,
+  .app-modulo {
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    /* Y HACE FALTA ESTE `min-width` JUSTO POR SOLTAR EL `overflow`. Un hijo de
+       un flex trae `min-width: auto`, o sea que se niega a encogerse por
+       debajo de su contenido; lo único que lo ponía a cero era el
+       `overflow: hidden` que acabamos de quitar. Sin esta línea, el lienzo se
+       quedaba en 1288 px dentro de una ventana de 850 y la mitad de los
+       botones de Armarios se iban por la derecha sin nada que deslizar. */
+    min-width: 0 !important;
+  }
+  /* El módulo ya no está atado al alto de la ventana, así que sus hijos
+     tampoco: si se quedaran con `h-full` volverían a medir lo que mide la
+     ventana y a recortar por dentro. */
+  .app-modulo > * {
+    height: auto !important;
+    max-height: none !important;
+  }
+}
