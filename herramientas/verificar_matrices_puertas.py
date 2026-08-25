@@ -54,6 +54,21 @@ VERIFICADAS = {
     ("T2", "PUERTAS", "147", "P50"),
 }
 
+# Sitios donde el fichero YA NO DICE lo que dice la hoja impresa, porque lo
+# mandó cambiar el master. Van aparte de las de arriba a propósito: aquéllas son
+# «la tarifa es así», y éstas son «nos hemos apartado de la tarifa». Confundir
+# las dos es perder la pista de qué es dato del proveedor y qué es decisión de
+# la casa. El detalle completo está en `_meta.cambios_del_master` del JSON.
+#
+#   T11/PUERTAS alto 90: la hoja pone P45=65 y P50=59 (más ancha, más barata).
+#   Comprobado a 900 dpi: pone 59, no 69. El master mandó invertirlas
+#   («invierte el precio, cámbialo y ya está», 25/08). Al invertirlas la fila
+#   sigue bajando, ahora en P45 (P40=62 y P45=59): es la consecuencia asumida,
+#   y se prefiere a inventar un tercer número que no está impreso.
+CAMBIADAS_POR_EL_MASTER = {
+    ("T11", "PUERTAS", "90", "P45"),
+}
+
 def _orden_tarifas(datos):
     """T1, T2, … T21 en orden numérico, no alfabético (T10 no va tras T1)."""
     return sorted((t for t in datos if t.startswith("T")),
@@ -77,7 +92,9 @@ def revisa(datos):
                     v = row.get(c)
                     if v is None:
                         continue
-                    if prev_v is not None and v < prev_v and (tar, fam, h, c) not in VERIFICADAS:
+                    conocida = ((tar, fam, h, c) in VERIFICADAS
+                                or (tar, fam, h, c) in CAMBIADAS_POR_EL_MASTER)
+                    if prev_v is not None and v < prev_v and not conocida:
                         avisos.append(f"{tar}/{fam} fila {h}: {prev_c}={prev_v} "
                                       f"pero {c}={v} (más ancha y más barata)")
                     prev_c, prev_v = c, v
@@ -120,10 +137,12 @@ def main():
 
     print(f"rarezas ya comprobadas contra el escaneo: {len(VERIFICADAS)} "
           "(la tarifa dice eso; no se tocan)")
+    print(f"casillas cambiadas por el master: {len(CAMBIADAS_POR_EL_MASTER)} "
+          "(el fichero se aparta de la hoja a propósito)")
 
     avisos = revisa(datos)
     if not avisos:
-        print("\n✓ las tres comprobaciones pasan en todo lo cargado")
+        print("\n✓ las dos comprobaciones pasan en todo lo cargado")
         return 0
     print(f"\n⚠ {len(avisos)} cosa(s) que mirar (NO se corrigen solas):")
     for a in avisos:

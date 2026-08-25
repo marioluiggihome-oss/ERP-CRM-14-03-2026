@@ -164,3 +164,46 @@ def test_una_vitrina_NO_sale_por_el_precio_de_una_puerta():
     assert round(puerta * 1.3) < vitrina / 2, (
         "el viejo x1,3 ya no se queda muy por debajo de la tarifa de vitrina; "
         "revisar si la tarifa ha cambiado")
+
+
+def test_LA_PUERTA_DE_T11_QUEDA_COMO_LA_MANDO_CAMBIAR_EL_MASTER():
+    """La única casilla en la que el fichero NO dice lo que dice la hoja.
+
+    La hoja de MV pone, en T11 alto 90, P45=65 y P50=59 — una puerta más ancha
+    y más barata. Comprobado a 900 dpi sobre el escaneo: pone 59, no 69, así que
+    la rareza es del impreso y no de la transcripción. El master mandó
+    invertirlas: «invierte el precio, cámbialo y ya está» (25/08).
+
+    Se invirtieron y no se inventó un tercer número. Lo que cuadraría del todo
+    sería P50=69, pero ese valor no aparece impreso en ninguna parte y una
+    tarifa no se completa a ojo.
+
+    Esta prueba existe para que el cambio no se pierda: si alguien vuelve a
+    volcar la tarifa desde el escaneo, se llevará la inversión por delante y
+    volverán los 65/59 sin que nadie se entere.
+    """
+    fila = _tarifas()["T11"]["PUERTAS"]["rows"]["90"]
+    assert fila["P45"] == 59 and fila["P50"] == 65, (
+        f"T11/PUERTAS alto 90 está en P45={fila.get('P45')} y "
+        f"P50={fila.get('P50')}. El master mandó invertirlas (59 y 65).")
+
+
+def test_EL_CAMBIO_DEL_MASTER_ESTA_ESCRITO_EN_LOS_PROPIOS_DATOS():
+    """Apartarse de la hoja del proveedor no puede quedar solo en un commit.
+
+    Quien abra el JSON dentro de dos años tiene que poder ver que esa casilla no
+    es un dato de MV sino una decisión de la casa, y por qué. Si no, la próxima
+    auditoría la dará por buena como si viniera del proveedor.
+    """
+    with open(TARIFA, "r", encoding="utf-8") as f:
+        meta = json.load(f).get("_meta", {})
+    cambios = meta.get("cambios_del_master") or []
+    assert cambios, (
+        "no queda constancia en el JSON de que nos hemos apartado de la hoja")
+    uno = [c for c in cambios if "T11" in c.get("donde", "")]
+    assert uno, "falta la anotación del cambio de T11/PUERTAS"
+    assert uno[0].get("hoja_impresa", {}).get("P45") == 65, (
+        "la anotación no dice qué ponía la hoja ANTES; sin eso no se puede "
+        "volver atrás ni discutirlo con el proveedor")
+    assert uno[0].get("efecto_que_queda"), (
+        "la anotación no dice qué queda sin cuadrar después del cambio")

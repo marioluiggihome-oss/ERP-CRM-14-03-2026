@@ -259,6 +259,22 @@
           "general": "FERRARA=T21, NANTES=T21 (pag 126). Lineas disponibles confirmadas en pagina 126."
         }
       }
+    ],
+    "cambios_del_master": [
+      {
+        "fecha": "2026-08-25",
+        "donde": "T11 / PUERTAS / alto 90 / columnas P45 y P50",
+        "hoja_impresa": {
+          "P45": 65,
+          "P50": 59
+        },
+        "queda_en": {
+          "P45": 59,
+          "P50": 65
+        },
+        "por_que": "La hoja de MV pone P45=65 y P50=59, o sea una puerta mas ancha mas barata. Comprobado a 900 dpi sobre el escaneo: pone 59, no 69 — la rareza es del impreso, no de la transcripcion. El master mando invertirlas: «invierte el precio, cambialo y ya esta». Se invierten y no se inventa un tercer numero; lo que cuadraria del todo seria P50=69, pero ese valor no aparece impreso en ninguna parte.",
+        "efecto_que_queda": "La fila sigue bajando, ahora en P45 (P40=62 y P45=59). Es la consecuencia de invertir y esta asumida."
+      }
     ]
   },
   "tariffs": {
@@ -9991,8 +10007,8 @@
             "P30": 53,
             "P35": 57,
             "P40": 62,
-            "P45": 65,
-            "P50": 59,
+            "P45": 59,
+            "P50": 65,
             "P60": 77
           },
           "127": {
