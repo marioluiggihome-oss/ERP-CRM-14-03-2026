@@ -50,25 +50,35 @@ DOS COSAS QUE NO PUEDEN PASAR NUNCA, y por eso hay pruebas para las dos:
     valoración < 2.500 €          ->  20 € por mueble
     de 2.500 € a 6.000 €          ->  30 € por mueble
     de 6.000 € a 9.000 €          ->  40 € por mueble
-    de 9.000 € en adelante        ->  50 € por mueble   (25/08, el master)
+    de 9.000 € a 12.000 €         ->  50 € por mueble
+    de 12.000 € a 15.000 €        ->  60 € por mueble
+    de 15.000 € en adelante       ->  70 € por mueble
 
-    y un TOPE de 50 € por mueble, pase lo que pase.
+    y un TOPE de 70 € por mueble, pase lo que pase.
 
-EL TRAMO DE 9.000 € (25/08). El master lo añadió después: «9000 euros, 50 euros
-por mueble». Con esto el TOPE de 50 € por fin coincide con el tramo más alto —
-que era justo lo que faltaba para que el tope significara algo. Ojo: ahora el
-tope y el tramo valen lo mismo, así que un tramo nuevo por encima de 50 quedaría
-recortado en silencio. Si algún día hace falta, se sube el tope A LA VEZ; hay
-una prueba que se pone roja si se separan.
+CÓMO CRECIÓ LA ESCALA (todo el 25/08, y todo dictado por el master). Primero
+tres tramos —20 / 30 / 40— y un tope de 50 € que no llegaba a aplicarse nunca.
+Después «9000 euros, 50 euros por mueble». Y después los dos de arriba: «el
+bloque de 12000 y 60 euros de prima» y «el último bloque de 15000 euros y 70
+euros de prima».
+
+EL TOPE SUBE CON LOS TRAMOS, SIEMPRE. Al añadir el de 12.000 € la escala pasó
+por encima del tope de 50 que había, y eso NO da error: `min(euros, TOPE)`
+habría recortado los 60 y los 70 a 50 en silencio, y el comercial cobraría de
+menos sin que nadie se enterase. Por eso el tope subió a 70 en el mismo cambio.
+Regla, para el siguiente que pase por aquí: **un tramo nuevo por encima del tope
+obliga a subir el tope A LA VEZ**, y a preguntárselo al master antes, que esto
+es nómina. Hay una prueba que se pone roja si se separan.
 
 LOS BORDES, YA CONFIRMADOS (25/08). Al describir los tramos el master dijo
 «inferiores a 2.500» (20) y «superiores a 2.500» (30), así que el valor clavado
 quedaba sin definir. Se implementó al alza —en la duda no se le quita dinero a
 quien vende— y él lo confirmó después: «en 6.000 euros exactos, 40 euros». Por
-simetría, en 2.500 y en 9.000 exactos se paga también el tramo de arriba.
+simetría, en TODOS los bordes clavados se paga el tramo de arriba.
 
-    2.499,99 -> 20   2.500 -> 30   5.999,99 -> 30   6.000 -> 40
-    8.999,99 -> 40   9.000 -> 50
+    2.499,99 -> 20    2.500 -> 30     5.999,99 -> 30    6.000 -> 40
+    8.999,99 -> 40    9.000 -> 50    11.999,99 -> 50   12.000 -> 60
+   14.999,99 -> 60   15.000 -> 70
 
 `BORDE_AL_ALZA` sigue existiendo por si algún día se quiere lo contrario, pero
 ya no es una duda: es una decisión tomada.
@@ -84,15 +94,20 @@ TRAMOS_COMERCIAL = (
     (2500.0, 20.0),
     (6000.0, 30.0),
     (9000.0, 40.0),
-    (None, 50.0),
+    (12000.0, 50.0),
+    (15000.0, 60.0),
+    (None, 70.0),
 )
 
-# Tope absoluto por mueble. Desde que existe el tramo de 9.000 € coincide con
-# el tramo más alto: recorta solo si alguien mete un tramo por encima de 50.
-TOPE_COMERCIAL_POR_MUEBLE = 50.0
+# Tope absoluto por mueble. Sube CON el tramo más alto, nunca por detrás: si se
+# quedara en 50 mientras hay tramos de 60 y 70, `euros_por_mueble_comercial` los
+# recortaría a 50 en silencio y el comercial cobraría de menos sin que saltara
+# ningún error. Hay una prueba que se pone roja si se separan.
+TOPE_COMERCIAL_POR_MUEBLE = 70.0
 
-# En el borde exacto de un tramo (2.500 o 6.000 clavados) se cobra el tramo de
-# ARRIBA. Lo confirmó el master el 25/08: «en 6.000 euros exactos, 40 euros».
+# En el borde exacto de un tramo (2.500, 6.000, 9.000… clavados) se cobra el
+# tramo de ARRIBA. Lo confirmó el master el 25/08: «en 6.000 euros exactos, 40
+# euros».
 BORDE_AL_ALZA = True
 
 
@@ -181,19 +196,35 @@ def comision_montadores(mano_por_mueble: float, muebles: int) -> dict:
     }
 
 
+def _euros(v: float) -> str:
+    """12000 -> «12.000 €». Con el punto de los miles, como se escribe aquí."""
+    return f"{int(round(v)):,}".replace(",", ".") + " €"
+
+
 def _nombre_del_tramo(valoracion: float) -> str:
-    """Para poder decir en pantalla POR QUÉ sale ese importe."""
+    """Para poder decir en pantalla POR QUÉ sale ese importe.
+
+    Se DERIVA de `TRAMOS_COMERCIAL` a propósito. Antes eran seis `if` escritos a
+    mano, o sea los tramos otra vez, en el mismo fichero, con otras palabras. Y
+    ya se rompió: al añadir el tramo de 9.000 € el importe pasó a 50 € y la
+    etiqueta se quedó diciendo «más de 6.000 €» —el número bien y la explicación
+    mintiendo—. Derivándolo, añadir un tramo no puede desincronizar el rótulo.
+    """
     try:
         v = float(valoracion or 0)
     except (TypeError, ValueError):
         v = 0.0
-    if (v < 2500.0) if BORDE_AL_ALZA else (v <= 2500.0):
-        return "menos de 2.500 €"
-    if (v < 6000.0) if BORDE_AL_ALZA else (v <= 6000.0):
-        return "de 2.500 € a 6.000 €"
-    if (v < 9000.0) if BORDE_AL_ALZA else (v <= 9000.0):
-        return "de 6.000 € a 9.000 €"
-    return "más de 9.000 €"
+    anterior = None
+    for tope, _ in TRAMOS_COMERCIAL:
+        if tope is None:
+            break
+        cabe = v < tope if BORDE_AL_ALZA else v <= tope
+        if cabe:
+            if anterior is None:
+                return f"menos de {_euros(tope)}"
+            return f"de {_euros(anterior)} a {_euros(tope)}"
+        anterior = tope
+    return f"más de {_euros(anterior)}" if anterior is not None else "todos"
 
 
 def resumen(valoracion: float, muebles: int, mano_por_mueble: float,

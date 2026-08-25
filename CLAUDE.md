@@ -210,8 +210,10 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    que ya se teclea en Rentabilidad MV — no tiene fórmula propia a propósito,
    porque dos números para lo mismo acaban sin cuadrar. Comerciales: cantidad
    FIJA por mueble según la valoración del pedido: **20 € por debajo de
-   2.500 €, 30 € hasta 6.000 €, 40 € hasta 9.000 € y 50 € por encima**, con un
-   tope de 50 € por mueble. El cálculo vive en `services/comisiones.py` y la
+   2.500 €, 30 € hasta 6.000 €, 40 € hasta 9.000 €, 50 € hasta 12.000 €, 60 €
+   hasta 15.000 € y 70 € por encima**, con un tope de 70 € por mueble (el tope
+   sube SIEMPRE con el tramo más alto: ver abajo). El cálculo vive en
+   `services/comisiones.py` y la
    pantalla tiene su propia tabla: el candado compara las dos —los números Y el
    nombre del tramo—, porque si se separan alguien cobra de menos, o cobra bien
    con una explicación que miente. Van dentro del candado de importes de
@@ -222,15 +224,22 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      con «siempre va sobre la base imponible, no sobre el total con IVA». Ni el
      coste ni el total con IVA pueden entrar: con el IVA, 5.500 € de base pasan
      a 6.655 € y saltan de tramo sin valer un euro más para la casa.
-   - En el borde EXACTO se paga el tramo de arriba: en 2.500 clavados, 30 €;
-     en 6.000 clavados, 40 €; en 9.000 clavados, 50 €. Confirmado por el master
-     el 25/08 («en 6.000 euros exactos, 40 euros»).
-   - El tramo de 9.000 € lo añadió el master el 25/08 («9000 euros, 50 euros
-     por mueble»), y con él el TOPE de 50 € deja de ser decorativo: hasta
-     entonces el tramo más alto eran 40 y el tope no mordía nunca. Ahora tope y
-     tramo más alto coinciden, así que **un tramo nuevo por encima de 50 se
-     recortaría en silencio**: si se añade, hay que subir el tope A LA VEZ, y
-     preguntando antes al master. Hay candado para eso.
+   - En el borde EXACTO se paga el tramo de arriba, en todos: 2.500 → 30 €,
+     6.000 → 40 €, 9.000 → 50 €, 12.000 → 60 €, 15.000 → 70 €. Confirmado por
+     el master el 25/08 («en 6.000 euros exactos, 40 euros»).
+   - **EL TOPE SUBE CON EL TRAMO MÁS ALTO, SIEMPRE.** La escala creció en tres
+     tandas el 25/08 (9.000 → 50 €, «el bloque de 12000 y 60 euros de prima»,
+     «el último bloque de 15000 euros y 70 euros de prima») y el tope pasó de
+     50 a 70 con ella. Si se quedara por detrás, `min(euros, TOPE)` recortaría
+     los tramos altos EN SILENCIO —sin error, sin aviso— y el comercial cobraría
+     de menos. Si se queda por delante, es letra muerta. Un tramo nuevo obliga a
+     mirar el tope A LA VEZ, preguntando antes al master. Hay candado para eso.
+   - El **rótulo** del tramo se DERIVA de la tabla, no se escribe a mano, en las
+     dos puntas. Escrito a mano ya se rompió: al añadir el tramo de 9.000 € el
+     importe pasó a 50 € y la etiqueta se quedó en «más de 6.000 €» — el número
+     bien y la explicación mintiendo, que es peor, porque quien lo lee se fía.
+     El candado `test_la_pantalla_PAGA_Y_ROTULA_igual_que_el_calculo` EJECUTA en
+     node las funciones del JSX y las compara con las del backend valor a valor.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

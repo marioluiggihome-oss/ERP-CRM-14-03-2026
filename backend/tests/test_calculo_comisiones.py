@@ -14,9 +14,14 @@ Los tramos los dictó el master el 25/08/2026:
     cuarenta euros. Poniendo un tope de valoración de cincuenta euros por
     mueble en pedidos superiores a este importe anterior.»
 
-Y el tramo de arriba, que añadió después el mismo día: **«9000 euros, 50 euros
-por mueble»**. Con él, el tope de 50 € deja de ser decorativo: coincide
-exactamente con el tramo más alto.
+Y los tres tramos de arriba, que fue añadiendo el mismo día: **«9000 euros, 50
+euros por mueble»**, **«el bloque de 12000 y 60 euros de prima»** y **«el último
+bloque de 15000 euros y 70 euros de prima»**.
+
+Esos dos últimos pasaron por encima del tope de 50 € que había, así que el tope
+subió a 70 en el mismo cambio. Si no, `min(euros, TOPE)` habría recortado los 60
+y los 70 a 50 EN SILENCIO —sin error, sin aviso— y el comercial cobraría de
+menos. Hay una prueba solo para eso.
 
 Y una corrección suya del mismo día, que importa mucho: al describirlo dijo
 «importes de COSTO … de valoración» y se implementó sobre el coste. Al verlo en
@@ -55,15 +60,19 @@ from services import comisiones as C  # noqa: E402
     (8999.99, 40),
     (9000.01, 50),
     (10000, 50),
-    (250000, 50),
+    (11999.99, 50),
+    (12000.01, 60),
+    (14999.99, 60),
+    (15000.01, 70),
+    (250000, 70),
 ])
 def test_los_tramos_son_los_que_dijo_el_master(valoracion, esperado):
     real = C.euros_por_mueble_comercial(valoracion)
     assert real == esperado, (
         f"con una valoración de {valoracion} € el comercial debería llevarse "
         f"{esperado} € por mueble y se lleva {real}. Los tramos los dictó el "
-        "master: 20 por debajo de 2.500, 30 hasta 6.000, 40 hasta 9.000 y 50 "
-        "por encima.")
+        "master: 20 por debajo de 2.500, 30 hasta 6.000, 40 hasta 9.000, 50 "
+        "hasta 12.000, 60 hasta 15.000 y 70 por encima.")
 
 
 def test_en_el_borde_exacto_se_paga_el_tramo_de_ARRIBA():
@@ -78,11 +87,16 @@ def test_en_el_borde_exacto_se_paga_el_tramo_de_ARRIBA():
     assert C.euros_por_mueble_comercial(2500) == 30
     assert C.euros_por_mueble_comercial(6000) == 40
     assert C.euros_por_mueble_comercial(9000) == 50
+    assert C.euros_por_mueble_comercial(12000) == 60
+    assert C.euros_por_mueble_comercial(15000) == 70
 
 
-def test_hay_un_tope_de_50_euros_por_mueble():
-    assert C.TOPE_COMERCIAL_POR_MUEBLE == 50, (
-        "el tope por mueble ha cambiado; el master lo puso en 50 €")
+def test_hay_un_tope_por_mueble_y_hoy_son_70_euros():
+    """El tope nació en 50 € y subió a 70 el 25/08, con los tramos de 12.000 y
+    15.000 €. Sube CON el tramo más alto, nunca por detrás — si no, recortaría
+    en silencio (ver la prueba de abajo)."""
+    assert C.TOPE_COMERCIAL_POR_MUEBLE == 70, (
+        "el tope por mueble ha cambiado sin que lo pidiera el master")
 
 
 def test_ningun_tramo_puede_pasar_del_TOPE_sin_que_alguien_se_entere():
@@ -101,18 +115,22 @@ def test_ningun_tramo_puede_pasar_del_TOPE_sin_que_alguien_se_entere():
 
 
 def test_el_tramo_mas_alto_llega_JUSTO_al_tope():
-    """El tramo de 9.000 € vale 50 €, y el tope son 50 €. Que coincidan es lo
-    que hace que el tope pedido por el master signifique algo: hasta el 25/08 el
-    tramo más alto eran 40 y el tope no mordía nunca."""
+    """Tramo más alto y tope tienen que valer lo mismo.
+
+    Si el tope se quedara por debajo, recortaría en silencio (la prueba de
+    arriba). Si se quedara por encima, sería letra muerta otra vez —que es como
+    estuvo hasta el 25/08, con tramos de hasta 40 y un tope de 50 que no mordía
+    nunca—. Hoy los dos son 70.
+    """
     mayor = max(e for _, e in C.TRAMOS_COMERCIAL)
-    assert mayor == C.TOPE_COMERCIAL_POR_MUEBLE == 50
+    assert mayor == C.TOPE_COMERCIAL_POR_MUEBLE == 70
 
 
 def test_el_tope_recorta_de_verdad_si_alguien_sube_un_tramo(monkeypatch):
     """Que el tope no muerda hoy no puede significar que no funcione."""
-    monkeypatch.setattr(C, "TRAMOS_COMERCIAL", ((2500.0, 20.0), (None, 80.0)))
-    assert C.euros_por_mueble_comercial(12000) == 50, (
-        "un tramo de 80 € por mueble debería quedarse en el tope de 50")
+    monkeypatch.setattr(C, "TRAMOS_COMERCIAL", ((2500.0, 20.0), (None, 120.0)))
+    assert C.euros_por_mueble_comercial(20000) == C.TOPE_COMERCIAL_POR_MUEBLE == 70, (
+        "un tramo de 120 € por mueble debería quedarse en el tope de 70")
 
 
 # ── Las unidades multiplican (CLAUDE.md, regla 4) ────────────────────────────
@@ -152,11 +170,11 @@ def test_el_resumen_junta_las_dos_y_suma_bien():
     assert r["total"] == 600
     assert r["comercial"]["tramo"] == "de 6.000 € a 9.000 €"
 
-    # Y el tramo de arriba, el que añadió el master el 25/08.
-    r9 = C.resumen(valoracion=9500, muebles=10, mano_por_mueble=20)
-    assert r9["comercial"]["porMueble"] == 50
-    assert r9["comercial"]["total"] == 500   # 10 x 50
-    assert r9["comercial"]["tramo"] == "más de 9.000 €"
+    # Y el tramo de arriba del todo, el último que dictó el master el 25/08.
+    r15 = C.resumen(valoracion=16000, muebles=10, mano_por_mueble=20)
+    assert r15["comercial"]["porMueble"] == 70
+    assert r15["comercial"]["total"] == 700   # 10 x 70
+    assert r15["comercial"]["tramo"] == "más de 15.000 €"
 
 
 @pytest.mark.parametrize("basura", [None, "", "abc", -1, float("nan")])
@@ -316,47 +334,73 @@ def test_la_pantalla_calcula_la_base_imponible_antes_del_tramo():
         "hay un IVA metido en el cálculo de la comisión")
 
 
-def test_el_NOMBRE_del_tramo_de_la_pantalla_es_el_mismo_que_el_del_calculo():
-    """El hueco que dejó el tramo de 9.000 € (25/08).
+def test_la_pantalla_PAGA_Y_ROTULA_igual_que_el_calculo(tmp_path):
+    """El candado fuerte: se EJECUTA el código de la pantalla y se compara.
 
-    La prueba de arriba compara los NÚMEROS de las dos tablas, y por eso saltó
-    en cuanto se añadió el tramo nuevo. Pero el nombre del tramo vive en otro
-    sitio —`nombreDelTramo` en el JSX y `_nombre_del_tramo` aquí— y ahí no
-    miraba nadie. O sea que la pantalla podía pagar 50 € por mueble y rotularlo
-    «más de 6.000 €»: el importe bien y la explicación mintiendo, que es peor
-    que no explicar nada, porque quien lo lea se fía.
+    Los tramos viven en dos sitios —el cálculo cobra, la pantalla avisa— y ya se
+    han separado una vez: al añadir el tramo de 9.000 € el importe pasó a 50 € y
+    el rótulo se quedó diciendo «más de 6.000 €». Número bien, explicación
+    mintiendo, que es peor que no explicar nada porque quien lo lee se fía.
 
-    Se traduce el `if (v < N) return '...'` del JSX y se compara tramo a tramo.
+    La prueba de arriba compara las TABLAS. Esta compara el RESULTADO: saca del
+    JSX las funciones de verdad, las corre en node y mira, valor a valor, que
+    paguen lo mismo y lo rotulen igual. Así también entra lo que la tabla no
+    dice —el redondeo, el borde, el formato de los miles, el tope—.
     """
-    import re
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no hay node en esta máquina")
 
     raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ruta = os.path.join(raiz, "frontend", "src", "components", "RentabilidadMV.jsx")
     with open(ruta, "r", encoding="utf-8") as f:
         cuerpo = f.read()
 
-    bloque = re.search(r"nombreDelTramo = \(valoracion\) => \{(.*?)\n\};", cuerpo, re.S)
-    assert bloque, "ya no está `nombreDelTramo` en la pantalla de Rentabilidad"
-    cortes = [(float(n), etiqueta) for n, etiqueta in
-              re.findall(r"if \(v < ([0-9]+)\) return '([^']+)';", bloque.group(1))]
-    ultima = re.findall(r"\n\s*return '([^']+)';", bloque.group(1))
-    assert cortes and ultima, "no se ha podido leer `nombreDelTramo` de la pantalla"
+    # Se recortan del JSX los trozos que hacen falta, en orden. Nada de volver a
+    # escribirlos aquí: entonces la prueba compararía el backend con una copia
+    # mía, no con lo que ve el usuario.
+    trozos = []
+    for marca, fin in (
+        ("export const TRAMOS_COMISION_COMERCIAL = [", "];"),
+        ("export const TOPE_COMISION_POR_MUEBLE = ", ";"),
+        ("export const comisionPorMueble = ", "\n};"),
+        ("const eurosDelTramo = ", ";\n"),
+        ("export const nombreDelTramo = ", "\n};"),
+    ):
+        assert marca in cuerpo, f"ya no está «{marca.strip()}» en la pantalla de Rentabilidad"
+        i = cuerpo.index(marca)
+        j = cuerpo.index(fin, i) + len(fin)
+        trozos.append(cuerpo[i:j].replace("export const", "const", 1))
 
-    def nombre_en_pantalla(v):
-        for corte, etiqueta in cortes:
-            if v < corte:
-                return etiqueta
-        return ultima[-1]
-
-    # Un valor a cada lado de cada frontera, y los bordes clavados.
+    # Un valor a cada lado de cada frontera, los bordes clavados, y los extremos.
     fronteras = [t for t, _ in C.TRAMOS_COMERCIAL if t is not None]
-    pruebas = [0.0]
+    pruebas = [0.0, 1.0]
     for f in fronteras:
         pruebas += [f - 0.01, f, f + 0.01]
-    pruebas.append(max(fronteras) * 10)
+    pruebas += [max(fronteras) * 10, 1234.56]
 
-    for v in pruebas:
-        assert nombre_en_pantalla(v) == C._nombre_del_tramo(v), (
-            f"con {v} € la pantalla rotula «{nombre_en_pantalla(v)}» y el cálculo "
-            f"dice «{C._nombre_del_tramo(v)}». El importe puede estar bien y la "
-            "explicación mintiendo — y esto es nómina.")
+    guion = tmp_path / "tramos.js"
+    guion.write_text(
+        "\n".join(trozos)
+        + "\nconst vs = " + json.dumps(pruebas) + ";\n"
+        + "console.log(JSON.stringify(vs.map((v) => "
+          "[comisionPorMueble(v), nombreDelTramo(v)])));\n",
+        encoding="utf-8")
+
+    salida = subprocess.run([node, str(guion)], capture_output=True, text=True, timeout=60)
+    assert salida.returncode == 0, (
+        f"el código de tramos de la pantalla no corre: {salida.stderr.strip()}")
+    pantalla = json.loads(salida.stdout)
+
+    for v, (euros, rotulo) in zip(pruebas, pantalla):
+        assert euros == C.euros_por_mueble_comercial(v), (
+            f"con {v} € la pantalla paga {euros} € por mueble y el cálculo "
+            f"{C.euros_por_mueble_comercial(v)} €. Esto es nómina.")
+        assert rotulo == C._nombre_del_tramo(v), (
+            f"con {v} € la pantalla rotula «{rotulo}» y el cálculo dice "
+            f"«{C._nombre_del_tramo(v)}». El importe puede estar bien y la "
+            "explicación mintiendo, que es peor: quien lo lee se fía.")

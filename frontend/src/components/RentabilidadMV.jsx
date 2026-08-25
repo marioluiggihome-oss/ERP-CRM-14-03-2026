@@ -168,18 +168,26 @@ export const MV_COSTES_DEFAULT = {
 // dos tablas: si se separan, la pantalla enseñaría una cifra y el cálculo daría
 // otra — y aquí eso es que alguien cobra de menos.
 //
-//   valoración < 2.500 €     ->  20 € por mueble
-//   de 2.500 € a 6.000 €     ->  30 € por mueble
-//   de 6.000 € a 9.000 €     ->  40 € por mueble
-//   de 9.000 € en adelante   ->  50 € por mueble
-//   tope, pase lo que pase   ->  50 € por mueble
+//   valoración < 2.500 €      ->  20 € por mueble
+//   de 2.500 € a 6.000 €      ->  30 € por mueble
+//   de 6.000 € a 9.000 €      ->  40 € por mueble
+//   de 9.000 € a 12.000 €     ->  50 € por mueble
+//   de 12.000 € a 15.000 €    ->  60 € por mueble
+//   de 15.000 € en adelante   ->  70 € por mueble
+//   tope, pase lo que pase    ->  70 € por mueble
+//
+// El TOPE sube CON el tramo más alto. Si se quedara por detrás, el `Math.min`
+// de abajo recortaría los tramos altos en silencio y el comercial cobraría
+// menos de lo que dice esta tabla.
 export const TRAMOS_COMISION_COMERCIAL = [
   { hasta: 2500, euros: 20 },
   { hasta: 6000, euros: 30 },
   { hasta: 9000, euros: 40 },
-  { hasta: null, euros: 50 },
+  { hasta: 12000, euros: 50 },
+  { hasta: 15000, euros: 60 },
+  { hasta: null, euros: 70 },
 ];
-export const TOPE_COMISION_POR_MUEBLE = 50;
+export const TOPE_COMISION_POR_MUEBLE = 70;
 
 /** € por mueble que se lleva el comercial con esa valoración de pedido. */
 export const comisionPorMueble = (valoracion) => {
@@ -193,12 +201,39 @@ export const comisionPorMueble = (valoracion) => {
                   TOPE_COMISION_POR_MUEBLE);
 };
 
+/**
+ * 12000 -> «12.000 €», con el punto de los miles.
+ *
+ * A mano y no con `toLocaleString('es-ES')` a propósito: eso depende del ICU
+ * del navegador y donde no esté completo devuelve «12,000 €» con coma. El
+ * candado compara este rótulo con el del backend carácter a carácter, así que
+ * tiene que salir igual siempre, en cualquier máquina.
+ */
+const eurosDelTramo = (v) => `${String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
+
+/**
+ * El rótulo del tramo, DERIVADO de la tabla de arriba.
+ *
+ * Antes era una cadena de `if` escritos a mano: los tramos otra vez, con otras
+ * palabras. Y se rompió — al añadir el tramo de 9.000 € el importe pasó a 50 €
+ * y el rótulo se quedó diciendo «más de 6.000 €». El número bien y la
+ * explicación mintiendo, que es peor que no explicar nada. Derivándolo, añadir
+ * un tramo no puede desincronizar el rótulo.
+ */
 export const nombreDelTramo = (valoracion) => {
   const v = Number(valoracion) || 0;
-  if (v < 2500) return 'menos de 2.500 €';
-  if (v < 6000) return 'de 2.500 € a 6.000 €';
-  if (v < 9000) return 'de 6.000 € a 9.000 €';
-  return 'más de 9.000 €';
+  let anterior = null;
+  for (const t of TRAMOS_COMISION_COMERCIAL) {
+    if (t.hasta === null) break;
+    // Borde exacto -> tramo de ARRIBA, igual que el backend.
+    if (v < t.hasta) {
+      return anterior === null
+        ? `menos de ${eurosDelTramo(t.hasta)}`
+        : `de ${eurosDelTramo(anterior)} a ${eurosDelTramo(t.hasta)}`;
+    }
+    anterior = t.hasta;
+  }
+  return anterior === null ? 'todos' : `más de ${eurosDelTramo(anterior)}`;
 };
 
 // Ancho (mm) del prefijo numérico del código
