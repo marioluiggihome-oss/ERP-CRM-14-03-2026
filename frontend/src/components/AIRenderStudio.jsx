@@ -500,9 +500,23 @@ export default function AIRenderStudio({ state, setState }) {
   // hace: el master, que es quien paga la factura del proveedor. Que no se te
   // acaben los créditos no quiere decir que el render sea gratis.
   const AvisoDeCoste = ({ n = 1 }) => {
-    if (!aiCredits) return null;
     const cuesta = creditosDeEstaTanda(n);
     const palabra = cuesta === 1 ? 'crédito' : 'créditos';
+    // EL COSTE NO DEPENDE DEL CONTADOR. Aquí había un `if (!aiCredits) return
+    // null` y era un error de bulto: lo que va a costar la tanda se sabe
+    // siempre —sale del motor elegido—, y lo único que necesita el contador es
+    // el «te quedan N». Si la llamada a `/my-credits` falla, se queda en nulo
+    // EN SILENCIO (ver `fetchCredits`), y con aquella condición desaparecía
+    // también el aviso: ni coste, ni saldo, ni explicación. El master, 25/08:
+    // «no sale lo de créditos en mi pantalla».
+    if (!aiCredits) {
+      return (
+        <p className="mt-1.5 text-center text-[11px] font-bold text-slate-500"
+          title="No se ha podido leer tu saldo de créditos. El coste del render sí se sabe.">
+          {`Vas a gastar ${cuesta} ${palabra} · no se ha podido leer tu saldo.`}
+        </p>
+      );
+    }
     if (aiCredits.ilimitado) {
       return (
         <p className="mt-1.5 text-center text-[11px] font-bold text-slate-500">
@@ -1096,11 +1110,26 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   // Créditos de IA del usuario: se consultan al montar y tras cada generación.
+  // FALLAR EN SILENCIO NO ES LO MISMO QUE NO ROMPER NADA.
+  //
+  // Esto era `if (r.ok) setAiCredits(...)` con un `catch` vacío, y el comentario
+  // decía «silencioso: el contador nunca rompe la UI». Suena prudente y no lo
+  // es: si la llamada falla, `aiCredits` se queda en nulo y la pastilla de
+  // créditos DESAPARECE de la cabecera sin una palabra. El usuario no ve un
+  // error, ve que no está — y no tiene forma de saber si es que no tiene
+  // créditos, si la pantalla está rota o si el servidor no contesta.
+  //
+  // Se sigue sin romper nada: se guarda el fallo y se enseña ahí mismo, en el
+  // hueco donde iría el número.
+  const [errorCreditos, setErrorCreditos] = useState(null);
   const fetchCredits = useCallback(async () => {
     try {
       const r = await fetch(`${API_URL}/api/ai-engine/my-credits`, { headers: getAuthHeaders() });
-      if (r.ok) setAiCredits(await r.json());
-    } catch { /* silencioso: el contador nunca rompe la UI */ }
+      if (r.ok) { setAiCredits(await r.json()); setErrorCreditos(null); }
+      else setErrorCreditos(`el servidor respondió ${r.status}`);
+    } catch (e) {
+      setErrorCreditos(e?.message || 'no se pudo conectar');
+    }
   }, []);
   useEffect(() => { fetchCredits(); }, [fetchCredits]);
 
@@ -3472,6 +3501,15 @@ export default function AIRenderStudio({ state, setState }) {
                 cupo se lo pone él para medir, y cuando lo agota el aviso de
                 "contacta con tu administrador" no le sirve de nada. Tener que
                 irse a Ajustes desde el móvil para volver a empezar tampoco. */}
+            {/* Si el contador no se ha podido leer, se DICE. Antes no salía
+                nada y parecía que la pantalla estaba a medias. */}
+            {!aiCredits && errorCreditos && (
+              <span
+                title={`No se ha podido leer tu saldo de créditos: ${errorCreditos}. Los renders siguen funcionando; lo que no se sabe es cuántos te quedan.`}
+                className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800">
+                <Sparkles size={12} /> Créditos: sin lectura
+              </span>
+            )}
             {aiCredits && (
               isMaster && !aiCredits.ilimitado ? (
                 <button
@@ -4023,7 +4061,16 @@ export default function AIRenderStudio({ state, setState }) {
         )}
 
         {/* Panel derecho - Área de render principal (ocupa todo el espacio disponible) */}
-        <div ref={renderPanelRef} className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 min-h-0 overflow-hidden bg-slate-50">
+        {/* ESTE PANEL SE DESLIZA. Llevaba `overflow-hidden`, y mientras aquí
+            dentro solo hubiera un render daba igual: la foto se ajusta sola.
+            Pero ahora viven aquí el panel de distribución —con sus paredes, sus
+            módulos y sus avisos— y la relación MV entera, y eso pasa de largo
+            del alto de la pantalla. Con `overflow-hidden` todo lo que sobraba
+            se CORTABA sin más: ni scroll, ni indicio de que hubiera algo
+            debajo. El master, 25/08, en una tablet de 8,6": «no se ve la
+            pantalla completa y no me deja hacer scroll hacia abajo».
+            Se recorta solo a lo ancho, que es lo que sí hay que contener. */}
+        <div ref={renderPanelRef} className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 min-h-0 overflow-y-auto overflow-x-hidden bg-slate-50">
           {/* Barra superior del área render: botón abrir opciones (móvil) + info */}
           <div className="flex items-center gap-2 mb-2 shrink-0">
             {/* Botón flotante para abrir el drawer de opciones en móvil/tablet */}
