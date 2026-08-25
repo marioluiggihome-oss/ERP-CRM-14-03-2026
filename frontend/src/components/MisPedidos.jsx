@@ -153,27 +153,27 @@ const MisPedidos = ({ currentUser }) => {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; }
-          .header { display: flex; justify-content: space-between; align-items: start; border-bottom: 3px solid #f97316; padding-bottom: 20px; margin-bottom: 20px; }
-          .logo { font-size: 28px; font-weight: 900; color: #f97316; }
-          .order-number { font-size: 24px; font-weight: 700; color: #334155; }
-          .status-badge { display: inline-block; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #dbeafe; color: #1d4ed8; margin-top: 8px; }
+          .header { display: flex; justify-content: space-between; align-items: start; border-bottom: 3px solid #d08e6c; padding-bottom: 20px; margin-bottom: 20px; }
+          .logo { font-size: 28px; font-weight: 900; color: #d08e6c; }
+          .order-number { font-size: 24px; font-weight: 700; color: #364150; }
+          .status-badge { display: inline-block; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #e1e9f5; color: #3b5ca7; margin-top: 8px; }
           .section { margin-bottom: 20px; }
-          .section-title { font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+          .section-title { font-size: 14px; font-weight: 700; color: #687485; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #e3e8ee; padding-bottom: 5px; }
           .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-          .info-item label { display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; }
-          .info-item span { font-size: 14px; font-weight: 600; color: #1e293b; }
+          .info-item label { display: block; font-size: 11px; color: #97a3b2; text-transform: uppercase; }
+          .info-item span { font-size: 14px; font-weight: 600; color: #212937; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th { background: #f8fafc; padding: 12px 10px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-          td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+          th { background: #f8fafb; padding: 12px 10px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #687485; border-bottom: 2px solid #e3e8ee; }
+          td { padding: 10px; border-bottom: 1px solid #f2f5f8; font-size: 13px; }
           .text-right { text-align: right; }
-          .total-row { background: #fff7ed; font-weight: 700; }
-          .total-row td { border-top: 2px solid #f97316; padding: 15px 10px; font-size: 16px; }
-          .specs { background: #f8fafc; padding: 15px; border-radius: 8px; }
+          .total-row { background: #fcf8f3; font-weight: 700; }
+          .total-row td { border-top: 2px solid #d08e6c; padding: 15px 10px; font-size: 16px; }
+          .specs { background: #f8fafb; padding: 15px; border-radius: 8px; }
           .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
           .specs-item { font-size: 12px; }
-          .specs-item label { color: #64748b; }
-          .specs-item span { font-weight: 600; color: #334155; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8; }
+          .specs-item label { color: #687485; }
+          .specs-item span { font-weight: 600; color: #364150; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e3e8ee; text-align: center; font-size: 11px; color: #97a3b2; }
           @media print { body { padding: 0; } }
         </style>
       </head>
@@ -181,12 +181,12 @@ const MisPedidos = ({ currentUser }) => {
         <div class="header">
           <div>
             <div class="logo"></div>
-            <div style="font-size: 12px; color: #64748b;"></div>
+            <div style="font-size: 12px; color: #687485;"></div>
           </div>
           <div style="text-align: right;">
             <div class="order-number">PEDIDO #${order.budgetNumber}</div>
             <div class="status-badge">${stateInfo.label}</div>
-            <div style="font-size: 12px; color: #64748b; margin-top: 8px;">
+            <div style="font-size: 12px; color: #687485; margin-top: 8px;">
               Fecha: ${formatDate(order.confirmedAt)}
             </div>
           </div>
@@ -244,7 +244,7 @@ const MisPedidos = ({ currentUser }) => {
             <tbody>
               ${(order.items || []).map(item => `
                 <tr>
-                  <td style="font-weight: 600; color: #f97316;">${item.code || '-'}</td>
+                  <td style="font-weight: 600; color: #d08e6c;">${item.code || '-'}</td>
                   <td>${item.name || '-'}</td>
                   <td class="text-right">${item.quantity || 1}</td>
                   <td class="text-right">${formatCurrency(item.price)}</td>
@@ -252,7 +252,7 @@ const MisPedidos = ({ currentUser }) => {
               `).join('')}
               <tr class="total-row">
                 <td colspan="3" class="text-right">TOTAL</td>
-                <td class="text-right" style="color: #f97316;">${formatCurrency(order.totalAmount)}</td>
+                <td class="text-right" style="color: #d08e6c;">${formatCurrency(order.totalAmount)}</td>
               </tr>
             </tbody>
           </table></div>
@@ -261,7 +261,7 @@ const MisPedidos = ({ currentUser }) => {
         ${order.notes ? `
         <div class="section">
           <div class="section-title">Notas</div>
-          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+          <div style="background: #fdfbf3; padding: 15px; border-radius: 8px; border-left: 4px solid #d5ab7c;">
             ${order.notes}
           </div>
         </div>

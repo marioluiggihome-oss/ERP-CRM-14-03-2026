@@ -8,7 +8,7 @@
  * Studio3kLanding.jsx
  * Landing page pública de Studio3K (studio3k.io / estudio3k.io)
  * Diseño: minimalista premium, similar a CarpinterosLanding pero con identidad propia.
- * Paleta: blanco puro, negro carbón, acento azul índigo (#3B5BDB) y dorado suave (#C9A84C).
+ * Paleta: blanco puro, negro carbón, acento azul índigo (#4e66ad) y dorado suave (#bdaa7a).
  * Tipografía: DM Sans (body) + DM Serif Display (titulares hero).
  * Estructura: Nav → Hero → Demo → Features → Pricing → Testimonials → FAQ → CTA → Footer
  */
@@ -377,7 +377,7 @@ function Testimonials() {
           {TESTIMONIALS.map((t) => (
             <div key={t.name} className="s3k-testimonial" data-reveal>
               <div className="s3k-testimonial-stars">
-                {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="#C9A84C" color="#C9A84C" />)}
+                {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="#bdaa7a" color="#bdaa7a" />)}
               </div>
               <p className="s3k-testimonial-text">"{t.text}"</p>
               <div className="s3k-testimonial-author">
@@ -607,17 +607,17 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap');
 
 .s3k-root {
-  --s3k-indigo: #3B5BDB;
-  --s3k-indigo-dark: #2F4AC4;
-  --s3k-gold: #C9A84C;
+  --s3k-indigo: #4e66ad;
+  --s3k-indigo-dark: #405699;
+  --s3k-gold: #bdaa7a;
   --s3k-black: #0A0A0A;
   --s3k-dark: #111118;
   --s3k-dark-2: #1A1A24;
   --s3k-white: #FFFFFF;
   --s3k-stone: #F4F4F6;
   --s3k-stone-2: #E8E8EC;
-  --s3k-ink: #1A1A2E;
-  --s3k-muted: #6B6B80;
+  --s3k-ink: #1b1b27;
+  --s3k-muted: #6c6c78;
   --s3k-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --s3k-serif: 'DM Serif Display', Georgia, serif;
   font-family: var(--s3k-sans);
@@ -727,7 +727,7 @@ const CSS = `
 /* FEATURES */
 .s3k-feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .s3k-feat { background: var(--s3k-dark-2); padding: 32px 28px; transition: background .2s; }
-.s3k-feat:hover { background: #1F1F2E; }
+.s3k-feat:hover { background: #202029; }
 .s3k-feat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .s3k-feat-icon { width: 40px; height: 40px; background: rgba(59,91,219,.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--s3k-indigo); }
 .s3k-feat-cota { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: rgba(255,255,255,.2); font-weight: 600; }
@@ -781,7 +781,7 @@ const CSS = `
 .s3k-faq-a { font-size: 15px; color: var(--s3k-muted); line-height: 1.65; padding-bottom: 20px; }
 
 /* CTA */
-.s3k-cta { background: linear-gradient(135deg, var(--s3k-indigo) 0%, #2040B8 100%); padding: 120px 0; }
+.s3k-cta { background: linear-gradient(135deg, var(--s3k-indigo) 0%, #344d8e 100%); padding: 120px 0; }
 .s3k-cta-inner { text-align: center; }
 .s3k-cta-h2 { font-family: var(--s3k-serif); font-size: clamp(36px, 5vw, 56px); font-weight: 400; line-height: 1.15; color: #fff; margin-bottom: 16px; }
 .s3k-cta .s3k-accent { color: var(--s3k-gold); font-style: italic; }

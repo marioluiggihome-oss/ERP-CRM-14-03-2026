@@ -29,8 +29,8 @@ const DoorType = {
 // Dibuja una línea de cota (con flechas y etiqueta) entre dos puntos en un
 // canvas 2D. Usado por los planos técnicos (alzado/planta acotados).
 function drawDimensionLine(ctx, x1, y1, x2, y2, label) {
-  ctx.strokeStyle = '#2563eb';
-  ctx.fillStyle = '#2563eb';
+  ctx.strokeStyle = '#486eb9';
+  ctx.fillStyle = '#486eb9';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(x1, y1);
@@ -86,171 +86,171 @@ const FINSA_COLORS = [
   { id: '34W', name: 'Gris Calcio', hex: '#9B9B9B', ref: '34W', category: 'grises' },
   { id: 'U12', name: 'Natural Grey', hex: '#A5A5A5', ref: 'U12', category: 'grises' },
   { id: '206', name: 'Gris 004', hex: '#808080', ref: '206', category: 'grises' },
-  { id: '192', name: 'Gris Azulado', hex: '#7B8794', ref: '192', category: 'grises' },
+  { id: '192', name: 'Gris Azulado', hex: '#7f868e', ref: '192', category: 'grises' },
   { id: '71A', name: 'Gris Gu', hex: '#5C5C5C', ref: '71A', category: 'grises' },
   { id: '194', name: 'Gris Porriño', hex: '#8A8A8A', ref: '194', category: 'grises' },
   { id: '40Y', name: 'Mineral Grey', hex: '#6E6E6E', ref: '40Y', category: 'grises' },
-  { id: '01Q', name: 'Gris Tórtora', hex: '#9E9589', ref: '01Q', category: 'grises' },
+  { id: '01Q', name: 'Gris Tórtora', hex: '#9b968f', ref: '01Q', category: 'grises' },
   { id: '231', name: 'Negro', hex: '#2D2D2D', ref: '231', category: 'grises' },
   
   // ========== CREMAS Y BEIGES ==========
   { id: '184', name: 'Crema Sil', hex: '#E8E0D5', ref: '184', category: 'cremas' },
   { id: '592B', name: 'Mohair Grey', hex: '#C5BFB8', ref: '592B', category: 'cremas' },
-  { id: '36W', name: 'Biscuit', hex: '#D4C8B8', ref: '36W', category: 'cremas' },
+  { id: '36W', name: 'Biscuit', hex: '#d0c9c0', ref: '36W', category: 'cremas' },
   { id: '183', name: 'Crema 005', hex: '#E5DDD0', ref: '183', category: 'cremas' },
   { id: '252B', name: 'Marfil Talco', hex: '#EAE4DC', ref: '252B', category: 'cremas' },
   { id: '65B', name: 'Ivory Bama', hex: '#F0EAE0', ref: '65B', category: 'cremas' },
-  { id: '11C', name: 'Sáhara', hex: '#D9CFC0', ref: '11C', category: 'cremas' },
-  { id: '131', name: 'Arena', hex: '#C4B8A8', ref: '131', category: 'cremas' },
-  { id: '15R', name: 'Gris Coco', hex: '#B5A99A', ref: '15R', category: 'cremas' },
+  { id: '11C', name: 'Sáhara', hex: '#d5d0c7', ref: '11C', category: 'cremas' },
+  { id: '131', name: 'Arena', hex: '#c0b9b0', ref: '131', category: 'cremas' },
+  { id: '15R', name: 'Gris Coco', hex: '#b1aaa1', ref: '15R', category: 'cremas' },
   { id: '653B', name: 'Merino', hex: '#E0D8CC', ref: '653B', category: 'cremas' },
   { id: '60V', name: 'Gris Suave', hex: '#C8C0B5', ref: '60V', category: 'cremas' },
-  { id: '20R', name: 'Duna', hex: '#C9BCA8', ref: '20R', category: 'cremas' },
-  { id: '656B', name: 'Alpaca', hex: '#B8AFA0', ref: '656B', category: 'cremas' },
-  { id: '654B', name: 'Avena', hex: '#E5DBC8', ref: '654B', category: 'cremas' },
+  { id: '20R', name: 'Duna', hex: '#c4bdb1', ref: '20R', category: 'cremas' },
+  { id: '656B', name: 'Alpaca', hex: '#b5afa7', ref: '656B', category: 'cremas' },
+  { id: '654B', name: 'Avena', hex: '#e1dbd0', ref: '654B', category: 'cremas' },
   
   // ========== VERDES ==========
-  { id: '1AU', name: 'Verde Salvia', hex: '#9CAF88', ref: '1AU', category: 'verdes' },
-  { id: '663B', name: 'Muted Green', hex: '#8BA07A', ref: '663B', category: 'verdes' },
-  { id: '664B', name: 'Verde Utopía', hex: '#5D7A5D', ref: '664B', category: 'verdes' },
-  { id: '7AT', name: 'Verde Oliva', hex: '#6B7B5A', ref: '7AT', category: 'verdes' },
-  { id: '662B', name: 'Verde Wakame', hex: '#4A5A4A', ref: '662B', category: 'verdes' },
-  { id: '79V', name: 'Verde Oxford', hex: '#3A4A3A', ref: '79V', category: 'verdes' },
-  { id: '467B', name: 'Verde Liquen', hex: '#6A8060', ref: '467B', category: 'verdes' },
-  { id: '86W', name: 'Verde Talco', hex: '#A5B5A0', ref: '86W', category: 'verdes' },
-  { id: '3AU', name: 'Verde Arcilla', hex: '#7A8A6A', ref: '3AU', category: 'verdes' },
-  { id: '7AD', name: 'Verde Jungla', hex: '#2A4A2A', ref: '7AD', category: 'verdes' },
-  { id: '465B', name: 'Verde Plomo', hex: '#5A6A5A', ref: '465B', category: 'verdes' },
+  { id: '1AU', name: 'Verde Salvia', hex: '#a1ac95', ref: '1AU', category: 'verdes' },
+  { id: '663B', name: 'Muted Green', hex: '#909d87', ref: '663B', category: 'verdes' },
+  { id: '664B', name: 'Verde Utopía', hex: '#667666', ref: '664B', category: 'verdes' },
+  { id: '7AT', name: 'Verde Oliva', hex: '#6f7866', ref: '7AT', category: 'verdes' },
+  { id: '662B', name: 'Verde Wakame', hex: '#4f584f', ref: '662B', category: 'verdes' },
+  { id: '79V', name: 'Verde Oxford', hex: '#3f483f', ref: '79V', category: 'verdes' },
+  { id: '467B', name: 'Verde Liquen', hex: '#707d6a', ref: '467B', category: 'verdes' },
+  { id: '86W', name: 'Verde Talco', hex: '#a9b3a6', ref: '86W', category: 'verdes' },
+  { id: '3AU', name: 'Verde Arcilla', hex: '#7e8775', ref: '3AU', category: 'verdes' },
+  { id: '7AD', name: 'Verde Jungla', hex: '#354634', ref: '7AD', category: 'verdes' },
+  { id: '465B', name: 'Verde Plomo', hex: '#5f685f', ref: '465B', category: 'verdes' },
   
   // ========== AZULES ==========
-  { id: '6AD', name: 'Aqua Blue', hex: '#5A8AA0', ref: '6AD', category: 'azules' },
-  { id: '659B', name: 'Glaciar', hex: '#A0C0D0', ref: '659B', category: 'azules' },
-  { id: '658B', name: 'Azul Capri', hex: '#4A90B0', ref: '658B', category: 'azules' },
-  { id: '259B', name: 'Azul Piedra', hex: '#6A8090', ref: '259B', category: 'azules' },
-  { id: '77V', name: 'Azul Talco', hex: '#8AA0B0', ref: '77V', category: 'azules' },
-  { id: '652B', name: 'Misty Blue', hex: '#9AB0C0', ref: '652B', category: 'azules' },
-  { id: '139', name: 'Azul Eo', hex: '#3A6080', ref: '139', category: 'azules' },
-  { id: '55C', name: 'Azul Handy', hex: '#2A5070', ref: '55C', category: 'azules' },
-  { id: '80V', name: 'Azul Náutico', hex: '#1A4060', ref: '80V', category: 'azules' },
-  { id: '651B', name: 'Azul Acero', hex: '#4A6080', ref: '651B', category: 'azules' },
-  { id: '188', name: 'Petróleo', hex: '#2A4050', ref: '188', category: 'azules' },
+  { id: '6AD', name: 'Aqua Blue', hex: '#6d8794', ref: '6AD', category: 'azules' },
+  { id: '659B', name: 'Glaciar', hex: '#abbec7', ref: '659B', category: 'azules' },
+  { id: '658B', name: 'Azul Capri', hex: '#688c9f', ref: '658B', category: 'azules' },
+  { id: '259B', name: 'Azul Piedra', hex: '#727f88', ref: '259B', category: 'azules' },
+  { id: '77V', name: 'Azul Talco', hex: '#929fa8', ref: '77V', category: 'azules' },
+  { id: '652B', name: 'Misty Blue', hex: '#a2afb8', ref: '652B', category: 'azules' },
+  { id: '139', name: 'Azul Eo', hex: '#4a5f71', ref: '139', category: 'azules' },
+  { id: '55C', name: 'Azul Handy', hex: '#3a4f61', ref: '55C', category: 'azules' },
+  { id: '80V', name: 'Azul Náutico', hex: '#2b3f52', ref: '80V', category: 'azules' },
+  { id: '651B', name: 'Azul Acero', hex: '#536072', ref: '651B', category: 'azules' },
+  { id: '188', name: 'Petróleo', hex: '#333f48', ref: '188', category: 'azules' },
   
   // ========== ROJOS Y CÁLIDOS ==========
-  { id: '0AU', name: 'Amarillo Pompeya', hex: '#E5C060', ref: '0AU', category: 'calidos' },
-  { id: '5AD', name: 'Terracota Nova', hex: '#C07050', ref: '5AD', category: 'calidos' },
-  { id: '28G', name: 'Mandarina', hex: '#E08040', ref: '28G', category: 'calidos' },
-  { id: '172', name: 'Rojo', hex: '#B03030', ref: '172', category: 'calidos' },
-  { id: '254B', name: 'Rojo Arcilla', hex: '#A05040', ref: '254B', category: 'calidos' },
-  { id: '466B', name: 'Rojo Tassili', hex: '#8A4030', ref: '466B', category: 'calidos' },
-  { id: '657B', name: 'Siena', hex: '#9A5040', ref: '657B', category: 'calidos' },
-  { id: '85W', name: 'Malva Talco', hex: '#B090A0', ref: '85W', category: 'calidos' },
-  { id: '60S', name: 'Rosa Nube', hex: '#E0C0C8', ref: '60S', category: 'calidos' },
-  { id: '9AT', name: 'Rosa Talco', hex: '#D0B0B8', ref: '9AT', category: 'calidos' },
+  { id: '0AU', name: 'Amarillo Pompeya', hex: '#d7c390', ref: '0AU', category: 'calidos' },
+  { id: '5AD', name: 'Terracota Nova', hex: '#aa7c69', ref: '5AD', category: 'calidos' },
+  { id: '28G', name: 'Mandarina', hex: '#c68e6d', ref: '28G', category: 'calidos' },
+  { id: '172', name: 'Rojo', hex: '#944e49', ref: '172', category: 'calidos' },
+  { id: '254B', name: 'Rojo Arcilla', hex: '#8c5d53', ref: '254B', category: 'calidos' },
+  { id: '466B', name: 'Rojo Tassili', hex: '#774d43', ref: '466B', category: 'calidos' },
+  { id: '657B', name: 'Siena', hex: '#875c52', ref: '657B', category: 'calidos' },
+  { id: '85W', name: 'Malva Talco', hex: '#a7959e', ref: '85W', category: 'calidos' },
+  { id: '60S', name: 'Rosa Nube', hex: '#d7c4c9', ref: '60S', category: 'calidos' },
+  { id: '9AT', name: 'Rosa Talco', hex: '#c7b4b9', ref: '9AT', category: 'calidos' },
   
   // ========== MADERAS CLARAS ==========
-  { id: '25V', name: 'Roble Virginia', hex: '#D4C4A8', ref: '25V', category: 'maderas-claras' },
-  { id: '17G', name: 'Pino Cervino', hex: '#E0D0B0', ref: '17G', category: 'maderas-claras' },
-  { id: '453B', name: 'Boeta Blanco', hex: '#E8DCC8', ref: '453B', category: 'maderas-claras' },
-  { id: '90Y', name: 'Aura Pine', hex: '#E5D8C0', ref: '90Y', category: 'maderas-claras' },
-  { id: '3AT', name: 'Bohemian Blanco', hex: '#EAE0D0', ref: '3AT', category: 'maderas-claras' },
-  { id: '91Y', name: 'Roble Dafne', hex: '#D8C8B0', ref: '91Y', category: 'maderas-claras' },
-  { id: '16N', name: 'Fresno Glacial', hex: '#E0D4C4', ref: '16N', category: 'maderas-claras' },
-  { id: '666B', name: 'Silky Wood', hex: '#E5DAC8', ref: '666B', category: 'maderas-claras' },
-  { id: '449B', name: 'Olmo Grace', hex: '#C8B8A0', ref: '449B', category: 'maderas-claras' },
-  { id: '18N', name: 'Fresno Taiga', hex: '#D0C0A8', ref: '18N', category: 'maderas-claras' },
-  { id: '222', name: 'Maple Blanco', hex: '#F0E8D8', ref: '222', category: 'maderas-claras' },
-  { id: '45A', name: 'Haya Bama', hex: '#E8D8C0', ref: '45A', category: 'maderas-claras' },
-  { id: '375', name: 'Haya Daimiel', hex: '#E0D0B8', ref: '375', category: 'maderas-claras' },
-  { id: '48W', name: 'Haya Gala', hex: '#E5D5C0', ref: '48W', category: 'maderas-claras' },
+  { id: '25V', name: 'Roble Virginia', hex: '#cec5b5', ref: '25V', category: 'maderas-claras' },
+  { id: '17G', name: 'Pino Cervino', hex: '#dad1be', ref: '17G', category: 'maderas-claras' },
+  { id: '453B', name: 'Boeta Blanco', hex: '#e4ddd1', ref: '453B', category: 'maderas-claras' },
+  { id: '90Y', name: 'Aura Pine', hex: '#e0d9cb', ref: '90Y', category: 'maderas-claras' },
+  { id: '3AT', name: 'Bohemian Blanco', hex: '#e6e1d7', ref: '3AT', category: 'maderas-claras' },
+  { id: '91Y', name: 'Roble Dafne', hex: '#d2c9bb', ref: '91Y', category: 'maderas-claras' },
+  { id: '16N', name: 'Fresno Glacial', hex: '#dcd5cc', ref: '16N', category: 'maderas-claras' },
+  { id: '666B', name: 'Silky Wood', hex: '#e1dbd0', ref: '666B', category: 'maderas-claras' },
+  { id: '449B', name: 'Olmo Grace', hex: '#c2b9ab', ref: '449B', category: 'maderas-claras' },
+  { id: '18N', name: 'Fresno Taiga', hex: '#cac1b3', ref: '18N', category: 'maderas-claras' },
+  { id: '222', name: 'Maple Blanco', hex: '#ede8df', ref: '222', category: 'maderas-claras' },
+  { id: '45A', name: 'Haya Bama', hex: '#e2d9cb', ref: '45A', category: 'maderas-claras' },
+  { id: '375', name: 'Haya Daimiel', hex: '#dad1c3', ref: '375', category: 'maderas-claras' },
+  { id: '48W', name: 'Haya Gala', hex: '#dfd6ca', ref: '48W', category: 'maderas-claras' },
   
   // ========== MADERAS MEDIAS (ROBLES) ==========
-  { id: '273B', name: 'Roble Verso', hex: '#C0A888', ref: '273B', category: 'maderas-medias' },
-  { id: '3AE', name: 'Roble Oasis', hex: '#C8B090', ref: '3AE', category: 'maderas-medias' },
-  { id: '688B', name: 'Tivoli Ash', hex: '#D0B898', ref: '688B', category: 'maderas-medias' },
-  { id: '98P', name: 'Olmo Bovary', hex: '#B8A080', ref: '98P', category: 'maderas-medias' },
-  { id: '51S', name: 'Caledonian Oak', hex: '#C4A888', ref: '51S', category: 'maderas-medias' },
-  { id: '898', name: 'Roble Ancares', hex: '#B8A078', ref: '898', category: 'maderas-medias' },
-  { id: '604', name: 'Roble Entablillado', hex: '#C0A880', ref: '604', category: 'maderas-medias' },
-  { id: '910', name: 'Roble Natural', hex: '#C8B090', ref: '910', category: 'maderas-medias' },
-  { id: '74V', name: 'Roble Stella', hex: '#B8A078', ref: '74V', category: 'maderas-medias' },
-  { id: '42B', name: 'Roble Trigo', hex: '#D0B890', ref: '42B', category: 'maderas-medias' },
-  { id: '98V', name: 'Roble Aurora', hex: '#C4A880', ref: '98V', category: 'maderas-medias' },
-  { id: '41G', name: 'Roble Hera', hex: '#B8A070', ref: '41G', category: 'maderas-medias' },
-  { id: '49D', name: 'Lissa Oak', hex: '#C0A878', ref: '49D', category: 'maderas-medias' },
-  { id: '79Y', name: 'Old Oak', hex: '#A89068', ref: '79Y', category: 'maderas-medias' },
-  { id: '008', name: 'Roble Bello', hex: '#B09870', ref: '008', category: 'maderas-medias' },
+  { id: '273B', name: 'Roble Verso', hex: '#b8aa98', ref: '273B', category: 'maderas-medias' },
+  { id: '3AE', name: 'Roble Oasis', hex: '#c0b2a0', ref: '3AE', category: 'maderas-medias' },
+  { id: '688B', name: 'Tivoli Ash', hex: '#c8baa8', ref: '688B', category: 'maderas-medias' },
+  { id: '98P', name: 'Olmo Bovary', hex: '#b0a290', ref: '98P', category: 'maderas-medias' },
+  { id: '51S', name: 'Caledonian Oak', hex: '#bbaa98', ref: '51S', category: 'maderas-medias' },
+  { id: '898', name: 'Roble Ancares', hex: '#b0a28b', ref: '898', category: 'maderas-medias' },
+  { id: '604', name: 'Roble Entablillado', hex: '#b7aa93', ref: '604', category: 'maderas-medias' },
+  { id: '910', name: 'Roble Natural', hex: '#c0b2a0', ref: '910', category: 'maderas-medias' },
+  { id: '74V', name: 'Roble Stella', hex: '#b0a28b', ref: '74V', category: 'maderas-medias' },
+  { id: '42B', name: 'Roble Trigo', hex: '#c7baa3', ref: '42B', category: 'maderas-medias' },
+  { id: '98V', name: 'Roble Aurora', hex: '#baaa94', ref: '98V', category: 'maderas-medias' },
+  { id: '41G', name: 'Roble Hera', hex: '#afa287', ref: '41G', category: 'maderas-medias' },
+  { id: '49D', name: 'Lissa Oak', hex: '#b7aa8f', ref: '49D', category: 'maderas-medias' },
+  { id: '79Y', name: 'Old Oak', hex: '#a0927b', ref: '79Y', category: 'maderas-medias' },
+  { id: '008', name: 'Roble Bello', hex: '#a89a83', ref: '008', category: 'maderas-medias' },
   
   // ========== MADERAS OSCURAS ==========
-  { id: '94Y', name: 'Iron Oak', hex: '#806850', ref: '94Y', category: 'maderas-oscuras' },
-  { id: '24V', name: 'Mystic Plomo', hex: '#706050', ref: '24V', category: 'maderas-oscuras' },
-  { id: '17N', name: 'Roble Joplin', hex: '#907860', ref: '17N', category: 'maderas-oscuras' },
-  { id: '97V', name: 'Roble Colorado', hex: '#8A7258', ref: '97V', category: 'maderas-oscuras' },
-  { id: '03R', name: 'Cambrian Oak', hex: '#806048', ref: '03R', category: 'maderas-oscuras' },
-  { id: '452B', name: 'Roble Cooper', hex: '#7A6248', ref: '452B', category: 'maderas-oscuras' },
-  { id: '84V', name: 'Roble Denver', hex: '#8A7050', ref: '84V', category: 'maderas-oscuras' },
-  { id: '274B', name: 'Roble Romance', hex: '#806850', ref: '274B', category: 'maderas-oscuras' },
-  { id: '73V', name: 'Roble Tostado', hex: '#785838', ref: '73V', category: 'maderas-oscuras' },
-  { id: '95Q', name: 'Roble Trufa', hex: '#604830', ref: '95Q', category: 'maderas-oscuras' },
-  { id: '75V', name: 'Roble Azabache', hex: '#3A3028', ref: '75V', category: 'maderas-oscuras' },
-  { id: '20N', name: 'Roble Sinatra', hex: '#5A4838', ref: '20N', category: 'maderas-oscuras' },
-  { id: '9AU', name: 'Roble Mina', hex: '#4A3828', ref: '9AU', category: 'maderas-oscuras' },
+  { id: '94Y', name: 'Iron Oak', hex: '#786a5d', ref: '94Y', category: 'maderas-oscuras' },
+  { id: '24V', name: 'Mystic Plomo', hex: '#6b6158', ref: '24V', category: 'maderas-oscuras' },
+  { id: '17N', name: 'Roble Joplin', hex: '#887a6d', ref: '17N', category: 'maderas-oscuras' },
+  { id: '97V', name: 'Roble Colorado', hex: '#827465', ref: '97V', category: 'maderas-oscuras' },
+  { id: '03R', name: 'Cambrian Oak', hex: '#766356', ref: '03R', category: 'maderas-oscuras' },
+  { id: '452B', name: 'Roble Cooper', hex: '#726456', ref: '452B', category: 'maderas-oscuras' },
+  { id: '84V', name: 'Roble Denver', hex: '#817260', ref: '84V', category: 'maderas-oscuras' },
+  { id: '274B', name: 'Roble Romance', hex: '#786a5d', ref: '274B', category: 'maderas-oscuras' },
+  { id: '73V', name: 'Roble Tostado', hex: '#6e5b4a', ref: '73V', category: 'maderas-oscuras' },
+  { id: '95Q', name: 'Roble Trufa', hex: '#584a3d', ref: '95Q', category: 'maderas-oscuras' },
+  { id: '75V', name: 'Roble Azabache', hex: '#37312c', ref: '75V', category: 'maderas-oscuras' },
+  { id: '20N', name: 'Roble Sinatra', hex: '#544a41', ref: '20N', category: 'maderas-oscuras' },
+  { id: '9AU', name: 'Roble Mina', hex: '#443a31', ref: '9AU', category: 'maderas-oscuras' },
   
   // ========== NOGALES ==========
-  { id: '463B', name: 'Lara Walnut', hex: '#8A6848', ref: '463B', category: 'nogales' },
-  { id: '455B', name: 'Nogal Boheme', hex: '#7A5838', ref: '455B', category: 'nogales' },
-  { id: '81V', name: 'Nogal Siena', hex: '#6A4830', ref: '81V', category: 'nogales' },
-  { id: '454B', name: 'Nogal Fausto', hex: '#5A4028', ref: '454B', category: 'nogales' },
-  { id: '684', name: 'Noce Panarea', hex: '#7A5838', ref: '684', category: 'nogales' },
-  { id: '261B', name: 'Nogal Bali', hex: '#604828', ref: '261B', category: 'nogales' },
-  { id: '5AE', name: 'Nogal Slow', hex: '#5A4028', ref: '5AE', category: 'nogales' },
-  { id: '33F', name: 'Nogal Siroko', hex: '#4A3820', ref: '33F', category: 'nogales' },
-  { id: '03C', name: 'Nogal Canaletto', hex: '#503820', ref: '03C', category: 'nogales' },
-  { id: '1AS', name: 'Nogal Valentina', hex: '#5A4028', ref: '1AS', category: 'nogales' },
-  { id: '60U', name: 'Nogal Victoria', hex: '#4A3018', ref: '60U', category: 'nogales' },
-  { id: '665B', name: 'Diana Walnut', hex: '#3A2818', ref: '665B', category: 'nogales' },
+  { id: '463B', name: 'Lara Walnut', hex: '#7f6c5a', ref: '463B', category: 'nogales' },
+  { id: '455B', name: 'Nogal Boheme', hex: '#705c4a', ref: '455B', category: 'nogales' },
+  { id: '81V', name: 'Nogal Siena', hex: '#604c3f', ref: '81V', category: 'nogales' },
+  { id: '454B', name: 'Nogal Fausto', hex: '#524336', ref: '454B', category: 'nogales' },
+  { id: '684', name: 'Noce Panarea', hex: '#705c4a', ref: '684', category: 'nogales' },
+  { id: '261B', name: 'Nogal Bali', hex: '#584a39', ref: '261B', category: 'nogales' },
+  { id: '5AE', name: 'Nogal Slow', hex: '#524336', ref: '5AE', category: 'nogales' },
+  { id: '33F', name: 'Nogal Siroko', hex: '#443a2d', ref: '33F', category: 'nogales' },
+  { id: '03C', name: 'Nogal Canaletto', hex: '#493b2e', ref: '03C', category: 'nogales' },
+  { id: '1AS', name: 'Nogal Valentina', hex: '#524336', ref: '1AS', category: 'nogales' },
+  { id: '60U', name: 'Nogal Victoria', hex: '#423326', ref: '60U', category: 'nogales' },
+  { id: '665B', name: 'Diana Walnut', hex: '#342a21', ref: '665B', category: 'nogales' },
   
   // ========== CEREZOS Y OTROS ==========
-  { id: '20B', name: 'Cerezo Xacobeo', hex: '#A87058', ref: '20B', category: 'cerezos' },
-  { id: '399', name: 'Cerezo Luna', hex: '#986850', ref: '399', category: 'cerezos' },
-  { id: '435', name: 'Cerezo Canela', hex: '#885840', ref: '435', category: 'cerezos' },
-  { id: '633', name: 'Sapelly 2', hex: '#7A4830', ref: '633', category: 'cerezos' },
-  { id: '37E', name: 'Richmond Plum', hex: '#5A3828', ref: '37E', category: 'cerezos' },
-  { id: '52A', name: 'Wengue L-01', hex: '#3A2820', ref: '52A', category: 'cerezos' },
+  { id: '20B', name: 'Cerezo Xacobeo', hex: '#987769', ref: '20B', category: 'cerezos' },
+  { id: '399', name: 'Cerezo Luna', hex: '#8a6e60', ref: '399', category: 'cerezos' },
+  { id: '435', name: 'Cerezo Canela', hex: '#7a5e51', ref: '435', category: 'cerezos' },
+  { id: '633', name: 'Sapelly 2', hex: '#6c4f41', ref: '633', category: 'cerezos' },
+  { id: '37E', name: 'Richmond Plum', hex: '#503c33', ref: '37E', category: 'cerezos' },
+  { id: '52A', name: 'Wengue L-01', hex: '#352a26', ref: '52A', category: 'cerezos' },
   
   // ========== METALIZADOS ==========
   { id: '890', name: 'Aluminio', hex: '#A8A8A8', ref: '890', category: 'metalizados' },
   { id: '72E', name: 'Aluminio Arosa', hex: '#B0B0B0', ref: '72E', category: 'metalizados' },
   { id: '70A', name: 'Perla', hex: '#D0D0D0', ref: '70A', category: 'metalizados' },
-  { id: '266B', name: 'Champán Metalizado', hex: '#D8C8B0', ref: '266B', category: 'metalizados' },
-  { id: '8AR', name: 'Bronce Sálvora', hex: '#A08060', ref: '8AR', category: 'metalizados' },
+  { id: '266B', name: 'Champán Metalizado', hex: '#d2c9bb', ref: '266B', category: 'metalizados' },
+  { id: '8AR', name: 'Bronce Sálvora', hex: '#968371', ref: '8AR', category: 'metalizados' },
   { id: '303', name: 'Gris Metalizado', hex: '#909090', ref: '303', category: 'metalizados' },
-  { id: '8AQ', name: 'Aluminio Cava', hex: '#B8B0A0', ref: '8AQ', category: 'metalizados' },
+  { id: '8AQ', name: 'Aluminio Cava', hex: '#b5b0a7', ref: '8AQ', category: 'metalizados' },
   { id: '253B', name: 'Titanio Tambo', hex: '#787878', ref: '253B', category: 'metalizados' },
   
   // ========== PIEDRAS Y CEMENTOS ==========
   { id: '72Y', name: 'Mármol Blanco', hex: '#F0F0F0', ref: '72Y', category: 'piedras' },
   { id: '676B', name: 'Mármol Kerala', hex: '#E8E0D8', ref: '676B', category: 'piedras' },
-  { id: '672B', name: 'Creamy Travertino', hex: '#E0D8C8', ref: '672B', category: 'piedras' },
+  { id: '672B', name: 'Creamy Travertino', hex: '#ddd8cf', ref: '672B', category: 'piedras' },
   { id: '583B', name: 'Pietra Alba', hex: '#E5DDD0', ref: '583B', category: 'piedras' },
   { id: '1AT', name: 'Mármol Hades', hex: '#404040', ref: '1AT', category: 'piedras' },
   { id: '99Q', name: 'Cemento Apolo', hex: '#909090', ref: '99Q', category: 'piedras' },
   { id: '06F', name: 'Cemento', hex: '#808080', ref: '06F', category: 'piedras' },
-  { id: '9AS', name: 'Creta Marfil', hex: '#D8D0C0', ref: '9AS', category: 'piedras' },
-  { id: '682B', name: 'Creta Bronce', hex: '#A89878', ref: '682B', category: 'piedras' },
+  { id: '9AS', name: 'Creta Marfil', hex: '#d5d0c7', ref: '9AS', category: 'piedras' },
+  { id: '682B', name: 'Creta Bronce', hex: '#a29987', ref: '682B', category: 'piedras' },
   { id: '683B', name: 'Creta Basalto', hex: '#606060', ref: '683B', category: 'piedras' },
-  { id: '674B', name: 'Atacama Beige', hex: '#C8B8A0', ref: '674B', category: 'piedras' },
-  { id: '675B', name: 'Atacama Terra', hex: '#A08868', ref: '675B', category: 'piedras' },
+  { id: '674B', name: 'Atacama Beige', hex: '#c2b9ab', ref: '674B', category: 'piedras' },
+  { id: '675B', name: 'Atacama Terra', hex: '#988a78', ref: '675B', category: 'piedras' },
   
   // ========== TEXTILES ==========
-  { id: '70F', name: 'Tessuto', hex: '#B8B0A0', ref: '70F', category: 'textiles' },
-  { id: '79G', name: 'Lino Esteiro', hex: '#C8C0B0', ref: '79G', category: 'textiles' },
-  { id: '12G', name: 'Lino Cancún', hex: '#D0C8B8', ref: '12G', category: 'textiles' },
-  { id: '13G', name: 'Lino Habana', hex: '#C0B098', ref: '13G', category: 'textiles' },
-  { id: '98Q', name: 'Espiga Sal', hex: '#E0D8C8', ref: '98Q', category: 'textiles' },
-  { id: '97Q', name: 'Espiga Pimienta', hex: '#A09080', ref: '97Q', category: 'textiles' },
-  { id: '678B', name: 'Tailor Sand', hex: '#D8C8B0', ref: '678B', category: 'textiles' },
-  { id: '677B', name: 'Tailor Camel', hex: '#C0A080', ref: '677B', category: 'textiles' },
-  { id: '679B', name: 'Tailor Stone', hex: '#A09080', ref: '679B', category: 'textiles' },
+  { id: '70F', name: 'Tessuto', hex: '#b5b0a7', ref: '70F', category: 'textiles' },
+  { id: '79G', name: 'Lino Esteiro', hex: '#c5c0b7', ref: '79G', category: 'textiles' },
+  { id: '12G', name: 'Lino Cancún', hex: '#cdc8bf', ref: '12G', category: 'textiles' },
+  { id: '13G', name: 'Lino Habana', hex: '#bab1a3', ref: '13G', category: 'textiles' },
+  { id: '98Q', name: 'Espiga Sal', hex: '#ddd8cf', ref: '98Q', category: 'textiles' },
+  { id: '97Q', name: 'Espiga Pimienta', hex: '#9b9188', ref: '97Q', category: 'textiles' },
+  { id: '678B', name: 'Tailor Sand', hex: '#d2c9bb', ref: '678B', category: 'textiles' },
+  { id: '677B', name: 'Tailor Camel', hex: '#b6a391', ref: '677B', category: 'textiles' },
+  { id: '679B', name: 'Tailor Stone', hex: '#9b9188', ref: '679B', category: 'textiles' },
   { id: '681B', name: 'Tailor Lava', hex: '#504840', ref: '681B', category: 'textiles' },
 ];
 
@@ -2164,7 +2164,7 @@ const Armarios = ({ state, setState }) => {
       const ox = margin, oy = margin;
 
       // Marco exterior del armario
-      ctx.strokeStyle = '#1e293b';
+      ctx.strokeStyle = '#212937';
       ctx.lineWidth = 4;
       ctx.strokeRect(ox, oy, W, H);
 
@@ -2173,7 +2173,7 @@ const Armarios = ({ state, setState }) => {
       for (let i = 0; i < modules; i++) {
         const mx = ox + i * modW;
         if (i > 0) {
-          ctx.strokeStyle = '#94a3b8';
+          ctx.strokeStyle = '#97a3b2';
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(mx, oy); ctx.lineTo(mx, oy + H); ctx.stroke();
         }
@@ -2188,22 +2188,22 @@ const Armarios = ({ state, setState }) => {
             // Caja del maletero: un rectángulo más, del mismo gris que el resto.
             // Antes iba relleno de ámbar con la palabra «maletero» encima, y el
             // modelo pintaba las dos cosas dentro de la foto.
-            ctx.strokeStyle = '#64748b';
+            ctx.strokeStyle = '#687485';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(mx + 4, ry + 2, modW - 8, Math.min(18, rowH - 4));
           } else if (tok === 'rod') {
-            ctx.strokeStyle = '#64748b';
+            ctx.strokeStyle = '#687485';
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(mx + 6, ry + rowH * 0.35);
             ctx.lineTo(mx + modW - 6, ry + rowH * 0.35);
             ctx.stroke();
           } else if (tok === 'drawer') {
-            ctx.strokeStyle = '#64748b';
+            ctx.strokeStyle = '#687485';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(mx + 5, ry + rowH * 0.25, modW - 10, rowH * 0.5);
           } else {
-            ctx.strokeStyle = '#94a3b8';
+            ctx.strokeStyle = '#97a3b2';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(mx + 4, ry + rowH - 4);
@@ -2232,13 +2232,13 @@ const Armarios = ({ state, setState }) => {
         if (!abierta) {
           // Puerta CERRADA: panel macizo que tapa su tramo. Lo que hay detrás
           // no se ve, que es justo lo que tiene que pasar en la foto.
-          ctx.fillStyle = '#e2e8f0';
+          ctx.fillStyle = '#e3e8ee';
           ctx.fillRect(dx, oy, doorW, H);
-          ctx.strokeStyle = '#334155';
+          ctx.strokeStyle = '#364150';
           ctx.lineWidth = 2;
           ctx.strokeRect(dx, oy, doorW, H);
           // Tirador, para que se lea como puerta y no como pared.
-          ctx.strokeStyle = '#475569';
+          ctx.strokeStyle = '#4a5564';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.moveTo(dx + doorW - 14, oy + H * 0.45);
@@ -2246,7 +2246,7 @@ const Armarios = ({ state, setState }) => {
           ctx.stroke();
         } else if (d > 0) {
           // Puerta ABIERTA: solo la junta con la de al lado.
-          ctx.strokeStyle = '#334155';
+          ctx.strokeStyle = '#364150';
           ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(dx, oy); ctx.lineTo(dx, oy + H); ctx.stroke();
         }
@@ -2289,7 +2289,7 @@ const Armarios = ({ state, setState }) => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const ox = left, oy = top;
 
-    ctx.strokeStyle = '#1e293b';
+    ctx.strokeStyle = '#212937';
     ctx.lineWidth = 3;
     ctx.strokeRect(ox, oy, W, H);
 
@@ -2297,11 +2297,11 @@ const Armarios = ({ state, setState }) => {
     for (let i = 0; i < modules; i++) {
       const mx = ox + i * modW;
       if (i > 0) {
-        ctx.strokeStyle = '#cbd5e1';
+        ctx.strokeStyle = '#cdd5de';
         ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(mx, oy); ctx.lineTo(mx, oy + H); ctx.stroke();
       }
-      ctx.fillStyle = '#475569';
+      ctx.fillStyle = '#4a5564';
       ctx.font = 'bold 10px sans-serif';
       ctx.fillText(`M${i + 1}`, mx + 4, oy + 12);
 
@@ -2313,21 +2313,21 @@ const Armarios = ({ state, setState }) => {
         const yTop = oy + j * rowH;
         const yBot = oy + (j + 1) * rowH;
         if (tok === 'maletero') {
-          ctx.fillStyle = '#fde68a';
+          ctx.fillStyle = '#f1e7bd';
           ctx.fillRect(mx + 3, yTop + 2, modW - 6, Math.min(16, rowH - 4));
         } else if (tok === 'rod') {
-          ctx.strokeStyle = '#64748b';
+          ctx.strokeStyle = '#687485';
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.moveTo(mx + 5, yTop + rowH * 0.4);
           ctx.lineTo(mx + modW - 5, yTop + rowH * 0.4);
           ctx.stroke();
         } else if (tok === 'drawer') {
-          ctx.strokeStyle = '#64748b';
+          ctx.strokeStyle = '#687485';
           ctx.lineWidth = 1.2;
           ctx.strokeRect(mx + 4, yTop + rowH * 0.25, modW - 8, rowH * 0.5);
         } else {
-          ctx.strokeStyle = '#94a3b8';
+          ctx.strokeStyle = '#97a3b2';
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.moveTo(mx + 3, yBot - 3);
@@ -2351,7 +2351,7 @@ const Armarios = ({ state, setState }) => {
     for (let d = 1; d < numDoors; d++) {
       const dx = ox + d * doorW;
       ctx.setLineDash([4, 3]);
-      ctx.strokeStyle = '#dc2626';
+      ctx.strokeStyle = '#c34f45';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(dx, oy); ctx.lineTo(dx, doorY); ctx.stroke();
       ctx.setLineDash([]);
@@ -2364,7 +2364,7 @@ const Armarios = ({ state, setState }) => {
       );
     }
 
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#111726';
     ctx.font = 'bold 13px sans-serif';
     ctx.fillText(
       `ESQUEMA DE FRENTE — ${width}×${height}×${depth}mm — ${numDoors} puertas ${doorType} — ${modules} módulos`,
@@ -2372,7 +2372,7 @@ const Armarios = ({ state, setState }) => {
     );
     // Que el propio dibujo diga lo que no es: si alguien lo imprime y lo baja
     // al taller, tiene que ver ahí mismo que el reparto interior es orientativo.
-    ctx.fillStyle = '#b45309';
+    ctx.fillStyle = '#95674e';
     ctx.font = '10px sans-serif';
     ctx.fillText(
       'Reparto interior orientativo (sin escala). Alturas reales: ver ALZADO TÉCNICO.',
@@ -2426,19 +2426,19 @@ const Armarios = ({ state, setState }) => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const ox = left, oy = top;
 
-    ctx.strokeStyle = '#1e293b';
+    ctx.strokeStyle = '#212937';
     ctx.lineWidth = 3;
     ctx.strokeRect(ox, oy, W, D);
 
     // Pared de fondo (línea gruesa en la parte superior de la planta)
-    ctx.strokeStyle = '#0f172a';
+    ctx.strokeStyle = '#111726';
     ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(ox - 10, oy); ctx.lineTo(ox + W + 10, oy); ctx.stroke();
 
     // Divisiones de módulos vistas en planta
     const { modules } = wardrobeConfig;
     const modW = W / modules;
-    ctx.strokeStyle = '#cbd5e1';
+    ctx.strokeStyle = '#cdd5de';
     ctx.lineWidth = 1;
     for (let i = 1; i < modules; i++) {
       const mx = ox + i * modW;
@@ -2448,7 +2448,7 @@ const Armarios = ({ state, setState }) => {
     drawDimensionLine(ctx, ox, oy - 24, ox + W, oy - 24, `${width}mm (${(width / 10).toFixed(0)}cm)`);
     drawDimensionLine(ctx, ox + W + 40, oy, ox + W + 40, oy + D, `${depth}mm (${(depth / 10).toFixed(0)}cm)`);
 
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#111726';
     ctx.font = 'bold 13px sans-serif';
     ctx.fillText(`PLANTA ACOTADA — ${width}×${depth}mm`, ox, canvas.height - 12);
 
@@ -2750,7 +2750,7 @@ const Armarios = ({ state, setState }) => {
                     ? 'rgba(34, 197, 94, 0.2)'
                     : getColorByName(wardrobeConfig.interiorColor).hex,
                   border: dropTargetModule === i
-                    ? '2px dashed #22c55e'
+                    ? '2px dashed #75b882'
                     : '1px solid rgba(0,0,0,0.1)'
                 }}
               >

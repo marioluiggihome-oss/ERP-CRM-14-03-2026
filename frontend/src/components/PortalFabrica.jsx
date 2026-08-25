@@ -2060,7 +2060,7 @@ const PortalFabrica = ({ currentUser }) => {
               doorColorHigh: industrialReportOrder.doorColor || 'BLANCO',
               doorColorColumns: industrialReportOrder.doorColor || 'BLANCO',
               sideColor: industrialReportOrder.sideColor || 'BLANCO',
-              brandColor: '#6366f1',
+              brandColor: '#6b74c1',
             }}
             catalogs={[]}
             logo={(currentUser?.useCustomBranding && currentUser?.logo) ? currentUser.logo : null}

@@ -15,7 +15,7 @@
  */
 import React from 'react';
 
-const ORANGE = '#C4622D';
+const ORANGE = '#aa7257';
 
 export function CarpinterMark({ size = 48, orange = ORANGE, ink = '#1A1A1A', className = '' }) {
   return (

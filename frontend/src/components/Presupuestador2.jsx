@@ -787,7 +787,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         itemsDespiece: [],
         pointValueMontada: pointValue,
         logo: logo || currentUser?.logo,
-        brandColor: '#ea580c',
+        brandColor: '#c0795f',
         companyName: currentUser?.companyName || '',
         ivaRate,
         allProducts: products,

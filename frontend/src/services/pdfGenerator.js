@@ -49,7 +49,7 @@ export const generateBudgetPDF = ({
   sideColor,
   carcassMaterialName,
   logo,
-  brandColor = '#ea580c',
+  brandColor = '#c0795f',
   companyName = '',
   globalFinish = '',
   allProducts = [],
@@ -494,7 +494,7 @@ export const generateArmarioPresupuestoPDF = ({
   boardsCalculation = {},
   ivaRate = 21,
   logo,
-  brandColor = '#ea580c',
+  brandColor = '#c0795f',
   companyName = ''
 }) => {
   const doc = new jsPDF({
@@ -668,7 +668,7 @@ export const generateArmariosDespiecePDF = ({
   totals = {},
   ivaRate = 21,
   logo,
-  brandColor = '#ea580c',
+  brandColor = '#c0795f',
   companyName = ''
 }) => {
   const doc = new jsPDF({
@@ -892,7 +892,7 @@ export const generateManufacturingPDF = ({
   items = [],
   allProducts = [],
   logo,
-  brandColor = '#ea580c',
+  brandColor = '#c0795f',
   companyName = '',
   distributorName = ''
 }) => {

@@ -196,11 +196,11 @@ const GestionGastos = ({ currentUser }) => {
       const w = window.open();
       if (!w) { alert('Permite las ventanas emergentes para imprimir'); return; }
       w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${inf.nombre}</title>
-        <style>body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:24px}
-        h1{font-size:20px;margin:0 0 2px} .sub{color:#64748b;font-size:12px;margin-bottom:16px}
+        <style>body{font-family:Arial,Helvetica,sans-serif;color:#212937;padding:24px}
+        h1{font-size:20px;margin:0 0 2px} .sub{color:#687485;font-size:12px;margin-bottom:16px}
         table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
-        th,td{border-bottom:1px solid #e2e8f0;padding:6px 8px;text-align:left}
-        th{background:#f1f5f9;text-transform:uppercase;font-size:10px}
+        th,td{border-bottom:1px solid #e3e8ee;padding:6px 8px;text-align:left}
+        th{background:#f2f5f8;text-transform:uppercase;font-size:10px}
         .tot{font-weight:800;font-size:14px} .box{margin-top:18px}
         </style></head><body>
         <h1>${inf.nombre}</h1>

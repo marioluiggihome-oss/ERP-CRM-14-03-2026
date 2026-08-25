@@ -13,7 +13,7 @@ import { Camera } from 'lucide-react';
 import { settingsAPI } from '../../services/api';
 
 const IdentityTab = ({ state, setState }) => {
-  const [colorInput, setColorInput] = useState(state.brandColor || '#ea580c');
+  const [colorInput, setColorInput] = useState(state.brandColor || '#c0795f');
   const [savingMB, setSavingMB] = useState(false);
   // Solo puede cambiar su logo quien tenga el permiso (o sea admin).
   const u = state.currentUser || {};
@@ -114,7 +114,7 @@ const IdentityTab = ({ state, setState }) => {
               type="text"
               value={colorInput}
               onChange={(e) => setColorInput(e.target.value)}
-              placeholder="#ea580c"
+              placeholder="#c0795f"
               className="w-full bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-lg font-black text-indigo-900 outline-none focus:border-orange-500"
               data-testid="brand-color-input"
             />

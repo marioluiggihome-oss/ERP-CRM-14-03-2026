@@ -479,8 +479,8 @@ const App = () => {
       logo: (user.useCustomBranding && user.logo) ? user.logo : prev.logo,
       // Colores corporativos según la división del usuario.
       brandColor: (user.isStudio3k || user.linkedStudio3kAdminId)
-        ? '#4B6BFF'
-        : ((user.isCarpintero || user.linkedCarpinteroAdminId) ? '#C4621D' : prev.brandColor)
+        ? '#5f78ca'
+        : ((user.isCarpintero || user.linkedCarpinteroAdminId) ? '#aa7252' : prev.brandColor)
     }));
     
     // Recargar productos de la biblioteca del usuario
@@ -744,8 +744,8 @@ const App = () => {
     // Studio3K: fondo navy oscuro + spinner azul índigo
     // Carpinter.io: fondo beige oscuro + spinner naranja corporativo
     // Luiggi Home (default): fondo slate-900 + spinner naranja
-    const _lBg = _lIsS3k ? '#0A0A1A' : _lIsCarp ? '#17130F' : '#0f172a';
-    const _lSpinner = _lIsS3k ? '#3B5BDB' : '#C4622D';
+    const _lBg = _lIsS3k ? '#0b0b14' : _lIsCarp ? '#17130F' : '#111726';
+    const _lSpinner = _lIsS3k ? '#4e66ad' : '#aa7257';
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ background: _lBg }}>
         <div className="text-center">
@@ -1019,29 +1019,29 @@ const App = () => {
   if (state.currentUser?.isStudio3k && !_hasOtherAccess && !state.studio3kPortalOff) {
     const studioWeb = state.currentUser?.studio3kLandingUrl || 'https://studio3k.io';
     return (
-      <div className="h-screen flex flex-col bg-[#080C1A] overflow-hidden">
-        <style>{`:root { --brand-primary: #4B6BFF; }`}</style>
+      <div className="h-screen flex flex-col bg-[#0a0d15] overflow-hidden">
+        <style>{`:root { --brand-primary: #5f78ca; }`}</style>
         {state.showStudio3kUsers && (
           <Suspense fallback={null}>
             <Studio3kUsers onClose={() => setState(prev => ({ ...prev, showStudio3kUsers: false }))} />
           </Suspense>
         )}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#0D1328] border-b border-white/10 shrink-0">
+        <div className="flex items-center justify-between px-4 py-2 bg-[#101420] border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-black tracking-tight text-white">studio<span className="text-[#4B6BFF]">3k</span></span>
-            <span className="text-xs font-black text-[#AAB8FF] uppercase tracking-widest">Entorno privado</span>
+            <span className="text-lg font-black tracking-tight text-white">studio<span className="text-[#5f78ca]">3k</span></span>
+            <span className="text-xs font-black text-[#b2bbe4] uppercase tracking-widest">Entorno privado</span>
           </div>
           <div className="flex items-center gap-3">
             {state.currentUser?.canManageStudio3kUsers && (
               <button
                 onClick={() => setState(prev => ({ ...prev, showStudio3kUsers: true }))}
-                className="text-xs font-bold text-white bg-[#293A92] hover:bg-[#3449B3] px-3 py-1.5 rounded-lg uppercase tracking-wide"
+                className="text-xs font-bold text-white bg-[#344273] hover:bg-[#41528d] px-3 py-1.5 rounded-lg uppercase tracking-wide"
               >
                 Usuarios
               </button>
             )}
             <a href={studioWeb} target="_blank" rel="noreferrer" className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest">Web</a>
-            <button onClick={() => setState(prev => ({ ...prev, currentUser: null }))} className="text-xs font-bold text-[#AAB8FF] hover:text-white uppercase tracking-widest">Salir</button>
+            <button onClick={() => setState(prev => ({ ...prev, currentUser: null }))} className="text-xs font-bold text-[#b2bbe4] hover:text-white uppercase tracking-widest">Salir</button>
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden bg-slate-50">
@@ -1129,8 +1129,8 @@ const App = () => {
         
         .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cdd5de; border-radius: 10px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #97a3b2; }
         
         @media print {
           .no-print { display: none !important; }

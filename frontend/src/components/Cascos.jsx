@@ -64,7 +64,7 @@ function ProviderLogo({ id, height = 20 }) {
     // Caja naranja, "blum" en blanco itálico con flecha ascendente y ®.
     return (
       <svg height={height} viewBox="0 0 200 84" style={box} aria-label="blum">
-        <rect x="0" y="0" width="200" height="84" rx="8" fill="#ee7203" />
+        <rect x="0" y="0" width="200" height="84" rx="8" fill="#ce875e" />
         <path d="M30 60 L30 24 M30 24 L22 33 M30 24 L38 33" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
         <text x="34" y="62" fontFamily="Arial, Helvetica, sans-serif" fontSize="52" fontStyle="italic" fontWeight="900" fill="#ffffff" letterSpacing="-1">blum</text>
         <text x="182" y="30" fontFamily="Arial, sans-serif" fontSize="11" fill="#ffffff">®</text>
@@ -76,7 +76,7 @@ function ProviderLogo({ id, height = 20 }) {
     return (
       <svg height={height} viewBox="0 0 200 84" style={box} aria-label="GTV">
         <rect x="0" y="0" width="200" height="84" rx="8" fill="#ffffff" />
-        <text x="100" y="60" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="56" fontWeight="900" fill="#2e3192" letterSpacing="1">GTV</text>
+        <text x="100" y="60" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="56" fontWeight="900" fill="#343c71" letterSpacing="1">GTV</text>
       </svg>
     );
   }
@@ -86,9 +86,9 @@ function ProviderLogo({ id, height = 20 }) {
       <svg height={height} viewBox="0 0 240 84" style={box} aria-label="emuca">
         <rect x="0" y="0" width="240" height="84" rx="8" fill="#ffffff" />
         <text x="12" y="52" fontFamily="Arial, Helvetica, sans-serif" fontSize="46" fontWeight="800" fill="#4d4d4f" letterSpacing="-1">emuca</text>
-        <path d="M205 40 q10 -18 24 -14 q-6 10 -18 22 q-8 4 -6 -8 Z" fill="#fdc300" />
+        <path d="M205 40 q10 -18 24 -14 q-6 10 -18 22 q-8 4 -6 -8 Z" fill="#e9c97e" />
         <circle cx="223" cy="20" r="3.5" fill="#ffffff" />
-        <text x="12" y="72" fontFamily="Arial, Helvetica, sans-serif" fontSize="15" fill="#fdc300" letterSpacing="1">where creation begins</text>
+        <text x="12" y="72" fontFamily="Arial, Helvetica, sans-serif" fontSize="15" fill="#e9c97e" letterSpacing="1">where creation begins</text>
       </svg>
     );
   }
@@ -106,14 +106,14 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   const x = pad, y = (H - bh) / 2;
   const cx = x + bw / 2, cy = y + bh / 2;
   const t = (tipo || '').toLowerCase();
-  const STROKE = '#475569', THIN = '#94a3b8';
+  const STROKE = '#4a5564', THIN = '#97a3b2';
   const detail = [];
 
   const shelvesAt = (n) => { for (let s = 1; s <= n; s++) detail.push(<line key={'s' + s} x1={x + 4} y1={y + (bh * s) / (n + 1)} x2={x + bw - 4} y2={y + (bh * s) / (n + 1)} stroke={THIN} strokeWidth="1.5" />); };
 
   if (t.includes('fregadero')) {
     // seno de fregadero + grifo
-    detail.push(<rect key="b" x={x + bw * 0.18} y={cy - bh * 0.12} width={bw * 0.64} height={bh * 0.3} rx="3" fill="#e0e7ff" stroke={STROKE} strokeWidth="1.6" />);
+    detail.push(<rect key="b" x={x + bw * 0.18} y={cy - bh * 0.12} width={bw * 0.64} height={bh * 0.3} rx="3" fill="#e3e7f5" stroke={STROKE} strokeWidth="1.6" />);
     detail.push(<circle key="d" cx={cx} cy={cy + bh * 0.03} r="3" fill="none" stroke={STROKE} strokeWidth="1.4" />);
     detail.push(<path key="g" d={`M ${cx + bw * 0.22} ${cy - bh * 0.12} v -8 q 0 -5 -6 -5`} fill="none" stroke={STROKE} strokeWidth="1.6" />);
   } else if (t.includes('placa')) {
@@ -123,7 +123,7 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   } else if (t.includes('horno')) {
     // horno: tirador + visor
     detail.push(<line key="h" x1={x + 6} y1={y + bh * 0.26} x2={x + bw - 6} y2={y + bh * 0.26} stroke={STROKE} strokeWidth="2" />);
-    detail.push(<rect key="v" x={x + bw * 0.22} y={y + bh * 0.4} width={bw * 0.56} height={bh * 0.4} rx="2" fill="#e0e7ff" stroke={STROKE} strokeWidth="1.4" />);
+    detail.push(<rect key="v" x={x + bw * 0.22} y={y + bh * 0.4} width={bw * 0.56} height={bh * 0.4} rx="2" fill="#e3e7f5" stroke={STROKE} strokeWidth="1.4" />);
   } else if (t.includes('bombona')) {
     // puerta con rejilla de ventilación
     [0.62, 0.7, 0.78].forEach((p, i) => detail.push(<line key={'r' + i} x1={x + bw * 0.3} y1={y + bh * p} x2={x + bw * 0.7} y2={y + bh * p} stroke={THIN} strokeWidth="1.6" />));
@@ -133,14 +133,14 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
     shelvesAt(1);
   } else if (t.includes('campana')) {
     // campana extraíble: trapecio
-    detail.push(<path key="c" d={`M ${x} ${y + bh} L ${x + bw * 0.25} ${y} L ${x + bw * 0.75} ${y} L ${x + bw} ${y + bh} Z`} fill="#eef2ff" stroke={STROKE} strokeWidth="1.6" />);
+    detail.push(<path key="c" d={`M ${x} ${y + bh} L ${x + bw * 0.25} ${y} L ${x + bw * 0.75} ${y} L ${x + bw} ${y + bh} Z`} fill="#f0f2fa" stroke={STROKE} strokeWidth="1.6" />);
   } else if (dibujo === 'angular' || t.includes('rincón') || t.includes('rincon') || t.includes('angular')) {
     // módulo en esquina
-    detail.push(<path key="a" d={`M ${x} ${y} L ${x + bw * 0.55} ${y} L ${x + bw} ${y + bh * 0.45} L ${x + bw} ${y + bh} L ${x} ${y + bh} Z`} fill="#f1f5f9" stroke={STROKE} strokeWidth="1.6" />);
+    detail.push(<path key="a" d={`M ${x} ${y} L ${x + bw * 0.55} ${y} L ${x + bw} ${y + bh * 0.45} L ${x + bw} ${y + bh} L ${x} ${y + bh} Z`} fill="#f2f5f8" stroke={STROKE} strokeWidth="1.6" />);
   } else if (dibujo === 'columna' || t.includes('columna') || t.includes('despensa')) {
     shelvesAt(alto >= 2000 ? 5 : 4);
   } else if (t.includes('cubretermo') || t.includes('termo')) {
-    detail.push(<rect key="tm" x={x + bw * 0.3} y={cy - bh * 0.1} width={bw * 0.4} height={bh * 0.22} rx="2" fill="#e0e7ff" stroke={STROKE} strokeWidth="1.4" />);
+    detail.push(<rect key="tm" x={x + bw * 0.3} y={cy - bh * 0.1} width={bw * 0.4} height={bh * 0.22} rx="2" fill="#e3e7f5" stroke={STROKE} strokeWidth="1.4" />);
   } else {
     // alto / bajo / transversal / sobre: baldas
     shelvesAt(alto >= 1300 ? 3 : alto >= 850 ? 2 : 1);
@@ -149,11 +149,11 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   const showAngular = dibujo === 'angular' && !(t.includes('rincón') || t.includes('rincon') || t.includes('angular'));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
-      <rect x={x} y={y} width={bw} height={bh} rx="2" fill="#f8fafc" stroke={STROKE} strokeWidth="2" />
+      <rect x={x} y={y} width={bw} height={bh} rx="2" fill="#f8fafb" stroke={STROKE} strokeWidth="2" />
       {detail}
       {showAngular && <line x1={x} y1={y} x2={x + bw / 2} y2={y + bh / 3} stroke={STROKE} strokeWidth="1.5" />}
-      <text x={cx} y={y - 3} textAnchor="middle" fontSize="9" fill="#334155">{dim(ancho)} {unidad}</text>
-      <text x={x - 3} y={cy} textAnchor="middle" fontSize="9" fill="#334155" transform={`rotate(-90 ${x - 3} ${cy})`}>{dim(alto)} {unidad}</text>
+      <text x={cx} y={y - 3} textAnchor="middle" fontSize="9" fill="#364150">{dim(ancho)} {unidad}</text>
+      <text x={x - 3} y={cy} textAnchor="middle" fontSize="9" fill="#364150" transform={`rotate(-90 ${x - 3} ${cy})`}>{dim(alto)} {unidad}</text>
     </svg>
   );
 }
@@ -482,7 +482,7 @@ const Cascos = ({ state, setState }) => {
   // Cadena de medidas para una línea (accesorios BLUM no tienen dimensiones).
   const dimStr = (l) => l.accesorio ? '—' : `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`;
   // Muestra de color para el punto identificativo de cada acabado.
-  const SWATCH = { blanco: '#f1f5f9', aluminio: '#cbd5e1', grafito: '#202023', blancoHidrofugo: '#f6f6f4', robleAurora: '#d9c6a4', spike: '#b58d86', stone: '#c9c2b3', roble: '#b07c4f', olmo: '#a8794e', blancoEsp: '#f8fafc' };
+  const SWATCH = { blanco: '#f2f5f8', aluminio: '#cdd5de', grafito: '#202023', blancoHidrofugo: '#f6f6f4', robleAurora: '#d2c7b4', spike: '#a9928e', stone: '#c6c2ba', roble: '#a08269', olmo: '#9a7e67', blancoEsp: '#f8fafb' };
 
   const addToCart = (m) => {
     const base = m.precios[colorActivo];        // precio de tarifa (puntos)
@@ -826,7 +826,7 @@ const Cascos = ({ state, setState }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#f0e9d8] overflow-y-auto">
+    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#ede9df] overflow-y-auto">
       <div className="hueco-logo rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white px-4 py-2.5 mb-4 shadow-lg flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-base sm:text-lg font-black flex items-center gap-2 whitespace-nowrap"><Box size={18} /> Cocina Desmontada</h1>
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1011,7 +1011,7 @@ const Cascos = ({ state, setState }) => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5">Color <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow" style={{ background: SWATCH[colorActivo] || '#e2e8f0' }} /></label>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5">Color <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow" style={{ background: SWATCH[colorActivo] || '#e3e8ee' }} /></label>
                 <select value={colorActivo} onChange={e => setColor(e.target.value)} disabled={colores.length <= 1} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400">
                   {colores.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
@@ -1073,7 +1073,7 @@ const Cascos = ({ state, setState }) => {
                   className="w-full text-left flex items-center gap-3 p-3 odd:bg-white even:bg-[#f7f1e3] hover:bg-indigo-50 transition-colors cursor-pointer group">
                   <div className="w-14 h-20 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate flex items-center gap-1.5"><span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[colorActivo] || '#e2e8f0' }} title={colorLabel(colorActivo)} />{nombre(m)} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
+                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate flex items-center gap-1.5"><span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[colorActivo] || '#e3e8ee' }} title={colorLabel(colorActivo)} />{nombre(m)} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {[['Alto', m.alto], ['Ancho', m.ancho], ['Fondo', m.fondo]].map(([lab, val]) => (
                         <span key={lab} className="inline-flex items-baseline gap-1 px-2.5 py-1 bg-slate-100 rounded-lg">
@@ -1099,7 +1099,7 @@ const Cascos = ({ state, setState }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
-                  <div className="relative w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /><span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full border-2 border-white ring-1 ring-slate-300 shadow" style={{ background: SWATCH[colorActivo] || '#e2e8f0' }} title={colorLabel(colorActivo)} /></div>
+                  <div className="relative w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /><span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full border-2 border-white ring-1 ring-slate-300 shadow" style={{ background: SWATCH[colorActivo] || '#e3e8ee' }} title={colorLabel(colorActivo)} /></div>
                   <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{nombre(m)}</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">{med(m.alto)}×{med(m.ancho)}×{med(m.fondo)} {unidad} · {m.grosor}mm</p>
                   <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
@@ -1184,7 +1184,7 @@ const Cascos = ({ state, setState }) => {
                     </span>
                   ) : (
                     <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
-                      <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
+                      <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[l.color] || '#e3e8ee' }} />
                       <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
                     </span>
                   )}

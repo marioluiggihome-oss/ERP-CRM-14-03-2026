@@ -20,12 +20,12 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Configuración de estados
 const STATUS_CONFIG = {
-  draft: { label: 'Borrador', color: '#9ca3af', bgColor: '#f3f4f6' },
-  confirmed: { label: 'Confirmada', color: '#3b82f6', bgColor: '#dbeafe' },
-  in_production: { label: 'En Producción', color: '#f59e0b', bgColor: '#fef3c7' },
-  ready: { label: 'Fabricada', color: '#10b981', bgColor: '#d1fae5' },
-  delivered: { label: 'Entregada', color: '#059669', bgColor: '#a7f3d0' },
-  cancelled: { label: 'Cancelada', color: '#ef4444', bgColor: '#fee2e2' }
+  draft: { label: 'Borrador', color: '#9da3ad', bgColor: '#f3f4f6' },
+  confirmed: { label: 'Confirmada', color: '#5f87c9', bgColor: '#e1e9f5' },
+  in_production: { label: 'En Producción', color: '#d5ab7c', bgColor: '#f8f3de' },
+  ready: { label: 'Fabricada', color: '#6bae8e', bgColor: '#def5e9' },
+  delivered: { label: 'Entregada', color: '#558d73', bgColor: '#c2ebd7' },
+  cancelled: { label: 'Cancelada', color: '#d5635c', bgColor: '#f8e4e4' }
 };
 
 // Componente de gráfica de barras simple con CSS
@@ -45,7 +45,7 @@ const SimpleBarChart = ({ data, title, height = 200 }) => {
                 className="w-full rounded-t-lg transition-all duration-500"
                 style={{ 
                   height: `${Math.max(heightPercent, 5)}%`,
-                  backgroundColor: item.color || '#3b82f6',
+                  backgroundColor: item.color || '#5f87c9',
                   minHeight: '8px'
                 }}
               />
@@ -242,9 +242,9 @@ const ProductionDashboard = ({ currentUser, orders = [], factories = [] }) => {
       ...factories.map(f => ({
         label: f.code,
         value: counts[f.id] || 0,
-        color: f.code === 'SAL' ? '#3b82f6' : f.code === 'ZAM' ? '#10b981' : '#8b5cf6'
+        color: f.code === 'SAL' ? '#5f87c9' : f.code === 'ZAM' ? '#6bae8e' : '#8572c7'
       })),
-      { label: 'Sin asignar', value: counts['unassigned'], color: '#9ca3af' }
+      { label: 'Sin asignar', value: counts['unassigned'], color: '#9da3ad' }
     ];
   }, [filteredOrders, factories]);
 
@@ -267,7 +267,7 @@ const ProductionDashboard = ({ currentUser, orders = [], factories = [] }) => {
       days.push({
         label: date.toLocaleDateString('es-ES', { weekday: 'short' }),
         value: count,
-        color: '#3b82f6'
+        color: '#5f87c9'
       });
     }
     return days;

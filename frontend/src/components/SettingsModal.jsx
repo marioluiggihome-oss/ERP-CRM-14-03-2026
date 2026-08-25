@@ -91,7 +91,7 @@ const PROVINCIAS_ESPANA = [
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [activeTab, setActiveTab] = useState('users');
-  const [colorInput, setColorInput] = useState(state.brandColor || '#ea580c');
+  const [colorInput, setColorInput] = useState(state.brandColor || '#c0795f');
   const [userSearch, setUserSearch] = useState('');
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);

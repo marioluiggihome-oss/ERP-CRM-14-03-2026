@@ -13,7 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Users, Activity, Calendar, TrendingUp, Download, RefreshCw, Clock, FileText, ShoppingCart, LogIn } from 'lucide-react';
 import { authHeaders } from '../../services/api';
 
-const COLORS = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4', '#84cc16'];
+const COLORS = ['#d08e6c', '#5f87c9', '#6bae8e', '#8572c7', '#c97195', '#d5ab7c', '#70aebe', '#9ec17e'];
 
 // Tarjeta de CONSUMO DE IA (solo master): contador mensual + umbral de alerta.
 const KIND_LABELS = { render: 'Renders 3D', vision: 'Análisis de imagen', text: 'Texto', chat: 'Chat', search: 'Búsqueda', otro: 'Otros' };
@@ -97,7 +97,7 @@ const AIUsageCard = () => {
   };
   if (!data) return null;
   const kinds = Object.entries(data.by_kind || {}).sort((a, b) => b[1] - a[1]);
-  const barColor = data.over ? '#dc2626' : data.warn ? '#d97706' : '#4f46e5';
+  const barColor = data.over ? '#c34f45' : data.warn ? '#b78965' : '#545cb1';
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-3">
@@ -401,12 +401,12 @@ const UsageReportTab = () => {
           </h3>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={report?.dailyActivity || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ee" />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip />
-              <Line type="monotone" dataKey="totalActions" stroke="#f97316" strokeWidth={2} name="Acciones" />
-              <Line type="monotone" dataKey="uniqueUsers" stroke="#3b82f6" strokeWidth={2} name="Usuarios" />
+              <Line type="monotone" dataKey="totalActions" stroke="#d08e6c" strokeWidth={2} name="Acciones" />
+              <Line type="monotone" dataKey="uniqueUsers" stroke="#5f87c9" strokeWidth={2} name="Usuarios" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -425,7 +425,7 @@ const UsageReportTab = () => {
                 cy="50%"
                 innerRadius={60}
                 outerRadius={90}
-                fill="#8884d8"
+                fill="#8a8aba"
                 paddingAngle={2}
                 dataKey="count"
                 nameKey="name"

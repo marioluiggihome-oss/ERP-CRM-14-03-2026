@@ -10,8 +10,8 @@ import React from 'react';
 // Si hay companyName configurado, se usa como texto; si no, un rótulo neutro.
 const NeutralLogo = ({ className = 'h-12', variant = 'light', companyName = '' }) => {
   const dark = variant === 'dark';
-  const ink = dark ? '#0f172a' : '#1e293b';
-  const accent = '#4f46e5';
+  const ink = dark ? '#111726' : '#212937';
+  const accent = '#545cb1';
   const nombre = (companyName || 'Gestión Profesional').trim();
   return (
     <div className={`flex items-center justify-center gap-2 ${className}`}>

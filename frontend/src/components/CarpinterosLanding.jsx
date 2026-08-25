@@ -88,7 +88,7 @@ function useReveal() {
 
 // Etiqueta de cota (eyebrow) estilo plano técnico: ── • texto • ──
 function Cota({ children, light = false }) {
-  const c = light ? "rgba(32,26,20,.5)" : "#C4622D";
+  const c = light ? "rgba(32,26,20,.5)" : "#aa7257";
   return (
     <span className="cota" style={{ color: c }}>
       <span className="cota-line" style={{ background: c }} />
@@ -108,7 +108,7 @@ function Nav({ onEnter }) {
         <a href="#top" className="nav-logo"><CarpinterLogo height={48} tone="dark" /></a>
         <nav className="nav-links">
           {NAV_LINKS.map((l) => (
-            <a key={l.label} href={l.href} style={{ color: "#5B4E3F" }}>{l.label}</a>
+            <a key={l.label} href={l.href} style={{ color: "#574f46" }}>{l.label}</a>
           ))}
         </nav>
         <div className="nav-cta">
@@ -135,7 +135,7 @@ function Nav({ onEnter }) {
 function BlueprintPanel() {
   return (
     <div className="blueprint" data-reveal>
-      <div className="bp-tag mono">alto_130 · fondo_58 · <span style={{ color: "#E8A06B" }}>auto-calc</span></div>
+      <div className="bp-tag mono">alto_130 · fondo_58 · <span style={{ color: "#d3a98b" }}>auto-calc</span></div>
       <svg viewBox="0 0 300 300" className="bp-svg" aria-hidden="true">
         <defs>
           <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -144,7 +144,7 @@ function BlueprintPanel() {
         </defs>
         <rect x="0" y="0" width="300" height="300" fill="url(#grid)" />
         {/* mueble columna */}
-        <g fill="none" stroke="#E8A06B" strokeWidth="2">
+        <g fill="none" stroke="#d3a98b" strokeWidth="2">
           <rect x="70" y="40" width="120" height="210" rx="3" />
           <line x1="70" y1="95" x2="190" y2="95" />
           <line x1="70" y1="150" x2="190" y2="150" />
@@ -153,7 +153,7 @@ function BlueprintPanel() {
           <circle cx="178" cy="178" r="3.4" />
         </g>
         {/* cotas */}
-        <g stroke="#C4622D" strokeWidth="1.4">
+        <g stroke="#aa7257" strokeWidth="1.4">
           <line x1="210" y1="40" x2="210" y2="250" />
           <line x1="205" y1="40" x2="215" y2="40" />
           <line x1="205" y1="250" x2="215" y2="250" />
@@ -161,13 +161,13 @@ function BlueprintPanel() {
           <line x1="70" y1="263" x2="70" y2="273" />
           <line x1="190" y1="263" x2="190" y2="273" />
         </g>
-        <text x="222" y="150" fill="#C4622D" fontSize="11" fontFamily="monospace" transform="rotate(90 222 150)" textAnchor="middle">130 cm</text>
-        <text x="130" y="285" fill="#C4622D" fontSize="11" fontFamily="monospace" textAnchor="middle">60 cm</text>
+        <text x="222" y="150" fill="#aa7257" fontSize="11" fontFamily="monospace" transform="rotate(90 222 150)" textAnchor="middle">130 cm</text>
+        <text x="130" y="285" fill="#aa7257" fontSize="11" fontFamily="monospace" textAnchor="middle">60 cm</text>
       </svg>
       <div className="bp-chip">
         <div className="mono bp-chip-k">PRESUPUESTO</div>
         <div className="bp-chip-v">1.204,72 €</div>
-        <div className="mono bp-chip-s" style={{ color: "#7DBE9B" }}>margen +162%</div>
+        <div className="mono bp-chip-s" style={{ color: "#93b7a3" }}>margen +162%</div>
       </div>
     </div>
   );
@@ -296,10 +296,10 @@ function AISection() {
         </div>
         <div className="ia-demo" data-reveal>
           <div className="ia-prompt mono">
-            <span style={{ color: "#E8A06B" }}>prompt&gt;</span> cocina en roble natural, isla central, tiradores negros…
+            <span style={{ color: "#d3a98b" }}>prompt&gt;</span> cocina en roble natural, isla central, tiradores negros…
           </div>
           <div className="ia-render">
-            <CarpinterMark size={88} orange="#C4622D" />
+            <CarpinterMark size={88} orange="#aa7257" />
             <div className="ia-render-lbl mono">render_ia · 4s</div>
           </div>
         </div>
@@ -371,7 +371,7 @@ function RenderPacks() {
                 <span className="price-num mono">{pack.renders}</span>
                 <span className="price-per"> renders</span>
               </div>
-              <div className="price-credits" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#C4622D' }}>{pack.price}€ <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#888' }}>+ IVA</span></div>
+              <div className="price-credits" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#aa7257' }}>{pack.price}€ <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#888' }}>+ IVA</span></div>
               <a href="#acceso" className="btn-outline price-btn" style={{ marginTop: '1rem' }}>Solicitar pack</a>
             </div>
           ))}
@@ -392,7 +392,7 @@ function Testimonials() {
         <div className="test-grid">
           {TESTIMONIALS.map((t) => (
             <figure key={t.name} className="test" data-reveal>
-              <div className="test-stars">{[0,1,2,3,4].map((i) => <Star key={i} size={14} fill="#C4622D" stroke="#C4622D" />)}</div>
+              <div className="test-stars">{[0,1,2,3,4].map((i) => <Star key={i} size={14} fill="#aa7257" stroke="#aa7257" />)}</div>
               <blockquote>“{t.text}”</blockquote>
               <figcaption><span className="test-name">{t.name}</span><span className="mono test-role">{t.role}</span></figcaption>
             </figure>
@@ -431,12 +431,12 @@ function CarpinterContactForm() {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ nombre: '', empresa: '', email: '', telefono: '', mensaje: '' });
   const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(196,98,45,0.3)', background: 'rgba(255,255,255,0.06)', color: '#F5F0E7', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s', fontFamily: 'inherit' };
-  const handleFocus = e => (e.currentTarget.style.borderColor = '#C4622D');
+  const handleFocus = e => (e.currentTarget.style.borderColor = '#aa7257');
   const handleBlur = e => (e.currentTarget.style.borderColor = 'rgba(196,98,45,0.3)');
   if (sent) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '24px 0' }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: '#C4622D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: '#aa7257', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Check size={22} color="#fff" />
         </div>
         <div>
@@ -516,8 +516,8 @@ function Footer() {
 /* ─── ESTILOS ────────────────────────────────────────────────────────────── */
 const STYLES = `
 .cl-root{
-  --espresso:#17130F; --espresso-2:#1F1912; --bone:#F5F0E7; --bone-2:#EDE5D6;
-  --orange:#C4622D; --orange-soft:#E8A06B; --ink:#201A14; --muted:#6F6152;
+  --espresso:#17130F; --espresso-2:#1F1912; --bone:#F5F0E7; --bone-2:#eae5dd;
+  --orange:#aa7257; --orange-soft:#d3a98b; --ink:#201A14; --muted:#6a625a;
   --sans:'DM Sans',system-ui,-apple-system,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
   font-family:var(--sans); color:var(--ink); background:var(--bone); overflow-x:hidden;
 }
@@ -535,7 +535,7 @@ const STYLES = `
 
 /* botones */
 .cl-root .btn-solid{display:inline-flex;align-items:center;gap:8px;background:var(--orange);color:#fff;font-weight:700;font-size:14px;padding:11px 20px;border-radius:10px;transition:.2s;box-shadow:0 8px 24px -12px rgba(196,98,45,.7);}
-.cl-root .btn-solid:hover{background:#A9521F;transform:translateY(-1px);}
+.cl-root .btn-solid:hover{background:#926047;transform:translateY(-1px);}
 .cl-root .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--orange);color:var(--orange);font-weight:700;font-size:14px;padding:11px 20px;border-radius:10px;transition:.2s;}
 .cl-root .btn-outline:hover{background:var(--orange);color:#fff;}
 .cl-root .btn-ghost{display:inline-flex;align-items:center;gap:8px;border:1.5px solid;background:transparent;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;transition:.2s;}

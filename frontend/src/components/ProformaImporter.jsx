@@ -503,10 +503,10 @@ const buscarCascos = (texto, colorProyecto, limite = 40, punto = PUNTO_POR_DEFEC
 // pero SIEMPRE editable en la tabla: si una linea cae en el grupo equivocado se
 // corrige en el desplegable, no hay que tocar codigo.
 const DESTINOS = {
-  cascos:   { id: 'cascos',   label: 'Cascos',   color: '#4f46e5' },
-  puertas:  { id: 'puertas',  label: 'Puertas',  color: '#C4622D' },
-  herrajes: { id: 'herrajes', label: 'Herrajes', color: '#0891b2' },
-  otros:    { id: 'otros',    label: 'Otros',    color: '#64748b' },
+  cascos:   { id: 'cascos',   label: 'Cascos',   color: '#545cb1' },
+  puertas:  { id: 'puertas',  label: 'Puertas',  color: '#aa7257' },
+  herrajes: { id: 'herrajes', label: 'Herrajes', color: '#598b9d' },
+  otros:    { id: 'otros',    label: 'Otros',    color: '#687485' },
 };
 
 const _destino_auto = (it, acb) => {

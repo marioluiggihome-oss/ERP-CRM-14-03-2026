@@ -112,7 +112,7 @@ const GlobalEventReminder = ({ currentUser, onOpenCalendar }) => {
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-4 text-white flex items-start justify-between gap-2"
-              style={{ background: detail.color || '#4f46e5' }}>
+              style={{ background: detail.color || '#545cb1' }}>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase opacity-80">Evento</p>
                 <h3 className="text-lg font-black leading-tight truncate">{detail.title}</h3>

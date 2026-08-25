@@ -26,8 +26,8 @@ const STAGES = [
 ];
 
 const PLANTILLA_HTML =
-  `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1e293b">
-  <h2 style="color:#4f46e5">Hola {{primernombre}} 👋</h2>
+  `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#212937">
+  <h2 style="color:#545cb1">Hola {{primernombre}} 👋</h2>
   <p>Te escribimos desde <b>Luiggi Home</b> para contarte…</p>
   <p>Un saludo,<br/>El equipo de Luiggi Home</p>
 </div>`;

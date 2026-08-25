@@ -91,9 +91,9 @@ export default function Studio3kUsers({ onClose }) {
   return (
     <div className="fixed inset-0 z-[9998] bg-slate-950/70 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 bg-[#080C1A] text-white">
+        <div className="flex items-center justify-between px-5 py-4 bg-[#0a0d15] text-white">
           <div>
-            <h3 className="font-black flex items-center gap-2"><Users size={18} className="text-[#4B6BFF]" /> Usuarios Studio3K</h3>
+            <h3 className="font-black flex items-center gap-2"><Users size={18} className="text-[#5f78ca]" /> Usuarios Studio3K</h3>
             <p className="text-[11px] text-slate-400 mt-1">Usuarios de tu estudio con acceso a Estudio 3D.</p>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
@@ -109,7 +109,7 @@ export default function Studio3kUsers({ onClose }) {
             <input value={nuevo.clientName} onChange={(event) => setNuevo({ ...nuevo, clientName: event.target.value })}
               placeholder="Nombre (opcional)" className="px-3 py-2 border border-slate-300 rounded-lg text-sm flex-1 min-w-[160px]" />
             <button onClick={crear} disabled={creating}
-              className="px-4 py-2 bg-[#4B6BFF] hover:bg-[#3A57E8] text-white rounded-lg text-xs font-black flex items-center gap-1.5 disabled:opacity-50">
+              className="px-4 py-2 bg-[#5f78ca] hover:bg-[#4d66b5] text-white rounded-lg text-xs font-black flex items-center gap-1.5 disabled:opacity-50">
               <Plus size={14} /> Crear
             </button>
           </div>

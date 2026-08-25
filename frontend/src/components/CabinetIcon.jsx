@@ -15,12 +15,12 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     );
   }
 
-  const stroke = '#4338ca'; // Indigo-700
+  const stroke = '#474d9b'; // Indigo-700
   const strokeWidth = 2;
-  const fill = '#eef2ff'; // Indigo-50
+  const fill = '#f0f2fa'; // Indigo-50
 
   const GolaClip = () => isGola ? (
-    <path d="M8 6 L32 6" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M8 6 L32 6" stroke="#d08e6c" strokeWidth="2.5" strokeLinecap="round" />
   ) : null;
 
   switch (type) {
@@ -32,17 +32,17 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
           {/* Cuerpo del mueble */}
           <rect x="6" y="14" width="28" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
           {/* Puerta abatible abierta hacia arriba */}
-          <path d="M8 14 L8 4 L32 4 L32 14" stroke="#dc2626" strokeWidth="1.5" fill="#fef2f2" />
+          <path d="M8 14 L8 4 L32 4 L32 14" stroke="#c34f45" strokeWidth="1.5" fill="#fbf3f3" />
           {/* Bisagra superior */}
-          <circle cx="10" cy="4" r="1" fill="#dc2626" />
-          <circle cx="30" cy="4" r="1" fill="#dc2626" />
+          <circle cx="10" cy="4" r="1" fill="#c34f45" />
+          <circle cx="30" cy="4" r="1" fill="#c34f45" />
           {/* Flecha indicando apertura */}
-          <path d="M20 10 L20 1" stroke="#dc2626" strokeWidth="1" strokeLinecap="round" />
-          <path d="M18 3 L20 1 L22 3" stroke="#dc2626" strokeWidth="1" strokeLinecap="round" />
+          <path d="M20 10 L20 1" stroke="#c34f45" strokeWidth="1" strokeLinecap="round" />
+          <path d="M18 3 L20 1 L22 3" stroke="#c34f45" strokeWidth="1" strokeLinecap="round" />
           {/* Interior visible */}
           <line x1="10" y1="24" x2="30" y2="24" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           {/* Etiqueta HK */}
-          <text x="20" y="21" textAnchor="middle" fontSize="5" fill="#dc2626" fontWeight="bold">HK</text>
+          <text x="20" y="21" textAnchor="middle" fontSize="5" fill="#c34f45" fontWeight="bold">HK</text>
           <GolaClip />
         </svg>
       );
@@ -54,18 +54,18 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
           {/* Cuerpo del mueble */}
           <rect x="6" y="12" width="28" height="24" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
           {/* Puerta elevándose con motor */}
-          <rect x="8" y="4" width="24" height="10" rx="1" stroke="#059669" strokeWidth="1.5" fill="#ecfdf5" />
+          <rect x="8" y="4" width="24" height="10" rx="1" stroke="#558d73" strokeWidth="1.5" fill="#f1fbf6" />
           {/* Símbolo de motor/servo */}
-          <circle cx="20" cy="9" r="3" stroke="#059669" strokeWidth="1" fill="#d1fae5" />
-          <path d="M18 9 L22 9 M20 7 L20 11" stroke="#059669" strokeWidth="1" />
+          <circle cx="20" cy="9" r="3" stroke="#558d73" strokeWidth="1" fill="#def5e9" />
+          <path d="M18 9 L22 9 M20 7 L20 11" stroke="#558d73" strokeWidth="1" />
           {/* Flechas indicando movimiento automático */}
-          <path d="M14 2 L14 5 M14 2 L12 4 M14 2 L16 4" stroke="#059669" strokeWidth="1" strokeLinecap="round" />
-          <path d="M26 2 L26 5 M26 2 L24 4 M26 2 L28 4" stroke="#059669" strokeWidth="1" strokeLinecap="round" />
+          <path d="M14 2 L14 5 M14 2 L12 4 M14 2 L16 4" stroke="#558d73" strokeWidth="1" strokeLinecap="round" />
+          <path d="M26 2 L26 5 M26 2 L24 4 M26 2 L28 4" stroke="#558d73" strokeWidth="1" strokeLinecap="round" />
           {/* Interior visible */}
           <line x1="10" y1="22" x2="30" y2="22" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           <line x1="10" y1="28" x2="30" y2="28" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           {/* Etiqueta HS */}
-          <text x="20" y="19" textAnchor="middle" fontSize="5" fill="#059669" fontWeight="bold">HS</text>
+          <text x="20" y="19" textAnchor="middle" fontSize="5" fill="#558d73" fontWeight="bold">HS</text>
           <GolaClip />
         </svg>
       );
@@ -77,14 +77,14 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
           {/* Cuerpo del mueble */}
           <rect x="6" y="12" width="28" height="24" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
           {/* Puerta elevándose - posición intermedia */}
-          <rect x="8" y="4" width="24" height="10" rx="1" stroke="#7c3aed" strokeWidth="1.5" fill="#ede9fe" />
+          <rect x="8" y="4" width="24" height="10" rx="1" stroke="#745bb9" strokeWidth="1.5" fill="#edeaf7" />
           {/* Flechas indicando movimiento hacia arriba */}
-          <path d="M20 1 L17 4 M20 1 L23 4" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M20 1 L17 4 M20 1 L23 4" stroke="#745bb9" strokeWidth="1.5" strokeLinecap="round" />
           {/* Interior visible del mueble */}
           <line x1="10" y1="22" x2="30" y2="22" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           <line x1="10" y1="28" x2="30" y2="28" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           {/* Etiqueta HL */}
-          <text x="20" y="19" textAnchor="middle" fontSize="5" fill="#7c3aed" fontWeight="bold">HL</text>
+          <text x="20" y="19" textAnchor="middle" fontSize="5" fill="#745bb9" fontWeight="bold">HL</text>
           <GolaClip />
         </svg>
       );
@@ -96,19 +96,19 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
           {/* Cuerpo del mueble */}
           <rect x="6" y="14" width="28" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
           {/* Puerta plegada bi-fold - parte superior (plegada hacia arriba) */}
-          <path d="M8 8 L8 2 L32 2 L32 8" stroke="#0891b2" strokeWidth="1.5" fill="#ecfeff" />
+          <path d="M8 8 L8 2 L32 2 L32 8" stroke="#598b9d" strokeWidth="1.5" fill="#f2fcfd" />
           {/* Puerta plegada bi-fold - parte inferior (en ángulo, bisagra central) */}
-          <path d="M8 8 L20 12 L32 8" stroke="#0891b2" strokeWidth="1.5" fill="#cffafe" />
+          <path d="M8 8 L20 12 L32 8" stroke="#598b9d" strokeWidth="1.5" fill="#dff6f8" />
           {/* Línea de bisagra central */}
-          <circle cx="20" cy="12" r="1" fill="#0891b2" />
+          <circle cx="20" cy="12" r="1" fill="#598b9d" />
           {/* Flechas indicando plegado */}
-          <path d="M5 5 Q3 10 6 11" stroke="#0891b2" strokeWidth="1" fill="none" strokeLinecap="round" />
-          <path d="M35 5 Q37 10 34 11" stroke="#0891b2" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M5 5 Q3 10 6 11" stroke="#598b9d" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M35 5 Q37 10 34 11" stroke="#598b9d" strokeWidth="1" fill="none" strokeLinecap="round" />
           {/* Interior visible */}
           <line x1="10" y1="24" x2="30" y2="24" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           <line x1="10" y1="30" x2="30" y2="30" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
           {/* Etiqueta HF */}
-          <text x="20" y="21" textAnchor="middle" fontSize="5" fill="#0891b2" fontWeight="bold">HF</text>
+          <text x="20" y="21" textAnchor="middle" fontSize="5" fill="#598b9d" fontWeight="bold">HF</text>
           <GolaClip />
         </svg>
       );
@@ -119,7 +119,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="8" width="24" height="24" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <rect x="12" y="12" width="12" height="10" rx="1" stroke={stroke} strokeWidth="1.5" fill="#dbeafe" />
+          <rect x="12" y="12" width="12" height="10" rx="1" stroke={stroke} strokeWidth="1.5" fill="#e1e9f5" />
           <circle cx="28" cy="17" r="2" fill={stroke} />
           <circle cx="28" cy="23" r="1.5" fill={stroke} />
           <GolaClip />
@@ -133,7 +133,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <rect x="12" y="10" width="16" height="12" rx="1" stroke={stroke} strokeWidth="1.5" fill="#fef3c7" />
+          <rect x="12" y="10" width="16" height="12" rx="1" stroke={stroke} strokeWidth="1.5" fill="#f8f3de" />
           <line x1="12" y1="26" x2="28" y2="26" stroke={stroke} strokeWidth="1" />
           <line x1="12" y1="30" x2="28" y2="30" stroke={stroke} strokeWidth="1" />
           <GolaClip />
@@ -146,8 +146,8 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <rect x="12" y="7" width="16" height="8" rx="1" stroke={stroke} strokeWidth="1" fill="#dbeafe" />
-          <rect x="12" y="18" width="16" height="10" rx="1" stroke={stroke} strokeWidth="1" fill="#fef3c7" />
+          <rect x="12" y="7" width="16" height="8" rx="1" stroke={stroke} strokeWidth="1" fill="#e1e9f5" />
+          <rect x="12" y="18" width="16" height="10" rx="1" stroke={stroke} strokeWidth="1" fill="#f8f3de" />
           <line x1="12" y1="32" x2="28" y2="32" stroke={stroke} strokeWidth="1" />
           <GolaClip />
         </svg>
@@ -159,10 +159,10 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <circle cx="15" cy="10" r="3" stroke={stroke} strokeWidth="1.5" fill="#fecaca" />
-          <circle cx="25" cy="10" r="3" stroke={stroke} strokeWidth="1.5" fill="#fecaca" />
-          <circle cx="15" cy="18" r="3" stroke={stroke} strokeWidth="1.5" fill="#fecaca" />
-          <circle cx="25" cy="18" r="3" stroke={stroke} strokeWidth="1.5" fill="#fecaca" />
+          <circle cx="15" cy="10" r="3" stroke={stroke} strokeWidth="1.5" fill="#f3cfce" />
+          <circle cx="25" cy="10" r="3" stroke={stroke} strokeWidth="1.5" fill="#f3cfce" />
+          <circle cx="15" cy="18" r="3" stroke={stroke} strokeWidth="1.5" fill="#f3cfce" />
+          <circle cx="25" cy="18" r="3" stroke={stroke} strokeWidth="1.5" fill="#f3cfce" />
           <GolaClip />
         </svg>
       );
@@ -173,7 +173,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <ellipse cx="20" cy="14" rx="10" ry="6" stroke={stroke} strokeWidth="1.5" fill="#bfdbfe" />
+          <ellipse cx="20" cy="14" rx="10" ry="6" stroke={stroke} strokeWidth="1.5" fill="#cadaee" />
           <circle cx="20" cy="14" r="2" fill={stroke} />
           <line x1="20" y1="20" x2="20" y2="28" stroke={stroke} strokeWidth="1.5" />
           <GolaClip />
@@ -186,9 +186,9 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <rect x="14" y="10" width="12" height="20" rx="2" stroke={stroke} strokeWidth="1.5" fill="#e0f2fe" />
-          <circle cx="20" cy="16" r="2" fill="#0284c7" />
-          <path d="M18 24 L22 24 L20 28 Z" fill="#ef4444" />
+          <rect x="14" y="10" width="12" height="20" rx="2" stroke={stroke} strokeWidth="1.5" fill="#e7f1f7" />
+          <circle cx="20" cy="16" r="2" fill="#5182a7" />
+          <path d="M18 24 L22 24 L20 28 Z" fill="#d5635c" />
           <GolaClip />
         </svg>
       );
@@ -227,8 +227,8 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <rect x="10" y="10" width="20" height="20" rx="1" stroke={stroke} strokeWidth="1" fill="#ecfccb" />
-          <path d="M20 15 L25 20 L20 25 L15 20 Z" stroke="#65a30d" strokeWidth="1.5" fill="none" />
+          <rect x="10" y="10" width="20" height="20" rx="1" stroke={stroke} strokeWidth="1" fill="#f0f8e1" />
+          <path d="M20 15 L25 20 L20 25 L15 20 Z" stroke="#7c9a63" strokeWidth="1.5" fill="none" />
           <GolaClip />
         </svg>
       );
@@ -239,11 +239,11 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <circle cx="14" cy="12" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
-          <circle cx="26" cy="12" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
-          <circle cx="14" cy="22" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
-          <circle cx="26" cy="22" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
-          <circle cx="20" cy="32" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
+          <circle cx="14" cy="12" r="3" stroke={stroke} strokeWidth="1" fill="#f1d3d6" />
+          <circle cx="26" cy="12" r="3" stroke={stroke} strokeWidth="1" fill="#f1d3d6" />
+          <circle cx="14" cy="22" r="3" stroke={stroke} strokeWidth="1" fill="#f1d3d6" />
+          <circle cx="26" cy="22" r="3" stroke={stroke} strokeWidth="1" fill="#f1d3d6" />
+          <circle cx="20" cy="32" r="3" stroke={stroke} strokeWidth="1" fill="#f1d3d6" />
           <GolaClip />
         </svg>
       );
@@ -257,7 +257,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
           <line x1="15" y1="8" x2="15" y2="32" stroke={stroke} strokeWidth="2" />
           <line x1="20" y1="8" x2="20" y2="32" stroke={stroke} strokeWidth="2" />
           <line x1="25" y1="8" x2="25" y2="32" stroke={stroke} strokeWidth="2" />
-          <rect x="12" y="30" width="16" height="4" rx="1" fill="#a8a29e" />
+          <rect x="12" y="30" width="16" height="4" rx="1" fill="#a7a29f" />
           <GolaClip />
         </svg>
       );
@@ -338,7 +338,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
           <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <rect x="12" y="8" width="16" height="22" rx="1" stroke={stroke} strokeWidth="1" fill="#dbeafe" opacity="0.5" />
+          <rect x="12" y="8" width="16" height="22" rx="1" stroke={stroke} strokeWidth="1" fill="#e1e9f5" opacity="0.5" />
           <circle cx="28" cy="20" r="2" fill={stroke} />
           <GolaClip />
         </svg>
@@ -349,7 +349,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'COS':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="4" y="4" width="8" height="32" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#fef3c7" />
+          <rect x="4" y="4" width="8" height="32" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#f8f3de" />
           <rect x="14" y="8" width="22" height="24" rx="1" stroke={stroke} strokeWidth="1" strokeDasharray="3 2" fill="none" opacity="0.4" />
           <GolaClip />
         </svg>
@@ -360,7 +360,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'EST':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="4" y="16" width="32" height="8" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#dbeafe" />
+          <rect x="4" y="16" width="32" height="8" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#e1e9f5" />
           <line x1="4" y1="20" x2="36" y2="20" stroke={stroke} strokeWidth="1" opacity="0.5" />
           <GolaClip />
         </svg>
@@ -371,7 +371,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'REG':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="4" y="14" width="32" height="12" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#e0e7ff" />
+          <rect x="4" y="14" width="32" height="12" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#e3e7f5" />
           <line x1="8" y1="20" x2="32" y2="20" stroke={stroke} strokeWidth="1" />
           <GolaClip />
         </svg>
@@ -382,7 +382,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'PTA':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#fef9c3" />
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#faf8df" />
           <circle cx="28" cy="20" r="2" fill={stroke} />
           <rect x="10" y="6" width="20" height="28" rx="1" stroke={stroke} strokeWidth="0.5" fill="none" />
           <GolaClip />
@@ -394,8 +394,8 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'VIT':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#dbeafe" />
-          <rect x="10" y="6" width="20" height="28" rx="1" stroke={stroke} strokeWidth="0.5" fill="#bfdbfe" opacity="0.5" />
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#e1e9f5" />
+          <rect x="10" y="6" width="20" height="28" rx="1" stroke={stroke} strokeWidth="0.5" fill="#cadaee" opacity="0.5" />
           <circle cx="28" cy="20" r="2" fill={stroke} />
           <GolaClip />
         </svg>
@@ -406,7 +406,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'COR':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <path d="M4 30 L4 20 Q4 14 10 14 L30 14 Q36 14 36 20 L36 30" stroke={stroke} strokeWidth={strokeWidth} fill="#fde68a" />
+          <path d="M4 30 L4 20 Q4 14 10 14 L30 14 Q36 14 36 20 L36 30" stroke={stroke} strokeWidth={strokeWidth} fill="#f1e7bd" />
           <line x1="4" y1="30" x2="36" y2="30" stroke={stroke} strokeWidth="1.5" />
           <GolaClip />
         </svg>
@@ -417,7 +417,7 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'ZOC':
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="4" y="28" width="32" height="8" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#d4d4d8" />
+          <rect x="4" y="28" width="32" height="8" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#d4d4d7" />
           <line x1="4" y1="32" x2="36" y2="32" stroke={stroke} strokeWidth="1" opacity="0.5" />
           <GolaClip />
         </svg>

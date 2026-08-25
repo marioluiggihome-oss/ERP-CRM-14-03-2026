@@ -347,12 +347,12 @@ const DirectorTab = () => {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={directorTrends.monthly || []}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ee" />
                         <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
                         <Tooltip formatter={(value) => formatCurrency(value)} labelStyle={{ fontWeight: 'bold' }} />
-                        <Bar dataKey="wonValue" fill="#22c55e" name="Ventas Cerradas" radius={[4,4,0,0]} />
-                        <Bar dataKey="createdValue" fill="#3b82f6" name="Creadas" radius={[4,4,0,0]} />
+                        <Bar dataKey="wonValue" fill="#75b882" name="Ventas Cerradas" radius={[4,4,0,0]} />
+                        <Bar dataKey="createdValue" fill="#5f87c9" name="Creadas" radius={[4,4,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -364,13 +364,13 @@ const DirectorTab = () => {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={directorTrends.monthly || []}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ee" />
                         <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip />
-                        <Line type="monotone" dataKey="created" stroke="#6366f1" strokeWidth={2} name="Creadas" dot={{ r: 4 }} />
-                        <Line type="monotone" dataKey="won" stroke="#22c55e" strokeWidth={2} name="Ganadas" dot={{ r: 4 }} />
-                        <Line type="monotone" dataKey="lost" stroke="#ef4444" strokeWidth={2} name="Perdidas" dot={{ r: 4 }} />
+                        <Line type="monotone" dataKey="created" stroke="#6b74c1" strokeWidth={2} name="Creadas" dot={{ r: 4 }} />
+                        <Line type="monotone" dataKey="won" stroke="#75b882" strokeWidth={2} name="Ganadas" dot={{ r: 4 }} />
+                        <Line type="monotone" dataKey="lost" stroke="#d5635c" strokeWidth={2} name="Perdidas" dot={{ r: 4 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

@@ -87,7 +87,7 @@ export default function CarpinterosUsers({ onClose }) {
     <div className="fixed inset-0 z-[9998] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 bg-stone-900 text-white">
-          <h3 className="font-black flex items-center gap-2"><Users size={18} style={{ color: '#D4A373' }} /> Mi división</h3>
+          <h3 className="font-black flex items-center gap-2"><Users size={18} style={{ color: '#c5a88d' }} /> Mi división</h3>
           <button onClick={onClose} className="p-1.5 text-stone-400 hover:text-white"><X size={18} /></button>
         </div>
 

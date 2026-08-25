@@ -83,17 +83,17 @@ const FichaObra = ({ d, estado, onEstado, mapUrl, onVolver }) => {
     const w = window.open('', '_blank');
     if (!w) return;
     w.document.write(`<!DOCTYPE html><html><head><title>Ficha · ${d.name || 'Promoción'}</title><style>
-      body { font-family: system-ui, -apple-system, sans-serif; color: #0f172a; padding: 32px; max-width: 800px; margin: 0 auto; line-height: 1.5; }
-      .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-      h1 { color: #1e1b4b; font-size: 24px; margin: 0 0 4px 0; font-weight: 900; }
-      .promoter { color: #475569; font-weight: 700; font-size: 14px; }
-      .badge { padding: 4px 10px; background: #e0e7ff; color: #3730a3; border-radius: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      body { font-family: system-ui, -apple-system, sans-serif; color: #111726; padding: 32px; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+      .header { border-bottom: 2px solid #e3e8ee; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+      h1 { color: #1f203b; font-size: 24px; margin: 0 0 4px 0; font-weight: 900; }
+      .promoter { color: #4a5564; font-weight: 700; font-size: 14px; }
+      .badge { padding: 4px 10px; background: #e3e7f5; color: #3b3f7d; border-radius: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
       .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-      .item { border: 1px solid #f1f5f9; background: #f8fafc; padding: 12px; border-radius: 8px; }
-      .label { text-transform: uppercase; font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.5px; margin-bottom: 4px; }
-      .value { font-size: 14px; color: #0f172a; font-weight: 700; word-break: break-word; }
+      .item { border: 1px solid #f2f5f8; background: #f8fafb; padding: 12px; border-radius: 8px; }
+      .label { text-transform: uppercase; font-size: 10px; font-weight: 800; color: #687485; letter-spacing: 0.5px; margin-bottom: 4px; }
+      .value { font-size: 14px; color: #111726; font-weight: 700; word-break: break-word; }
       .full { grid-column: span 2; }
-      .footer { margin-top: 30px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+      .footer { margin-top: 30px; font-size: 11px; color: #97a3b2; text-align: center; border-top: 1px solid #e3e8ee; padding-top: 12px; }
       @media print { body { padding: 0; } }
     </style></head><body>
       <div class="header">
@@ -239,11 +239,11 @@ const PropData = ({ state }) => {
     const w = window.open('', '_blank');
     if (!w) return;
     w.document.write(`<html><head><title>Obra nueva · ${location}</title><style>
-      body{font-family:Arial,sans-serif;color:#1f2937;padding:24px}
-      h1{color:#312e81;font-size:20px;margin:0 0 4px} .meta{color:#64748b;font-size:12px;margin-bottom:16px}
-      .obra{border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;break-inside:avoid}
-      .top{display:flex;justify-content:space-between;font-size:14px} .tag{color:#6d28d9;font-weight:700;font-size:11px}
-      .sub{color:#475569;font-size:12px} .det{color:#64748b;font-size:11px;margin-top:2px}
+      body{font-family:Arial,sans-serif;color:#212934;padding:24px}
+      h1{color:#343765;font-size:20px;margin:0 0 4px} .meta{color:#687485;font-size:12px;margin-bottom:16px}
+      .obra{border:1px solid #e3e8ee;border-radius:10px;padding:10px 12px;margin-bottom:8px;break-inside:avoid}
+      .top{display:flex;justify-content:space-between;font-size:14px} .tag{color:#654da8;font-weight:700;font-size:11px}
+      .sub{color:#4a5564;font-size:12px} .det{color:#687485;font-size:11px;margin-top:2px}
       @media print{.no-print{display:none}}
     </style></head><body>
       <h1>Promociones de obra nueva — ${location}</h1>

@@ -123,13 +123,13 @@ const DashboardTab = () => {
               </h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={dashboardMetrics.monthlyTrend || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e3e8ee" />
                   <XAxis dataKey="name" tick={{fontSize: 12}} />
                   <YAxis tick={{fontSize: 12}} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="pedidos" name="Pedidos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="presupuestos" name="Presupuestos" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pedidos" name="Pedidos" fill="#5f87c9" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="presupuestos" name="Presupuestos" fill="#8572c7" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -144,11 +144,11 @@ const DashboardTab = () => {
                 <RechartsPie>
                   <Pie
                     data={[
-                      { name: 'Borrador', value: dashboardMetrics.production?.byStatus?.draft || 0, color: '#94a3b8' },
-                      { name: 'Confirmado', value: dashboardMetrics.production?.byStatus?.confirmed || 0, color: '#3b82f6' },
-                      { name: 'En Producción', value: dashboardMetrics.production?.byStatus?.in_production || 0, color: '#f59e0b' },
-                      { name: 'Listo', value: dashboardMetrics.production?.byStatus?.ready || 0, color: '#10b981' },
-                      { name: 'Entregado', value: dashboardMetrics.production?.byStatus?.delivered || 0, color: '#8b5cf6' },
+                      { name: 'Borrador', value: dashboardMetrics.production?.byStatus?.draft || 0, color: '#97a3b2' },
+                      { name: 'Confirmado', value: dashboardMetrics.production?.byStatus?.confirmed || 0, color: '#5f87c9' },
+                      { name: 'En Producción', value: dashboardMetrics.production?.byStatus?.in_production || 0, color: '#d5ab7c' },
+                      { name: 'Listo', value: dashboardMetrics.production?.byStatus?.ready || 0, color: '#6bae8e' },
+                      { name: 'Entregado', value: dashboardMetrics.production?.byStatus?.delivered || 0, color: '#8572c7' },
                     ].filter(d => d.value > 0)}
                     cx="50%"
                     cy="50%"
@@ -159,11 +159,11 @@ const DashboardTab = () => {
                     label={({name, value}) => `${name}: ${value}`}
                   >
                     {[
-                      { name: 'Borrador', value: dashboardMetrics.production?.byStatus?.draft || 0, color: '#94a3b8' },
-                      { name: 'Confirmado', value: dashboardMetrics.production?.byStatus?.confirmed || 0, color: '#3b82f6' },
-                      { name: 'En Producción', value: dashboardMetrics.production?.byStatus?.in_production || 0, color: '#f59e0b' },
-                      { name: 'Listo', value: dashboardMetrics.production?.byStatus?.ready || 0, color: '#10b981' },
-                      { name: 'Entregado', value: dashboardMetrics.production?.byStatus?.delivered || 0, color: '#8b5cf6' },
+                      { name: 'Borrador', value: dashboardMetrics.production?.byStatus?.draft || 0, color: '#97a3b2' },
+                      { name: 'Confirmado', value: dashboardMetrics.production?.byStatus?.confirmed || 0, color: '#5f87c9' },
+                      { name: 'En Producción', value: dashboardMetrics.production?.byStatus?.in_production || 0, color: '#d5ab7c' },
+                      { name: 'Listo', value: dashboardMetrics.production?.byStatus?.ready || 0, color: '#6bae8e' },
+                      { name: 'Entregado', value: dashboardMetrics.production?.byStatus?.delivered || 0, color: '#8572c7' },
                     ].filter(d => d.value > 0).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}

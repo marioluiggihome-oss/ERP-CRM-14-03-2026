@@ -360,9 +360,9 @@ const LuiggiFloor = ({ currentUser }) => {
     const prod = d.prod;
     if (prod?.image) {
       try { pdf.addImage(prod.image, imgFormat(prod.image), 14, y, W - 28, bandH); }
-      catch (_) { const [r, g, b] = hexToRgb(prod.swatchTo || '#c9c2b3'); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F'); }
+      catch (_) { const [r, g, b] = hexToRgb(prod.swatchTo || '#c6c2ba'); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F'); }
     } else {
-      const [r, g, b] = hexToRgb(prod?.swatchTo || '#c9c2b3'); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F');
+      const [r, g, b] = hexToRgb(prod?.swatchTo || '#c6c2ba'); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F');
     }
     y += bandH + 9;
 
@@ -453,7 +453,7 @@ const LuiggiFloor = ({ currentUser }) => {
   // ── Descargar copia (PDF/presupuesto) de un pedido guardado ──
   const downloadOrderPDF = (o) => {
     const it = (o.items || [])[0] || {};
-    const prod = items.find(p => p.id === (it.productId || it.id)) || { swatchTo: '#c9c2b3', image: it.image };
+    const prod = items.find(p => p.id === (it.productId || it.id)) || { swatchTo: '#c6c2ba', image: it.image };
     const rows = (o.items || []).map(x => [
       `${x.name}${x.dims ? ` (${x.dims})` : ''}`,
       `${x.paquetes} paq · ${m2fmt(x.m2)} · ${eur(x.pricePerM2 || x.netoM2 || 0)}/m²`,

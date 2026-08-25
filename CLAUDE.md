@@ -269,6 +269,36 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      panel NO da un total que sume los tres montones — son promesas de distinto
      valor. Candado: `test_calculo_liquidaciones.py`.
 
+18. **El COLOR del ERP se genera, no se escribe a mano** (25/08). El master:
+   «colores que no griten, que queden bien y que quede todo bastante integrado
+   y moderno». El aspecto no salía de ningún sitio central — 92 componentes y
+   78.000 líneas repitiendo clases de Tailwind, con los tokens de shadcn sin
+   usar. Ahora la paleta vive en `frontend/paleta.generada.js`, que sale de
+   `herramientas/paleta_erp.py`: los colores de Tailwind con la **misma
+   luminosidad y menos saturación**.
+   - **La L no se toca.** Los contrastes de las 92 pantallas dependen de la
+     luminosidad, no de la saturación: bajando solo la C, un `bg-indigo-600`
+     sigue siendo igual de oscuro y el blanco encima se sigue leyendo. Única
+     excepción: tres colores (fuchsia, pink, rose en el tono 600) que al
+     apagarse cruzaban por debajo de 4,5 de contraste y se oscurecieron lo
+     justo. Regla: **apagar no puede tumbar un contraste que antes aprobaba**;
+     lo que ya venía suspenso de Tailwind se deja como está.
+   - **UNA sola clave `colors` en `tailwind.config.js`.** La primera versión
+     metió una segunda y en JavaScript gana la última: la paleta entera se
+     descartó EN SILENCIO — fichero escrito, build en verde, pantalla igual.
+   - Los **1.279 hexadecimales sueltos** de los componentes (estilos en línea,
+     degradados, iconos) se apagan con `herramientas/apagar_hex_sueltos.py`:
+     no pasan por Tailwind, y apagar solo las clases habría dejado media
+     pantalla gritando al lado de la otra media.
+   - **Pesos de letra:** `font-bold` pesa 600 y `font-black` 700 (eran 700 y
+     900). Había 2.132 y 1.929 usos contra 29 `font-semibold`: si todo va en
+     negrísima no hay jerarquía y nada destaca. Y ahora son pesos que Inter
+     descarga de verdad — antes se pedía 700 sin estar en el `@import` y el
+     navegador lo falsificaba.
+   - Candado: `test_pantalla_paleta_apagada.py`. Hace falta porque **ningún
+     otro candado mira cómo se VE**: todos vigilan el cálculo y lo que la
+     pantalla dice, así que un cambio estético entra entero con el CI en verde.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

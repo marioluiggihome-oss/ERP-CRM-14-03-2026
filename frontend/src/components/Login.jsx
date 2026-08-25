@@ -16,13 +16,13 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Marca Luiggi Floor (división de suelo SPC). Si el admin subió un logo, se usa
 // esa imagen; si no, una representación tipográfica con el oro de la marca
-// (#CAA968), siempre sobre fondo oscuro como el logotipo original.
+// (#beac88), siempre sobre fondo oscuro como el logotipo original.
 const FloorBrand = ({ src, big = false }) => (
   <div className={`inline-flex items-center justify-center rounded-2xl bg-zinc-950 shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
     {src ? (
       <img src={src} alt="Floor" className={`${big ? 'h-16' : 'h-9'} w-auto object-contain`} />
     ) : (
-      <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#CAA968' }}>
+      <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#beac88' }}>
         <span className={`${big ? 'text-4xl' : 'text-xl'} italic`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>luiggi</span>
         <span className={`${big ? 'text-sm mt-1.5' : 'text-[9px] mt-1'} font-bold tracking-[0.45em]`}>FLOOR</span>
       </div>
@@ -50,7 +50,7 @@ const CarpBrand = ({ big = false }) => (
       alt="carpinter.io"
       style={{ height: big ? 64 : 40, width: 'auto', objectFit: 'contain' }}
     />
-    <span className={`${big ? 'text-[10px] mt-2' : 'text-[8px] mt-1'} font-bold tracking-[0.4em] text-[#C4622D]`}>CARPINTEROS · EBANISTAS</span>
+    <span className={`${big ? 'text-[10px] mt-2' : 'text-[8px] mt-1'} font-bold tracking-[0.4em] text-[#aa7257]`}>CARPINTEROS · EBANISTAS</span>
   </div>
 );
 
@@ -80,7 +80,7 @@ const isStudio3kDirect = () => {
 
 const Studio3kBrand = ({ big = false }) => (
   <div className={`inline-flex items-baseline font-bold tracking-tight ${big ? 'text-5xl' : 'text-2xl'}`}>
-    <span className="text-white">studio</span><span className="text-[#4B6BFF]">3k</span>
+    <span className="text-white">studio</span><span className="text-[#5f78ca]">3k</span>
   </div>
 );
 
@@ -303,7 +303,7 @@ const Login = ({ onLogin, customLogo }) => {
     : 'https://static.prod-images.emergentagent.com/jobs/b3965c3e-ccdc-4506-be7a-5d947275bca3/images/34360bf741aea83455380cd7a1a3e4f5cf9c6771d54283a4efe0ac8d2bf300d3.png';
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden font-sans" style={{ backgroundColor: brand === 'carpinteros' ? '#2a2119' : '#0f172a' }}>
+    <div className="fixed inset-0 flex overflow-hidden font-sans" style={{ backgroundColor: brand === 'carpinteros' ? '#2a2119' : '#111726' }}>
       {/* Full Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -330,7 +330,7 @@ const Login = ({ onLogin, customLogo }) => {
                 <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
                   TU SUELO<br />
                   TU ESPACIO<br />
-                  <span style={{ color: '#CAA968' }}>TU ESTILO</span>
+                  <span style={{ color: '#beac88' }}>TU ESTILO</span>
                 </h1>
                 <p className="text-white/70 text-lg">
                   Suelo SPC porcelánico — red de distribución Floor.
@@ -342,7 +342,7 @@ const Login = ({ onLogin, customLogo }) => {
                 <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
                   TU TALLER<br />
                   TU OFICIO<br />
-                  <span style={{ color: '#D4A373' }}>TU NEGOCIO</span>
+                  <span style={{ color: '#c5a88d' }}>TU NEGOCIO</span>
                 </h1>
                 <p className="text-white/70 text-lg">
                   Herramientas profesionales para carpinteros y ebanistas.
@@ -354,7 +354,7 @@ const Login = ({ onLogin, customLogo }) => {
                 <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
                   TU COCINA<br />
                   TU PROYECTO<br />
-                  <span style={{ color: '#4B6BFF' }}>EN 3D</span>
+                  <span style={{ color: '#5f78ca' }}>EN 3D</span>
                 </h1>
                 <p className="text-white/70 text-lg">
                   Tu entorno profesional para diseñar, presentar y vender cocinas.

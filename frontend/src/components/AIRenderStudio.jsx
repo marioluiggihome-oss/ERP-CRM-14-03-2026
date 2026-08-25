@@ -70,17 +70,17 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Cada instalación indica en qué tipos de proyecto tiene sentido (`tipos`). Así la
 // paleta de marcado y la detección automática se adaptan a cocina / armario / baño.
 const MARK_TYPES = {
-  enchufe:  { label: 'Enchufe', color: '#f59e0b', h: 110, Icon: PlugZap, tipos: ['cocina', 'armario', 'bano', 'otro'] },
-  agua:     { label: 'Toma agua', color: '#0ea5e9', h: 50, Icon: Droplet, tipos: ['cocina', 'bano'] },
-  desague:  { label: 'Desagüe', color: '#64748b', h: 40, Icon: Waves, tipos: ['cocina', 'bano'] },
-  lavadora: { label: 'Toma lavadora', color: '#0891b2', h: 90, Icon: Droplet, tipos: ['cocina', 'bano'] },
-  gas:      { label: 'Gas', color: '#ef4444', h: 55, Icon: Flame, tipos: ['cocina'] },
-  luz:      { label: 'Punto de luz', color: '#eab308', h: 220, Icon: Lightbulb, tipos: ['cocina', 'armario', 'bano', 'otro'] },
-  campana:  { label: 'Luz campana', color: '#334155', h: 160, Icon: Fan, tipos: ['cocina'] },
-  vitrina:  { label: 'Luz vitrina', color: '#a855f7', h: 160, Icon: Lamp, tipos: ['cocina'] },
-  toallero: { label: 'Toallero / radiador', color: '#f97316', h: 120, Icon: Flame, tipos: ['bano'] },
-  tv:       { label: 'TV / antena', color: '#8b5cf6', h: 120, Icon: Tv, tipos: ['cocina', 'armario', 'otro'] },
-  datos:    { label: 'Datos / red', color: '#10b981', h: 30, Icon: Wifi, tipos: ['cocina', 'armario', 'bano', 'otro'] },
+  enchufe:  { label: 'Enchufe', color: '#d5ab7c', h: 110, Icon: PlugZap, tipos: ['cocina', 'armario', 'bano', 'otro'] },
+  agua:     { label: 'Toma agua', color: '#66a2c7', h: 50, Icon: Droplet, tipos: ['cocina', 'bano'] },
+  desague:  { label: 'Desagüe', color: '#687485', h: 40, Icon: Waves, tipos: ['cocina', 'bano'] },
+  lavadora: { label: 'Toma lavadora', color: '#598b9d', h: 90, Icon: Droplet, tipos: ['cocina', 'bano'] },
+  gas:      { label: 'Gas', color: '#d5635c', h: 55, Icon: Flame, tipos: ['cocina'] },
+  luz:      { label: 'Punto de luz', color: '#d2b985', h: 220, Icon: Lightbulb, tipos: ['cocina', 'armario', 'bano', 'otro'] },
+  campana:  { label: 'Luz campana', color: '#364150', h: 160, Icon: Fan, tipos: ['cocina'] },
+  vitrina:  { label: 'Luz vitrina', color: '#9973c8', h: 160, Icon: Lamp, tipos: ['cocina'] },
+  toallero: { label: 'Toallero / radiador', color: '#d08e6c', h: 120, Icon: Flame, tipos: ['bano'] },
+  tv:       { label: 'TV / antena', color: '#8572c7', h: 120, Icon: Tv, tipos: ['cocina', 'armario', 'otro'] },
+  datos:    { label: 'Datos / red', color: '#6bae8e', h: 30, Icon: Wifi, tipos: ['cocina', 'armario', 'bano', 'otro'] },
 };
 
 // ─── Hook para Web Speech API ────────────────────────────────────────────────
@@ -875,7 +875,7 @@ export default function AIRenderStudio({ state, setState }) {
     im.onload = () => {
       const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
       const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, 0, cw, ch);
+      ctx.fillStyle = '#e3e8ee'; ctx.fillRect(0, 0, cw, ch);
       const sc = Math.min(cw / im.width, ch / im.height);
       const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
       ctx.drawImage(im, dx, dy, dw, dh);
@@ -925,7 +925,7 @@ export default function AIRenderStudio({ state, setState }) {
     im.onload = () => {
       const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
       const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, 0, cw, ch);
+      ctx.fillStyle = '#e3e8ee'; ctx.fillRect(0, 0, cw, ch);
       const sc = Math.min(cw / im.width, ch / im.height);
       const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
       ctx.drawImage(im, dx, dy, dw, dh);

@@ -272,6 +272,6 @@ export const CATALOG_BASE_DESPIECE = [
   },
 ];
 
-export const DEFAULT_BRAND_COLOR = '#ea580c';
+export const DEFAULT_BRAND_COLOR = '#c0795f';
 
 export const STORAGE_KEY = 'luiggi_industrial_v3_master_stable';

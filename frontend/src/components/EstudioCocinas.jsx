@@ -1021,7 +1021,7 @@ export default function EstudioCocinas({ state, setState }) {
   const handlePdfExport = useCallback((content, filename) => {
     const w = window.open('', '_blank');
     const isHtml = content && content.trim().startsWith('<');
-    w.document.write(`<html><head><title>${filename}</title><style>body{font-family:sans-serif;padding:30px;color:#333;max-width:900px;margin:0 auto}pre{white-space:pre-wrap;font-size:12px;background:#f5f5f5;padding:15px;border-radius:8px}img{max-width:100%;border-radius:8px}h1,h2,h3{color:#b45309}@media print{button{display:none}}</style></head><body><h2 style="color:#b45309;margin-bottom:4px">3D Estudio — ${proy.nombre_cliente || 'Proyecto'}</h2><p style="color:#999;font-size:12px;margin-bottom:20px">${new Date().toLocaleDateString('es-ES')}</p>${isHtml ? content : `<pre>${content}</pre>`}<script>window.onload=()=>{window.print()}<\/script></body></html>`);
+    w.document.write(`<html><head><title>${filename}</title><style>body{font-family:sans-serif;padding:30px;color:#333;max-width:900px;margin:0 auto}pre{white-space:pre-wrap;font-size:12px;background:#f5f5f5;padding:15px;border-radius:8px}img{max-width:100%;border-radius:8px}h1,h2,h3{color:#95674e}@media print{button{display:none}}</style></head><body><h2 style="color:#95674e;margin-bottom:4px">3D Estudio — ${proy.nombre_cliente || 'Proyecto'}</h2><p style="color:#999;font-size:12px;margin-bottom:20px">${new Date().toLocaleDateString('es-ES')}</p>${isHtml ? content : `<pre>${content}</pre>`}<script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
   }, [proy.nombre_cliente]);
 

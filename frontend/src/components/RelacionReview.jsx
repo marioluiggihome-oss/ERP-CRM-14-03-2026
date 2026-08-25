@@ -494,20 +494,20 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
         : mano === null ? 'Sin decidir' : '—';
       const nota = (m.nota || '').trim();
       return `
-      <tr style="border-bottom: ${nota ? 'none' : '1px solid #e2e8f0'}; font-size: 13px;">
-        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #475569;">${idx + 1}</td>
-        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #4338ca;">${m.qty}</td>
-        <td style="padding: 8px 12px; font-weight: bold; color: #0f172a;">${esc(m.cod) || '—'}</td>
-        <td style="padding: 8px 12px; color: #475569;">${esc(m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble')}</td>
-        <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.ancho ? m.ancho + ' cm' : '—'}</td>
-        <td style="padding: 8px 12px; text-align: center; color: #334155;">${m.alto ? m.alto + ' cm' : '—'}</td>
-        <td style="padding: 8px 12px; text-align: center; font-weight: bold; ${mano === null ? 'color:#b45309;' : ''}">${manoTxt}</td>
-        <td style="padding: 8px 12px; text-align: right; color: #334155;">${eur(m.pvp)}</td>
-        <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #0f172a;">${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}</td>
+      <tr style="border-bottom: ${nota ? 'none' : '1px solid #e3e8ee'}; font-size: 13px;">
+        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #4a5564;">${idx + 1}</td>
+        <td style="padding: 8px 12px; font-weight: bold; text-align: center; color: #474d9b;">${m.qty}</td>
+        <td style="padding: 8px 12px; font-weight: bold; color: #111726;">${esc(m.cod) || '—'}</td>
+        <td style="padding: 8px 12px; color: #4a5564;">${esc(m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble')}</td>
+        <td style="padding: 8px 12px; text-align: center; color: #364150;">${m.ancho ? m.ancho + ' cm' : '—'}</td>
+        <td style="padding: 8px 12px; text-align: center; color: #364150;">${m.alto ? m.alto + ' cm' : '—'}</td>
+        <td style="padding: 8px 12px; text-align: center; font-weight: bold; ${mano === null ? 'color:#95674e;' : ''}">${manoTxt}</td>
+        <td style="padding: 8px 12px; text-align: right; color: #364150;">${eur(m.pvp)}</td>
+        <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #111726;">${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}</td>
       </tr>
-      ${nota ? `<tr style="border-bottom: 1px solid #e2e8f0; font-size: 12px;">
+      ${nota ? `<tr style="border-bottom: 1px solid #e3e8ee; font-size: 12px;">
         <td></td>
-        <td colspan="8" style="padding: 0 12px 8px 12px; color: #475569; font-style: italic;">${esc(nota)}</td>
+        <td colspan="8" style="padding: 0 12px 8px 12px; color: #4a5564; font-style: italic;">${esc(nota)}</td>
       </tr>` : ''}`;
     }).join('');
 
@@ -517,28 +517,28 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           <meta charset="utf-8"/>
           <title>Relación de Muebles - Cocina Montada MV</title>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 25px; color: #1e293b; }
-            .header { border-bottom: 2px solid #4338ca; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-            .title { font-size: 22px; font-weight: 900; color: #1e1b4b; margin: 0; }
-            .badge { display: inline-block; padding: 4px 10px; background: #e0e7ff; color: #3730a3; border-radius: 6px; font-weight: bold; font-size: 12px; }
-            .badge-casco { display: inline-block; padding: 4px 10px; background: #f1f5f9; color: #334155; border-radius: 6px; font-weight: bold; font-size: 12px; margin-left: 6px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 25px; color: #212937; }
+            .header { border-bottom: 2px solid #474d9b; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-size: 22px; font-weight: 900; color: #1f203b; margin: 0; }
+            .badge { display: inline-block; padding: 4px 10px; background: #e3e7f5; color: #3b3f7d; border-radius: 6px; font-weight: bold; font-size: 12px; }
+            .badge-casco { display: inline-block; padding: 4px 10px; background: #f2f5f8; color: #364150; border-radius: 6px; font-weight: bold; font-size: 12px; margin-left: 6px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #f8fafc; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #cbd5e1; text-align: left; }
-            .total-box { margin-top: 25px; margin-left: auto; width: 280px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; }
+            th { background: #f8fafb; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: #687485; border-bottom: 2px solid #cdd5de; text-align: left; }
+            .total-box { margin-top: 25px; margin-left: auto; width: 280px; background: #f8fafb; border: 1px solid #e3e8ee; border-radius: 12px; padding: 15px; }
             .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-            .total-row.final { border-top: 2px solid #cbd5e1; margin-top: 6px; padding-top: 8px; font-size: 16px; font-weight: bold; color: #4338ca; }
+            .total-row.final { border-top: 2px solid #cdd5de; margin-top: 6px; padding-top: 8px; font-size: 16px; font-weight: bold; color: #474d9b; }
           </style>
         </head>
         <body>
           <div class="header">
             <div>
               <h1 class="title">RELACIÓN DE MUEBLES · COCINA MONTADA</h1>
-              <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">Sistema Oficial de Tarifas MV · Luiggi Home</p>
+              <p style="margin: 4px 0 0 0; color: #687485; font-size: 13px;">Sistema Oficial de Tarifas MV · Luiggi Home</p>
             </div>
             <div style="text-align: right;">
               <span class="badge">Tarifa ${tarifa} (${TARIFAS_NOMBRES[tarifa] || 'Estándar'})</span>
               <span class="badge-casco">Casco: ${acabadoCasco}</span>
-              <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${new Date().toLocaleDateString('es-ES')}</div>
+              <div style="font-size: 11px; color: #97a3b2; margin-top: 4px;">${new Date().toLocaleDateString('es-ES')}</div>
             </div>
           </div>
 

@@ -322,25 +322,25 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           @media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #333; line-height: 1.4; }
-          .header { background: #1e40af; color: white; padding: 20px; margin-bottom: 15px; }
+          .header { background: #324b87; color: white; padding: 20px; margin-bottom: 15px; }
           .header h1 { font-size: 18px; margin-bottom: 5px; }
           .header-subtitle { font-size: 10px; opacity: 0.9; }
-          .info-box { background: #f3f4f6; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; }
+          .info-box { background: #f3f4f6; border: 1px solid #e5e7ea; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; }
           .info-item { text-align: center; }
           .info-label { font-size: 9px; color: #666; text-transform: uppercase; font-weight: bold; }
           .info-value { font-size: 14px; font-weight: bold; margin-top: 3px; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-          th { background: #1e40af; color: white; padding: 10px; font-size: 10px; text-align: left; font-weight: bold; text-transform: uppercase; }
-          td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+          th { background: #324b87; color: white; padding: 10px; font-size: 10px; text-align: left; font-weight: bold; text-transform: uppercase; }
+          td { padding: 10px; border-bottom: 1px solid #e5e7ea; }
           tr:nth-child(even) { background: #f9fafb; }
           .text-center { text-align: center; }
           .text-right { text-align: right; }
           .font-bold { font-weight: bold; }
-          .total-row { background: #dbeafe !important; }
-          .total-row td { font-weight: bold; font-size: 13px; border-top: 2px solid #1e40af; }
+          .total-row { background: #e1e9f5 !important; }
+          .total-row td { font-weight: bold; font-size: 13px; border-top: 2px solid #324b87; }
           .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9px; color: #666; text-align: center; }
-          .veta-badge { background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
-          .color-badge { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+          .veta-badge { background: #def5e9; color: #35594b; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+          .color-badge { background: #f8f3de; color: #78513f; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
         </style>
       </head>
       <body>
@@ -364,9 +364,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           </div>
         </div>
 
-        <div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;padding:10px 14px;margin-bottom:15px;font-size:10px;">
+        <div style="background:#f3f4f6;border:1px solid #d2d5da;border-radius:6px;padding:10px 14px;margin-bottom:15px;font-size:10px;">
           <strong>Tolerancia Puerta (mm):</strong> Alto -${doorToleranceHeight} · Ancho -${doorToleranceWidth}
-          <span style="color:#6b7280;font-style:italic;"> — las medidas de la tabla ya tienen la tolerancia descontada</span>
+          <span style="color:#6c727d;font-style:italic;"> — las medidas de la tabla ya tienen la tolerancia descontada</span>
         </div>
 
         <table>
@@ -457,9 +457,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     const w = window.open('', '_blank');
     w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido de compra</title>
       <style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#222}
-      .h{background:#6d28d9;color:#fff;padding:16px;margin-bottom:14px}.h h1{font-size:18px;margin:0}
+      .h{background:#654da8;color:#fff;padding:16px;margin-bottom:14px}.h h1{font-size:18px;margin:0}
       .info{font-size:11px;color:#555;margin-bottom:14px}h2{font-size:13px;margin:16px 0 6px}
-      table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#ede9fe;text-align:left;padding:8px;font-size:11px}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#edeaf7;text-align:left;padding:8px;font-size:11px}
       td{padding:8px;border-bottom:1px solid #eee}.c{text-align:center}</style></head><body>
       <div class="h"><h1>📦 PEDIDO DE COMPRA — PROVEEDOR</h1></div>
       <div class="info"><strong>Ref. Pedido:</strong> ${ref} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</div>
@@ -539,10 +539,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       <style>@page{size:A4;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0}
       .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
       .lbl{border:1px solid #333;border-radius:4px;padding:6px 8px;height:34mm;display:flex;flex-direction:column;justify-content:space-between;page-break-inside:avoid}
-      .code{font-size:15px;font-weight:800;color:#1e293b}
-      .piece{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase}
-      .dim{font-size:18px;font-weight:800;color:#ea580c}.dim .t{font-size:11px;color:#64748b}
-      .meta{font-size:9px;color:#64748b}.foot{font-size:8px;color:#94a3b8;border-top:1px dashed #cbd5e1;padding-top:3px}
+      .code{font-size:15px;font-weight:800;color:#212937}
+      .piece{font-size:11px;font-weight:700;color:#4a5564;text-transform:uppercase}
+      .dim{font-size:18px;font-weight:800;color:#c0795f}.dim .t{font-size:11px;color:#687485}
+      .meta{font-size:9px;color:#687485}.foot{font-size:8px;color:#97a3b2;border-top:1px dashed #cdd5de;padding-top:3px}
       </style></head><body><div class="grid">${cells}</div></body></html>`);
     w.document.close();
     w.onload = () => w.print();
@@ -793,25 +793,25 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           }
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: Arial, Helvetica, sans-serif; font-size: 9px; color: #333; line-height: 1.3; }
-          .header { background: #1e1b4b; color: white; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+          .header { background: #1f203b; color: white; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
           .header h1 { font-size: 14px; margin: 0; }
           .header-right { text-align: right; font-size: 8px; opacity: 0.8; }
-          .info-bar { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 8px; }
+          .info-bar { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px; background: #f3f4f6; border: 1px solid #e5e7ea; font-size: 8px; }
           .info-item { text-align: center; flex: 1; }
           .info-label { font-size: 7px; color: #666; text-transform: uppercase; font-weight: bold; }
           .info-value { font-size: 10px; font-weight: bold; margin-top: 2px; }
           .summary { display: flex; gap: 6px; margin-bottom: 10px; }
-          .summary-box { flex: 1; padding: 6px 8px; background: #eef2ff; border: 1px solid #c7d2fe; text-align: center; }
-          .summary-number { font-size: 16px; font-weight: bold; color: #4f46e5; }
+          .summary-box { flex: 1; padding: 6px 8px; background: #f0f2fa; border: 1px solid #ccd3ed; text-align: center; }
+          .summary-number { font-size: 16px; font-weight: bold; color: #545cb1; }
           .summary-label { font-size: 7px; color: #666; text-transform: uppercase; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8px; }
-          th { background: #1e1b4b; color: white; padding: 5px 4px; font-size: 7px; text-align: left; font-weight: bold; }
-          td { padding: 4px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+          th { background: #1f203b; color: white; padding: 5px 4px; font-size: 7px; text-align: left; font-weight: bold; }
+          td { padding: 4px; border-bottom: 1px solid #e5e7ea; vertical-align: middle; }
           tr:nth-child(even) { background: #f9fafb; }
-          .furniture-header { background: #fef3c7 !important; font-weight: bold; }
-          .furniture-header td { font-size: 9px; padding: 6px 4px; border-bottom: 2px solid #f59e0b; }
+          .furniture-header { background: #f8f3de !important; font-weight: bold; }
+          .furniture-header td { font-size: 9px; padding: 6px 4px; border-bottom: 2px solid #d5ab7c; }
           .component-row td:first-child { padding-left: 12px; }
-          .section-title { background: #1e1b4b; color: white; padding: 6px 10px; margin: 10px 0 6px 0; font-weight: bold; font-size: 10px; page-break-after: avoid; }
+          .section-title { background: #1f203b; color: white; padding: 6px 10px; margin: 10px 0 6px 0; font-weight: bold; font-size: 10px; page-break-after: avoid; }
           .page-break { page-break-before: always; }
           .avoid-break { page-break-inside: avoid; }
           .footer { margin-top: 15px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 7px; color: #666; text-align: center; }
@@ -823,15 +823,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           .text-right { text-align: right; }
           .text-center { text-align: center; }
           .font-bold { font-weight: bold; }
-          .bg-amber { background: #fef3c7; }
-          .bg-emerald { background: #d1fae5; }
-          .bg-orange { background: #ffedd5; }
-          .bg-blue { background: #dbeafe; }
-          .casco-box { background: #d1fae5; border: 2px solid #10b981; padding: 10px; margin: 8px 0; border-radius: 4px; }
+          .bg-amber { background: #f8f3de; }
+          .bg-emerald { background: #def5e9; }
+          .bg-orange { background: #f7eee3; }
+          .bg-blue { background: #e1e9f5; }
+          .casco-box { background: #def5e9; border: 2px solid #6bae8e; padding: 10px; margin: 8px 0; border-radius: 4px; }
           .casco-dims { display: flex; gap: 15px; justify-content: center; margin-top: 8px; }
           .casco-dim { text-align: center; }
-          .casco-dim .label { font-size: 7px; color: #047857; text-transform: uppercase; }
-          .casco-dim .value { font-size: 16px; font-weight: bold; color: #065f46; }
+          .casco-dim .label { font-size: 7px; color: #43705e; text-transform: uppercase; }
+          .casco-dim .value { font-size: 16px; font-weight: bold; color: #35594b; }
         </style>
       </head>
       <body>
@@ -947,9 +947,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           </div>
         </div>
         ${despieceData?.items?.some(f => f.components?.some(c => c.name?.toLowerCase().includes('puerta') || c.type?.toUpperCase() === 'PUERTA')) ? `
-        <div style="background:#f1f5f9;border:2px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:11px;">
+        <div style="background:#f2f5f8;border:2px solid #cdd5de;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:11px;">
           <strong>Tolerancia Puerta (mm):</strong> Alto -${doorToleranceHeight} · Ancho -${doorToleranceWidth}
-          <span style="color:#64748b;font-style:italic;"> — ya descontada en las medidas de corte de las piezas PUERTA</span>
+          <span style="color:#687485;font-style:italic;"> — ya descontada en las medidas de corte de las piezas PUERTA</span>
         </div>` : ''}
         <div class="section-title">PIEZAS AGRUPADAS POR MATERIAL</div>
       `;
@@ -1129,7 +1129,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <strong style="font-size:11px;">${idx + 1}. ${item.productCode}</strong>
                 <span style="color:#666; font-size:9px;"> - ${item.productName}</span>
               </div>
-              <div style="font-size:10px; color:#ea580c; font-weight:bold;">×${item.itemQuantity || 1}</div>
+              <div style="font-size:10px; color:#c0795f; font-weight:bold;">×${item.itemQuantity || 1}</div>
             </div>
             <div class="casco-dims">
               <div class="casco-dim"><div class="label">Ancho</div><div class="value">${item.originalWidth} cm</div></div>
@@ -1206,20 +1206,20 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         html += `
           <div class="section-title">🎨 RESUMEN DE PUERTAS POR COLOR</div>
           <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <div style="flex:1; background:#dbeafe; border:2px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
-              <div style="font-size:8px; color:#1e40af; font-weight:bold;">P. ALTOS</div>
-              <div style="font-size:20px; font-weight:bold; color:#1e40af;">${totalAltos}</div>
-              <div style="font-size:9px; color:#3b82f6; margin-top:4px;">Color: ${coloresPorTipo.ALTOS}</div>
+            <div style="flex:1; background:#e1e9f5; border:2px solid #5f87c9; padding:10px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:#324b87; font-weight:bold;">P. ALTOS</div>
+              <div style="font-size:20px; font-weight:bold; color:#324b87;">${totalAltos}</div>
+              <div style="font-size:9px; color:#5f87c9; margin-top:4px;">Color: ${coloresPorTipo.ALTOS}</div>
             </div>
-            <div style="flex:1; background:#ffedd5; border:2px solid #f97316; padding:10px; border-radius:8px; text-align:center;">
-              <div style="font-size:8px; color:#c2410c; font-weight:bold;">P. BAJOS</div>
-              <div style="font-size:20px; font-weight:bold; color:#c2410c;">${totalBajos}</div>
-              <div style="font-size:9px; color:#f97316; margin-top:4px;">Color: ${coloresPorTipo.BAJOS}</div>
+            <div style="flex:1; background:#f7eee3; border:2px solid #d08e6c; padding:10px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:#9e604c; font-weight:bold;">P. BAJOS</div>
+              <div style="font-size:20px; font-weight:bold; color:#9e604c;">${totalBajos}</div>
+              <div style="font-size:9px; color:#d08e6c; margin-top:4px;">Color: ${coloresPorTipo.BAJOS}</div>
             </div>
-            <div style="flex:1; background:#ede9fe; border:2px solid #8b5cf6; padding:10px; border-radius:8px; text-align:center;">
-              <div style="font-size:8px; color:#6d28d9; font-weight:bold;">P. COLUMNAS</div>
-              <div style="font-size:20px; font-weight:bold; color:#6d28d9;">${totalColumnas}</div>
-              <div style="font-size:9px; color:#8b5cf6; margin-top:4px;">Color: ${coloresPorTipo.COLUMNAS}</div>
+            <div style="flex:1; background:#edeaf7; border:2px solid #8572c7; padding:10px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:#654da8; font-weight:bold;">P. COLUMNAS</div>
+              <div style="font-size:20px; font-weight:bold; color:#654da8;">${totalColumnas}</div>
+              <div style="font-size:9px; color:#8572c7; margin-top:4px;">Color: ${coloresPorTipo.COLUMNAS}</div>
             </div>
           </div>
         `;
@@ -1230,8 +1230,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           if (puertasTipo.length === 0) return;
           
           const subtotal = puertasTipo.reduce((sum, p) => sum + (p.doorQty * p.itemQuantity), 0);
-          const bgColor = tipo === 'ALTOS' ? '#dbeafe' : tipo === 'BAJOS' ? '#ffedd5' : '#ede9fe';
-          const borderColor = tipo === 'ALTOS' ? '#3b82f6' : tipo === 'BAJOS' ? '#f97316' : '#8b5cf6';
+          const bgColor = tipo === 'ALTOS' ? '#e1e9f5' : tipo === 'BAJOS' ? '#f7eee3' : '#edeaf7';
+          const borderColor = tipo === 'ALTOS' ? '#5f87c9' : tipo === 'BAJOS' ? '#d08e6c' : '#8572c7';
           
           html += `
             <div class="section-title" style="background:${borderColor};">🚪 PUERTAS ${tipo} - Color: ${coloresPorTipo[tipo]}</div>
@@ -1256,7 +1256,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <td class="font-bold">${p.productCode}</td>
                 <td class="text-center">${p.doorHeight}</td>
                 <td class="text-center">${p.doorWidth}</td>
-                <td class="text-center" style="background:${doorHasVeta ? '#d1fae5' : '#f1f5f9'}; color:${doorHasVeta ? '#065f46' : '#64748b'}; font-weight:bold;">${doorHasVeta ? '↕ V' : '— Sin veta'}</td>
+                <td class="text-center" style="background:${doorHasVeta ? '#def5e9' : '#f2f5f8'}; color:${doorHasVeta ? '#35594b' : '#687485'}; font-weight:bold;">${doorHasVeta ? '↕ V' : '— Sin veta'}</td>
                 <td class="text-center">${p.doorQty}</td>
                 <td class="text-center font-bold">${total}</td>
               </tr>
@@ -1271,10 +1271,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         });
         
         html += `
-          <div style="background:${doorHasVeta ? '#d1fae5' : '#f1f5f9'}; padding:8px; border-radius:6px; font-size:9px; color:${doorHasVeta ? '#065f46' : '#64748b'}; margin-top:10px;">
+          <div style="background:${doorHasVeta ? '#def5e9' : '#f2f5f8'}; padding:8px; border-radius:6px; font-size:9px; color:${doorHasVeta ? '#35594b' : '#687485'}; margin-top:10px;">
             <strong>📐 VETA:</strong> ${doorHasVeta ? 'Todas las puertas con veta VERTICAL (↕) - La veta sigue la dirección del ALTO' : 'Las puertas NO llevan veta'}
           </div>
-          <div style="background:#fef3c7; padding:8px; border-radius:6px; font-size:9px; color:#92400e; margin-top:5px;">
+          <div style="background:#f8f3de; padding:8px; border-radius:6px; font-size:9px; color:#78513f; margin-top:5px;">
             <strong>TOTAL GENERAL:</strong> ${totalPuertas} puertas${sideColor ? ` | <strong>Costados:</strong> ${sideColor}` : ''}
           </div>
         `;
@@ -1290,7 +1290,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <tr><td>Correderas (pares)</td><td class="text-right font-bold">${calculateHerrajes?.correderas || 0}</td></tr>
             <tr><td>Tiradores</td><td class="text-right font-bold">${calculateHerrajes?.tiradores || 0} uds</td></tr>
             <tr><td>Soportes de Baldas</td><td class="text-right font-bold">${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
-            ${calculateHerrajes?.colgadores > 0 ? `<tr style="background:#fef3c7;"><td><strong>🪝 Colgadores (juegos)</strong></td><td class="text-right font-bold">${calculateHerrajes.colgadores} (= ${calculateHerrajes.colgadores * 2} uds)</td></tr>` : ''}
+            ${calculateHerrajes?.colgadores > 0 ? `<tr style="background:#f8f3de;"><td><strong>🪝 Colgadores (juegos)</strong></td><td class="text-right font-bold">${calculateHerrajes.colgadores} (= ${calculateHerrajes.colgadores * 2} uds)</td></tr>` : ''}
           </tbody>
         </table>
       `;

@@ -87,7 +87,7 @@ const detectDevTools = () => {
           align-items: center;
           justify-content: center;
           height: 100vh;
-          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          background: linear-gradient(135deg, #212937 0%, #111726 100%);
           color: white;
           font-family: system-ui, -apple-system, sans-serif;
           text-align: center;

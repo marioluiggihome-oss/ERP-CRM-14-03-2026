@@ -154,7 +154,7 @@ const CocinasIA = ({ state }) => {
   const nuevo = () => { if (renders.length && !window.confirm('¿Empezar de cero? Se perderán los renders no descargados.')) return; setRenders([]); setPlans([]); setNotes(''); setCliente(''); setRef(''); setSel(0); setError(''); setSavedId(null); setEditRefImage(null); setCompare(false); };
 
   return (
-    <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-[#eef2ff] overflow-y-auto">
+    <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-[#f0f2fa] overflow-y-auto">
       <div className="hueco-logo rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
         <h1 className="text-base sm:text-lg font-black flex items-center gap-2"><ChefHat size={18} /> Cocinas IA 2 · Render desde plano</h1>
         {/* Widget de créditos de IA */}

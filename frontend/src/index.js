@@ -106,33 +106,33 @@ class ErrorBoundary extends React.Component {
         `\n${window.location.pathname}${window.location.hash || ''}`,
       ].filter(Boolean).join('\n');
       return (
-        <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', background: '#0f172a', minHeight: '100vh', color: 'white' }}>
-          <div style={{ maxWidth: 560, margin: '40px auto', background: '#1e293b', borderRadius: 16, padding: 24, border: '1px solid #334155' }}>
-            <h1 style={{ color: '#f97316', marginBottom: 12, fontSize: 22 }}>⚠️ Algo ha fallado</h1>
-            <p style={{ marginBottom: 16, color: '#cbd5e1', fontSize: 14 }}>
+        <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', background: '#111726', minHeight: '100vh', color: 'white' }}>
+          <div style={{ maxWidth: 560, margin: '40px auto', background: '#212937', borderRadius: 16, padding: 24, border: '1px solid #364150' }}>
+            <h1 style={{ color: '#d08e6c', marginBottom: 12, fontSize: 22 }}>⚠️ Algo ha fallado</h1>
+            <p style={{ marginBottom: 16, color: '#cdd5de', fontSize: 14 }}>
               La aplicación ha encontrado un error inesperado.
             </p>
-            <details style={{ background: '#0f172a', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 12, color: '#94a3b8' }}>
+            <details style={{ background: '#111726', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 12, color: '#97a3b2' }}>
               <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Ver detalles técnicos</summary>
               <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 8 }}>{detalle}</pre>
               {/* Para poder MANDARLO en vez de transcribirlo a mano desde una
                   pantalla de móvil. */}
               <button
                 onClick={() => { try { navigator.clipboard.writeText(detalle); } catch { /* noop */ } }}
-                style={{ marginTop: 10, background: '#334155', color: 'white', border: 'none', padding: '8px 14px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', fontSize: 12 }}
+                style={{ marginTop: 10, background: '#364150', color: 'white', border: 'none', padding: '8px 14px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', fontSize: 12 }}
               >
                 Copiar detalle
               </button>
             </details>
             <button
               onClick={this.handleManualReload}
-              style={{ background: '#22c55e', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 15, marginRight: 10 }}
+              style={{ background: '#75b882', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 15, marginRight: 10 }}
             >
               🔄 Recargar
             </button>
             <button
               onClick={() => { try { localStorage.clear(); sessionStorage.clear(); } catch{}; window.location.reload(); }}
-              style={{ background: '#64748b', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 15 }}
+              style={{ background: '#687485', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 15 }}
             >
               Cerrar sesión y recargar
             </button>

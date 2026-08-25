@@ -19,9 +19,9 @@ import { jsPDF } from 'jspdf';
 
 // Colores para distinguir piezas
 const PIECE_COLORS = [
-  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', 
-  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
-  '#14b8a6', '#f43f5e', '#a855f7', '#eab308', '#0ea5e9'
+  '#5f87c9', '#d5635c', '#75b882', '#d5ab7c', '#8572c7', 
+  '#70aebe', '#c97195', '#9ec17e', '#d08e6c', '#6b74c1',
+  '#6daea3', '#d06a72', '#9973c8', '#d2b985', '#66a2c7'
 ];
 
 // Tamaños estándar de tableros (en mm)
@@ -357,18 +357,18 @@ const BoardOptimizer = ({ isOpen, onClose, despiecePieces = [], material = 'Mela
     const boardData = boards[currentBoardIndex];
 
     // Limpiar
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = '#f2f5f8';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Tablero base
-    ctx.fillStyle = '#e2e8f0';
-    ctx.strokeStyle = '#64748b';
+    ctx.fillStyle = '#e3e8ee';
+    ctx.strokeStyle = '#687485';
     ctx.lineWidth = 2;
     ctx.fillRect(offsetX, offsetY, boardDimensions.width * scale, boardDimensions.height * scale);
     ctx.strokeRect(offsetX, offsetY, boardDimensions.width * scale, boardDimensions.height * scale);
 
     // Grid cada 100mm
-    ctx.strokeStyle = '#cbd5e1';
+    ctx.strokeStyle = '#cdd5de';
     ctx.lineWidth = 0.5;
     for (let x = 100; x < boardDimensions.width; x += 100) {
       ctx.beginPath();
@@ -439,7 +439,7 @@ const BoardOptimizer = ({ isOpen, onClose, despiecePieces = [], material = 'Mela
     });
 
     // Dimensiones
-    ctx.fillStyle = '#475569';
+    ctx.fillStyle = '#4a5564';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`${boardDimensions.width} mm`, canvas.width / 2, canvas.height - 8);
@@ -450,7 +450,7 @@ const BoardOptimizer = ({ isOpen, onClose, despiecePieces = [], material = 'Mela
     ctx.restore();
 
     // Instrucción de arrastre
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = '#97a3b2';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText('Arrastra las piezas para ajustar | Doble clic para rotar', canvas.width - 10, 15);

@@ -475,19 +475,19 @@ const Armarios2 = ({ state }) => {
                   <stop offset="0%" stopColor={shade(material.color, -0.12)} />
                   <stop offset="100%" stopColor={shade(material.color, -0.28)} />
                 </linearGradient>
-                <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#0f172a" floodOpacity="0.18" /></filter>
+                <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#111726" floodOpacity="0.18" /></filter>
               </defs>
               {/* Fondo trasero + carcasa con marco (costados/techo/base) */}
-              <rect x={PAD} y={PAD} width={innerW} height={innerH} rx="4" fill="url(#mat)" stroke="#1e293b" strokeWidth="1.5" filter="url(#sh)" onClick={placeAt} style={{ cursor: tool ? 'crosshair' : 'default' }} />
-              {(() => { const t = Math.max(6, cfg.thickness * 0.5); return (<g fill={shade(material.color, -0.22)} stroke="#1e293b" strokeWidth="0.6">
+              <rect x={PAD} y={PAD} width={innerW} height={innerH} rx="4" fill="url(#mat)" stroke="#212937" strokeWidth="1.5" filter="url(#sh)" onClick={placeAt} style={{ cursor: tool ? 'crosshair' : 'default' }} />
+              {(() => { const t = Math.max(6, cfg.thickness * 0.5); return (<g fill={shade(material.color, -0.22)} stroke="#212937" strokeWidth="0.6">
                 <rect x={PAD} y={PAD} width={t} height={innerH} /><rect x={PAD + innerW - t} y={PAD} width={t} height={innerH} />
                 <rect x={PAD} y={PAD} width={innerW} height={t} /><rect x={PAD} y={PAD + innerH - t} width={innerW} height={t} />
               </g>); })()}
               {/* Sombreado suave por sección + ancho de cada cuerpo en mm */}
-              {Array.from({ length: numSections }).map((_, i) => { const [a, b] = secX(i); const wmm = Math.round((boundaries[i + 1] - boundaries[i]) / 100 * cfg.width); return (<g key={i}>{i % 2 ? <rect x={a} y={PAD} width={b - a} height={innerH} fill="#000" opacity="0.03" /> : null}<text x={(a + b) / 2} y={PAD + 12} textAnchor="middle" fontSize="9" fontWeight="700" fill="#94a3b8">{wmm}</text></g>); })}
+              {Array.from({ length: numSections }).map((_, i) => { const [a, b] = secX(i); const wmm = Math.round((boundaries[i + 1] - boundaries[i]) / 100 * cfg.width); return (<g key={i}>{i % 2 ? <rect x={a} y={PAD} width={b - a} height={innerH} fill="#000" opacity="0.03" /> : null}<text x={(a + b) / 2} y={PAD + 12} textAnchor="middle" fontSize="9" fontWeight="700" fill="#97a3b2">{wmm}</text></g>); })}
               {/* Cotas */}
-              <text x={PAD + innerW / 2} y={PAD - 16} textAnchor="middle" fontSize="12" fontWeight="800" fill="#334155">{cfg.width} mm</text>
-              <text x={PAD - 16} y={PAD + innerH / 2} textAnchor="middle" fontSize="12" fontWeight="800" fill="#334155" transform={`rotate(-90 ${PAD - 16} ${PAD + innerH / 2})`}>{cfg.height} mm</text>
+              <text x={PAD + innerW / 2} y={PAD - 16} textAnchor="middle" fontSize="12" fontWeight="800" fill="#364150">{cfg.width} mm</text>
+              <text x={PAD - 16} y={PAD + innerH / 2} textAnchor="middle" fontSize="12" fontWeight="800" fill="#364150" transform={`rotate(-90 ${PAD - 16} ${PAD + innerH / 2})`}>{cfg.height} mm</text>
 
               {/* Divisores verticales (arrastre X) */}
               {comps.filter(c => c.type === 'divider-v').map(c => {
@@ -495,7 +495,7 @@ const Armarios2 = ({ state }) => {
                 return (
                   <g key={c.id} onMouseDown={() => { setDrag({ id: c.id, axis: 'x' }); setSelId(c.id); }} onTouchStart={() => { setDrag({ id: c.id, axis: 'x' }); setSelId(c.id); }} style={{ cursor: 'ew-resize' }}>
                     <rect x={x - 8} y={PAD} width={16} height={innerH} fill="transparent" />
-                    <rect x={x - tw / 2} y={PAD + 4} width={tw} height={innerH - 8} rx="1" fill={sel ? '#c026d3' : 'url(#slab)'} stroke={sel ? '#a21caf' : '#1e293b'} strokeWidth="0.8" />
+                    <rect x={x - tw / 2} y={PAD + 4} width={tw} height={innerH - 8} rx="1" fill={sel ? '#a05da8' : 'url(#slab)'} stroke={sel ? '#894f8e' : '#212937'} strokeWidth="0.8" />
                   </g>
                 );
               })}
@@ -505,22 +505,22 @@ const Armarios2 = ({ state }) => {
                 const si = Math.min(c.sectionIndex ?? 0, numSections - 1);
                 const [x1, x2] = secX(si); const w = (x2 - x1) - 10; const xx = x1 + 5;
                 const y = PAD + ((c.y ?? 40) / 100) * innerH; const sel = selId === c.id;
-                const st = sel ? '#c026d3' : '#1e293b';
+                const st = sel ? '#a05da8' : '#212937';
                 let shape;
-                if (c.type === 'shelf') shape = <rect x={xx} y={y - 3} width={w} height={6} rx="1" fill={sel ? '#c026d3' : 'url(#slab)'} stroke={st} strokeWidth="0.8" />;
-                else if (c.type === 'drawer') { const dh = Math.min(30, innerH * 0.11); shape = <g><rect x={xx} y={y} width={w} height={dh} rx="2" fill={sel ? '#c026d3' : 'url(#slab)'} stroke={st} strokeWidth="1" /><rect x={xx + w / 2 - 12} y={y + dh / 2 - 1.5} width="24" height="3" rx="1.5" fill="#0f172a" opacity="0.5" /></g>; }
-                else if (c.type === 'hanging-rod') shape = <g><line x1={xx} y1={y} x2={xx + w} y2={y} stroke={sel ? '#c026d3' : '#334155'} strokeWidth="2.5" strokeLinecap="round" />{[0.25, 0.5, 0.75].map((f, k) => <path key={k} d={`M ${xx + w * f} ${y} q -5 6 0 12 q 5 -6 0 -12`} fill="none" stroke="#64748b" strokeWidth="1.4" />)}</g>;
-                else if (c.type === 'led-strip') shape = <g><line x1={xx} y1={y} x2={xx + w} y2={y} stroke="#fbbf24" strokeWidth="6" opacity="0.35" strokeLinecap="round" /><line x1={xx} y1={y} x2={xx + w} y2={y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 4" strokeLinecap="round" /></g>;
-                else if (c.type === 'shoe-rack') shape = <g>{[0, 1, 2].map(k => <line key={k} x1={xx} y1={y + k * 7} x2={xx + w} y2={y + k * 7 - 5} stroke={sel ? '#c026d3' : '#10b981'} strokeWidth="2.5" strokeLinecap="round" />)}</g>;
-                else if (c.type === 'pant-rack') shape = <g><line x1={xx} y1={y} x2={xx + w} y2={y} stroke={sel ? '#c026d3' : '#14b8a6'} strokeWidth="2" />{[0.15, 0.35, 0.55, 0.75].map((f, k) => <line key={k} x1={xx + w * f} y1={y} x2={xx + w * f} y2={y + 16} stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" />)}</g>;
+                if (c.type === 'shelf') shape = <rect x={xx} y={y - 3} width={w} height={6} rx="1" fill={sel ? '#a05da8' : 'url(#slab)'} stroke={st} strokeWidth="0.8" />;
+                else if (c.type === 'drawer') { const dh = Math.min(30, innerH * 0.11); shape = <g><rect x={xx} y={y} width={w} height={dh} rx="2" fill={sel ? '#a05da8' : 'url(#slab)'} stroke={st} strokeWidth="1" /><rect x={xx + w / 2 - 12} y={y + dh / 2 - 1.5} width="24" height="3" rx="1.5" fill="#111726" opacity="0.5" /></g>; }
+                else if (c.type === 'hanging-rod') shape = <g><line x1={xx} y1={y} x2={xx + w} y2={y} stroke={sel ? '#a05da8' : '#364150'} strokeWidth="2.5" strokeLinecap="round" />{[0.25, 0.5, 0.75].map((f, k) => <path key={k} d={`M ${xx + w * f} ${y} q -5 6 0 12 q 5 -6 0 -12`} fill="none" stroke="#687485" strokeWidth="1.4" />)}</g>;
+                else if (c.type === 'led-strip') shape = <g><line x1={xx} y1={y} x2={xx + w} y2={y} stroke="#e2c68e" strokeWidth="6" opacity="0.35" strokeLinecap="round" /><line x1={xx} y1={y} x2={xx + w} y2={y} stroke="#d5ab7c" strokeWidth="2" strokeDasharray="7 4" strokeLinecap="round" /></g>;
+                else if (c.type === 'shoe-rack') shape = <g>{[0, 1, 2].map(k => <line key={k} x1={xx} y1={y + k * 7} x2={xx + w} y2={y + k * 7 - 5} stroke={sel ? '#a05da8' : '#6bae8e'} strokeWidth="2.5" strokeLinecap="round" />)}</g>;
+                else if (c.type === 'pant-rack') shape = <g><line x1={xx} y1={y} x2={xx + w} y2={y} stroke={sel ? '#a05da8' : '#6daea3'} strokeWidth="2" />{[0.15, 0.35, 0.55, 0.75].map((f, k) => <line key={k} x1={xx + w * f} y1={y} x2={xx + w * f} y2={y + 16} stroke="#6daea3" strokeWidth="2" strokeLinecap="round" />)}</g>;
                 else shape = <line x1={xx} y1={y} x2={xx + w} y2={y} stroke={st} strokeWidth="4" strokeLinecap="round" />;
                 return (
                   <g key={c.id} onMouseDown={() => { setDrag({ id: c.id, axis: 'y' }); setSelId(c.id); }} onTouchStart={() => { setDrag({ id: c.id, axis: 'y' }); setSelId(c.id); }} style={{ cursor: 'ns-resize' }}>
                     <rect x={xx} y={y - 9} width={w} height={22} fill="transparent" />
                     {shape}
                     {sel
-                      ? <text x={xx + 2} y={y - 12} fontSize="10" fontWeight="800" fill="#c026d3">{LABELS[c.type]} · {Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}mm</text>
-                      : <text x={x2 - 6} y={y - 3} textAnchor="end" fontSize="8" fontWeight="700" fill="#94a3b8">{Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}</text>}
+                      ? <text x={xx + 2} y={y - 12} fontSize="10" fontWeight="800" fill="#a05da8">{LABELS[c.type]} · {Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}mm</text>
+                      : <text x={x2 - 6} y={y - 3} textAnchor="end" fontSize="8" fontWeight="700" fill="#97a3b2">{Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}</text>}
                   </g>
                 );
               })}
@@ -531,8 +531,8 @@ const Armarios2 = ({ state }) => {
                 const dw = innerW / nd;
                 return Array.from({ length: nd }).map((_, i) => (
                   <g key={'door' + i} pointerEvents="none">
-                    <rect x={PAD + i * dw + 1} y={PAD + 2} width={dw - 2} height={innerH - 4} fill={material.color} opacity={cfg.doorType === 'sliding' ? 0.55 : 0.72} stroke="#1e293b" strokeWidth="1" rx="2" />
-                    <line x1={PAD + i * dw + dw - 8} y1={PAD + innerH * 0.4} x2={PAD + i * dw + dw - 8} y2={PAD + innerH * 0.6} stroke="#0f172a" strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
+                    <rect x={PAD + i * dw + 1} y={PAD + 2} width={dw - 2} height={innerH - 4} fill={material.color} opacity={cfg.doorType === 'sliding' ? 0.55 : 0.72} stroke="#212937" strokeWidth="1" rx="2" />
+                    <line x1={PAD + i * dw + dw - 8} y1={PAD + innerH * 0.4} x2={PAD + i * dw + dw - 8} y2={PAD + innerH * 0.6} stroke="#111726" strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
                   </g>
                 ));
               })()}

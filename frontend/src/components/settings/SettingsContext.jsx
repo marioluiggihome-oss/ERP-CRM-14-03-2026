@@ -39,7 +39,7 @@ export const formatCurrency = (value) => {
 };
 
 // Colores para gráficos
-export const CHART_COLORS = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4'];
+export const CHART_COLORS = ['#d08e6c', '#5f87c9', '#6bae8e', '#8572c7', '#d5635c', '#70aebe'];
 
 // Estilos comunes para botones
 export const buttonStyles = {

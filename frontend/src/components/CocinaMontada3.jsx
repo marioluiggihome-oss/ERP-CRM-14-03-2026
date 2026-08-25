@@ -129,48 +129,48 @@ const TARIFAS_NOMBRES = {
 
 const MUESTRARIO_PUERTAS = {
   T1: [
-    { id: 't1-roble', nombre: 'Roble Sincro', color: '#b58d67' },
-    { id: 't1-nogal', nombre: 'Nogal Pacific', color: '#6e4c36' },
+    { id: 't1-roble', nombre: 'Roble Sincro', color: '#a8917c' },
+    { id: 't1-nogal', nombre: 'Nogal Pacific', color: '#645044' },
     { id: 't1-gris', nombre: 'Gris Texturado', color: '#8e9092' },
     { id: 't1-blanco', nombre: 'Blanco Polar', color: '#f3f4f6' }
   ],
   T2: [
     { id: 't2-blanco-seda', nombre: 'Blanco Seda', color: '#f9fafb' },
     { id: 't2-cashmere', nombre: 'Cashmere Seda', color: '#d8cfc4' },
-    { id: 't2-verde', nombre: 'Verde Oliva Seda', color: '#687766' },
-    { id: 't2-antracita', nombre: 'Antracita Seda', color: '#374151' }
+    { id: 't2-verde', nombre: 'Verde Oliva Seda', color: '#6c756b' },
+    { id: 't2-antracita', nombre: 'Antracita Seda', color: '#39414e' }
   ],
   T3: [
     { id: 't3-blanco-brillo', nombre: 'Blanco Puro Brillo', color: '#ffffff' },
-    { id: 't3-blanco-mate', nombre: 'Blanco Seda Mate', color: '#f1f5f9' },
-    { id: 't3-negro', nombre: 'Negro Carbón Lacado', color: '#1e293b' },
-    { id: 't3-azul', nombre: 'Azul Noche Lacado', color: '#1e3a8a' }
+    { id: 't3-blanco-mate', nombre: 'Blanco Seda Mate', color: '#f2f5f8' },
+    { id: 't3-negro', nombre: 'Negro Carbón Lacado', color: '#212937' },
+    { id: 't3-azul', nombre: 'Azul Noche Lacado', color: '#2d406d' }
   ],
   T4: [
     { id: 't4-zenit-blanco', nombre: 'ZENIT Blanco Supermate', color: '#fafafa' },
-    { id: 't4-zenit-antracita', nombre: 'ZENIT Antracita Metal', color: '#334155' },
-    { id: 't4-zenit-basalto', nombre: 'ZENIT Gris Basalto', color: '#475569' },
-    { id: 't4-zenit-croma', nombre: 'ZENIT Croma Oro', color: '#854d0e' }
+    { id: 't4-zenit-antracita', nombre: 'ZENIT Antracita Metal', color: '#364150' },
+    { id: 't4-zenit-basalto', nombre: 'ZENIT Gris Basalto', color: '#4a5564' },
+    { id: 't4-zenit-croma', nombre: 'ZENIT Croma Oro', color: '#705741' }
   ],
   T5: [
-    { id: 't5-fenix-negro', nombre: 'FENIX Nero Ingo (Antihuella)', color: '#0f172a' },
+    { id: 't5-fenix-negro', nombre: 'FENIX Nero Ingo (Antihuella)', color: '#111726' },
     { id: 't5-fenix-blanco', nombre: 'FENIX Bianco Kos', color: '#ffffff' },
-    { id: 't5-fenix-londra', nombre: 'FENIX Grigio Londra', color: '#52525b' },
-    { id: 't5-fenix-verde', nombre: 'FENIX Verde Comodoro', color: '#2d3b36' }
+    { id: 't5-fenix-londra', nombre: 'FENIX Grigio Londra', color: '#52525a' },
+    { id: 't5-fenix-verde', nombre: 'FENIX Verde Comodoro', color: '#323937' }
   ]
 };
 
 const MUESTRARIO_CASCOS = [
-  { id: 'grafito-19', nombre: 'Grafito Antracita (19mm)', color: '#334155', grosor: 19 },
-  { id: 'blanco-hidro-19', nombre: 'Blanco Hidrófugo (19mm)', color: '#f8fafc', grosor: 19 },
-  { id: 'roble-aurora-19', nombre: 'Roble Aurora (19mm)', color: '#c49a6c', grosor: 19 },
-  { id: 'spike-19', nombre: 'Spike (19mm)', color: '#57534e', grosor: 19 },
-  { id: 'stone-19', nombre: 'Stone (19mm)', color: '#78716c', grosor: 19 },
+  { id: 'grafito-19', nombre: 'Grafito Antracita (19mm)', color: '#364150', grosor: 19 },
+  { id: 'blanco-hidro-19', nombre: 'Blanco Hidrófugo (19mm)', color: '#f8fafb', grosor: 19 },
+  { id: 'roble-aurora-19', nombre: 'Roble Aurora (19mm)', color: '#b79e84', grosor: 19 },
+  { id: 'spike-19', nombre: 'Spike (19mm)', color: '#56534f', grosor: 19 },
+  { id: 'stone-19', nombre: 'Stone (19mm)', color: '#77716d', grosor: 19 },
   { id: 'blanco-16', nombre: 'Blanco En Kit (16mm)', color: '#ffffff', grosor: 16 },
-  { id: 'aluminio-16', nombre: 'Aluminio Textura (16mm)', color: '#94a3b8', grosor: 16 },
-  { id: 'roble-natural-16', nombre: 'Roble Natural (16mm)', color: '#a16207', grosor: 16 },
-  { id: 'olmo-18', nombre: 'Olmo (18mm)', color: '#713f12', grosor: 18 },
-  { id: 'esp-blanco-16', nombre: 'Especial Blanco (16mm)', color: '#f1f5f9', grosor: 16 }
+  { id: 'aluminio-16', nombre: 'Aluminio Textura (16mm)', color: '#97a3b2', grosor: 16 },
+  { id: 'roble-natural-16', nombre: 'Roble Natural (16mm)', color: '#896c50', grosor: 16 },
+  { id: 'olmo-18', nombre: 'Olmo (18mm)', color: '#5f4837', grosor: 18 },
+  { id: 'esp-blanco-16', nombre: 'Especial Blanco (16mm)', color: '#f2f5f8', grosor: 16 }
 ];
 
 export default function CocinaMontada3({ currentUser, state, setState, logo }) {

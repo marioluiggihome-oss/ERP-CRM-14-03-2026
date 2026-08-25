@@ -23,11 +23,11 @@ import {
 import { es } from 'date-fns/locale';
 
 const EVENT_TYPES = {
-  cita: { name: 'Cita/Visita', color: '#3b82f6', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
-  seguimiento: { name: 'Seguimiento', color: '#f59e0b', bgColor: 'bg-amber-100', textColor: 'text-amber-700' },
-  llamada: { name: 'Llamada', color: '#10b981', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700' },
-  reunion: { name: 'Reunión', color: '#8b5cf6', bgColor: 'bg-violet-100', textColor: 'text-violet-700' },
-  otro: { name: 'Otro', color: '#6b7280', bgColor: 'bg-slate-100', textColor: 'text-slate-700' }
+  cita: { name: 'Cita/Visita', color: '#5f87c9', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
+  seguimiento: { name: 'Seguimiento', color: '#d5ab7c', bgColor: 'bg-amber-100', textColor: 'text-amber-700' },
+  llamada: { name: 'Llamada', color: '#6bae8e', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700' },
+  reunion: { name: 'Reunión', color: '#8572c7', bgColor: 'bg-violet-100', textColor: 'text-violet-700' },
+  otro: { name: 'Otro', color: '#6c727d', bgColor: 'bg-slate-100', textColor: 'text-slate-700' }
 };
 
 const VIEWS = {
@@ -132,7 +132,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
             endDate: g.endDate,
             allDay: g.allDay,
             eventType: 'otro',
-            color: g.color || '#16a34a',
+            color: g.color || '#5f986a',
             completed: false,
             source: 'google',
             readOnlyFromGoogle: true,
@@ -623,7 +623,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
                         return (
                           <div key={day.toString()} className="flex-1 p-1 border-r border-slate-100 min-h-[26px] space-y-0.5">
                             {ad.map(evt => (
-                              <div key={evt.id} onClick={() => openEditModal(evt)} className={`text-[9px] px-1 rounded truncate cursor-pointer text-white ${evt.completed ? 'opacity-50 line-through' : ''}`} style={{ background: evt.color || EVENT_TYPES[evt.eventType]?.color || '#3b82f6' }}>{evt.title}</div>
+                              <div key={evt.id} onClick={() => openEditModal(evt)} className={`text-[9px] px-1 rounded truncate cursor-pointer text-white ${evt.completed ? 'opacity-50 line-through' : ''}`} style={{ background: evt.color || EVENT_TYPES[evt.eventType]?.color || '#5f87c9' }}>{evt.title}</div>
                             ))}
                           </div>
                         );
@@ -656,7 +656,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
                                 const top = startM * (HOUR_PX / 60);
                                 const height = Math.max(dur * (HOUR_PX / 60) - 2, 16);
                                 const widthPct = 100 / cols;
-                                const color = evt.color || EVENT_TYPES[evt.eventType]?.color || '#3b82f6';
+                                const color = evt.color || EVENT_TYPES[evt.eventType]?.color || '#5f87c9';
                                 let hhmm = ''; try { hhmm = format(parseISO(evt.startDate), 'HH:mm'); } catch { hhmm = ''; }
                                 return (
                                   <div key={evt.id} onClick={(ev) => { ev.stopPropagation(); openEditModal(evt); }}
@@ -719,7 +719,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
                         {allDay.map(evt => (
                           <button key={evt.id} onClick={() => openEditModal(evt)}
                             className={`text-xs px-2 py-1 rounded font-bold text-white ${evt.completed ? 'opacity-50 line-through' : ''}`}
-                            style={{ background: evt.color || EVENT_TYPES[evt.eventType]?.color || '#3b82f6' }}>
+                            style={{ background: evt.color || EVENT_TYPES[evt.eventType]?.color || '#5f87c9' }}>
                             {evt.title}
                           </button>
                         ))}
@@ -751,7 +751,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
                           const top = startM * (HOUR_PX / 60);
                           const height = Math.max(dur * (HOUR_PX / 60) - 2, 20);
                           const widthPct = 100 / cols;
-                          const color = evt.color || EVENT_TYPES[evt.eventType]?.color || '#3b82f6';
+                          const color = evt.color || EVENT_TYPES[evt.eventType]?.color || '#5f87c9';
                           let hhmm = ''; try { hhmm = format(parseISO(evt.startDate), 'HH:mm'); } catch { hhmm = ''; }
                           return (
                             <div key={evt.id} onClick={(ev) => { ev.stopPropagation(); openEditModal(evt); }}
