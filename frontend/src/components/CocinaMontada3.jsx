@@ -487,6 +487,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   }, [busca, catalogo]);
 
   const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [200, 220], bajo: [80, 70] };
+
+  // Costados, laterales y regletas: sus dos columnas de tarifa son el ANCHO de
+  // la pieza, no la altura del mueble que rematan (ver `services/mv_relacion.py`).
+  // El ancho de un costado es el FONDO del mueble —33 en altos, 58 en bajos y
+  // columnas—, así que «hasta 70» es el caso corriente y va primero.
+  const OPCIONES_ANCHO = { a7090: [70, 90] };
+  const ANCHO_POR_DEFECTO_LINEAL = 70;
+
   const alturasDe = (m) => {
     const fam = String(m.familia || '').toUpperCase();
     const tipo = String(m.tipo || '').toUpperCase();
@@ -494,6 +502,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     const t = familias?.[m.familia]?.type;
     return OPCIONES_ALTURA[t] || null;
   };
+
+  /** Los anchos de tarifa de una pieza lineal, o null si no es una de ellas. */
+  const anchosDe = (m) => OPCIONES_ANCHO[familias?.[m.familia]?.type] || null;
 
   const puntosLocal = (m, alto) => {
     const info = familias?.[m.familia];
@@ -503,7 +514,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       const t = info.type;
       let i = 0;
       if (t === 'h7090') i = alto >= 85 ? 1 : 0;
-      else if (t === 'h127147') i = alto > 137 ? 1 : 0;
+      else if (t === 'a7090') {
+        // Aquí manda el ANCHO de la pieza, no el alto del mueble. Con el alto,
+        // un costado de columna (220) caía siempre en la columna cara y la
+        // barata no se podía alcanzar nunca.
+        const a = Number(m.anchoTarifa) || ANCHO_POR_DEFECTO_LINEAL;
+        i = a > 70 ? 1 : 0;
+      } else if (t === 'h127147') i = alto > 137 ? 1 : 0;
       else if (t === 'h200220') i = alto > 210 ? 1 : 0;
       return Math.round((e[i] || e[0]) * pv * 100) / 100;
     }
@@ -523,6 +540,15 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     if (m._k !== k) return m;
     const alto = Number(v) || null;
     return { ...m, alto, pvp: puntosLocal(m, alto) };
+  }));
+
+  /** Elige la COLUMNA de tarifa de una pieza lineal por su ancho (70 / 90).
+   *  Se le pasa a `puntosLocal` el mueble YA actualizado: si se le pasara `m`,
+   *  leería el ancho viejo y el precio iría un clic por detrás. */
+  const setAnchoTarifa = (k, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const conAncho = { ...m, anchoTarifa: Number(v) || ANCHO_POR_DEFECTO_LINEAL };
+    return { ...conAncho, pvp: puntosLocal(conAncho, m.alto) };
   }));
 
   const setObs = (k, obs) => {
@@ -1481,6 +1507,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             <div className="lg:hidden space-y-2.5">
               {filasFiltradas.map((m, idx) => {
                 const opcionesAlt = alturasDe(m);
+                const opcionesAnc = anchosDe(m);
                 const tieneMano = manoDe(m.cod);
                 return (
                   <div key={m._k} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
@@ -1509,10 +1536,24 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                     {/* Medidas y mano */}
                     <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px]">
-                      <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
-                        {m.ancho ? `${m.ancho} cm de ancho` : 'ancho —'}
-                      </span>
-                      {opcionesAlt ? (
+                      {opcionesAnc ? (
+                        /* Costados, laterales y regletas: la tarifa va por ANCHO
+                           de la pieza. Antes aquí ponía «ancho —» y el alto se
+                           elegía en un desplegable — justo al revés. */
+                        <label className="flex items-center gap-1">
+                          <span className="text-slate-400 font-bold">Ancho</span>
+                          <select value={m.anchoTarifa || opcionesAnc[0]}
+                            onChange={e => setAnchoTarifa(m._k, e.target.value)}
+                            className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs">
+                            {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
+                          </select>
+                        </label>
+                      ) : (
+                        <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
+                          {m.ancho ? `${m.ancho} cm de ancho` : 'ancho —'}
+                        </span>
+                      )}
+                      {opcionesAnc ? null : opcionesAlt ? (
                         <label className="flex items-center gap-1">
                           <span className="text-slate-400 font-bold">Alto</span>
                           <select value={m.alto || opcionesAlt[0]} onChange={e => setAlto(m._k, e.target.value)}
@@ -1613,6 +1654,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <tbody className="divide-y divide-slate-100">
                 {filasFiltradas.map((m, idx) => {
                   const opcionesAlt = alturasDe(m);
+                  const opcionesAnc = anchosDe(m);
                   const tieneMano = manoDe(m.cod);
                   return (
                     <tr key={m._k} className="hover:bg-slate-50/80 transition-colors group">
@@ -1677,14 +1719,29 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </div>
                       </td>
 
-                      {/* Ancho */}
+                      {/* Ancho. En costados/laterales/regletas la tarifa va por
+                          ANCHO de la pieza, así que aquí se ELIGE en vez de
+                          enseñar un guion. */}
                       <td className="py-3 px-3 text-center font-bold text-slate-700">
-                        {m.ancho ? `${m.ancho} cm` : '—'}
+                        {opcionesAnc ? (
+                          <select
+                            value={m.anchoTarifa || opcionesAnc[0]}
+                            onChange={e => setAnchoTarifa(m._k, e.target.value)}
+                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-indigo-400"
+                          >
+                            {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
+                          </select>
+                        ) : (m.ancho ? `${m.ancho} cm` : '—')}
                       </td>
 
                       {/* Alto */}
                       <td className="py-3 px-3 text-center">
-                        {opcionesAlt ? (
+                        {opcionesAnc ? (
+                          /* Un costado no elige alto: el suyo lo fija su propio
+                             tipo (de alto, de bajo, de columna…), que es lo que
+                             dice la descripción de la fila en la tarifa. */
+                          <span className="text-slate-400">—</span>
+                        ) : opcionesAlt ? (
                           <select
                             value={m.alto || opcionesAlt[0]}
                             onChange={e => setAlto(m._k, e.target.value)}

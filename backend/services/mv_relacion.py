@@ -25,6 +25,29 @@ _MV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "mv_
 
 _FONDO = {"BAJO": 58, "ALTO": 33, "COLUMNA": 58}
 
+# ─── Costados, laterales y regletas: las dos columnas son ANCHO, no ALTO ─────
+#
+# En la tarifa MV estas familias (COSTADOS_COLOR, LATERALES_COLOR, REGLETA_*)
+# tienen dos columnas tituladas «70» y «90», igual que los ALTOS. Pero no
+# significan lo mismo: en un alto es la ALTURA del mueble; aquí es el ANCHO de la
+# pieza, «hasta 70» y «hasta 90». Lo confirmó el master el 25/08 y se ve en la
+# propia tarifa (pág. 6): «REGLETA COLOR **Ancho 15**» con las mismas dos
+# columnas, y «CCB Costado color bajo **70/85 alto**» — o sea que la altura va
+# escrita en la DESCRIPCIÓN de la fila, no en la cabecera de la columna.
+#
+# Compartían el tipo `h7090` y eso salía caro: la columna se elegía con
+# `alto >= 85`, y un costado de COLUMNA mide 200-220 de alto, así que SIEMPRE
+# caía en la columna de 90. La barata era inalcanzable — para CCS, CCM y CCC no
+# había manera de que saliera. Una columna de tarifa que no se puede alcanzar no
+# es una preferencia: es la prueba de que la clave de búsqueda está mal.
+#
+# El ancho de un costado ES EL FONDO del mueble que remata: 33 en altos y 58 en
+# bajos y columnas (`_FONDO`, arriba). Los dos caben de sobra en «hasta 70», así
+# que ese es el caso corriente y por eso es el valor por defecto; la de 90 es
+# para piezas especiales (islas con más fondo) y se elige a mano en pantalla.
+ANCHO_LINEAL_POR_DEFECTO = 70
+CORTE_ANCHO_LINEAL = 70          # <= 70 -> columna 1 ; > 70 -> columna 2
+
 
 def _load_index(tariff: str = "T1"):
     data = json.load(open(_MV_PATH, "r", encoding="utf-8"))
@@ -108,8 +131,14 @@ def _tipo_de(letters):
     return "BAJO"
 
 
-def _puntos(entry, alto):
-    """Puntos según el tipo de familia y (si aplica) la altura."""
+def _puntos(entry, alto, ancho=None):
+    """Puntos según el tipo de familia y la medida que manda en cada una.
+
+    `alto` manda en los muebles (altos, sobreencimeras, columnas) y `ancho` en
+    los lineales (costados, laterales, regletas). Son dos cosas distintas y por
+    eso son dos parámetros: cuando compartían uno, un costado de columna se
+    tarifaba por los 220 cm de alto de la columna que remata.
+    """
     if not entry:
         return None
     t = entry["t"]
@@ -118,6 +147,12 @@ def _puntos(entry, alto):
         return ev
     if t == "h7090" and isinstance(ev, list):
         return ev[1] if (alto and alto >= 85) else ev[0]
+    if t == "a7090" and isinstance(ev, list):
+        # Ojo: `ancho` es el de la PIEZA, no el del mueble. Si no se sabe se usa
+        # el valor por defecto de arriba, que está razonado — nunca un número
+        # sacado del código del mueble, que aquí no lleva ancho.
+        a = ancho if ancho else ANCHO_LINEAL_POR_DEFECTO
+        return ev[1] if a > CORTE_ANCHO_LINEAL else ev[0]
     if t in ("h127147", "h200220") and isinstance(ev, list):
         umbral = 137 if t == "h127147" else 210
         return ev[1] if (alto and alto > umbral) else ev[0]

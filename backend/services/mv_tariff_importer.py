@@ -96,6 +96,21 @@ def expand_tariffs(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     upsert(code, tariff, pts, family=family, name=f"{family} {code}",
                            width=_width_from_code(code), height=0)
 
+            elif ftype == "a7090":
+                # Costados, laterales y regletas: las dos columnas son el ANCHO
+                # de la pieza («hasta 70» / «hasta 90»), no la altura del mueble
+                # que rematan. Ver la nota de `services/mv_relacion.py`. Va
+                # aparte de las tres de abajo a propósito: si compartiera rama
+                # volvería a guardarse como altura y el buscador volvería a
+                # ofrecer «Alto 70/90» para un costado de columna de 220.
+                for code, vals in items.items():
+                    if not isinstance(vals, list):
+                        continue
+                    for a, v in zip((70, 90), vals):
+                        upsert(f"{code}-A{a}", tariff, v, family=family,
+                               name=f"{family} {code} ancho hasta {a}",
+                               width=a, height=0)
+
             elif ftype in ("h7090", "h127147", "h200220"):
                 hs = {"h7090": (70, 90), "h127147": (127, 147), "h200220": (200, 220)}[ftype]
                 for code, vals in items.items():

@@ -1542,7 +1542,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             10,
@@ -1571,7 +1571,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             9,
@@ -1600,7 +1600,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -1622,7 +1622,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -1644,7 +1644,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -3125,7 +3125,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             27,
@@ -3154,7 +3154,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             28,
@@ -3183,7 +3183,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -3205,7 +3205,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -3227,7 +3227,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -4708,7 +4708,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             17,
@@ -4737,7 +4737,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -4759,7 +4759,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             17.4,
@@ -4788,7 +4788,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -4810,7 +4810,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -6306,7 +6306,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             17,
@@ -6336,7 +6336,7 @@
         "_revisar": "LCM=[63,79] y LCC=[111,122] son MAYORES que T2=[60,74]/[109,118] (T4>T2, invierte el orden esperado T3<T4<T2). LCA(seg.val=19<T3=20), LCF([23,29]<T3=[26,30]) y LCB(23<T3=26) caen ligeramente por debajo de T3. Todo confirmado por zoom."
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             15,
@@ -6366,7 +6366,7 @@
         "_revisar": "CCA,CCF,CCB,CCS son ligeramente MENORES que T3 (consistente con LATERALES_COLOR). CCM=[61,77] es MAYOR que T2=[58,74] (T4>T2, igual que LCM)."
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -6388,7 +6388,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -6410,7 +6410,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -7945,7 +7945,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             17,
@@ -7974,7 +7974,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             15,
@@ -8003,7 +8003,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RA": [
@@ -8025,7 +8025,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -8047,7 +8047,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -9643,7 +9643,7 @@
         "_nota": "TEC260-360 en blanco, igual que T1/T4/T5."
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             23,
@@ -9672,7 +9672,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             21,
@@ -9701,7 +9701,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -9723,7 +9723,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -9745,7 +9745,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -11225,7 +11225,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             26,
@@ -11254,7 +11254,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             24,
@@ -11283,7 +11283,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -11305,7 +11305,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -11453,7 +11453,7 @@
         "_nota": "TEC260-360 en blanco, igual que T1/T4/T5/T8."
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -12858,7 +12858,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             20,
@@ -12887,7 +12887,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             18,
@@ -12916,7 +12916,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -12938,7 +12938,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -12960,7 +12960,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -14515,7 +14515,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             20,
@@ -14544,7 +14544,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             18,
@@ -14573,7 +14573,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -14595,7 +14595,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -14617,7 +14617,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -16217,7 +16217,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             21,
@@ -16246,7 +16246,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             19,
@@ -16275,7 +16275,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -16297,7 +16297,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -16319,7 +16319,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -17378,7 +17378,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             23,
@@ -17407,7 +17407,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             21,
@@ -17436,7 +17436,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -17458,7 +17458,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -17480,7 +17480,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -19521,7 +19521,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             23,
@@ -19550,7 +19550,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             21,
@@ -19579,7 +19579,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -19601,7 +19601,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -19749,7 +19749,7 @@
         "_nota": "TEC260-360 en blanco, igual que T1/T4/T5."
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -21168,7 +21168,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             26,
@@ -21197,7 +21197,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             24,
@@ -21226,7 +21226,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -21248,7 +21248,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -21396,7 +21396,7 @@
         "_nota": "TEC260-360 en blanco, igual que T1/T4/T5/T8."
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -22814,7 +22814,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             26,
@@ -22843,7 +22843,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             24,
@@ -22872,7 +22872,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -22894,7 +22894,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -23042,7 +23042,7 @@
         "_nota": "TEC260-360 en blanco, igual que T1/T4/T5/T8."
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -24492,11 +24492,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "dual",
-        "cols": [
-          "70",
-          "90"
-        ],
+        "type": "a7090",
         "items": {
           "LCA": [
             23,
@@ -24525,11 +24521,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "dual",
-        "cols": [
-          "70",
-          "90"
-        ],
+        "type": "a7090",
         "items": {
           "CCA": [
             21,
@@ -24558,12 +24550,8 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "dual",
+        "type": "a7090",
         "_ancho": 15,
-        "cols": [
-          "70",
-          "90"
-        ],
         "items": {
           "RA": [
             9,
@@ -24584,12 +24572,8 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "dual",
+        "type": "a7090",
         "_ancho": 10,
-        "cols": [
-          "70",
-          "90"
-        ],
         "items": {
           "RMA": [
             1,
@@ -26214,11 +26198,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "dual",
-        "cols": [
-          "70",
-          "90"
-        ],
+        "type": "a7090",
         "items": {
           "LCA": [
             27,
@@ -26247,11 +26227,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "dual",
-        "cols": [
-          "70",
-          "90"
-        ],
+        "type": "a7090",
         "items": {
           "CCA": [
             24,
@@ -26280,12 +26256,8 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "dual",
+        "type": "a7090",
         "_ancho": 15,
-        "cols": [
-          "70",
-          "90"
-        ],
         "items": {
           "RA": [
             10,
@@ -26306,12 +26278,8 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "dual",
+        "type": "a7090",
         "_ancho": 10,
-        "cols": [
-          "70",
-          "90"
-        ],
         "items": {
           "RMA": [
             1,
@@ -27936,11 +27904,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "dual",
-        "cols": [
-          "70",
-          "90"
-        ],
+        "type": "a7090",
         "items": {
           "LCA": [
             32,
@@ -27969,11 +27933,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "dual",
-        "cols": [
-          "70",
-          "90"
-        ],
+        "type": "a7090",
         "items": {
           "CCA": [
             28,
@@ -28002,12 +27962,8 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "dual",
+        "type": "a7090",
         "_ancho": 15,
-        "cols": [
-          "70",
-          "90"
-        ],
         "items": {
           "RA": [
             12,
@@ -28028,12 +27984,8 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "dual",
+        "type": "a7090",
         "_ancho": 10,
-        "cols": [
-          "70",
-          "90"
-        ],
         "items": {
           "RMA": [
             2,
@@ -29658,7 +29610,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             20,
@@ -29687,7 +29639,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             18,
@@ -29716,7 +29668,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -29738,7 +29690,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -29760,7 +29712,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -31360,7 +31312,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             21,
@@ -31389,7 +31341,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             19,
@@ -31418,7 +31370,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -31440,7 +31392,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -31462,7 +31414,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -33062,7 +33014,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             19,
@@ -33091,7 +33043,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             17,
@@ -33120,7 +33072,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -33142,7 +33094,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -33164,7 +33116,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
@@ -34764,7 +34716,7 @@
         }
       },
       "LATERALES_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "LCA": [
             20,
@@ -34793,7 +34745,7 @@
         }
       },
       "COSTADOS_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CCA": [
             19,
@@ -34822,7 +34774,7 @@
         }
       },
       "REGLETA_COLOR": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 15,
         "items": {
           "RA": [
@@ -34844,7 +34796,7 @@
         }
       },
       "REGLETA_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "_ancho": 10,
         "items": {
           "RMA": [
@@ -34866,7 +34818,7 @@
         }
       },
       "COSTADOS_MELAMINA": {
-        "type": "h7090",
+        "type": "a7090",
         "items": {
           "CMCB": [
             19,
