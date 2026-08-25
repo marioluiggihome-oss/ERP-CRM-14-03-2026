@@ -118,18 +118,75 @@ def test_una_fecha_ILEGIBLE_no_libera():
 
 
 # ── En qué mes cae ───────────────────────────────────────────────────────────
-def test_cae_en_el_mes_de_la_ULTIMA_condicion():
-    """Servido en julio, cobrado en agosto -> es de agosto. Antes de esa fecha
-    no había nada que liquidar."""
-    p = pedido(servidoAt="2026-07-30", cobradoAt="2026-08-02")
+def test_cae_en_el_mes_de_LA_ENTREGA():
+    """El master, 25/08: «si se sirven en agosto se liquidan en agosto».
+
+    La fecha de cobro decide SI se libera, no CUÁNDO. Como el cobro va siempre
+    por delante de la salida del almacén, el mes es el de la entrega.
+    """
+    p = pedido(servidoAt="2026-08-03", cobradoAt="2026-07-28")
     assert L.periodo_de_consolidacion(p) == "2026-08"
 
-    p2 = pedido(servidoAt="2026-09-03", cobradoAt="2026-08-28")
-    assert L.periodo_de_consolidacion(p2) == "2026-09"
+
+def test_el_COBRO_NO_puede_arrastrar_la_comision_a_otro_mes():
+    """La mutación que hay que vigilar. Si alguien volviera a poner aquí el
+    máximo de las dos fechas, un cobro apuntado tarde —con la mercancía ya
+    entregada— movería la comisión al mes siguiente y el cooperativista cobraría
+    con un mes de retraso, sin que saltara ningún error."""
+    p = pedido(servidoAt="2026-08-03", cobradoAt="2026-09-15", pendienteCobro=0)
+    assert L.periodo_de_consolidacion(p) == "2026-08"
 
 
 def test_lo_que_no_esta_consolidado_no_tiene_mes():
     assert L.periodo_de_consolidacion(pedido()) is None
+
+
+def test_LA_MERCANCIA_SIN_COBRAR_TAMPOCO_TIENE_MES():
+    """Este hueco lo encontró una mutación, no yo.
+
+    Al probar «¿y si alguien quita la comprobación del cobro del cálculo del
+    mes?» no se puso roja ni una prueba: la de arriba solo cubría un pedido sin
+    servir. O sea que un pedido salido del almacén con dinero pendiente habría
+    empezado a tener mes de liquidación —el paso previo a colarse en una paga—
+    sin que nadie se enterara. El mes no existe hasta que se cumplen LAS DOS.
+    """
+    p = pedido(servidoAt="2026-08-03", cobradoAt="2026-08-03", pendienteCobro=250.0)
+    assert L.periodo_de_consolidacion(p) is None
+    assert L.linea(p, L.COMERCIAL)["periodo"] is None
+
+
+# ── La mercancía sale cobrada: la norma, y qué pasa si no se cumple ─────────
+def test_lo_normal_es_que_el_cobro_vaya_POR_DELANTE_de_la_entrega():
+    """«Todos los pedidos antes de salir del almacén tienen que estar cobrados»
+    (master, 25/08). Ese es el caso corriente y libera sin más."""
+    p = pedido(cobradoAt="2026-07-20", servidoAt="2026-08-03")
+    assert L.estado_de(p) == L.CONSOLIDADA
+    assert L.es_anomalia(p) is False
+
+
+def test_si_SALE_SIN_COBRAR_no_se_paga_Y_ADEMAS_SE_MARCA():
+    """La norma la cumplen personas y el dato lo teclean personas.
+
+    El día que un pedido salga con un pendiente, aquí no se paga —no se comisiona
+    sobre dinero que no ha entrado— pero tampoco se queda callado en el montón de
+    «en progreso», donde parecería un pedido normal a medio hacer. Hay mercancía
+    fuera y dinero sin entrar: eso se ve.
+    """
+    p = pedido(servidoAt="2026-08-03", cobradoAt="2026-08-03", pendienteCobro=250.0)
+    assert L.estado_de(p) == L.EN_PROGRESO
+    assert L.es_anomalia(p) is True
+    assert L.linea(p, L.COMERCIAL)["anomalia"] is True
+
+
+def test_un_pedido_normal_en_progreso_NO_es_una_anomalia():
+    """Aceptado y todavía sin servir es lo corriente. Marcarlo sería llenar el
+    panel de alarmas falsas, y una alarma que salta siempre no la mira nadie."""
+    assert L.es_anomalia(pedido()) is False
+
+
+def test_un_pedido_ANULADO_no_es_una_anomalia_aunque_saliera_sin_cobrar():
+    p = pedido(servidoAt="2026-08-03", pendienteCobro=250.0, anulado=True)
+    assert L.es_anomalia(p) is False
 
 
 # ── Los euros: los pone `comisiones.py`, aquí no se recalcula nada ───────────

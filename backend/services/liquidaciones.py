@@ -42,10 +42,23 @@ cobrado al 90%. Eso NO libera. Mientras quede un euro pendiente, la comisión se
 queda en progreso. Se admite medio céntimo de tolerancia y nada más, que es
 redondeo, no deuda.
 
-EN QUÉ MES CAE. En el de la ÚLTIMA de las dos condiciones: si se sirvió en julio
-y se terminó de cobrar en agosto, es de agosto. Es la lectura literal de «no se
-liberan hasta que» — antes de esa fecha no había nada que liquidar. Si el master
-prefiere la fecha de servicio, se cambia `PERIODO_POR` y las pruebas lo dicen.
+EN QUÉ MES CAE: EN EL DE LA ENTREGA. El master, 25/08: «las comisiones se
+liquidan cuando se entrega la mercancía […] y si se sirven en agosto se liquidan
+en agosto». La fecha de cobro NO decide el mes.
+
+Y no decide el mes porque no puede: «todos los pedidos antes de salir del
+almacén tienen que estar cobrados». O sea que el cobro va SIEMPRE por delante de
+la entrega, y el mes de la entrega es el más tardío de los dos por definición.
+
+ENTONCES ¿PARA QUÉ SE SIGUE MIRANDO EL COBRO? Porque «tiene que estar cobrado»
+es una norma de la casa, no una ley de la física. La norma la cumplen las
+personas y el dato lo teclean las personas: un pedido puede salir con un
+pendiente por un error, por un cobro que se apuntó tarde o por una excepción que
+alguien autorizó. Si aquí se diera el cobro por hecho, ese día se pagaría una
+comisión sobre dinero que no ha entrado, EN SILENCIO. Cuesta una comparación
+dejarlo comprobado, y el día que la norma no se cumpla se entera alguien: la
+línea sale marcada con `anomalia` en vez de liberarse sola. Un candado que se
+apoya en que nadie se equivoque no es un candado.
 
 LO QUE ESTE MÓDULO NO HACE, a propósito:
 
@@ -74,9 +87,9 @@ MONTADOR = "montador"
 # Medio céntimo. Por debajo de esto es redondeo; por encima es deuda y no libera.
 TOLERANCIA_COBRO = 0.005
 
-# En qué mes cae una comisión consolidada: en el de la última condición que se
-# cumplió. Ver la nota de arriba.
-PERIODO_POR = "ultima_condicion"
+# En qué mes cae una comisión consolidada: en el de la ENTREGA de la mercancía.
+# Master, 25/08: «si se sirven en agosto se liquidan en agosto». Ver la nota.
+PERIODO_POR = "servido"
 
 
 def _fecha(v) -> Optional[date]:
@@ -179,11 +192,30 @@ def estado_de(pedido: dict) -> Optional[str]:
 
 
 def periodo_de_consolidacion(pedido: dict) -> Optional[str]:
-    """El mes en que la comisión se libera: el de la ÚLTIMA de las dos fechas."""
+    """El mes en que se paga: el de la ENTREGA de la mercancía.
+
+    Master, 25/08: «si se sirven en agosto se liquidan en agosto». La fecha de
+    cobro no entra en esta cuenta — solo decide SI se libera, no CUÁNDO.
+    """
     p = normaliza(pedido)
     if not (esta_servido(p) and esta_cobrado(p)):
         return None
-    return periodo_de(max(p["servidoAt"], p["cobradoAt"]))
+    return periodo_de(p["servidoAt"])
+
+
+def es_anomalia(pedido: dict) -> bool:
+    """Salió del almacén sin estar cobrado del todo. No debería poder pasar.
+
+    «Todos los pedidos antes de salir del almacén tienen que estar cobrados»
+    (master, 25/08). Cuando aparece uno así, la comisión NO se libera —no se
+    paga sobre dinero que no ha entrado— pero tampoco se queda callada en el
+    montón de «en progreso», donde parecería un pedido normal a medio hacer. Se
+    marca, para que se vea que hay mercancía fuera y dinero sin entrar.
+    """
+    p = normaliza(pedido)
+    if p["anulado"] or p["aceptadoAt"] is None:
+        return False
+    return esta_servido(p) and not esta_cobrado(p)
 
 
 def euros_de(pedido: dict, rol: str) -> float:
@@ -207,6 +239,7 @@ def linea(pedido: dict, rol: str) -> Optional[dict]:
     return {
         "pedidoId": p["id"],
         "estado": est,
+        "anomalia": es_anomalia(p),
         "euros": euros_de(p, rol),
         "muebles": p["muebles"],
         "periodo": p["liquidadoEn"] if est == LIQUIDADA else periodo_de_consolidacion(p),

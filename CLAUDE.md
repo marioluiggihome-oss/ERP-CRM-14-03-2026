@@ -244,6 +244,31 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      El candado `test_la_pantalla_PAGA_Y_ROTULA_igual_que_el_calculo` EJECUTA en
      node las funciones del JSX y las compara con las del backend valor a valor.
 
+17. **CUÁNDO cobra un cooperativista: los tres estados del dinero** (25/08).
+   `comisiones.py` dice CUÁNTO; `services/liquidaciones.py` dice CUÁNDO, que es
+   donde se paga dos veces o se paga de más. **En progreso** = pedido aceptado:
+   lo VE en euros (es el plan de estimulación) pero no es suyo y se cae con el
+   pedido. **Consolidada** = servido del todo Y cobrado del todo. **Liquidada** =
+   ya pagada, no vuelve a entrar nunca. Se liquida **una vez al mes**.
+   - **El mes es el de la ENTREGA**, no el del cobro: «si se sirven en agosto se
+     liquidan en agosto» (master). El cobro decide SI se libera, no CUÁNDO.
+   - **Las dos condiciones son una «Y».** Servido sin cobrar es pagar con dinero
+     que no ha entrado; cobrado sin servir es un anticipo.
+   - **«Cobrado» es cobrado del TODO.** Este ERP lleva cobros a cuenta
+     (`pendienteCobro`): al 90% no libera. Media céntimo de tolerancia, que es
+     redondeo — sin ella, un descuadre de un céntimo congelaría una comisión
+     para siempre.
+   - «Todos los pedidos antes de salir del almacén tienen que estar cobrados»
+     (master). Eso es una NORMA DE LA CASA, no una ley de la física: la cumplen
+     personas y el dato lo teclean personas. **No se da por hecha.** Si un pedido
+     sale con pendiente, no se paga Y se marca (`es_anomalia`) en vez de quedarse
+     callado entre los normales. Un candado que se apoya en que nadie se
+     equivoque no es un candado.
+   - Un pedido anulado o sin aceptar devuelve `None`, no cero euros: una línea a
+     cero en el panel del comercial es recordarle lo que no va a cobrar. Y el
+     panel NO da un total que sume los tres montones — son promesas de distinto
+     valor. Candado: `test_calculo_liquidaciones.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
