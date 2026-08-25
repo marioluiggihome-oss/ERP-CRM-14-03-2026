@@ -215,9 +215,12 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    compara las dos, porque si se separan alguien cobra de menos. Van dentro del
    candado de importes de Rentabilidad (regla 9). Candado:
    `test_calculo_comisiones.py`.
+   - El tramo lo marca el **PVP** del pedido, NO el coste. Se hizo primero
+     sobre el coste porque el master dijo «importes de costo», y lo corrigió al
+     verlo: «es sobre el PVP». No es un matiz — el PVP es muy superior al coste,
+     así que con el mismo pedido el comercial sube de tramo.
    - PENDIENTE de confirmar por el master: qué pasa en 2.500 y 6.000 CLAVADOS
-     (hoy el borde va al tramo de arriba, `BORDE_AL_ALZA`), y si la valoración
-     que marca el tramo es el COSTE (lo que se usa hoy) o el PVP.
+     (hoy el borde va al tramo de arriba, `BORDE_AL_ALZA`).
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

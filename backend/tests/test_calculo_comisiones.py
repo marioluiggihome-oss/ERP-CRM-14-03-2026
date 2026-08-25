@@ -14,6 +14,12 @@ Los tramos los dictó el master el 25/08/2026:
     cuarenta euros. Poniendo un tope de valoración de cincuenta euros por
     mueble en pedidos superiores a este importe anterior.»
 
+Y una corrección suya del mismo día, que importa mucho: al describirlo dijo
+«importes de COSTO … de valoración» y se implementó sobre el coste. Al verlo en
+pantalla lo corrigió: **«es sobre el PVP, no sobre el costo»**. No es un matiz:
+el PVP de un pedido es muy superior a su coste, así que con el mismo pedido el
+comercial sube de tramo y cobra más.
+
 Y de los montadores: «se llevan una comisión desde la fabricación de los
 pedidos a partir de cascos, donde está la casilla esa que ponemos el valor de
 mano de obra».
@@ -188,3 +194,25 @@ def test_las_comisiones_van_dentro_del_candado_de_importes():
     assert trozo.count("margenVisible") >= 3, (
         "los importes de las comisiones se pintan sin pasar por el candado de "
         "Rentabilidad: enseñar la pantalla dejaría ver lo que cobra cada uno")
+
+
+def test_el_tramo_se_calcula_sobre_el_PVP_y_no_sobre_el_COSTE():
+    """La corrección del master del 25/08, clavada.
+
+    Se implementó primero sobre el coste porque él dijo «importes de costo», y
+    lo corrigió al verlo. Esta prueba mira la pantalla: si alguien vuelve a
+    pasarle el coste, el comercial baja de tramo y cobra menos sin que nadie se
+    entere — el número seguiría saliendo, solo que más pequeño.
+    """
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ruta = os.path.join(raiz, "frontend", "src", "components", "RentabilidadMV.jsx")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("Comisiones de cooperativistas")
+    trozo = cuerpo[max(0, i - 1500):i + 500]
+    assert "const valoracion = calc.tot.pvp" in trozo, (
+        "el tramo de la comisión ha vuelto a calcularse sobre algo que no es el "
+        "PVP. El master lo corrigió expresamente: «es sobre el PVP, no sobre el "
+        "costo».")
+    assert "const valoracion = calc.tot.coste" not in trozo, (
+        "vuelve a usarse el COSTE para decidir el tramo")

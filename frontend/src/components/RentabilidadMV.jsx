@@ -737,7 +737,12 @@ export default function RentabilidadMV({ esMaster, seed }) {
             (CLAUDE.md, regla 8): esto es nómina de gente. */}
         {calc.rows.length > 0 && (() => {
           const uds = lineas.reduce((a, l) => a + l.cant, 0);
-          const valoracion = calc.tot.coste;
+          // EL TRAMO LO MARCA EL PVP, NO EL COSTE. Al describirlo el master
+          // dijo «importes de costo … de valoración» y se implementó sobre el
+          // coste; al verlo lo corrigió: «es sobre el PVP, no sobre el costo»
+          // (25/08). Cambia bastante — el PVP de un pedido es muy superior a su
+          // coste, así que con el mismo pedido el comercial sube de tramo.
+          const valoracion = calc.tot.pvp;
           const porMuebleCom = comisionPorMueble(valoracion);
           const totalCom = Math.round(porMuebleCom * uds * 100) / 100;
           const manoUd = Number(p.mano) || 0;
@@ -759,7 +764,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   <div className="text-[10px] text-slate-500">
                     {`${eur(porMuebleCom)} × ${uds} mueble${uds === 1 ? '' : 's'}`}
                   </div>
-                  <div className="text-[10px] text-slate-400" title="El tramo lo marca la valoración de los muebles a coste.">
+                  <div className="text-[10px] text-slate-400" title="El tramo lo marca el PVP total del pedido.">
                     {`tramo: ${nombreDelTramo(valoracion)}`}
                   </div>
                 </div>
@@ -781,12 +786,12 @@ export default function RentabilidadMV({ esMaster, seed }) {
                     {margenVisible ? eur(totalCom + totalMon) : '•••'}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    {`sobre una valoración de ${margenVisible ? eur(valoracion) : '•••'}`}
+                    {`sobre un PVP de ${pvpVisible ? eur(valoracion) : '•••'}`}
                   </div>
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 mt-2">
-                Comercial: cantidad fija por mueble según la valoración del pedido
+                Comercial: cantidad fija por mueble según el PVP del pedido
                 (20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima;
                 tope de 50 €). Montadores: la mano de obra por mueble que hay puesta
                 arriba. Los importes van con el mismo candado que el margen.

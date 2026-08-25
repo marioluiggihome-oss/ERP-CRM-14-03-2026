@@ -19,7 +19,13 @@ faltaba era sumarlo y llamarlo por su nombre.
 
 COMERCIALES
 -----------
-Cantidad FIJA por mueble, y el tramo lo marca la valoración del pedido:
+Cantidad FIJA por mueble, y el tramo lo marca el **PVP** del pedido.
+
+OJO CON ESTO, que ya se hizo mal una vez: al describirlo, el master dijo
+«importes de costo … de valoración» y se implementó sobre el COSTE. Al verlo en
+pantalla lo corrigió: «es sobre el PVP, no sobre el costo». La diferencia no es
+menor — el PVP de un pedido es muy superior a su coste, así que con el mismo
+pedido el comercial sube de tramo y cobra más.
 
     valoración < 2.500 €          ->  20 € por mueble
     de 2.500 € a 6.000 €          ->  30 € por mueble
@@ -27,8 +33,8 @@ Cantidad FIJA por mueble, y el tramo lo marca la valoración del pedido:
 
     y un TOPE de 50 € por mueble, pase lo que pase.
 
-DOS COSAS QUE EL MASTER TIENE QUE CONFIRMAR, y que están marcadas en el código
-para que no se olviden:
+UNA COSA QUE EL MASTER TIENE QUE CONFIRMAR, y que queda marcada en el código
+para que no se olvide:
 
   1. Qué pasa EXACTAMENTE en 2.500 € y en 6.000 €. Dijo «inferiores a 2.500»
      (20) y «superiores a 2.500» (30), así que el valor exacto quedó sin
@@ -90,7 +96,8 @@ def _entero_no_negativo(n) -> int:
 def comision_comercial(valoracion: float, muebles: int) -> dict:
     """Comisión del comercial de un pedido entero.
 
-    `valoracion` es el importe del pedido con el que se decide el tramo, y
+    `valoracion` es el PVP del pedido (no el coste: lo corrigió el master el
+    25/08) con el que se decide el tramo, y
     `muebles` las UNIDADES (no las líneas: una línea de 4 muebles son 4 — regla
     4 de CLAUDE.md, las unidades multiplican).
     """
