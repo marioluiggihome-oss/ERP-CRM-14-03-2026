@@ -41,6 +41,15 @@ _FONDO = {"BAJO": 58, "ALTO": 33, "COLUMNA": 58}
 # había manera de que saliera. Una columna de tarifa que no se puede alcanzar no
 # es una preferencia: es la prueba de que la clave de búsqueda está mal.
 #
+# LAS CINCO FAMILIAS que van por ancho: COSTADOS_COLOR, COSTADOS_MELAMINA,
+# LATERALES_COLOR, REGLETA_COLOR y REGLETA_MELAMINA. Las regletas las confirmó
+# el master aparte, al revisar este cambio («las regletas de color son
+# correctas», 25/08), y no es un detalle: en la tarifa la regleta de color lleva
+# escrito «Ancho 15» al lado de esas mismas dos columnas de 70/90, así que su
+# ancho de tablero (15) y el tramo de tarifa (70/90) son dos cosas distintas.
+# La de melamina es idéntica en estructura —«Ancho 10», mismas columnas, mismas
+# cuatro filas— y va igual.
+#
 # El ancho de un costado ES EL FONDO del mueble que remata: 33 en altos y 58 en
 # bajos y columnas (`_FONDO`, arriba). Los dos caben de sobra en «hasta 70», así
 # que ese es el caso corriente y por eso es el valor por defecto; la de 90 es

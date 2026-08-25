@@ -45,7 +45,13 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 TARIFA = os.path.join(RAIZ, "backend", "data", "mv_tarifas_oficiales.json")
 MONTADA3 = os.path.join(RAIZ, "frontend", "src", "components", "CocinaMontada3.jsx")
 
-# Las cinco familias de la página de lineales de la tarifa.
+# Las cinco familias de la página de lineales de la tarifa. Las REGLETAS entran
+# igual que los costados, y no por deducción: se le preguntó al master al
+# revisar este cambio y lo confirmó — «las regletas de color son correctas»
+# (25/08). Cuadra con la hoja: la regleta de color lleva escrito «Ancho 15» al
+# lado de las mismas dos columnas 70/90, o sea que su ancho de tablero y el
+# tramo de tarifa son dos cosas distintas. La de melamina es idéntica en
+# estructura («Ancho 10», mismas columnas, mismas cuatro filas).
 LINEALES = ("LATERALES_COLOR", "COSTADOS_COLOR", "REGLETA_COLOR",
             "REGLETA_MELAMINA", "COSTADOS_MELAMINA")
 
