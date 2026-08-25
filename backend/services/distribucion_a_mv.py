@@ -74,10 +74,29 @@ SIN_CASCO = {
 # El relleno no es un mueble de catálogo: es una pieza a medida.
 A_MEDIDA = {"relleno": "es una pieza a medida, no un mueble de catálogo"}
 
-# En esta fábrica los bajos SOLO se fabrican a 80 (CLAUDE.md).
+# ─── ALTURAS POR DEFECTO ─────────────────────────────────────────────────────
+#
+# LA ALTURA MANDA EN EL PRECIO, así que estos tres números no son cosmética: un
+# alto de 60 vale 156,51 € a 70 cm y 169,83 € a 90.
+#
+# Hasta el 25/08/2026 la pantalla NO mandaba ninguna altura y el backend cogía
+# 70 para los altos y 200 para las columnas sin decírselo a nadie. O sea que
+# TODA relación MV salía tarifada a 70/200 aunque la cocina llevara otra cosa:
+# ni aviso, ni error, un número plausible y a correr. El master lo cambió al
+# leer la auditoría: «por defecto altos de 90, bajos de 80 y columnas de 220».
+#
+# Son PROPUESTAS, no dogma: las tres se pueden cambiar en el presupuesto antes
+# de pasar a pedido (`alto_altos` / `alto_columnas` en el cuerpo de la
+# petición). Lo que no puede volver a pasar es que las elija el código en
+# silencio.
+
+# En esta fábrica los bajos SOLO se fabrican a 80 (CLAUDE.md). No es una
+# preferencia: es que no hay otra.
 ALTO_BAJOS = 80
-# Columna: 200 o 220 (CLAUDE.md). Se propone la de 200.
-ALTO_COLUMNAS = 200
+# Alto: 70 o 90 (CLAUDE.md). Se propone la de 90.
+ALTO_ALTOS = 90
+# Columna: 200 o 220 (CLAUDE.md). Se propone la de 220.
+ALTO_COLUMNAS = 220
 
 
 def _catalogo(tarifa: str = "T1") -> set:
@@ -103,7 +122,7 @@ def _propone_mano(indice: int) -> str:
     return "D" if indice % 2 == 0 else "I"
 
 
-def _altura_de(fila: str, prefijo: str, alto_altos: int,
+def _altura_de(fila: str, prefijo: str, alto_altos: int = ALTO_ALTOS,
                alto_columnas: int = ALTO_COLUMNAS) -> int:
     """La altura MANDA EN EL PRECIO, así que no puede quedarse en blanco.
 
@@ -121,7 +140,7 @@ def _altura_de(fila: str, prefijo: str, alto_altos: int,
 
 
 def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
-                            alto_altos: int = 70,
+                            alto_altos: int = ALTO_ALTOS,
                             alto_columnas: int = ALTO_COLUMNAS) -> dict:
     """Traduce una distribución a líneas de relación MV.
 
@@ -197,6 +216,39 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
 
     return {"lineas": lineas, "sin_codigo": sin_codigo,
             "notacion": notacion_de(lineas)}
+
+
+def reaplica_alturas(lineas, alto_altos: int = ALTO_ALTOS,
+                     alto_columnas: int = ALTO_COLUMNAS):
+    """Vuelve a poner la altura a unas líneas YA HECHAS, sin tocar nada más.
+
+    Hace falta porque cada línea lleva su propia altura dentro (`notacion_de`
+    escribe «(altura N)» mueble a mueble), así que cambiar el desplegable de la
+    pantalla no serviría de nada si las líneas siguieran con la altura vieja: se
+    volvería a tarifar exactamente igual.
+
+    La regla de qué altura le toca a cada uno NO se repite aquí: se le pregunta
+    a `_altura_de`, que es quien la sabe. El prefijo se saca del código —«A60D»
+    -> «A», «CF60» -> «CF»— quitándole el ancho y la mano.
+
+    Se respeta lo que el usuario haya tocado a mano en otras cosas (la mano, el
+    dos puertas): esto SOLO cambia `alto`.
+    """
+    salida = []
+    for ln in lineas or []:
+        copia = dict(ln)
+        cod = str(copia.get("codigo") or "").upper()
+        # El prefijo son las letras del principio, hasta el primer dígito.
+        prefijo = ""
+        for c in cod:
+            if c.isdigit():
+                break
+            prefijo += c
+        if prefijo:
+            fila = "alto" if prefijo.startswith("A") else "bajo"
+            copia["alto"] = _altura_de(fila, prefijo, alto_altos, alto_columnas)
+        salida.append(copia)
+    return salida
 
 
 def notacion_de(lineas) -> str:

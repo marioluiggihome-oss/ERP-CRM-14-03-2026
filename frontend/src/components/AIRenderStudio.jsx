@@ -476,6 +476,21 @@ export default function AIRenderStudio({ state, setState }) {
   // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro.
   // ('ia2' e 'ia4' están apagadas.)
   const [motor, setMotor] = useState('ia1');
+  // ─── LO QUE VA A COSTAR, ANTES DE PULSAR ─────────────────────────────────
+  //
+  // El coste en créditos depende del motor (25/08). Pero el aviso NO PUEDE
+  // DECIR NUNCA QUÉ MOTOR SE USA — el master fue explícito: «pero que no ponga
+  // nunca qué IA se usa». Y tiene sentido más allá del gusto: IA 1 es la única
+  // que ve un usuario que no sea master (CLAUDE.md, regla 1), así que poner el
+  // nombre del motor en pantalla sería enseñar por dónde va la casa.
+  //
+  // Se dice el NÚMERO y ya está. Esta tabla tiene que decir lo mismo que
+  // `COSTE_POR_MOTOR` de `backend/services/ai_usage.py`, que es quien cobra de
+  // verdad; hay un candado que compara las dos y se pone rojo si se separan.
+  const COSTE_CREDITOS = { banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
+  const creditosPorRender = () => Math.ceil((COSTE_CREDITOS[providerOf()] ?? 1));
+  const creditosDeEstaTanda = (n = 1) => creditosPorRender() * Math.max(1, n);
+
   const providerOf = () => {
     // IA 2 (Manus) esta APAGADA: es un agente, no un modelo de imagen, y cada
     // render se iba a minutos —hasta 5— mientras Gemini tarda segundos. El
@@ -524,6 +539,14 @@ export default function AIRenderStudio({ state, setState }) {
   // pantalla. Ahora existe, y lo que enseña es lo mismo que se va a dibujar.
   const [distDetectada, setDistDetectada] = useState(null); // {distribucion, via, avisos}
   const [detectandoDist, setDetectandoDist] = useState(false);
+  // ALTURAS MV. Mandan en el precio: un alto de 60 vale 156,51 € a 70 cm y
+  // 169,83 € a 90. Hasta el 25/08 no se elegían —la pantalla no las mandaba y
+  // el servidor cogía 70 y 200 en silencio—, así que toda relación salía
+  // tarifada a unas alturas que no había pedido nadie. Las propuestas las fijó
+  // el master: altos 90, columnas 220. Los bajos no se eligen: en esta fábrica
+  // solo se fabrican a 80.
+  const [altoAltos, setAltoAltos] = useState(90);
+  const [altoColumnas, setAltoColumnas] = useState(220);
   const distAceptada = useRef(null);    // lo que el usuario ha visto y da por bueno
   const viaDistribucion = useRef(null); // de dónde salió: croquis, render o descripción
   const fotoGuardada = useRef(null);   // el render tal cual, para poder volver
@@ -1443,6 +1466,9 @@ export default function AIRenderStudio({ state, setState }) {
     setDetectandoDist(true); setError(null); setAvisoGeom(null);
     // El botón es para VOLVER A MIRAR: se descarta lo aceptado antes de leer,
     // o `deducirDistribucion` devolvería lo de la vez pasada.
+    // Antes de tirar lo que hay, se guarda: volver a detectar es UNA TECLA y no
+    // puede llevarse por delante las correcciones de una tarde sin vuelta atrás.
+    apilarDistribucion(distAceptada.current);
     distAceptada.current = null; viaDistribucion.current = null;
     setDistDetectada(null);
     const motivos = [], fallos = [];
@@ -1496,6 +1522,44 @@ export default function AIRenderStudio({ state, setState }) {
 
   const [corrigiendo, setCorrigiendo] = useState(false);
 
+  // DESHACER DEL PANEL DE DISTRIBUCIÓN.
+  //
+  // El master, 25/08: corriges doce módulos a mano, te equivocas en uno, y no
+  // hay vuelta atrás; y si vuelves a pulsar «Detectar», los doce se van.
+  //
+  // Se guarda la distribución ANTERIOR en una pila, y también antes de volver a
+  // detectar — que es justo el caso que más duele: una detección nueva es una
+  // tecla, y perder la tarde por una tecla no puede ser. Se guarda lo que ya
+  // había pasado por el validador, así que al deshacer no hace falta volver a
+  // validarlo: es un estado que ya era bueno.
+  const pilaDist = useRef([]);
+  const [puedeDeshacer, setPuedeDeshacer] = useState(false);
+
+  const apilarDistribucion = (d) => {
+    if (!d) return;
+    pilaDist.current.push(JSON.parse(JSON.stringify(d)));
+    // Tope: no hace falta guardar la sesión entera, y cada copia es un objeto
+    // con todos los módulos dentro.
+    if (pilaDist.current.length > 25) pilaDist.current.shift();
+    setPuedeDeshacer(true);
+  };
+
+  const deshacerDistribucion = () => {
+    const anterior = pilaDist.current.pop();
+    setPuedeDeshacer(pilaDist.current.length > 0);
+    if (!anterior) return;
+    distAceptada.current = anterior;
+    setDistDetectada({ distribucion: anterior, via: 'deshecho',
+                       avisos: anterior.avisos || [] });
+    // Lo dibujado y lo tarifado eran de la versión que acabamos de tirar.
+    alzadoGuardado.current = null;
+    setRelacionMV(null);
+    if (vistaConCotas && fotoGuardada.current) {
+      setRenderResult(fotoGuardada.current);
+      setVistaConCotas(false);
+    }
+  };
+
   // MUEBLES MV: la distribución traducida a códigos de catálogo con su precio.
   // Cierra el circuito — lo que se ha leído y corregido en el panel se
   // convierte en muebles que se le pueden pedir a MV.
@@ -1511,7 +1575,8 @@ export default function AIRenderStudio({ state, setState }) {
     if (!dist) { setError('Pulsa antes «Detectar distribución».'); return; }
     setCargandoMV(true); setError(null);
     try {
-      const r = await postJson('/api/estudio-cocinas/relacion-mv', { distribucion: dist });
+      const r = await postJson('/api/estudio-cocinas/relacion-mv',
+        { distribucion: dist, alto_altos: altoAltos, alto_columnas: altoColumnas });
       if (!r?.success) { setError('No se pudo sacar la relación de muebles MV.'); return; }
       setRelacionMV(r);
     } catch (e) {
@@ -1522,17 +1587,58 @@ export default function AIRenderStudio({ state, setState }) {
   // Vuelve a tarifar unas líneas que el usuario ha tocado. Se vuelve a pedir al
   // backend a propósito: cambiar «B60D» por «B60» es cambiar de mueble, y el
   // precio lo dice el catálogo, no la pantalla.
-  const retarifarMV = async (lineas) => {
+  // `altos`/`columnas` se pasan A MANO desde `cambiarAlturas` a propósito:
+  // `setAltoAltos` no ha refrescado todavía el estado cuando se llama aquí, y
+  // sin esto se retarifaría con la altura ANTERIOR — el clásico de React, y
+  // aquí saldría un precio que no es el que se está mirando.
+  const retarifarMV = async (lineas, altos, columnas) => {
     if (cargandoMV) return;
     setCargandoMV(true); setError(null);
     try {
       const r = await postJson('/api/estudio-cocinas/relacion-mv',
-        { lineas, sin_codigo: relacionMV?.sin_codigo || [], tarifa: relacionMV?.tarifa || 'T1' });
+        { lineas, sin_codigo: relacionMV?.sin_codigo || [], tarifa: relacionMV?.tarifa || 'T1',
+          alto_altos: altos ?? altoAltos, alto_columnas: columnas ?? altoColumnas });
       if (r?.success) setRelacionMV(r);
       else setError('No se pudo volver a tarifar la relación.');
     } catch (e) {
       setError(`No se pudo volver a tarifar: ${e?.message || 'error desconocido'}.`);
     } finally { setCargandoMV(false); }
+  };
+
+  // Cambiar la altura CON LA RELACIÓN YA HECHA, que es donde de verdad hace
+  // falta: es en el presupuesto, mirando el total, cuando uno se da cuenta de
+  // que esos altos eran de 90 y no de 70. Se vuelve a tarifar con las mismas
+  // líneas —o sea que la mano y el dos puertas que hayas elegido se quedan—;
+  // de reaplicar la altura mueble a mueble se encarga el servidor, que es
+  // quien sabe qué prefijo es un alto y cuál una columna.
+  const cambiarAlturas = (altos, columnas) => {
+    setAltoAltos(altos); setAltoColumnas(columnas);
+    if (relacionMV?.lineas?.length) retarifarMV(relacionMV.lineas, altos, columnas);
+  };
+
+  // QUÉ SE GUARDA DE LA RELACIÓN MV: LAS DECISIONES, NO EL DINERO.
+  //
+  // Lo que no se puede volver a calcular solo es lo que has decidido tú: la
+  // mano D/I de cada puerta, el «dos puertas» y las alturas. El PRECIO sí se
+  // recalcula —se vuelve a pedir al catálogo al abrir el proyecto— y por eso NO
+  // se guarda: si se guardara, un proyecto llevaría dentro la tarifa MV, y
+  // entonces cualquiera que abriera ese proyecto vería el dinero sin pasar por
+  // el candado del servidor (CLAUDE.md, regla 8b). Un candado que se puede
+  // rodear guardando un fichero no es un candado.
+  const relacionParaGuardar = () => {
+    if (!relacionMV?.lineas?.length) return null;
+    return {
+      tarifa: relacionMV.tarifa || 'T1',
+      altoAltos, altoColumnas,
+      lineas: relacionMV.lineas.map(l => ({
+        id: l.id, label: l.label, familia: l.familia, codigo: l.codigo,
+        ancho: l.ancho, alto: l.alto, pared_idx: l.pared_idx,
+        posicion_cm: l.posicion_cm, mano: l.mano ?? null,
+        mano_propuesta: !!l.mano_propuesta,
+        puede_dos_puertas: !!l.puede_dos_puertas,
+        confirmar_familia: !!l.confirmar_familia,
+      })),
+    };
   };
 
   const cambiarMano = (i, mano) => {
@@ -1636,6 +1742,7 @@ export default function AIRenderStudio({ state, setState }) {
     // validación, se queda a medias y sin vuelta atrás.
     const propuesta = JSON.parse(JSON.stringify(base));
     mutar(propuesta);
+    apilarDistribucion(base);
     setCorrigiendo(true); setError(null);
     try {
       const r = await postJson('/api/estudio-cocinas/validar-distribucion', { distribucion: propuesta });
@@ -1645,7 +1752,14 @@ export default function AIRenderStudio({ state, setState }) {
       // El alzado guardado se dibujó con las medidas VIEJAS: ya no vale. Y la
       // relación de muebles MV tampoco: son otros muebles.
       alzadoGuardado.current = null;
+      // PERO SI LA TENÍAS ABIERTA, SE VUELVE A PEDIR. Antes se cerraba y punto,
+      // así que para saber cómo iba el precio había que volver a pulsar
+      // «Muebles MV» después de CADA corrección. Ahora el total se actualiza
+      // solo mientras diseñas, que es cuando sirve de algo: cambias un módulo
+      // de 60 a 90 y ves lo que cuesta ese cambio.
+      const teniaRelacion = !!relacionMV;
       setRelacionMV(null);
+      if (teniaRelacion) pedirMueblesMV();
       if (vistaConCotas && fotoGuardada.current) {
         setRenderResult(fotoGuardada.current);
         setVistaConCotas(false);
@@ -2764,6 +2878,7 @@ export default function AIRenderStudio({ state, setState }) {
           style: params.style, images: [imgSave], referenceImage: refSave,
           medidas, tipo3d,
           distribucion: distAceptada.current || null,
+          relacionMV: relacionParaGuardar(),
         }),
       });
       let d = null;
@@ -2828,6 +2943,17 @@ export default function AIRenderStudio({ state, setState }) {
             via: 'guardada con el proyecto',
             avisos: full.distribucion.avisos || [],
           });
+        }
+        // LA RELACIÓN MV vuelve con las manos que decidiste, y se VUELVE A
+        // TARIFAR: el proyecto guarda las decisiones y el precio lo pone el
+        // catálogo, cada vez, pasando por el candado del servidor. Así una
+        // subida de tarifa se ve al reabrir en vez de quedarse congelada, y
+        // quien no puede ver el dinero sigue sin verlo.
+        if (full.relacionMV?.lineas?.length) {
+          const alt = Number(full.relacionMV.altoAltos) || 90;
+          const col = Number(full.relacionMV.altoColumnas) || 220;
+          setAltoAltos(alt); setAltoColumnas(col);
+          retarifarMV(full.relacionMV.lineas, alt, col);
         }
       }
     } catch { /* si falla el detalle, se queda con la miniatura de la lista */ }
@@ -3715,6 +3841,17 @@ export default function AIRenderStudio({ state, setState }) {
                     <><Send size={18} /> {variantCount > 1 ? `Generar ${variantCount} variaciones` : 'Generar desde la descripción'}</>
                   )}
                 </button>
+                {/* EL COSTE, ANTES DE PULSAR. Solo el número: aquí NO se dice
+                    nunca qué motor se usa (petición del master, 25/08). */}
+                {aiCredits && !aiCredits.ilimitado && (
+                  <p className={`mt-1.5 text-center text-[11px] font-bold ${
+                    creditosDeEstaTanda(variantCount) > (aiCredits.restantes ?? 0)
+                      ? 'text-red-600' : 'text-slate-500'}`}>
+                    {creditosDeEstaTanda(variantCount) > (aiCredits.restantes ?? 0)
+                      ? `Te faltan créditos: esto gasta ${creditosDeEstaTanda(variantCount)} y te quedan ${aiCredits.restantes ?? 0}.`
+                      : `Vas a gastar ${creditosDeEstaTanda(variantCount)} ${creditosDeEstaTanda(variantCount) === 1 ? 'crédito' : 'créditos'} · te quedan ${aiCredits.restantes ?? 0}.`}
+                  </p>
+                )}
               </div>
             </div>
           ) : (
@@ -3890,8 +4027,28 @@ export default function AIRenderStudio({ state, setState }) {
                 <span className="font-black shrink-0">
                   Distribución detectada {distDetectada.via} · revísala antes de dibujar:
                 </span>
+                {/* EL TOTAL, MIENTRAS DISEÑAS. Antes había que bajar hasta la
+                    relación MV para saber por dónde iba el precio. Sale solo si
+                    hay total: a quien no puede ver la tarifa MV el servidor le
+                    manda `totalPvp` en nulo (CLAUDE.md, regla 8b) y aquí no se
+                    pinta nada — el candado no se rodea por esta puerta. */}
+                {relacionMV?.totalPvp != null && (
+                  <span className="ml-auto shrink-0 px-2 py-0.5 rounded-full bg-white border border-teal-300 text-teal-800 text-[11px] font-black tabular-nums"
+                    title="Total de los muebles MV de esta distribución, a tarifa. Se actualiza al corregir un módulo.">
+                    {relacionMV.totalPvp} €
+                  </span>
+                )}
+                {/* DESHACER. Recupera la versión anterior, incluida la que se
+                    perdía al volver a pulsar «Detectar». */}
+                <button onClick={deshacerDistribucion} disabled={!puedeDeshacer || corrigiendo}
+                  title={puedeDeshacer
+                    ? 'Deshacer el último cambio de la distribución (también recupera lo que había antes de volver a detectar)'
+                    : 'No hay nada que deshacer todavía'}
+                  className={`${relacionMV?.totalPvp != null ? '' : 'ml-auto'} flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-white border border-teal-300 text-teal-700 hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed shrink-0`}>
+                  <RotateCcw size={12} /> Deshacer
+                </button>
                 <button onClick={olvidarDistribucion} title="Descartar lo detectado y cerrar este aviso"
-                  className="ml-auto text-teal-500 hover:text-teal-700 shrink-0">
+                  className="text-teal-500 hover:text-teal-700 shrink-0">
                   <X size={16} />
                 </button>
               </div>
@@ -3983,6 +4140,38 @@ export default function AIRenderStudio({ state, setState }) {
                   {distDetectada.avisos.map((a, i) => <li key={i}>{a}</li>)}
                 </ul>
               )}
+              {/* ALTURAS ANTES DE PEDIR LOS MUEBLES. Mandan en el precio, así
+                  que se eligen a la vista y no las decide el código por
+                  detrás: un alto de 60 vale 156,51 € a 70 cm y 169,83 € a 90.
+                  Los BAJOS no salen porque no hay nada que elegir — en esta
+                  fábrica solo se fabrican a 80—, y ponerlos daría a entender
+                  que hay alternativa. */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="font-bold text-slate-600">Alturas:</span>
+                <label className="flex items-center gap-1">
+                  <span className="text-slate-500">Altos</span>
+                  <select value={altoAltos} onChange={e => setAltoAltos(Number(e.target.value))}
+                    disabled={cargandoMV}
+                    title="Altura del casco de los muebles altos. MV los fabrica a 70 y a 90, y NO valen lo mismo."
+                    className="px-1.5 py-0.5 border border-slate-300 rounded-md bg-white font-bold">
+                    <option value={70}>70</option>
+                    <option value={90}>90</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-1">
+                  <span className="text-slate-500">Columnas</span>
+                  <select value={altoColumnas} onChange={e => setAltoColumnas(Number(e.target.value))}
+                    disabled={cargandoMV}
+                    title="Altura del casco de las columnas. MV las fabrica a 200 y a 220."
+                    className="px-1.5 py-0.5 border border-slate-300 rounded-md bg-white font-bold">
+                    <option value={200}>200</option>
+                    <option value={220}>220</option>
+                  </select>
+                </label>
+                <span className="text-slate-400" title="En esta fábrica los bajos solo se fabrican a 80: no hay nada que elegir.">
+                  Bajos 80 (único)
+                </span>
+              </div>
               <button onClick={pedirMueblesMV} disabled={cargandoMV || corrigiendo}
                 title="Traduce esta distribución a muebles del catálogo MV, con su código, su ancho y su precio de tarifa. No cambia nada del diseño: saca la relación para que la revises."
                 className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50 flex items-center gap-1.5">
@@ -4001,6 +4190,35 @@ export default function AIRenderStudio({ state, setState }) {
                   className="ml-auto text-indigo-400 hover:text-indigo-700 shrink-0">
                   <X size={16} />
                 </button>
+              </div>
+              {/* LAS ALTURAS, TAMBIÉN AQUÍ. Es mirando el total cuando uno cae
+                  en que esos altos eran de 90. Cambiarlas vuelve a tarifar en
+                  el acto y NO pierde las manos que hayas elegido. */}
+              <div className="flex flex-wrap items-center gap-2 mb-2 text-[11px]">
+                <span className="font-bold text-indigo-700">Alturas:</span>
+                <label className="flex items-center gap-1">
+                  <span className="text-indigo-500">Altos</span>
+                  <select value={altoAltos} disabled={cargandoMV}
+                    onChange={e => cambiarAlturas(Number(e.target.value), altoColumnas)}
+                    title="MV fabrica los altos a 70 y a 90, y no valen lo mismo. Al cambiarlo se vuelve a tarifar."
+                    className="px-1.5 py-0.5 border border-indigo-300 rounded-md bg-white font-bold">
+                    <option value={70}>70</option>
+                    <option value={90}>90</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-1">
+                  <span className="text-indigo-500">Columnas</span>
+                  <select value={altoColumnas} disabled={cargandoMV}
+                    onChange={e => cambiarAlturas(altoAltos, Number(e.target.value))}
+                    title="MV fabrica las columnas a 200 y a 220. Al cambiarlo se vuelve a tarifar."
+                    className="px-1.5 py-0.5 border border-indigo-300 rounded-md bg-white font-bold">
+                    <option value={200}>200</option>
+                    <option value={220}>220</option>
+                  </select>
+                </label>
+                <span className="text-indigo-400" title="En esta fábrica los bajos solo se fabrican a 80.">
+                  Bajos 80 (único)
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px] min-w-[420px]">

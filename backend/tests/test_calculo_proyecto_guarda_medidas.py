@@ -162,3 +162,83 @@ def test_la_pantalla_manda_las_medidas_y_las_recupera_al_abrir():
         "al abrir un proyecto ya no se recuperan las medidas guardadas")
     assert "full.distribucion" in cuerpo, (
         "al abrir un proyecto ya no se recupera la distribución guardada")
+
+
+# ─── LA RELACIÓN MV: LAS DECISIONES SÍ, EL DINERO NO ─────────────────────────
+#
+# El master, 25/08: «que las manos se guarden y se puedan cambiar antes de
+# pedir». La mano D/I y el «dos puertas» no se leen del diseño: los elige él
+# mueble a mueble, y son justo lo que no puede llegar sin decidir al taller.
+#
+# Pero guardar la relación entera habría metido la TARIFA MV dentro del
+# proyecto, y entonces cualquiera que abriese ese proyecto vería el dinero sin
+# pasar por el candado del servidor (CLAUDE.md, regla 8b). Un candado que se
+# rodea guardando un fichero no es un candado. Por eso se guardan las
+# decisiones y el precio se vuelve a pedir al catálogo al abrir.
+
+RELACION = {
+    "tarifa": "T1", "altoAltos": 90, "altoColumnas": 220,
+    "lineas": [
+        {"id": "alto", "label": "Alto", "familia": "Alto", "codigo": "A60I",
+         "ancho": 60, "alto": 90, "pared_idx": 0, "posicion_cm": 0,
+         "mano": "I", "mano_propuesta": False, "puede_dos_puertas": True,
+         "confirmar_familia": False},
+    ],
+}
+
+
+def test_las_manos_elegidas_se_guardan_con_el_proyecto(guardar):
+    endpoint, db = guardar
+    r = asyncio.run(endpoint(
+        {"cliente": "Pepe", "images": ["x"], "relacionMV": RELACION},
+        current_user=USUARIO))
+    doc = db.render3d_designs.docs[r["design"]["id"]]
+    assert doc.get("relacionMV"), "no se ha guardado la relación MV"
+    linea = doc["relacionMV"]["lineas"][0]
+    assert linea["mano"] == "I", "se ha perdido la mano elegida"
+    assert linea["mano_propuesta"] is False, (
+        "una mano YA DECIDIDA vuelve a guardarse como propuesta: al reabrir "
+        "saldría con el «?» y habría que volver a decidirla")
+    assert doc["relacionMV"]["altoAltos"] == 90, "no se guardan las alturas elegidas"
+
+
+def test_guardar_otra_vez_sin_la_relacion_no_borra_las_manos(guardar):
+    endpoint, db = guardar
+    primero = asyncio.run(endpoint(
+        {"cliente": "Pepe", "images": ["x"], "relacionMV": RELACION}, current_user=USUARIO))
+    oid = primero["design"]["id"]
+    asyncio.run(endpoint({"id": oid, "images": ["y"]}, current_user=USUARIO))
+    doc = db.render3d_designs.docs[oid]
+    assert doc.get("relacionMV", {}).get("lineas"), (
+        "un guardado sin la relación ha borrado las manos que ya estaban decididas")
+
+
+def test_la_pantalla_NO_guarda_los_precios_en_el_proyecto():
+    """El candado del candado. Es lo que impide rodear la regla 8b."""
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ruta = os.path.join(raiz, "frontend", "src", "components", "AIRenderStudio.jsx")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    trozo = cuerpo[cuerpo.index("const relacionParaGuardar"):]
+    trozo = trozo[:trozo.index("const cambiarMano")]
+    for dinero in ("pvp", "puntos", "totalPvp", "importe"):
+        assert dinero not in trozo, (
+            f"se está guardando «{dinero}» dentro del proyecto. Eso mete la tarifa "
+            "MV en un documento que puede abrir alguien que no es master, y se "
+            "salta el candado del servidor (CLAUDE.md, regla 8b).")
+    # Y lo que sí tiene que guardar:
+    for decision in ("mano", "codigo", "altoAltos"):
+        assert decision in trozo, f"ya no se guarda «{decision}», que es una decisión del master"
+
+
+def test_al_abrir_un_proyecto_se_vuelve_a_tarifar(guardar):
+    """Guardar decisiones y no precios obliga a re-tarifar al abrir."""
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ruta = os.path.join(raiz, "frontend", "src", "components", "AIRenderStudio.jsx")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    assert "full.relacionMV" in cuerpo, (
+        "al abrir un proyecto ya no se recupera la relación MV guardada")
+    assert "retarifarMV(full.relacionMV.lineas" in cuerpo, (
+        "la relación se recupera pero NO se vuelve a tarifar. Como el proyecto no "
+        "guarda precios, sin re-tarifar el presupuesto saldría a cero.")

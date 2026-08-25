@@ -109,7 +109,7 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
     existing = await _db.render3d_designs.find_one(
         {"id": oid},
         {"_id": 0, "createdAt": 1, "userId": 1,
-         "medidas": 1, "distribucion": 1, "tipo3d": 1})
+         "medidas": 1, "distribucion": 1, "tipo3d": 1, "relacionMV": 1})
     if existing and existing.get("userId") and current_user and current_user.get("id") \
        and existing["userId"] != current_user["id"] and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
@@ -142,6 +142,14 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
         "medidas": (existing or {}).get("medidas"),
         "distribucion": (existing or {}).get("distribucion"),
         "tipo3d": (existing or {}).get("tipo3d"),
+        # LA RELACIÓN MV, con las MANOS ya decididas. La mano D/I y el «dos
+        # puertas» no se leen del diseño: los elige el master mueble a mueble, y
+        # son justo lo que no puede llegar sin decidir al taller —un código
+        # acabado en «D/I» se acierta la mitad de las veces y la otra mitad es
+        # un frente desmontado y taladrado otra vez en casa del cliente—. Se
+        # perdían al cerrar el proyecto. Van también las ALTURAS elegidas, que
+        # mandan en el precio.
+        "relacionMV": (existing or {}).get("relacionMV"),
         "createdByName": (current_user or {}).get("clientName") or (current_user or {}).get("username") or "",
         "createdAt": (existing or {}).get("createdAt") or now,
         "updatedAt": now,
@@ -156,6 +164,8 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
         doc["distribucion"] = p["distribucion"]
     if p.get("tipo3d"):
         doc["tipo3d"] = str(p["tipo3d"])
+    if isinstance(p.get("relacionMV"), dict):
+        doc["relacionMV"] = p["relacionMV"]
 
     await _db.render3d_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
     doc.pop("_id", None)

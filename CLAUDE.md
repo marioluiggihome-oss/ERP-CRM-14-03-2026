@@ -181,6 +181,30 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    se parta de lo que ya había y que estén en la proyección del `find_one`.
    Candado: `test_calculo_proyecto_guarda_medidas.py`.
 
+13. **La ALTURA de un mueble MV la elige el master, y manda en el precio**
+   (25/08). La pantalla no mandaba `alto_altos` ni `alto_columnas` y el backend
+   cogía 70 y 200 en silencio: TODA relación salía tarifada a 70/200 aunque la
+   cocina llevara otra cosa. Un alto de 60 vale 156,51 € a 70 y 169,83 € a 90.
+   Propuestas del master: **altos 90, bajos 80, columnas 220**; los bajos no se
+   eligen (esta fábrica solo los hace a 80). Se pueden cambiar antes de sacar la
+   relación Y en el presupuesto ya hecho, antes de pasar a pedido. Candado:
+   `test_calculo_alturas_mv.py`.
+
+14. **Un proyecto guarda las DECISIONES de la relación MV, nunca los PRECIOS**
+   (25/08). La mano D/I y el «dos puertas» los decide el master y se perdían al
+   cerrar. Se guardan; el precio NO, y se vuelve a pedir al catálogo al abrir.
+   Si se guardara, el proyecto llevaría la tarifa MV dentro y cualquiera que lo
+   abriera vería el dinero sin pasar por el candado del servidor (regla 8b): un
+   candado que se rodea guardando un fichero no es un candado. Candado:
+   `test_calculo_proyecto_guarda_medidas.py`.
+
+15. **El aviso de coste del render NUNCA dice qué IA se usa** (25/08, a petición
+   del master). Se dice el número de créditos y ya está: IA 1 es la única que ve
+   un usuario que no sea master (regla 1), así que poner el motor en pantalla
+   enseña por dónde va la casa. La tabla de costes está en la pantalla y en el
+   servidor, y el candado compara las dos: si se separan, el aviso diría una
+   cosa y la factura otra. Candado: `test_pantalla_aviso_de_coste.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

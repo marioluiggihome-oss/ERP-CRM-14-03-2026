@@ -73,9 +73,15 @@ def test_cada_mueble_se_tarifa_por_SU_altura():
     assert alto["alto"] == 90, (
         f"el alto se ha tarifado a {alto['alto']} cm en vez de a 90: la altura de "
         "un mueble se la ha comido la de otro.")
+    # 220, NO 200. Esta prueba pedía 200 porque ése era el defecto del código
+    # hasta el 25/08/2026. Lo cambió el master al leer la auditoría: «por defecto
+    # altos de 90, bajos de 80 y columnas de 220». La prueba sigue vigilando lo
+    # mismo —que cada mueble se tarife por SU altura y no por la del vecino—;
+    # solo cambia el número que se espera.
+    from services.distribucion_a_mv import ALTO_COLUMNAS
     columna = [t for t in tarifadas if t["familia"] == "COLUMNA_FRIGO"][0]
-    assert columna["alto"] == 200, \
-        f"la columna se ha tarifado a {columna['alto']} cm en vez de a 200"
+    assert columna["alto"] == ALTO_COLUMNAS, \
+        f"la columna se ha tarifado a {columna['alto']} cm en vez de a {ALTO_COLUMNAS}"
     bajos = [t for t in tarifadas if t["familia"] in ("BAJO", "BAJO_FREGADERO")]
     assert all(b["alto"] == 80 for b in bajos), \
         "algún bajo no se ha tarifado a 80, que es la única altura que fabrica esta casa"

@@ -76,10 +76,19 @@ def test_las_medidas_salen_en_MILIMETROS():
 
 
 def test_la_altura_de_una_columna_tambien_va_en_mm():
-    """Una columna son 200 cm. En el papel, 2000."""
+    """Una columna son 220 cm. En el papel, 2200.
+
+    Esta prueba decía 200/2000 porque ése era el defecto del código hasta el
+    25/08/2026; lo cambió el master al leer la auditoría («columnas de 220»). Lo
+    que vigila es lo mismo —que la altura salga en MILÍMETROS en el papel, que es
+    como se piden los muebles—, así que el número se lee de donde vive en vez de
+    escribirlo aquí otra vez.
+    """
+    from services.distribucion_a_mv import ALTO_COLUMNAS
     _relacion, pdf = _pdf()
     altos = [v for k, v in _campos(pdf) if k == "alto"]
-    assert "2000" in altos, f"la columna no sale a 2000 mm: {altos}"
+    esperado = str(ALTO_COLUMNAS * 10)
+    assert esperado in altos, f"la columna no sale a {esperado} mm: {altos}"
 
 
 def test_el_fondo_tambien():

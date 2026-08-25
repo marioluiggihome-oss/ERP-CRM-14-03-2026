@@ -2528,6 +2528,18 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
     if lineas_dadas:
         lineas = [dict(x) for x in lineas_dadas]
         sin_codigo = (payload or {}).get("sin_codigo") or []
+        # SI VIENEN ALTURAS, SE REAPLICAN. Cada línea lleva su altura dentro y
+        # `notacion_de` la escribe mueble a mueble, así que sin esto cambiar el
+        # desplegable de alturas no habría cambiado ni un céntimo: se volvería a
+        # tarifar con la altura vieja. Solo se toca `alto`; la mano y el dos
+        # puertas que haya elegido el usuario se quedan como estaban.
+        if (payload or {}).get("alto_altos") or (payload or {}).get("alto_columnas"):
+            from services.distribucion_a_mv import (
+                reaplica_alturas, ALTO_ALTOS as _AA, ALTO_COLUMNAS as _AC)
+            lineas = reaplica_alturas(
+                lineas,
+                alto_altos=int((payload or {}).get("alto_altos") or _AA),
+                alto_columnas=int((payload or {}).get("alto_columnas") or _AC))
     else:
         dist = (payload or {}).get("distribucion") or {}
         if not dist.get("elementos"):
@@ -2536,10 +2548,16 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
                 detail=("No hay módulos que traducir. Pulsa «Detectar distribución» "
                         "antes de pedir los muebles MV."))
         try:
+            # LAS ALTURAS VIENEN DE LA PANTALLA. Si no vienen, se usan las
+            # propuestas de `distribucion_a_mv` (altos 90, columnas 220), que
+            # es donde está escrito el porqué. Aquí NO se repiten los números:
+            # tenerlos en dos sitios es tenerlos distintos algún día, y estos
+            # mandan en el precio.
+            from services.distribucion_a_mv import ALTO_ALTOS, ALTO_COLUMNAS
             r = distribucion_a_relacion(
                 dist, tarifa=tarifa,
-                alto_altos=int((payload or {}).get("alto_altos") or 70),
-                alto_columnas=int((payload or {}).get("alto_columnas") or 200))
+                alto_altos=int((payload or {}).get("alto_altos") or ALTO_ALTOS),
+                alto_columnas=int((payload or {}).get("alto_columnas") or ALTO_COLUMNAS))
         except Exception as e:
             logger.error(f"relacion-mv: {e}")
             raise HTTPException(status_code=500, detail="No se pudo traducir la distribución a muebles MV.")
