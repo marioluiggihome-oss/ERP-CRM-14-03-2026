@@ -53,16 +53,20 @@ DOS COSAS QUE NO PUEDEN PASAR NUNCA, y por eso hay pruebas para las dos:
 
     y un TOPE de 50 € por mueble, pase lo que pase.
 
-UNA COSA QUE EL MASTER TIENE QUE CONFIRMAR, y que queda marcada en el código
-para que no se olvide:
+LOS BORDES, YA CONFIRMADOS (25/08). Al describir los tramos el master dijo
+«inferiores a 2.500» (20) y «superiores a 2.500» (30), así que el valor clavado
+quedaba sin definir. Se implementó al alza —en la duda no se le quita dinero a
+quien vende— y él lo confirmó después: «en 6.000 euros exactos, 40 euros». Por
+simetría, en 2.500 exactos se pagan 30.
 
-  1. Qué pasa EXACTAMENTE en 2.500 € y en 6.000 €. Dijo «inferiores a 2.500»
-     (20) y «superiores a 2.500» (30), así que el valor exacto quedó sin
-     definir. Aquí el borde va al tramo de ARRIBA —en 2.500 clavados se pagan
-     30— porque en la duda no se le quita dinero a quien vende. Cambiar
-     `BORDE_AL_ALZA` a False lo pasa al tramo de abajo.
+    2.499,99 -> 20      2.500 -> 30      5.999,99 -> 30      6.000 -> 40
 
-  2. El tope de 50 €. Hoy NO llega a aplicarse nunca: el tramo más alto son
+`BORDE_AL_ALZA` sigue existiendo por si algún día se quiere lo contrario, pero
+ya no es una duda: es una decisión tomada.
+
+UNA COSA QUE SIGUE PENDIENTE:
+
+  · El tope de 50 €. Hoy NO llega a aplicarse nunca: el tramo más alto son
      40 €, así que 50 no muerde. Se deja puesto porque el master lo pidió y
      porque el día que se añada un tramo por encima, el tope ya está.
 """
@@ -82,9 +86,8 @@ TRAMOS_COMERCIAL = (
 # Tope absoluto por mueble. Ver la nota 2 de arriba.
 TOPE_COMERCIAL_POR_MUEBLE = 50.0
 
-# En el borde exacto de un tramo (2.500 o 6.000 clavados), ¿se cobra el tramo
-# de arriba o el de abajo? Arriba: en la duda no se le quita dinero a quien
-# vende. Pendiente de que el master lo confirme.
+# En el borde exacto de un tramo (2.500 o 6.000 clavados) se cobra el tramo de
+# ARRIBA. Lo confirmó el master el 25/08: «en 6.000 euros exactos, 40 euros».
 BORDE_AL_ALZA = True
 
 

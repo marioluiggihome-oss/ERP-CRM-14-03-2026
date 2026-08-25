@@ -60,10 +60,13 @@ def test_los_tramos_son_los_que_dijo_el_master(valoracion, esperado):
 
 
 def test_en_el_borde_exacto_se_paga_el_tramo_de_ARRIBA():
-    """El master dijo «inferiores a 2.500» (20) y «superiores a 2.500» (30), así
-    que el valor clavado quedó sin definir. Se decide al alza: en la duda no se
-    le quita dinero a quien vende. Está pendiente de que lo confirme, y por eso
-    se deja escrito aquí en vez de en la cabeza de nadie."""
+    """CONFIRMADO por el master el 25/08: «en 6.000 euros exactos, 40 euros».
+
+    Al describir los tramos dijo «inferiores a 2.500» (20) y «superiores a
+    2.500» (30), así que el valor clavado quedaba sin definir. Se implementó al
+    alza —en la duda no se le quita dinero a quien vende— y él lo confirmó
+    después. Por simetría, en 2.500 exactos se pagan 30.
+    """
     assert C.BORDE_AL_ALZA is True
     assert C.euros_por_mueble_comercial(2500) == 30
     assert C.euros_por_mueble_comercial(6000) == 40

@@ -221,8 +221,9 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      con «siempre va sobre la base imponible, no sobre el total con IVA». Ni el
      coste ni el total con IVA pueden entrar: con el IVA, 5.500 € de base pasan
      a 6.655 € y saltan de tramo sin valer un euro más para la casa.
-   - PENDIENTE de confirmar por el master: qué pasa en 2.500 y 6.000 CLAVADOS
-     (hoy el borde va al tramo de arriba, `BORDE_AL_ALZA`).
+   - En el borde EXACTO se paga el tramo de arriba: en 2.500 clavados, 30 €;
+     en 6.000 clavados, 40 €. Confirmado por el master el 25/08 («en 6.000
+     euros exactos, 40 euros»).
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
