@@ -160,6 +160,44 @@ export const MV_COSTES_DEFAULT = {
   dtoPuertas: 0,    // alias legado (compatibilidad)
 };
 
+// ─── COMISIONES DE LOS COOPERATIVISTAS ──────────────────────────────────────
+//
+// ESTO ES NÓMINA. Los tramos los dictó el master el 25/08/2026 y tienen que
+// decir LO MISMO que `backend/services/comisiones.py`, que es donde vive el
+// cálculo de verdad y donde están las pruebas. Hay un candado que compara las
+// dos tablas: si se separan, la pantalla enseñaría una cifra y el cálculo daría
+// otra — y aquí eso es que alguien cobra de menos.
+//
+//   valoración < 2.500 €     ->  20 € por mueble
+//   de 2.500 € a 6.000 €     ->  30 € por mueble
+//   más de 6.000 €           ->  40 € por mueble
+//   tope, pase lo que pase   ->  50 € por mueble
+export const TRAMOS_COMISION_COMERCIAL = [
+  { hasta: 2500, euros: 20 },
+  { hasta: 6000, euros: 30 },
+  { hasta: null, euros: 40 },
+];
+export const TOPE_COMISION_POR_MUEBLE = 50;
+
+/** € por mueble que se lleva el comercial con esa valoración de pedido. */
+export const comisionPorMueble = (valoracion) => {
+  const v = Number(valoracion) || 0;
+  for (const t of TRAMOS_COMISION_COMERCIAL) {
+    // En el borde exacto (2.500 o 6.000 clavados) se paga el tramo de ARRIBA:
+    // en la duda no se le quita dinero a quien vende. Igual que el backend.
+    if (t.hasta === null || v < t.hasta) return Math.min(t.euros, TOPE_COMISION_POR_MUEBLE);
+  }
+  return Math.min(TRAMOS_COMISION_COMERCIAL[TRAMOS_COMISION_COMERCIAL.length - 1].euros,
+                  TOPE_COMISION_POR_MUEBLE);
+};
+
+export const nombreDelTramo = (valoracion) => {
+  const v = Number(valoracion) || 0;
+  if (v < 2500) return 'menos de 2.500 €';
+  if (v < 6000) return 'de 2.500 € a 6.000 €';
+  return 'más de 6.000 €';
+};
+
 // Ancho (mm) del prefijo numérico del código
 export const anchoDe = (cod) => {
   const m = /^[A-Z_]+(\d+)/.exec(cod || '');
@@ -691,6 +729,71 @@ export default function RentabilidadMV({ esMaster, seed }) {
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2.5"><div className="text-[10px] font-black text-emerald-500 uppercase">Margen medio</div><div className="text-lg font-black text-emerald-700">{margenVisible ? `${calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%` : '•••'}</div></div>
           </div>
         )}
+
+        {/* ─── COMISIONES DE LOS COOPERATIVISTAS ───────────────────────────
+            Va DESPUÉS de los KPIs a propósito: el tramo lo marca la valoración
+            del pedido, así que primero se ve el total y luego lo que sale de
+            él. Y va dentro de Rentabilidad MV, que ya es solo del master
+            (CLAUDE.md, regla 8): esto es nómina de gente. */}
+        {calc.rows.length > 0 && (() => {
+          const uds = lineas.reduce((a, l) => a + l.cant, 0);
+          const valoracion = calc.tot.coste;
+          const porMuebleCom = comisionPorMueble(valoracion);
+          const totalCom = Math.round(porMuebleCom * uds * 100) / 100;
+          const manoUd = Number(p.mano) || 0;
+          const totalMon = Math.round(manoUd * uds * 100) / 100;
+          return (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+              <div className="flex items-center gap-1.5 mb-2 text-amber-700">
+                <Calculator size={14} />
+                <span className="text-[11px] font-black uppercase tracking-wide">
+                  Comisiones de cooperativistas
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="rounded-lg border border-amber-200 bg-white p-2.5">
+                  <div className="text-[10px] font-black text-amber-500 uppercase">Comercial</div>
+                  <div className="text-lg font-black text-amber-800">
+                    {margenVisible ? eur(totalCom) : '•••'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {`${eur(porMuebleCom)} × ${uds} mueble${uds === 1 ? '' : 's'}`}
+                  </div>
+                  <div className="text-[10px] text-slate-400" title="El tramo lo marca la valoración de los muebles a coste.">
+                    {`tramo: ${nombreDelTramo(valoracion)}`}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-white p-2.5">
+                  <div className="text-[10px] font-black text-amber-500 uppercase">Montadores</div>
+                  <div className="text-lg font-black text-amber-800">
+                    {margenVisible ? eur(totalMon) : '•••'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {`${eur(manoUd)} de mano de obra × ${uds} mueble${uds === 1 ? '' : 's'}`}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    se cambia arriba, en «Mano obra €»
+                  </div>
+                </div>
+                <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-2.5">
+                  <div className="text-[10px] font-black text-amber-600 uppercase">Total comisiones</div>
+                  <div className="text-lg font-black text-amber-900">
+                    {margenVisible ? eur(totalCom + totalMon) : '•••'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {`sobre una valoración de ${margenVisible ? eur(valoracion) : '•••'}`}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2">
+                Comercial: cantidad fija por mueble según la valoración del pedido
+                (20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima;
+                tope de 50 €). Montadores: la mano de obra por mueble que hay puesta
+                arriba. Los importes van con el mismo candado que el margen.
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Tabla */}
         {calc.rows.length > 0 && (

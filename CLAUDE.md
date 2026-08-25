@@ -205,6 +205,20 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    servidor, y el candado compara las dos: si se separan, el aviso diría una
    cosa y la factura otra. Candado: `test_pantalla_aviso_de_coste.py`.
 
+16. **Las COMISIONES de los cooperativistas son NÓMINA: los números los dicta
+   el master** (25/08). Montadores: su comisión ES la mano de obra por mueble
+   que ya se teclea en Rentabilidad MV — no tiene fórmula propia a propósito,
+   porque dos números para lo mismo acaban sin cuadrar. Comerciales: cantidad
+   FIJA por mueble según la valoración del pedido (20 € por debajo de 2.500 €,
+   30 € hasta 6.000 €, 40 € por encima; tope de 50 €). El cálculo vive en
+   `services/comisiones.py` y la pantalla tiene su propia tabla: el candado
+   compara las dos, porque si se separan alguien cobra de menos. Van dentro del
+   candado de importes de Rentabilidad (regla 9). Candado:
+   `test_calculo_comisiones.py`.
+   - PENDIENTE de confirmar por el master: qué pasa en 2.500 y 6.000 CLAVADOS
+     (hoy el borde va al tramo de arriba, `BORDE_AL_ALZA`), y si la valoración
+     que marca el tramo es el COSTE (lo que se usa hoy) o el PVP.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
