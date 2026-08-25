@@ -32,6 +32,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
+import BotonPantallaCompleta from './BotonPantallaCompleta';
 import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada } from './RentabilidadMV';
 import RelacionReview from './RelacionReview';
 
@@ -986,6 +987,15 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
         {/* Botonera Central: herramientas secundarias */}
         <div className="flex items-center gap-1 flex-wrap">
+          {/* MAXIMIZAR / MINIMIZAR (master, 25/08). El mismo componente que el
+              carril y el Estudio 3D: una sola pantalla completa en todo el ERP,
+              con un solo nombre y un solo efecto. Aquí se gana mucho — esta
+              pantalla es una tabla larga y la barra del navegador se come el
+              alto justo donde están las filas. */}
+          <BotonPantallaCompleta
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all bg-white/10 hover:bg-white/20 border-white/10 text-white"
+            claseTexto="truncate"
+            textos={{ dentro: 'Reducir', fuera: 'Maximizar' }} />
           <button
             onClick={() => setShowMuestrario(v => !v)}
             className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showMuestrario ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
@@ -1631,7 +1641,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               type="button"
               {...handlersCandado}
               className={`p-2.5 rounded-2xl border transition-all ${verCoste ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
-              title="Shift + Clic para ver desglose de coste y margen"
+              /* EL TÍTULO DECÍA SOLO «Shift + Clic», y en una tablet no hay
+                 tecla Shift: el master lo preguntó porque parecía que el botón
+                 no servía para nada. Se abre con PULSACIÓN LARGA, que es lo
+                 que ya decía el texto de ayuda compartido; aquí faltaba. */
+              title={`Coste de fábrica y margen. ${AYUDA_CANDADO}. Va escondido a propósito para poder enseñar esta pantalla con un cliente delante.`}
             >
               {verCoste ? <Unlock size={18} /> : <Lock size={18} />}
             </button>
