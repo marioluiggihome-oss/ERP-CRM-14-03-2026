@@ -1330,7 +1330,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               </span>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            {/* `flex-wrap`: son cuatro pastillas y en un móvil de 390 px no
+                caben en una fila. Sin envolver, la última —«N sin mano · Fijar
+                Dcha», que además es un BOTÓN— empezaba en x=330 y se salía por
+                la derecha sin nada que deslizar: inalcanzable. */}
+            <div className="flex items-center gap-2.5 flex-wrap">
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs">
                 <Package size={14} /> Bajos: {metricas.bajosUds} ({metricas.metrosBajos} m)
               </div>
@@ -1462,7 +1466,132 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               </p>
             </div>
           ) : (
-            <table className="w-full text-left text-xs border-collapse">
+            <>
+            {/* ─── FICHAS: hasta `lg`. La tabla NO cabe y no hay forma de que
+                 quepa. Con el candado abierto son 13 columnas: medidos 851 px
+                 de tabla en un hueco de 693 en una tablet de 8,6", y en un
+                 móvil de 390 ni eso. Se podía arrastrar de lado, pero leer
+                 códigos arrastrando no es manejable — el master, 25/08: «muy
+                 intuitiva y muy facilona de manejar».
+
+                 Cada mueble es una ficha con el CÓDIGO grande, que es lo que se
+                 lee de verdad, y los controles con el dedo en mente. En `lg`
+                 para arriba vuelve la tabla, que ahí sí cabe y se compara mejor
+                 en vertical. */}
+            <div className="lg:hidden space-y-2.5">
+              {filasFiltradas.map((m, idx) => {
+                const opcionesAlt = alturasDe(m);
+                const tieneMano = manoDe(m.cod);
+                return (
+                  <div key={m._k} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+                    {/* Cabecera de la ficha: nº, código y borrar */}
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 shrink-0 w-6 h-6 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-black flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-black text-indigo-700 text-lg leading-none">{m.cod}</span>
+                          {!m.encontrado && (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">Manual</span>
+                          )}
+                        </div>
+                        <div className="font-bold text-slate-600 text-[11px] mt-0.5">
+                          {m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => quitar(m._k)}
+                        title="Quitar este mueble"
+                        className="shrink-0 p-2 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+
+                    {/* Medidas y mano */}
+                    <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px]">
+                      <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
+                        {m.ancho ? `${m.ancho} cm de ancho` : 'ancho —'}
+                      </span>
+                      {opcionesAlt ? (
+                        <label className="flex items-center gap-1">
+                          <span className="text-slate-400 font-bold">Alto</span>
+                          <select value={m.alto || opcionesAlt[0]} onChange={e => setAlto(m._k, e.target.value)}
+                            className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs">
+                            {opcionesAlt.map(a => <option key={a} value={a}>{a} cm</option>)}
+                          </select>
+                        </label>
+                      ) : (
+                        <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
+                          {m.alto ? `${m.alto} cm de alto` : 'alto —'}
+                        </span>
+                      )}
+                      {tieneMano !== undefined && (
+                        <button type="button" onClick={() => rotarMano(m._k)}
+                          title="Cambiar la mano de apertura"
+                          className={`px-2.5 py-1.5 rounded-lg font-black text-[11px] ${
+                            tieneMano === 'D' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                            tieneMano === 'I' ? 'bg-sky-100 text-sky-800 border border-sky-300' :
+                            'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                          }`}>
+                          {tieneMano === 'D' ? '▶ Dcha' : tieneMano === 'I' ? '◀ Izq' : '⚠️ Sin mano'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Cantidad e importes */}
+                    <div className="mt-2.5 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                        <button type="button" onClick={() => setQty(m._k, -1, true)}
+                          aria-label="Quitar una unidad"
+                          className="w-10 h-10 rounded-lg bg-white hover:bg-slate-200 text-slate-700 font-black text-lg flex items-center justify-center shadow-2xs">
+                          −
+                        </button>
+                        <input type="number" min="1" value={m.qty} onChange={e => setQty(m._k, e.target.value)}
+                          aria-label="Unidades"
+                          className="w-12 text-center bg-transparent font-black text-slate-900 text-base outline-none" />
+                        <button type="button" onClick={() => setQty(m._k, 1, true)}
+                          aria-label="Añadir una unidad"
+                          className="w-10 h-10 rounded-lg bg-white hover:bg-slate-200 text-slate-700 font-black text-lg flex items-center justify-center shadow-2xs">
+                          +
+                        </button>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase">
+                          {`${eur(m.pvp)} × ${m.qty}`}
+                        </div>
+                        <div className="font-mono font-black text-slate-900 text-lg leading-none">
+                          {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Coste y margen: solo con el candado abierto */}
+                    {verCoste && (
+                      <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[10px] font-mono border-t border-slate-100 pt-2">
+                        <span className="text-purple-700 font-bold">{`Casco ${eur(m.despiece?.casco)}`}</span>
+                        <span className="text-purple-700 font-bold">{`Puertas ${eur(m.despiece?.puerta)}`}</span>
+                        <span className="text-purple-900 font-black">{`Coste ${eur(m.coste)}`}</span>
+                        <span className="text-emerald-600 font-bold">
+                          {`Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}%)`}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Observaciones, a lo ancho: es donde se escribe de verdad */}
+                    <input type="text" value={m.obs || ''} onChange={e => setObs(m._k, e.target.value)}
+                      placeholder="✎ Observaciones / características especiales…"
+                      title="Características especiales, cajeados de pilar, accesorios interiores o notas para taller"
+                      className={`mt-2.5 w-full px-2.5 py-2 rounded-xl border text-[11px] outline-none transition-all ${
+                        m.obs?.trim()
+                          ? 'border-amber-400 bg-amber-50/70 font-bold text-amber-900 ring-1 ring-amber-300'
+                          : 'border-slate-200 bg-slate-50/60 text-slate-500 focus:bg-white focus:border-indigo-400'
+                      }`} />
+                  </div>
+                );
+              })}
+            </div>
+
+            <table className="hidden lg:table w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-[10px] font-black uppercase text-slate-400">
                   <th className="py-2.5 px-2 text-center w-10">#</th>
@@ -1631,6 +1760,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 })}
               </tbody>
             </table>
+            </>
           )}
         </div>
 
