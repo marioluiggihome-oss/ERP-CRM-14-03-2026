@@ -234,6 +234,9 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      los tramos altos EN SILENCIO —sin error, sin aviso— y el comercial cobraría
      de menos. Si se queda por delante, es letra muerta. Un tramo nuevo obliga a
      mirar el tope A LA VEZ, preguntando antes al master. Hay candado para eso.
+     Se le preguntó si quería un techo por encima de la escala y dijo que no:
+     «70 tope de momento» (25/08). Que hoy no recorte nada es la decisión, no un
+     cabo suelto.
    - El **rótulo** del tramo se DERIVA de la tabla, no se escribe a mano, en las
      dos puntas. Escrito a mano ya se rompió: al añadir el tramo de 9.000 € el
      importe pasó a 50 € y la etiqueta se quedó en «más de 6.000 €» — el número

@@ -178,7 +178,9 @@ export const MV_COSTES_DEFAULT = {
 //
 // El TOPE sube CON el tramo más alto. Si se quedara por detrás, el `Math.min`
 // de abajo recortaría los tramos altos en silencio y el comercial cobraría
-// menos de lo que dice esta tabla.
+// menos de lo que dice esta tabla. Hoy vale lo mismo que el tramo de arriba, o
+// sea que no recorta nada — y es a propósito: el master, 25/08, «70 tope de
+// momento».
 export const TRAMOS_COMISION_COMERCIAL = [
   { hasta: 2500, euros: 20 },
   { hasta: 6000, euros: 30 },

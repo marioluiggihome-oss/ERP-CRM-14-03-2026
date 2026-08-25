@@ -70,6 +70,13 @@ Regla, para el siguiente que pase por aquí: **un tramo nuevo por encima del top
 obliga a subir el tope A LA VEZ**, y a preguntárselo al master antes, que esto
 es nómina. Hay una prueba que se pone roja si se separan.
 
+CONFIRMADO: el tope se queda en 70 «de momento» (master, 25/08). Se le preguntó
+expresamente si quería un techo POR ENCIMA de la escala —hoy tope y tramo más
+alto valen lo mismo, así que el tope no recorta nada— y dijo que no. O sea que
+esto no es un descuido ni un cabo suelto: es la decisión. Que no recorte hoy es
+lo correcto; lo que hace falta es que siga sin recortar el día que suba un
+tramo, y de eso se encarga la prueba de arriba.
+
 LOS BORDES, YA CONFIRMADOS (25/08). Al describir los tramos el master dijo
 «inferiores a 2.500» (20) y «superiores a 2.500» (30), así que el valor clavado
 quedaba sin definir. Se implementó al alza —en la duda no se le quita dinero a

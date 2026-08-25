@@ -99,6 +99,21 @@ def test_hay_un_tope_por_mueble_y_hoy_son_70_euros():
         "el tope por mueble ha cambiado sin que lo pidiera el master")
 
 
+def test_que_el_tope_no_recorte_hoy_es_la_DECISION_y_no_un_descuido():
+    """Se le preguntó al master si quería un techo por encima de la escala.
+
+    Dijo que no: «70 tope de momento» (25/08). Hoy tope y tramo más alto valen
+    lo mismo, así que `min(euros, TOPE)` no le quita un euro a nadie — y eso es
+    exactamente lo que tiene que pasar. Queda escrito aquí para que el siguiente
+    que lo vea no lo tome por un cabo suelto y «lo arregle» subiendo el tope,
+    que sería tocar nómina por su cuenta.
+    """
+    mayor = max(e for _, e in C.TRAMOS_COMERCIAL)
+    assert C.euros_por_mueble_comercial(10 ** 9) == mayor, (
+        "el tope está recortando el tramo más alto: alguien ha bajado el tope o "
+        "ha subido un tramo sin mirar el otro")
+
+
 def test_ningun_tramo_puede_pasar_del_TOPE_sin_que_alguien_se_entere():
     """Desde el tramo de 9.000 € (25/08) el tope y el tramo más alto coinciden
     en 50 €. Eso deja el sistema pegado al techo: si mañana alguien añade un
