@@ -1024,17 +1024,17 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             textos={{ dentro: 'Reducir', fuera: 'Maximizar' }} />
           <button
             onClick={() => setShowMuestrario(v => !v)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showMuestrario ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showMuestrario ? 'bg-accion-500 text-white border-accion-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Muestrario de acabados de puertas y cascos"
           >
-            <Palette size={12} className="text-indigo-300" /> Acabados
+            <Palette size={12} className="text-dato-300" /> Acabados
           </button>
           <button
             onClick={() => setShowEscandallo(v => !v)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showEscandallo ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showEscandallo ? 'bg-accion-500 text-slate-950 border-accion-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Escandallo técnico de taller"
           >
-            <Hammer size={12} className="text-amber-400" /> Escandallo
+            <Hammer size={12} className="text-dato-400" /> Escandallo
           </button>
           {/* Desplegable IMPORTAR */}
           <div className="relative">
@@ -1054,9 +1054,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 <div className="absolute right-0 mt-1.5 z-50 w-72 bg-white rounded-xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-700 animate-in fade-in zoom-in-95">
                   <button
                     onClick={() => { setMenuImportar(false); setShowPegadoMasivo(true); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
                   >
-                    <List size={16} className="text-indigo-600 mt-0.5 shrink-0" />
+                    <List size={16} className="text-dato-600 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Pegado Masivo (Texto / WhatsApp)</span>
                       <span className="block text-[9px] text-slate-500 font-medium">Pega la relación de muebles en masa o móntalos a mano</span>
@@ -1065,9 +1065,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                   <button
                     onClick={() => { setMenuImportar(false); relacionInputRef.current?.click(); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
                   >
-                    <Sparkles size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                    <Sparkles size={16} className="text-dato-500 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Desde plantilla (PDF nomenclaturas)</span>
                       <span className="block text-[9px] text-slate-500 font-medium">Sube la plantilla rellenada con los códigos MV</span>
@@ -1076,9 +1076,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                   <button
                     onClick={() => { setMenuImportar(false); alvicInputRef.current?.click(); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
                   >
-                    <Package size={16} className="text-cyan-600 mt-0.5 shrink-0" />
+                    <Package size={16} className="text-dato-600 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Desde presupuesto Alvic (PDF)</span>
                       <span className="block text-[9px] text-slate-500 font-medium">Proforma Alvic → equivalencia de muebles y cascos</span>
@@ -1087,9 +1087,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                   <button
                     onClick={() => { setMenuImportar(false); descargarPlantillaEnBlanco(); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 flex items-start gap-2.5 transition-colors"
+                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 transition-colors"
                   >
-                    <Download size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                    <Download size={16} className="text-dato-600 mt-0.5 shrink-0" />
                     <div>
                       <span className="block text-xs font-black text-slate-800">Descargar plantilla en blanco</span>
                       <span className="block text-[9px] text-slate-500 font-medium">PDF rellenable con las 58 familias</span>
@@ -1101,10 +1101,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           </div>
           <button
             onClick={() => setShowComparador(v => !v)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showComparador ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showComparador ? 'bg-accion-500 text-slate-950 border-accion-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
             title="Comparar presupuesto en todas las tarifas T1-T5"
           >
-            <Sparkles size={12} className={showComparador ? 'text-slate-950' : 'text-amber-400'} /> Comparar
+            <Sparkles size={12} className={showComparador ? 'text-slate-950' : 'text-dato-400'} /> Comparar
           </button>
           <button
             onClick={exportarPDFOficial}
@@ -1121,7 +1121,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <button
             onClick={lanzarAFabricacion}
             disabled={!muebles.length}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-[10px] shadow-sm transition-all disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-accion-500 to-accion-600 hover:from-accion-600 hover:to-accion-700 text-slate-950 font-black text-[10px] shadow-sm transition-all disabled:opacity-40"
             title="Crear orden de fabricación en taller"
           >
             <Factory size={12} /> Fabricar
@@ -1129,7 +1129,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <button
             onClick={guardarPresupuesto}
             disabled={!muebles.length || guardando}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black shadow-sm transition-all disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accion-600 hover:bg-accion-700 text-white text-[10px] font-black shadow-sm transition-all disabled:opacity-40"
             title="Guardar presupuesto en el sistema"
           >
             {guardando ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Guardar
@@ -1142,14 +1142,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm animate-in fade-in zoom-in-95">
           <div className="space-y-2">
             <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-              <Box size={14} className="text-indigo-600" /> Acabado de Cascos (Grupo ACB):
+              <Box size={14} className="text-dato-600" /> Acabado de Cascos (Grupo ACB):
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5">
               {MUESTRARIO_CASCOS.map(ac => (
                 <button
                   key={ac.id}
                   onClick={() => setAcabadoCasco(ac.nombre)}
-                  className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${acabadoCasco === ac.nombre ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-300' : 'border-slate-200 hover:border-slate-300'}`}
+                  className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${acabadoCasco === ac.nombre ? 'border-accion-600 bg-accion-50/50 ring-1 ring-accion-300' : 'border-slate-200 hover:border-slate-300'}`}
                 >
                   <div className="w-full h-6 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: ac.color }} />
                   <span className="text-[10px] font-bold text-slate-800 leading-tight">{ac.nombre}</span>
@@ -1181,7 +1181,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
             <div className="text-[9px] uppercase font-bold text-indigo-300">Cajones & Gavetas</div>
             <div className="text-base font-black text-white">{metricas.totalCajones + metricas.totalGavetas} uds</div>
-            <div className="text-[9px] text-indigo-200/70">{metricas.totalCajones} caj. + {metricas.totalGavetas} gav.</div>
+            <div className="text-[9px] text-dato-200/70">{metricas.totalCajones} caj. + {metricas.totalGavetas} gav.</div>
           </div>
           <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
             <div className="text-[9px] uppercase font-bold text-indigo-300">Patas & Colgadores</div>
@@ -1270,12 +1270,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         <div className="bg-gradient-to-r from-amber-50 via-indigo-50 to-amber-50 border border-amber-200 rounded-3xl p-4 shadow-sm space-y-2">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-amber-600 shrink-0" />
+              <Sparkles size={16} className="text-dato-600 shrink-0" />
               <span className="font-black text-xs text-slate-900 uppercase tracking-wide">Ver presupuesto en otra tarifa:</span>
             </div>
             {/* AVISO IMPORTANTE: el catálogo MV NO es lineal. T4 (ZENIT/POLILAMINADO) tiene
                 muchos artículos más baratos que T2 o T3. Los precios son EXACTOS al cambiar de tarifa. */}
-            <span className="text-[10px] text-amber-700 font-semibold bg-amber-100 border border-amber-300 rounded-lg px-2 py-0.5">
+            <span className="text-[10px] text-dato-700 font-semibold bg-dato-100 border border-dato-300 rounded-lg px-2 py-0.5">
               ⚠️ El catálogo MV no sigue orden de precio T1→T21. Pulsa cada tarifa para ver el precio real.
             </span>
           </div>
@@ -1287,8 +1287,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 title={TARIFAS_NOMBRES[ct.tarifa] || ct.tarifa}
                 className={`px-3 py-1.5 rounded-xl border text-left transition-all ${
                   ct.activa
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                    ? 'bg-accion-600 text-white border-accion-600 shadow-md ring-2 ring-accion-300'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-accion-300 hover:bg-accion-50'
                 }`}
               >
                 <div className="text-[10px] font-black uppercase">{ct.tarifa}</div>
@@ -1323,7 +1323,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       key={t}
                       onClick={() => setTarifa(t)}
                       title={TARIFAS_NOMBRES[t] || t}
-                      className={`px-2.5 py-1 rounded-lg font-black text-[10px] transition-all shrink-0 ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+                      className={`px-2.5 py-1 rounded-lg font-black text-[10px] transition-all shrink-0 ${tarifa === t ? 'bg-accion-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
                     >
                       {t}
                     </button>
@@ -1344,7 +1344,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       key={t}
                       onClick={() => setTarifa(t)}
                       title={TARIFAS_NOMBRES[t] || t}
-                      className={`px-2.5 py-1 rounded-lg font-black text-[10px] transition-all shrink-0 ${tarifa === t ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+                      className={`px-2.5 py-1 rounded-lg font-black text-[10px] transition-all shrink-0 ${tarifa === t ? 'bg-accion-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
                     >
                       {t}
                     </button>
@@ -1373,9 +1373,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               {sinMano > 0 && (
                 <button
                   onClick={() => fijarTodasManos('D')}
-                  className="flex items-center gap-1 px-3 py-1 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-black text-xs hover:bg-amber-200 transition-colors animate-pulse"
+                  className="flex items-center gap-1 px-3 py-1 rounded-xl bg-accion-100 text-accion-900 border border-accion-300 font-black text-xs hover:bg-accion-200 transition-colors animate-pulse"
                 >
-                  <AlertTriangle size={14} className="text-amber-600" /> {sinMano} sin mano · Fijar Dcha
+                  <AlertTriangle size={14} className="text-aviso-600" /> {sinMano} sin mano · Fijar Dcha
                 </button>
               )}
             </div>
@@ -1398,14 +1398,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                     else if (e.key === 'Escape') { setFoco(false); }
                   }}
                   placeholder="Escribe un código o descripción (ej.: 1 b60i, asc60d, fregadero 60, col60, 2 gavetero 80)…"
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-inner bg-slate-50/50"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium focus:border-accion-500 focus:ring-2 focus:ring-accion-100 outline-none transition-all shadow-inner bg-slate-50/50"
                 />
-                {buscando && <Loader size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-600 animate-spin" />}
+                {buscando && <Loader size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-dato-600 animate-spin" />}
               </div>
               <button
                 onClick={() => añadirTexto(busca)}
                 disabled={!busca.trim() || buscando}
-                className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
+                className="px-6 py-3 rounded-2xl bg-accion-600 hover:bg-accion-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
               >
                 <Plus size={18} /> Añadir Mueble
               </button>
@@ -1419,7 +1419,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                     key={c.cod}
                     type="button"
                     onClick={() => añadirSugerencia(c)}
-                    className={`w-full px-5 py-2.5 text-left flex items-center justify-between gap-3 text-xs transition-colors ${i === sel ? 'bg-indigo-50 text-indigo-900 font-bold' : 'hover:bg-slate-50'}`}
+                    className={`w-full px-5 py-2.5 text-left flex items-center justify-between gap-3 text-xs transition-colors ${i === sel ? 'bg-accion-50 text-accion-900 font-bold' : 'hover:bg-slate-50'}`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-mono font-black text-indigo-600 text-sm">{c.cod}</span>
@@ -1443,7 +1443,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <button
                     key={it.label}
                     onClick={() => añadirTexto(it.expr)}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 font-bold text-xs text-slate-700 shadow-2xs transition-all"
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-accion-400 hover:text-accion-600 font-bold text-xs text-slate-700 shadow-2xs transition-all"
                     title={it.desc}
                   >
                     + {it.label}
@@ -1464,7 +1464,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <button
                 key={cat}
                 onClick={() => setFiltroCat(cat)}
-                className={`px-4 py-2 border-b-2 font-black text-xs transition-all ${filtroCat === cat ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
+                className={`px-4 py-2 border-b-2 font-black text-xs transition-all ${filtroCat === cat ? 'border-accion-600 text-accion-600' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
               >
                 {cat} {cat === 'TODOS' ? `(${muebles.length})` : ''}
               </button>
@@ -1474,7 +1474,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <div className="flex items-center gap-2 pb-2">
             <button
               onClick={copiarParaWhatsApp}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${copiadoWs ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'}`}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${copiadoWs ? 'bg-accion-600 text-white border-accion-600' : 'bg-accion-50 text-accion-800 border-accion-200 hover:bg-accion-100'}`}
             >
               {copiadoWs ? <Check size={14} /> : <Copy size={14} />} {copiadoWs ? '¡Copiado para WhatsApp!' : 'Copiar WhatsApp'}
             </button>
@@ -1529,7 +1529,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       </div>
                       <button type="button" onClick={() => quitar(m._k)}
                         title="Quitar este mueble"
-                        className="shrink-0 p-2 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50">
+                        className="shrink-0 p-2 rounded-xl text-slate-300 hover:text-error-600 hover:bg-error-50">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -1570,9 +1570,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         <button type="button" onClick={() => rotarMano(m._k)}
                           title="Cambiar la mano de apertura"
                           className={`px-2.5 py-1.5 rounded-lg font-black text-[11px] ${
-                            tieneMano === 'D' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                            tieneMano === 'I' ? 'bg-sky-100 text-sky-800 border border-sky-300' :
-                            'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                            tieneMano === 'D' ? 'bg-accion-100 text-accion-800 border border-accion-300' :
+                            tieneMano === 'I' ? 'bg-accion-100 text-accion-800 border border-accion-300' :
+                            'bg-accion-100 text-accion-900 border border-accion-300 animate-pulse'
                           }`}>
                           {tieneMano === 'D' ? '▶ Dcha' : tieneMano === 'I' ? '◀ Izq' : '⚠️ Sin mano'}
                         </button>
@@ -1609,10 +1609,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                     {/* Coste y margen: solo con el candado abierto */}
                     {verCoste && (
                       <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[10px] font-mono border-t border-slate-100 pt-2">
-                        <span className="text-purple-700 font-bold">{`Casco ${eur(m.despiece?.casco)}`}</span>
-                        <span className="text-purple-700 font-bold">{`Puertas ${eur(m.despiece?.puerta)}`}</span>
-                        <span className="text-purple-900 font-black">{`Coste ${eur(m.coste)}`}</span>
-                        <span className="text-emerald-600 font-bold">
+                        <span className="text-dato-700 font-bold">{`Casco ${eur(m.despiece?.casco)}`}</span>
+                        <span className="text-dato-700 font-bold">{`Puertas ${eur(m.despiece?.puerta)}`}</span>
+                        <span className="text-dato-900 font-black">{`Coste ${eur(m.coste)}`}</span>
+                        <span className="text-dato-600 font-bold">
                           {`Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}%)`}
                         </span>
                       </div>
@@ -1644,7 +1644,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <th className="py-2.5 px-3 text-center">Mano</th>
                   {verCoste && <th className="py-2.5 px-3 text-right text-purple-700" title="Coste Neto de Casco ACB">Casco Neto (ACB)</th>}
                   {verCoste && <th className="py-2.5 px-3 text-right text-purple-700" title={`Coste de Puertas según Tarifa ${tarifa}`}>Puertas ({tarifa})</th>}
-                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700">Coste Total</th>}
+                  {verCoste && <th className="py-2.5 px-3 text-right text-dato-700">Coste Total</th>}
                   {verCoste && <th className="py-2.5 px-3 text-right text-emerald-700">Margen</th>}
                   <th className="py-2.5 px-3 text-right">PVP Ud.</th>
                   <th className="py-2.5 px-3 text-right">Total</th>
@@ -1727,7 +1727,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           <select
                             value={m.anchoTarifa || opcionesAnc[0]}
                             onChange={e => setAnchoTarifa(m._k, e.target.value)}
-                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-indigo-400"
+                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-dato-400"
                           >
                             {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
                           </select>
@@ -1745,7 +1745,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           <select
                             value={m.alto || opcionesAlt[0]}
                             onChange={e => setAlto(m._k, e.target.value)}
-                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-indigo-400"
+                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-dato-400"
                           >
                             {opcionesAlt.map(a => <option key={a} value={a}>{a} cm</option>)}
                           </select>
@@ -1761,9 +1761,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             type="button"
                             onClick={() => rotarMano(m._k)}
                             className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all flex items-center gap-1 mx-auto ${
-                              tieneMano === 'D' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                              tieneMano === 'I' ? 'bg-sky-100 text-sky-800 border border-sky-300' :
-                              'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                              tieneMano === 'D' ? 'bg-accion-100 text-accion-800 border border-accion-300' :
+                              tieneMano === 'I' ? 'bg-accion-100 text-accion-800 border border-accion-300' :
+                              'bg-accion-100 text-accion-900 border border-accion-300 animate-pulse'
                             }`}
                           >
                             {tieneMano === 'D' ? '▶ Dcha' : tieneMano === 'I' ? '◀ Izq' : '⚠️ Sin Mano'}
@@ -1775,22 +1775,22 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                       {/* Coste y Margen (candado) */}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Neto ACB: ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
+                        <td className="py-3 px-3 text-right font-mono text-dato-700 font-bold" title={`Neto ACB: ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
                           {eur(m.despiece?.casco)}
                         </td>
                       )}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-purple-700 font-bold" title={`Puertas: ${(m.despiece?.puertasDetalle || []).map(f => `${f.desc} [${f.puntos} pts]`).join(' + ') || '0 frentes'} = ${m.despiece?.puntosPuertas || 0} pts (${eur(m.despiece?.puertaPvp)}) | Coste neto (${m.despiece?.dtoPuertas || 50}% dto): ${eur(m.despiece?.puerta)}`}>
+                        <td className="py-3 px-3 text-right font-mono text-dato-700 font-bold" title={`Puertas: ${(m.despiece?.puertasDetalle || []).map(f => `${f.desc} [${f.puntos} pts]`).join(' + ') || '0 frentes'} = ${m.despiece?.puntosPuertas || 0} pts (${eur(m.despiece?.puertaPvp)}) | Coste neto (${m.despiece?.dtoPuertas || 50}% dto): ${eur(m.despiece?.puerta)}`}>
                           {eur(m.despiece?.puerta)}
                         </td>
                       )}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-purple-900 font-black">
+                        <td className="py-3 px-3 text-right font-mono text-dato-900 font-black">
                           {eur(m.coste)}
                         </td>
                       )}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600">
+                        <td className="py-3 px-3 text-right font-mono font-bold text-dato-600">
                           {eur(m.margen)} <span className="text-[10px] text-emerald-500">({m.margenPct.toFixed(1)}%)</span>
                         </td>
                       )}
@@ -1806,7 +1806,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         <button
                           type="button"
                           onClick={() => quitar(m._k)}
-                          className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-300 hover:text-error-600 hover:bg-error-50 transition-colors"
                           title="Eliminar fila"
                         >
                           <Trash2 size={16} />
@@ -1827,7 +1827,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             <button
               type="button"
               {...handlersCandado}
-              className={`p-2.5 rounded-2xl border transition-all ${verCoste ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
+              className={`p-2.5 rounded-2xl border transition-all ${verCoste ? 'bg-master-100 text-master-800 border-master-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
               /* EL TÍTULO DECÍA SOLO «Shift + Clic», y en una tablet no hay
                  tecla Shift: el master lo preguntó porque parecía que el botón
                  no servía para nada. Se abre con PULSACIÓN LARGA, que es lo
@@ -1841,7 +1841,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             {verCoste && (
               <div className="flex items-center gap-4 text-xs">
                 <div>Coste Fábrica: <b className="font-mono text-slate-800">{eur(totalCoste)}</b></div>
-                <div>Margen Bruto: <b className="font-mono text-emerald-700">{eur(totalMargen)} ({totalMargenPct.toFixed(1)}%)</b></div>
+                <div>Margen Bruto: <b className="font-mono text-dato-700">{eur(totalMargen)} ({totalMargenPct.toFixed(1)}%)</b></div>
               </div>
             )}
           </div>
@@ -1849,14 +1849,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <div className="flex items-center gap-6">
             <div className="text-right space-y-0.5 text-xs text-slate-600">
               <div>Subtotal: <span className="font-mono font-bold text-slate-800">{eur(subtotalBruto)}</span></div>
-              {descuento > 0 && <div className="text-rose-600 font-bold">Dto. ({descuento}%): -{eur(importeDescuento)}</div>}
+              {descuento > 0 && <div className="text-dato-600 font-bold">Dto. ({descuento}%): -{eur(importeDescuento)}</div>}
               <div>Base Imponible: <span className="font-mono font-bold text-slate-800">{eur(baseImponible)}</span></div>
               <div>IVA ({ivaRate}%): <span className="font-mono font-bold text-slate-800">{eur(cuotaIva)}</span></div>
             </div>
 
             <div className="text-right pl-4 border-l border-slate-200">
               <span className="text-[10px] uppercase font-black text-slate-400 block">Total Final Presupuesto</span>
-              <span className="text-2xl font-black text-indigo-950 tracking-tight">{eur(totalPvp)}</span>
+              <span className="text-2xl font-black text-dato-950 tracking-tight">{eur(totalPvp)}</span>
             </div>
           </div>
         </div>
@@ -1869,7 +1869,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileUp size={22} className="text-indigo-600" />
+                <FileUp size={22} className="text-dato-600" />
                 <h3 className="text-lg font-black text-slate-900">Pegado Masivo de Relación</h3>
               </div>
               <button onClick={() => setShowPegadoMasivo(false)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400">
@@ -1896,7 +1896,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <button
                 onClick={procesarPegadoMasivo}
                 disabled={!textoMasivo.trim() || buscando}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl bg-accion-600 hover:bg-accion-700 text-white text-xs font-bold shadow-md disabled:opacity-50 flex items-center gap-2"
               >
                 {buscando ? <Loader size={15} className="animate-spin" /> : <Plus size={15} />} Volcar Muebles a la Lista
               </button>
@@ -1968,7 +1968,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowModalDtos(false)}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-accion-600 hover:bg-accion-700 text-white text-xs font-bold shadow-md flex items-center gap-2"
               >
                 <Check size={14} /> Aplicar a Todas las Puertas
               </button>

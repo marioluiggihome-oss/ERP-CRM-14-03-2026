@@ -20,7 +20,7 @@ function BarraAnalisis({ texto, hechas, total }) {
     <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2">
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <span className="text-[11px] font-black text-indigo-800 uppercase tracking-wide">{texto}</span>
-        <span className="text-[11px] font-bold text-indigo-500 tabular-nums">
+        <span className="text-[11px] font-bold text-dato-500 tabular-nums">
           {total ? `${hechas}/${total} · ` : ''}{seg}s
         </span>
       </div>
@@ -527,7 +527,7 @@ export default function AIRenderStudio({ state, setState }) {
     const quedan = aiCredits.restantes ?? 0;
     const noLlega = cuesta > quedan;
     return (
-      <p className={`mt-1.5 text-center text-[11px] font-bold ${noLlega ? 'text-red-600' : 'text-slate-500'}`}>
+      <p className={`mt-1.5 text-center text-[11px] font-bold ${noLlega ? 'text-aviso-600' : 'text-slate-500'}`}>
         {noLlega
           ? `Te faltan créditos: esto gasta ${cuesta} y te quedan ${quedan}.`
           : `Vas a gastar ${cuesta} ${palabra} · te quedan ${quedan}.`}
@@ -3506,7 +3506,7 @@ export default function AIRenderStudio({ state, setState }) {
             {!aiCredits && errorCreditos && (
               <span
                 title={`No se ha podido leer tu saldo de créditos: ${errorCreditos}. Los renders siguen funcionando; lo que no se sabe es cuántos te quedan.`}
-                className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800">
+                className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-error-100 text-error-800">
                 <Sparkles size={12} /> Créditos: sin lectura
               </span>
             )}
@@ -3573,13 +3573,13 @@ export default function AIRenderStudio({ state, setState }) {
               <FolderOpen size={13} /> <span className="hidden sm:inline">Proyectos</span>
             </button>
                 <button onClick={() => setPaletteOpen(o => !o)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${paletteOpen ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white hover:opacity-90'}`}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${paletteOpen ? 'bg-accion-500 text-slate-950 shadow-md' : 'bg-gradient-to-r from-accion-500 to-accion-600 text-white hover:opacity-90'}`}
                   title="Abrir catálogo lateral de acabados ALVIC Luxe / Zenit, ACB y PORTASUR">
                   <Palette size={12} /> <span className="hidden sm:inline">✨ Acabados</span>
                 </button>
                 <button onClick={saveDesign} disabled={busy}
                   title="Guardar el proyecto (cliente, referencia, medidas, renders e historial)"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-accion-600 text-white rounded-lg font-bold text-xs hover:bg-accion-700 disabled:opacity-50">
                   {busy ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
                   <span className="hidden sm:inline">Guardar</span>
                 </button>
@@ -3640,14 +3640,14 @@ export default function AIRenderStudio({ state, setState }) {
               <div className="bg-white p-4.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-3.5">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-sm font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                    <Sparkles size={16} className="text-indigo-600" />
+                    <Sparkles size={16} className="text-dato-600" />
                     CONFIGURAR PROYECTO
                   </span>
                   {tiposPermitidos.length > 1 && (
                     <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
                       {tiposPermitidos.map(tp => (
                         <button key={tp.id} onClick={() => setTipo3d(tp.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${tipo3d === tp.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${tipo3d === tp.id ? 'bg-accion-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
                           {tp.label}
                         </button>
                       ))}
@@ -3667,9 +3667,9 @@ export default function AIRenderStudio({ state, setState }) {
                       disabled={!isSupported}
                       className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                         isListening
-                          ? 'bg-red-500 text-white animate-pulse'
+                          ? 'bg-accion-500 text-white animate-pulse'
                           : isSupported
-                            ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+                            ? 'bg-accion-50 text-accion-700 hover:bg-accion-100 border border-accion-200'
                             : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                       }`}
                       title={isListening ? 'Detener dictado' : 'Dictar por voz'}
@@ -3725,7 +3725,7 @@ export default function AIRenderStudio({ state, setState }) {
                           )}
                           <button
                             onClick={() => removeReference(i)}
-                            className="absolute top-0.5 right-0.5 bg-white/90 rounded-full text-slate-500 hover:text-red-500 shadow"
+                            className="absolute top-0.5 right-0.5 bg-white/90 rounded-full text-slate-500 hover:text-error-500 shadow"
                             title="Quitar referencia"><X size={13} /></button>
                         </div>
                       ))}
@@ -3734,7 +3734,7 @@ export default function AIRenderStudio({ state, setState }) {
                     {canUseAmueblado && (
                     <button onClick={amueblarEstanciaReal} disabled={isGenerating || !refImage}
                       title="Trata la foto como la estancia REAL (vacía o a reformar) y diseña el mueble dentro, respetando paredes, ventanas, suelo y perspectiva."
-                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] font-black text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 shadow-sm">
+                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] font-black text-white bg-gradient-to-r from-accion-600 to-accion-600 hover:from-accion-500 hover:to-accion-500 disabled:opacity-50 shadow-sm">
                       {isGenerating ? <Loader size={15} className="animate-spin" /> : <Sparkles size={15} />}
                       Amueblar esta estancia real (foto)
                     </button>
@@ -3746,11 +3746,11 @@ export default function AIRenderStudio({ state, setState }) {
                   <button onClick={() => setShowMedidas(v => !v)}
                     className="flex items-center justify-between p-2.5 text-left w-full">
                     <div className="flex items-center gap-1.5">
-                      <Maximize2 size={13} className="text-indigo-500" />
-                      <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Medidas de la estancia</span>
+                      <Maximize2 size={13} className="text-dato-500" />
+                      <span className="text-[11px] font-black text-dato-700 uppercase tracking-wider">Medidas de la estancia</span>
                       <span className="text-[10px] text-indigo-400 hidden sm:inline">— escala real para render y planos acotados</span>
                     </div>
-                    <span className="text-indigo-400 shrink-0 ml-2">{showMedidas ? '▲' : '▼'}</span>
+                    <span className="text-dato-400 shrink-0 ml-2">{showMedidas ? '▲' : '▼'}</span>
                   </button>
                   {showMedidas && <div className="px-2.5 pb-2.5 flex flex-col gap-2">
                   <div className="grid grid-cols-3 gap-2">
@@ -3802,7 +3802,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {MATERIALS.styles.map(s => (
                         <button key={s.id} onClick={() => elegirParams({ style: s.id })}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${params.style === s.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${params.style === s.id ? 'bg-accion-100 text-accion-700 ring-2 ring-accion-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
                           {s.label}
                         </button>
                       ))}
@@ -3813,7 +3813,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <div className="grid grid-cols-2 gap-2">
                       {MATERIALS.cameras.map(c => (
                         <button key={c.id} onClick={() => setCamera(c.id)}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-accion-100 text-accion-700 ring-2 ring-accion-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
                           {c.label}
                         </button>
                       ))}
@@ -3824,7 +3824,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <div className="flex flex-wrap gap-1.5">
                       {MATERIALS.lighting.map(l => (
                         <button key={l.id} onClick={() => elegirParams({ lighting: l.id })}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-accion-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                           {l.label}
                         </button>
                       ))}
@@ -3838,7 +3838,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="flex flex-wrap gap-1.5">
                     {MATERIALS.appliances.map(a => (
                       <button key={a.id} onClick={() => toggleElectro(a.id)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${electros.includes(a.id) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${electros.includes(a.id) ? 'bg-accion-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                         {a.label}
                       </button>
                     ))}
@@ -3885,7 +3885,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="flex bg-slate-100 rounded-lg p-1">
                     {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
-                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
+                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}
                   </div>
                 </div>
@@ -3894,14 +3894,14 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="flex bg-slate-100 rounded-lg p-1">
                     {[1, 2, 3].map(n => (
                       <button key={n} onClick={() => setVariantCount(n)}
-                        className={`w-9 py-1.5 rounded-md text-xs font-black transition-all ${variantCount === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{n}</button>
+                        className={`w-9 py-1.5 rounded-md text-xs font-black transition-all ${variantCount === n ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{n}</button>
                     ))}
                   </div>
                 </div>
                 <button
                   onClick={handleGenerateNatural}
                   disabled={!description.trim() || isGenerating}
-                  className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                  className="w-full py-4 bg-gradient-to-r from-accion-600 to-accion-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
                 >
                   {isGenerating ? (
                     <><Loader size={18} className="animate-spin" /> Generando {variantCount > 1 ? `${variantCount} variaciones` : 'render'}...</>
@@ -3925,7 +3925,7 @@ export default function AIRenderStudio({ state, setState }) {
                       onClick={() => elegirParams({ layout: l.id })}
                       className={`px-3 py-3 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-1 ${
                         params.layout === l.id
-                          ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
+                          ? 'bg-accion-100 text-accion-700 ring-2 ring-accion-300'
                           : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
@@ -3942,7 +3942,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <select
                   value={params.countertop}
                   onChange={(e) => elegirParams({ countertop: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accion-300"
                 >
                   {MATERIALS.countertops.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
@@ -3954,7 +3954,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <select
                   value={params.cabinets}
                   onChange={(e) => elegirParams({ cabinets: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accion-300"
                 >
                   {MATERIALS.cabinets.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
@@ -3966,7 +3966,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <select
                   value={params.handles}
                   onChange={(e) => elegirParams({ handles: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accion-300"
                 >
                   {MATERIALS.handles.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
@@ -3978,7 +3978,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <select
                   value={params.floor}
                   onChange={(e) => elegirParams({ floor: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accion-300"
                 >
                   {MATERIALS.floors.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
@@ -3994,7 +3994,7 @@ export default function AIRenderStudio({ state, setState }) {
                       onClick={() => elegirParams({ style: s.id })}
                       className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                         params.style === s.id
-                          ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
+                          ? 'bg-accion-100 text-accion-700 ring-2 ring-accion-300'
                           : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
@@ -4011,7 +4011,7 @@ export default function AIRenderStudio({ state, setState }) {
                   value={params.additional_details}
                   onChange={(e) => elegirParams({ additional_details: e.target.value })}
                   placeholder="Ej: ventana grande con vistas, electrodomésticos integrados..."
-                  className="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-accion-300"
                 />
               </div>
 
@@ -4020,7 +4020,7 @@ export default function AIRenderStudio({ state, setState }) {
                 onClick={handleGenerateParams}
                 disabled={isGenerating}
                 title="Generar el render 3D con los parámetros de arriba (consume créditos de IA)"
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shrink-0"
+                className="w-full py-4 bg-gradient-to-r from-accion-600 to-accion-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shrink-0"
               >
                 {isGenerating ? (
                   <>
@@ -4049,13 +4049,13 @@ export default function AIRenderStudio({ state, setState }) {
               title="Arrastra para redimensionar"
               className="w-2.5 cursor-ew-resize touch-none bg-slate-100 hover:bg-indigo-400 transition-colors" />
             <button onClick={() => setPanelHidden(true)} title="Ocultar panel de características"
-              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow">
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-accion-600 shadow">
               <ChevronLeft size={15} />
             </button>
           </div>
         ) : (
           <button onClick={() => setPanelHidden(false)} title="Mostrar panel de características"
-            className="hidden lg:flex shrink-0 self-stretch items-center px-1 bg-white border-r border-slate-200 text-slate-400 hover:text-indigo-600">
+            className="hidden lg:flex shrink-0 self-stretch items-center px-1 bg-white border-r border-slate-200 text-slate-400 hover:text-accion-600">
             <ChevronRight size={18} />
           </button>
         )}
@@ -4075,7 +4075,7 @@ export default function AIRenderStudio({ state, setState }) {
           <div className="flex items-center gap-2 mb-2 shrink-0">
             {/* Botón flotante para abrir el drawer de opciones en móvil/tablet */}
             <button onClick={() => setPanelHidden(false)}
-              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-white border border-slate-200 text-indigo-600 hover:bg-indigo-50 shadow-sm">
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-white border border-slate-200 text-accion-600 hover:bg-accion-50 shadow-sm">
               <Palette size={14} /> Opciones
             </button>
           </div>
@@ -4086,7 +4086,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <ul className="list-disc pl-4 space-y-0.5">
                   {avisoGeom.map((a, i) => <li key={i}>{a}</li>)}
                 </ul>
-                <button onClick={() => setAvisoGeom(null)} className="ml-auto text-amber-500 hover:text-amber-700 shrink-0">
+                <button onClick={() => setAvisoGeom(null)} className="ml-auto text-aviso-500 hover:text-aviso-700 shrink-0">
                   <X size={16} />
                 </button>
               </div>
@@ -4104,7 +4104,7 @@ export default function AIRenderStudio({ state, setState }) {
                     manda `totalPvp` en nulo (CLAUDE.md, regla 8b) y aquí no se
                     pinta nada — el candado no se rodea por esta puerta. */}
                 {relacionMV?.totalPvp != null && (
-                  <span className="ml-auto shrink-0 px-2 py-0.5 rounded-full bg-white border border-teal-300 text-teal-800 text-[11px] font-black tabular-nums"
+                  <span className="ml-auto shrink-0 px-2 py-0.5 rounded-full bg-white border border-dato-300 text-dato-800 text-[11px] font-black tabular-nums"
                     title="Total de los muebles MV de esta distribución, a tarifa. Se actualiza al corregir un módulo.">
                     {relacionMV.totalPvp} €
                   </span>
@@ -4115,7 +4115,7 @@ export default function AIRenderStudio({ state, setState }) {
                   title={puedeDeshacer
                     ? 'Deshacer el último cambio de la distribución (también recupera lo que había antes de volver a detectar)'
                     : 'No hay nada que deshacer todavía'}
-                  className={`${relacionMV?.totalPvp != null ? '' : 'ml-auto'} flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-white border border-teal-300 text-teal-700 hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed shrink-0`}>
+                  className={`${relacionMV?.totalPvp != null ? '' : 'ml-auto'} flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-white border border-accion-300 text-accion-700 hover:bg-accion-100 disabled:opacity-40 disabled:cursor-not-allowed shrink-0`}>
                   <RotateCcw size={12} /> Deshacer
                 </button>
                 <button onClick={olvidarDistribucion} title="Descartar lo detectado y cerrar este aviso"
@@ -4133,7 +4133,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <select value={pared.ancho} disabled={corrigiendo}
                         onChange={(ev) => cambiarAnchoPared(i, parseInt(ev.target.value, 10))}
                         title="Ancho REAL de esta pared. Si lo cambias, manda sobre lo que haya leído la IA."
-                        className="px-1 py-0.5 rounded border border-teal-300 bg-white text-teal-900 font-black text-[12px] disabled:opacity-50">
+                        className="px-1 py-0.5 rounded border border-dato-300 bg-white text-dato-900 font-black text-[12px] disabled:opacity-50">
                         {/* De 100 a 600 de 10 en 10, más el valor actual por si
                             viene de un croquis y no cae en la rejilla. */}
                         {Array.from(new Set([pared.ancho, ...Array.from({ length: 51 }, (_, k) => 100 + k * 10)]))
@@ -4147,7 +4147,7 @@ export default function AIRenderStudio({ state, setState }) {
                       {/* La suma TIENE que cuadrar con la pared. El validador ya
                           la cuadra; enseñarlo es la red por si algún día no. */}
                       {mods.length > 0 && suma !== pared.ancho && (
-                        <span className="text-red-700 font-black">· ojo: los módulos suman {suma} cm</span>
+                        <span className="text-aviso-700 font-black">· ojo: los módulos suman {suma} cm</span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -4170,18 +4170,18 @@ export default function AIRenderStudio({ state, setState }) {
                                 const v = parseFloat(String(ev.target.value).replace(',', '.'));
                                 if (v > 0 && v !== e.ancho) cambiarAnchoModulo(e.pared_idx, e.posicion_cm, v);
                               }}
-                              className="w-12 bg-transparent font-black text-teal-900 border-b border-teal-400 text-center disabled:opacity-50" />
+                              className="w-12 bg-transparent font-black text-dato-900 border-b border-dato-400 text-center disabled:opacity-50" />
                           ) : (
                             <select value={e.ancho} disabled={corrigiendo}
                               onChange={(ev) => cambiarAnchoModulo(e.pared_idx, e.posicion_cm, parseInt(ev.target.value, 10))}
-                              className="bg-transparent font-black text-teal-900 disabled:opacity-50">
+                              className="bg-transparent font-black text-dato-900 disabled:opacity-50">
                               {Array.from(new Set([e.ancho, ...ANCHOS_CATALOGO])).sort((a, b) => a - b)
                                 .map(w => <option key={w} value={w}>{e.corregida || e.medida_escrita ? '' : '~'}{w}</option>)}
                             </select>
                           )}
                           <button onClick={() => quitarModulo(e.pared_idx, e.posicion_cm)} disabled={corrigiendo}
                             title="Quitar este módulo. El hueco que deje lo cuadra el validador."
-                            className="text-teal-400 hover:text-red-600 disabled:opacity-50 px-0.5">×</button>
+                            className="text-teal-400 hover:text-error-600 disabled:opacity-50 px-0.5">×</button>
                         </span>
                       ))}
                       <select value="" disabled={corrigiendo}
@@ -4191,7 +4191,7 @@ export default function AIRenderStudio({ state, setState }) {
                           ev.target.value = '';
                         }}
                         title="Añadir un módulo que la IA no haya visto. Se pone al final de la pared."
-                        className="rounded-lg border border-dashed border-teal-400 bg-white px-1.5 py-0.5 text-[11px] font-black text-teal-700 disabled:opacity-50">
+                        className="rounded-lg border border-dashed border-accion-400 bg-white px-1.5 py-0.5 text-[11px] font-black text-accion-700 disabled:opacity-50">
                         <option value="">+ añadir…</option>
                         {MODULOS_PARA_AÑADIR.map(m => <option key={m.id} value={m.id}>{m.label} ({m.ancho})</option>)}
                       </select>
@@ -4245,7 +4245,7 @@ export default function AIRenderStudio({ state, setState }) {
               </div>
               <button onClick={pedirMueblesMV} disabled={cargandoMV || corrigiendo}
                 title="Traduce esta distribución a muebles del catálogo MV, con su código, su ancho y su precio de tarifa. No cambia nada del diseño: saca la relación para que la revises."
-                className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50 flex items-center gap-1.5">
+                className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-700 text-white hover:bg-accion-800 disabled:opacity-50 flex items-center gap-1.5">
                 {cargandoMV ? <Loader size={12} className="animate-spin" /> : <BookOpen size={12} />}
                 {cargandoMV ? 'Buscando en el catálogo…' : 'Muebles MV de esta cocina'}
               </button>
@@ -4258,7 +4258,7 @@ export default function AIRenderStudio({ state, setState }) {
                   Muebles MV · tarifa {relacionMV.tarifa} · {relacionMV.lineas?.length || 0} muebles
                 </span>
                 <button onClick={olvidarRelacionMV} title="Cerrar la relación de muebles"
-                  className="ml-auto text-indigo-400 hover:text-indigo-700 shrink-0">
+                  className="ml-auto text-accion-400 hover:text-accion-700 shrink-0">
                   <X size={16} />
                 </button>
               </div>
@@ -4268,11 +4268,11 @@ export default function AIRenderStudio({ state, setState }) {
               <div className="flex flex-wrap items-center gap-2 mb-2 text-[11px]">
                 <span className="font-bold text-indigo-700">Alturas:</span>
                 <label className="flex items-center gap-1">
-                  <span className="text-indigo-500">Altos</span>
+                  <span className="text-dato-500">Altos</span>
                   <select value={altoAltos} disabled={cargandoMV}
                     onChange={e => cambiarAlturas(Number(e.target.value), altoColumnas)}
                     title="MV fabrica los altos a 70 y a 90, y no valen lo mismo. Al cambiarlo se vuelve a tarifar."
-                    className="px-1.5 py-0.5 border border-indigo-300 rounded-md bg-white font-bold">
+                    className="px-1.5 py-0.5 border border-dato-300 rounded-md bg-white font-bold">
                     <option value={70}>70</option>
                     <option value={90}>90</option>
                   </select>
@@ -4282,7 +4282,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <select value={altoColumnas} disabled={cargandoMV}
                     onChange={e => cambiarAlturas(altoAltos, Number(e.target.value))}
                     title="MV fabrica las columnas a 200 y a 220. Al cambiarlo se vuelve a tarifar."
-                    className="px-1.5 py-0.5 border border-indigo-300 rounded-md bg-white font-bold">
+                    className="px-1.5 py-0.5 border border-dato-300 rounded-md bg-white font-bold">
                     <option value={200}>200</option>
                     <option value={220}>220</option>
                   </select>
@@ -4305,7 +4305,7 @@ export default function AIRenderStudio({ state, setState }) {
                   </thead>
                   <tbody>
                     {(relacionMV.lineas || []).map((l, i) => (
-                      <tr key={`${l.codigo}-${l.pared_idx}-${l.posicion_cm}`} className="border-t border-indigo-100">
+                      <tr key={`${l.codigo}-${l.pared_idx}-${l.posicion_cm}`} className="border-t border-dato-100">
                         <td className="py-1 font-black">{l.codigo}</td>
                         <td className="truncate max-w-[150px]">
                           {l.familia}
@@ -4323,17 +4323,17 @@ export default function AIRenderStudio({ state, setState }) {
                             <>
                               <button onClick={() => cambiarMano(i, 'I')} disabled={cargandoMV}
                                 title="Puerta con apertura a la izquierda"
-                                className={`px-1 rounded font-black disabled:opacity-50 ${l.mano === 'I' ? 'bg-indigo-600 text-white' : 'text-indigo-500'}`}>I</button>
+                                className={`px-1 rounded font-black disabled:opacity-50 ${l.mano === 'I' ? 'bg-accion-600 text-white' : 'text-accion-500'}`}>I</button>
                               <button onClick={() => cambiarMano(i, 'D')} disabled={cargandoMV}
                                 title="Puerta con apertura a la derecha"
-                                className={`px-1 rounded font-black disabled:opacity-50 ${l.mano === 'D' ? 'bg-indigo-600 text-white' : 'text-indigo-500'}`}>D</button>
+                                className={`px-1 rounded font-black disabled:opacity-50 ${l.mano === 'D' ? 'bg-accion-600 text-white' : 'text-accion-500'}`}>D</button>
                               {l.mano_propuesta && <span className="ml-1 text-amber-700" title="Mano PROPUESTA, no leída del diseño: revísala.">?</span>}
                             </>
-                          ) : <span className="text-indigo-500" title="Dos puertas: no hay mano que elegir">2 ptas</span>}
+                          ) : <span className="text-accion-500" title="Dos puertas: no hay mano que elegir">2 ptas</span>}
                           {l.puede_dos_puertas && (
                             <button onClick={() => alternarDosPuertas(i)} disabled={cargandoMV}
                               title={l.mano ? 'Pasarlo a dos puertas (es otro mueble y otro precio)' : 'Pasarlo a una puerta'}
-                              className="ml-1 text-[10px] underline text-indigo-600 disabled:opacity-50">
+                              className="ml-1 text-[10px] underline text-accion-600 disabled:opacity-50">
                               {l.mano ? '→2' : '→1'}
                             </button>
                           )}
@@ -4371,7 +4371,7 @@ export default function AIRenderStudio({ state, setState }) {
                     {puedeAbrirMontada3 && (
                       <button onClick={() => volcarRelacionMV('montada3')} disabled={cargandoMV}
                         title="Volcar a Cocina Montada 3 (presupuesto por relación y códigos). Allí se abre la revisión antes de mezclar nada con lo que ya tengas."
-                        className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                         <CheckCircle size={12} /> Cocina Montada 3
                       </button>
                     )}
@@ -4394,7 +4394,7 @@ export default function AIRenderStudio({ state, setState }) {
               )}
               <button onClick={descargarRelacionPDF} disabled={pdfRelacion || cargandoMV}
                 title="Descarga la relación en PDF RELLENABLE: se corrige a mano fuera del ERP, se vuelve a subir para un pegado masivo, y trae renglones en blanco para añadir muebles. Sin precios: puede acabar delante de un cliente."
-                className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-indigo-700 ring-1 ring-indigo-600 hover:bg-indigo-50 disabled:opacity-50 inline-flex items-center gap-1.5">
+                className="mt-2 px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-accion-700 ring-1 ring-accion-600 hover:bg-accion-50 disabled:opacity-50 inline-flex items-center gap-1.5">
                 {pdfRelacion ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />}
                 {pdfRelacion ? 'Generando…' : 'PDF rellenable'}
               </button>
@@ -4409,8 +4409,8 @@ export default function AIRenderStudio({ state, setState }) {
           )}
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
-              <span className="text-red-500 font-bold">Error:</span> {error}
-              <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">
+              <span className="text-error-500 font-bold">Error:</span> {error}
+              <button onClick={() => setError(null)} className="ml-auto text-error-400 hover:text-error-600">
                 <X size={16} />
               </button>
             </div>
@@ -4425,7 +4425,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="absolute inset-2 border-4 border-indigo-300 rounded-full animate-pulse opacity-40" />
                   <div className="absolute inset-4 border-4 border-t-indigo-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <Wand2 size={32} className="text-indigo-600" />
+                    <Wand2 size={32} className="text-dato-600" />
                   </div>
                 </div>
                 <p className="text-lg font-black text-slate-700 uppercase tracking-wider">Generando render</p>
@@ -4475,7 +4475,7 @@ export default function AIRenderStudio({ state, setState }) {
                 {/* Grupo IA: acciones que generan nueva imagen */}
                 <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
                   title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-accion-600 to-accion-600 hover:from-accion-500 hover:to-accion-500 shadow-sm disabled:opacity-50">
                   {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                   <span className="hidden sm:inline truncate">Decorador/a</span><span className="sm:hidden">Deco</span>
                 </button>
@@ -4487,7 +4487,7 @@ export default function AIRenderStudio({ state, setState }) {
                 {canUse4K && (
                 <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
                   title="Genera y descarga la imagen a máxima resolución fotorrealista Ultra-HD (8K / 4K real 3840 px)"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-amber-600 via-purple-600 to-indigo-600 hover:opacity-90 shadow-md disabled:opacity-50">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-accion-600 via-purple-600 to-accion-600 hover:opacity-90 shadow-md disabled:opacity-50">
                   {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />} 📷 Render 8K / 4K
                 </button>
                 )}
@@ -4495,12 +4495,12 @@ export default function AIRenderStudio({ state, setState }) {
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 {/* Grupo descarga/export */}
                 <button onClick={downloadRender} disabled={downloading || !currentImage()}
-                  className="flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
+                  className="flex items-center gap-1 px-2 py-1 bg-accion-600 text-white rounded-lg text-[11px] font-bold hover:bg-accion-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                   {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
                   <span className="hidden sm:inline truncate">Imagen</span>
                 </button>
                 <button onClick={descargarTodo} disabled={downloading || !currentImage()}
-                  className="flex items-center gap-1 px-2 py-1 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar render actual + historial completo">
+                  className="flex items-center gap-1 px-2 py-1 bg-accion-500 text-white rounded-lg text-[11px] font-bold hover:bg-accion-600 disabled:opacity-50" title="Descargar render actual + historial completo">
                   {downloading ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
                   <span className="hidden sm:inline truncate">Todo</span>
                 </button>
@@ -4512,26 +4512,26 @@ export default function AIRenderStudio({ state, setState }) {
                   <span className="hidden sm:inline truncate">Logo</span>
                 </button>
                 <button onClick={exportPDF} disabled={downloading || !currentImage()}
-                  className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
+                  className="flex items-center gap-1 px-2 py-1 bg-accion-600 text-white rounded-lg text-[11px] font-bold hover:bg-accion-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
                   <FileText size={12} /> PDF
                 </button>
                 <button onClick={exportDossierPDF} disabled={downloading || !currentImage()}
-                  className="flex items-center gap-1 px-2 py-1 bg-violet-600 text-white rounded-lg text-[11px] font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
+                  className="flex items-center gap-1 px-2 py-1 bg-accion-600 text-white rounded-lg text-[11px] font-bold hover:bg-accion-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
                   <BookOpen size={12} />
                   <span className="hidden sm:inline truncate">Dossier</span>
                 </button>
                 <button onClick={exportDXF} disabled={downloading}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-cyan-600 text-white rounded-lg text-[11px] font-bold hover:bg-cyan-700 shadow-sm" title="Descargar plano en formato vectorial DXF (AutoCAD R12/2000) listo para taller, fábrica ACB y marmolista">
+                  className="flex items-center gap-1 px-2.5 py-1 bg-ok-600 text-white rounded-lg text-[11px] font-bold hover:bg-ok-700 shadow-sm" title="Descargar plano en formato vectorial DXF (AutoCAD R12/2000) listo para taller, fábrica ACB y marmolista">
                   <Maximize2 size={12} />
                   <span className="truncate">📐 CAD DXF</span>
                 </button>
                 <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
-                  className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded-lg text-[11px] font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
+                  className="flex items-center gap-1 px-2 py-1 bg-accion-600 text-white rounded-lg text-[11px] font-bold hover:bg-accion-700 disabled:opacity-50" title="Compartir por WhatsApp">
                   <Share2 size={12} />
                   <span className="hidden sm:inline truncate">WhatsApp</span>
                 </button>
                 <button onClick={attachToBudget} disabled={downloading || !currentImage()}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-accion-600 text-white' : 'bg-accion-500 text-white hover:bg-accion-600'}`}
                   title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
                   {attached ? <><CheckCircle size={12} /> <span className="hidden sm:inline truncate">Adjuntado</span></> : <><Send size={12} /> <span className="hidden sm:inline truncate">{tipo3d === 'armario' ? 'Armarios' : 'Presup.'}</span></>}
                 </button>
@@ -4554,7 +4554,7 @@ export default function AIRenderStudio({ state, setState }) {
                 )}
                 {canUseRender360 && (orbitFrames.length >= 2 ? (
                   <button onClick={() => setOrbitOn(v => !v)}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${orbitOn ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${orbitOn ? 'bg-accion-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                     title="Visor 360º: arrastra para girar la cocina">
                     <RotateCw size={12} /> 360º
                   </button>
@@ -4575,7 +4575,7 @@ export default function AIRenderStudio({ state, setState }) {
                 {/* Separador + nuevo render */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 <button onClick={() => { setRenderResult(null); setDescription(''); }}
-                  className="p-1.5 bg-slate-100 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                  className="p-1.5 bg-slate-100 rounded-lg hover:bg-accion-50 hover:text-accion-500 transition-colors"
                   title="Nuevo render (limpia el resultado actual)">
                   <RotateCcw size={14} className="text-slate-500" />
                 </button>
@@ -4585,7 +4585,7 @@ export default function AIRenderStudio({ state, setState }) {
                   title="Instalaciones y planos técnicos"
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-all ${
                     barraLateral ? '' : 'ml-auto'} ${
-                    showInstall ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    showInstall ? 'bg-accion-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                   <PlugZap size={13} />
                   <span className="hidden sm:inline truncate">Instalaciones</span>
                   <ChevronRight size={12} className={`transition-transform ${showInstall ? 'rotate-90' : ''}`} />
@@ -4638,7 +4638,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="mt-2 flex items-center gap-1.5 overflow-x-auto sm:overflow-visible sm:flex-wrap [&>*]:shrink-0 sm:[&>*]:shrink bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
                   <button onClick={() => detectInstalaciones()} disabled={detecting}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                     {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar auto (IA)'}
                   </button>
                   <button onClick={() => setSchematic(s => !s)}
@@ -4651,7 +4651,7 @@ export default function AIRenderStudio({ state, setState }) {
                       : tipo3d === 'armario'
                         ? 'El alzado acotado del armario se genera en el Presupuestador de Armarios (botón PLANOS), que es donde están sus medidas'
                         : 'Lámina de presentación. El alzado y la planta acotados sólo están modelados para cocina'}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} {etiquetaFicha(tipo3d)}
                   </button>
                   {/* Aquí estaba el interruptor «✎ Boceto». Se quita porque la
@@ -4668,7 +4668,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {tipo3d === 'cocina' && (
                   <button onClick={generarAlzadoDesdeTexto} disabled={editing}
                     title="Alzado técnico EXACTO desde tu descripción (respeta cajones/gavetas por módulo, aunque el render no lo haga)."
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 flex items-center gap-1.5">
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />} Alzado desde mi descripción
                   </button>
                   )}
@@ -4676,7 +4676,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <>
                     <button onClick={detectarDistribucion} disabled={detectandoDist || editing}
                       title="Lee tu croquis, el render o tu descripción y saca las paredes y los módulos con su ancho. NO dibuja nada: te enseña las medidas para que las revises antes."
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 flex items-center gap-1.5">
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                       {detectandoDist ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detectandoDist ? 'Leyendo…' : 'Detectar distribución'}
                     </button>
                     <button onClick={alternarMedidas} disabled={editing || !renderResult}
@@ -4685,8 +4685,8 @@ export default function AIRenderStudio({ state, setState }) {
                         : 'INTERRUPTOR: enseña el mismo diseño con las medidas puestas, y al volver a pulsar recupera la foto tal cual. No genera nada nuevo ni gasta créditos. Las cotas se dibujan desde las medidas reales: la IA nunca escribe cotas sobre la foto.'}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-black disabled:opacity-50 flex items-center gap-1.5 ${
                         vistaConCotas
-                          ? 'bg-sky-600 text-white hover:bg-sky-700'
-                          : 'bg-white text-sky-700 ring-1 ring-sky-600 hover:bg-sky-50'}`}>
+                          ? 'bg-ok-600 text-white hover:bg-ok-700'
+                          : 'bg-white text-ok-700 ring-1 ring-ok-600 hover:bg-ok-50'}`}>
                       {editing ? <Loader size={12} className="animate-spin" /> : <Ruler size={12} />} {vistaConCotas ? 'Quitar medidas' : 'Poner medidas'}
                     </button>
                     <button onClick={() => generarVistaAlambrica(true)} disabled={editing}
@@ -4718,7 +4718,7 @@ export default function AIRenderStudio({ state, setState }) {
                       onChange={(e) => setMarkHInput(e.target.value === '' ? '' : Math.max(0, Math.min(300, parseInt(e.target.value) || 0)))}
                       className="w-12 px-1 py-0.5 border border-amber-300 rounded text-center text-xs font-black text-slate-900 bg-white"
                     />
-                    <span className="text-[10px] font-bold text-amber-700">cm</span>
+                    <span className="text-[10px] font-bold text-dato-700">cm</span>
                   </div>
                   {Object.entries(MARK_TYPES).filter(([, t]) => t.tipos.includes(tipo3d)).map(([id, t]) => { const Ic = t.Icon; return (
                     <button key={id} onClick={() => setMarkTool(markTool === id ? null : id)}
@@ -4732,7 +4732,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <button onClick={() => setMarks(m => m.slice(0, -1))} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Deshacer</button>
                     <button onClick={() => { setMarks([]); setMarkTool(null); }} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Limpiar</button>
                     <button onClick={descargarConMarcas} className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900 flex items-center gap-1"><Download size={12} /> Descargar con marcas</button>
-                    <button onClick={esquemaGremioPDF} disabled={downloading} title="PDF con las tomas marcadas, sus alturas y leyenda para el fontanero/electricista" className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50 flex items-center gap-1"><FileText size={12} /> Esquema gremio (PDF)</button>
+                    <button onClick={esquemaGremioPDF} disabled={downloading} title="PDF con las tomas marcadas, sus alturas y leyenda para el fontanero/electricista" className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-700 text-white hover:bg-accion-800 disabled:opacity-50 flex items-center gap-1"><FileText size={12} /> Esquema gremio (PDF)</button>
                     <span className="text-[10px] text-slate-400">{marks.length} marca(s)</span>
                   </>}
                   {markTool && marks.length === 0 && <span className="text-[10px] text-indigo-600 font-bold">Haz clic en el render para colocar «{MARK_TYPES[markTool].label}»</span>}
@@ -4807,7 +4807,7 @@ export default function AIRenderStudio({ state, setState }) {
                           onPointerCancel={() => { arrastreRef.current = null; }}
                           onClick={(e) => e.stopPropagation()}
                           title={`${t.label} · altura ${markH(mk)} cm — arrastra para colocarlo, toca para editar`}
-                          className={`w-10 h-10 rounded-full text-white flex items-center justify-center shadow-lg ring-2 cursor-grab active:cursor-grabbing touch-none select-none ${editMark === i ? 'ring-indigo-500' : 'ring-white'}`}
+                          className={`w-10 h-10 rounded-full text-white flex items-center justify-center shadow-lg ring-2 cursor-grab active:cursor-grabbing touch-none select-none ${editMark === i ? 'ring-accion-500' : 'ring-white'}`}
                           style={{ background: t.color }}>
                           <Ic size={20} />
                         </button>
@@ -4838,7 +4838,7 @@ export default function AIRenderStudio({ state, setState }) {
                               ); })}
                             </div>
                             <button onClick={() => { setMarks(m => m.filter((_, j) => j !== i)); setEditMark(null); }}
-                              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[11px] font-bold hover:bg-rose-100"><Trash2 size={13} /> Quitar punto</button>
+                              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-accion-50 text-accion-600 rounded-lg text-[11px] font-bold hover:bg-accion-100"><Trash2 size={13} /> Quitar punto</button>
                           </div>
                         )}
                       </div>
@@ -4883,7 +4883,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {/* Cabecera del panel */}
                   <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 bg-slate-900 text-white">
                     <div className="flex items-center gap-2">
-                      <Palette size={18} className="text-amber-400" />
+                      <Palette size={18} className="text-dato-400" />
                       <span className="font-black text-sm uppercase tracking-wide">Catálogo de Acabados</span>
                     </div>
                     <button onClick={() => setPaletteOpen(false)} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
@@ -4895,7 +4895,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="p-3 border-b border-slate-100 bg-slate-50 flex gap-1.5 overflow-x-auto no-scrollbar">
                     {[['c1', '✨ ALVIC (Luxe / Zenit)'], ['c2', 'ACB'], ['c3', 'PORTASUR']].map(([id, lbl]) => (
                       <button key={id} onClick={() => { setColorTab(id); setOpenGama(null); }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${colorTab === id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${colorTab === id ? 'bg-accion-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
                         {lbl}
                       </button>
                     ))}
@@ -4907,12 +4907,12 @@ export default function AIRenderStudio({ state, setState }) {
                     {gamas.map(g => (
                       <div key={g.gama} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                         <button onClick={() => setOpenGama(o => o === g.gama ? null : g.gama)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-black text-slate-800 hover:bg-indigo-50/50 transition-colors">
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-black text-slate-800 hover:bg-accion-50/50 transition-colors">
                           <span className="flex items-center gap-1.5">
                             <span>{g.gama}</span>
                             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">{g.items.length}</span>
                           </span>
-                          <ChevronRight size={14} className={`text-slate-400 transition-transform ${openGama === g.gama ? 'rotate-90 text-indigo-600' : ''}`} />
+                          <ChevronRight size={14} className={`text-slate-400 transition-transform ${openGama === g.gama ? 'rotate-90 text-dato-600' : ''}`} />
                         </button>
                         
                         {openGama === g.gama && (
@@ -4922,7 +4922,7 @@ export default function AIRenderStudio({ state, setState }) {
                                 onClick={() => colorVariant(c.modelo || c.forma ? { ...c, label: `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim() } : `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim())}
                                 disabled={editing}
                                 title={c.forma ? `${c.modelo || c.label} — ${c.forma}` : `Aplicar ${c.label} al render`}
-                                className="flex items-center gap-2 text-left p-2 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-500 hover:shadow-md transition-all disabled:opacity-40 group">
+                                className="flex items-center gap-2 text-left p-2 rounded-xl bg-white border border-slate-200/80 hover:border-accion-500 hover:shadow-md transition-all disabled:opacity-40 group">
                                 <span className="w-6 h-6 rounded-full border-2 border-white ring-2 ring-slate-200 shadow shrink-0 group-hover:ring-indigo-500 transition-all" style={{ background: c.bg }} />
                                 <span className="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600">{c.label}</span>
                               </button>
@@ -4941,7 +4941,7 @@ export default function AIRenderStudio({ state, setState }) {
                   alto. Vuelve al salir de la comparativa. */}
               {currentImage() && !compareOn && (
                 <div className="shrink-0 flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2 flex-wrap">
-                  <Wand2 size={16} className="text-purple-500 shrink-0 ml-1" />
+                  <Wand2 size={16} className="text-accion-500 shrink-0 ml-1" />
                   {/* Miniatura del elemento subido (a copiar en la cocina) */}
                   {editRefImage && (
                     <div className="relative shrink-0">
@@ -4958,7 +4958,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {/* Micro: dictar el cambio */}
                   {editSp.isSupported && (
                     <button onClick={toggleEditMic} title={editSp.isListening ? 'Detener dictado' : 'Dictar el cambio'}
-                      className={`shrink-0 p-2 rounded-lg border ${editSp.isListening ? 'bg-red-500 text-white border-red-500 animate-pulse' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      className={`shrink-0 p-2 rounded-lg border ${editSp.isListening ? 'bg-accion-500 text-white border-accion-500 animate-pulse' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
                       {editSp.isListening ? <MicOff size={16} /> : <Mic size={16} />}
                     </button>
                   )}
@@ -4970,11 +4970,11 @@ export default function AIRenderStudio({ state, setState }) {
                   </label>
                   {/* Botón + para añadir líneas de edición */}
                   <button onClick={() => setEditLines(prev => [...prev, ''])} title="Añadir otra instrucción de edición"
-                    className="shrink-0 p-2 rounded-lg border bg-white text-purple-600 border-purple-200 hover:bg-purple-50">
+                    className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
                   <button onClick={editRender} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50 shrink-0">
+                    className="flex items-center gap-1.5 px-4 py-2 bg-accion-600 text-white rounded-lg text-xs font-bold hover:bg-accion-700 disabled:opacity-50 shrink-0">
                     {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}</>}
                   </button>
                 </div>
@@ -4989,7 +4989,7 @@ export default function AIRenderStudio({ state, setState }) {
                         placeholder={`Cambio adicional ${idx + 2}...`}
                         className="flex-1 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
                       <button onClick={() => setEditLines(prev => prev.filter((_, i) => i !== idx))} title="Eliminar línea"
-                        className="shrink-0 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"><X size={14} /></button>
+                        className="shrink-0 p-1 text-error-400 hover:text-error-600 hover:bg-error-50 rounded"><X size={14} /></button>
                     </div>
                   ))}
                 </div>
@@ -5076,7 +5076,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <button
                         type="button"
                         onClick={() => copiarRelacionMV(renderResult.parsed_params.relacionMV)}
-                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]">
+                        className="px-2.5 py-1 rounded-md bg-accion-600 hover:bg-accion-700 text-white font-bold text-[11px]">
                         {relacionCopiada ? '✓ Copiado' : 'Copiar'}
                       </button>
                       {/* VOLCAR LA LECTURA, NO EL RENDER.
@@ -5091,7 +5091,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <button
                         type="button"
                         onClick={() => volcarRelacionA('cocinaMontada3')}
-                        className="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px]">
+                        className="px-2.5 py-1 rounded-md bg-accion-600 hover:bg-accion-700 text-white font-bold text-[11px]">
                         Volcar a Montada 3
                       </button>
                     </div>
@@ -5108,7 +5108,7 @@ export default function AIRenderStudio({ state, setState }) {
                       cajonera se elige contando frentes, que entre BGC y BC hay
                       200 EUR. */}
                   {renderResult.parsed_params.relacionMVSinAncho > 0 && (
-                    <div className="mt-1 text-amber-700 font-bold">
+                    <div className="mt-1 text-accion-700 font-bold">
                       ⚠ {renderResult.parsed_params.relacionMVSinAncho} mueble(s) sin ancho en el plano: salen con «?»
                       y no se pegarán. Escribe tú el ancho antes de pegar.
                     </div>
@@ -5149,7 +5149,7 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
                 {/* Botón CTA para abrir el panel de opciones en móvil */}
                 <button onClick={() => setPanelHidden(false)}
-                  className="lg:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-md">
+                  className="lg:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-accion-600 text-white rounded-xl font-bold text-sm hover:bg-accion-700 shadow-md">
                   <Palette size={16} /> Abrir opciones de diseño
                 </button>
               </div>
@@ -5164,7 +5164,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {savedId ? 'Fotos del proyecto' : 'Historial'}
                 </h4>
                 {savedId && histInfo.total > 0 && (
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                  <span className="text-[10px] font-bold text-ok-600 bg-ok-50 border border-ok-200 rounded-full px-2 py-0.5">
                     {histInfo.total} guardada{histInfo.total === 1 ? '' : 's'}
                   </span>
                 )}
@@ -5181,7 +5181,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div key={i} className="relative shrink-0 group">
                     <button
                       onClick={() => setRenderResult(item)}
-                      className="w-12 h-12 bg-slate-200 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all block"
+                      className="w-12 h-12 bg-slate-200 rounded-lg overflow-hidden hover:ring-2 hover:ring-accion-400 transition-all block"
                       title={item.description}
                     >
                       {(item?.miniatura || item?.result?.images?.[0]) ? (
@@ -5193,7 +5193,7 @@ export default function AIRenderStudio({ state, setState }) {
                       )}
                     </button>
                     <button onClick={() => quitarDelHistorial(i)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-error-500 shadow opacity-0 group-hover:opacity-100 transition-opacity"
                       title={item?.guardadaId ? 'Borrar también del proyecto guardado' : 'Quitar del historial'}><X size={11} /></button>
                   </div>
                 ))}
@@ -5218,12 +5218,12 @@ export default function AIRenderStudio({ state, setState }) {
               <h3 className="font-black text-slate-800 shrink-0">Mis proyectos 3D</h3>
               <div className="flex items-center gap-2">
                 <button onClick={nuevoProyecto}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-accion-600 text-white hover:bg-accion-700">
                   <Plus size={14} /> Proyecto nuevo
                 </button>
                 <button onClick={() => { setSelMode(v => !v); setSelIds([]); }}
                   title="Selecciona varios proyectos del mismo cliente y únelos en uno solo (todas las imágenes juntas)"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black ${selMode ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black ${selMode ? 'bg-accion-600 text-white hover:bg-accion-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                   <Layers size={14} /> {selMode ? 'Cancelar' : 'Unir'}
                 </button>
                 <button onClick={() => { setSavedList(null); setSelMode(false); setSelIds([]); }} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
@@ -5236,7 +5236,7 @@ export default function AIRenderStudio({ state, setState }) {
                   value={savedSearch}
                   onChange={e => setSavedSearch(e.target.value)}
                   placeholder="Buscar por nombre o referencia…"
-                  className="w-full px-3 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  className="w-full px-3 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-accion-500/40"
                 />
               </div>
             )}
@@ -5253,7 +5253,7 @@ export default function AIRenderStudio({ state, setState }) {
                 const toggleSel = (id) => setSelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
                 return shown.map(d => (
                 <div key={d.id} onClick={() => selMode && toggleSel(d.id)}
-                  className={`flex items-center gap-3 border rounded-xl p-2 mb-2 ${selMode ? 'cursor-pointer' : ''} ${selMode && selIds.includes(d.id) ? 'border-amber-400 bg-amber-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                  className={`flex items-center gap-3 border rounded-xl p-2 mb-2 ${selMode ? 'cursor-pointer' : ''} ${selMode && selIds.includes(d.id) ? 'border-accion-400 bg-accion-50' : 'border-slate-200 hover:bg-slate-50'}`}>
                   {selMode && (
                     <input type="checkbox" readOnly checked={selIds.includes(d.id)} className="w-4 h-4 shrink-0 rounded accent-amber-600" />
                   )}
@@ -5265,8 +5265,8 @@ export default function AIRenderStudio({ state, setState }) {
                     {d.updatedAt && <p className="text-[10px] text-slate-400">{new Date(d.updatedAt).toLocaleString('es-ES')}</p>}
                   </div>
                   {!selMode && <>
-                  <button onClick={() => loadDesign(d)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
-                  <button onClick={() => deleteDesign(d.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                  <button onClick={() => loadDesign(d)} className="px-3 py-1.5 bg-accion-600 text-white rounded-lg text-xs font-bold hover:bg-accion-700">Abrir</button>
+                  <button onClick={() => deleteDesign(d.id)} className="p-1.5 text-error-400 hover:text-error-600 hover:bg-error-50 rounded-lg"><Trash2 size={16} /></button>
                   </>}
                 </div>
                 ));
@@ -5293,11 +5293,11 @@ export default function AIRenderStudio({ state, setState }) {
             <p className="text-xs text-slate-500 text-center mb-4">Tienes ambos presupuestadores activos. Elige dónde enviar el render:</p>
             <div className="flex gap-3">
               <button onClick={() => doAttach('presupuestador2')}
-                className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-colors">
+                className="flex-1 py-3 rounded-xl bg-accion-600 text-white font-bold text-sm hover:bg-accion-700 transition-colors">
                 Cocina Montada (P1)
               </button>
               <button onClick={() => doAttach('budget')}
-                className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors">
+                className="flex-1 py-3 rounded-xl bg-accion-600 text-white font-bold text-sm hover:bg-accion-700 transition-colors">
                 Cocina Montada 2 (P2)
               </button>
             </div>
@@ -5353,7 +5353,7 @@ export default function AIRenderStudio({ state, setState }) {
       {/* Saldo de renders: acceso siempre visible, para poder recargar
           sin salir del estudio cuando se agota el cupo. */}
       <button onClick={() => setVerRecarga(true)} title="Tus renders de IA"
-        className="fixed bottom-4 right-4 z-[60] px-3 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-lg flex items-center gap-1.5">
+        className="fixed bottom-4 right-4 z-[60] px-3 py-2 rounded-full bg-accion-600 hover:bg-accion-700 text-white text-xs font-black shadow-lg flex items-center gap-1.5">
         <Zap size={14} /> Mis renders
       </button>
       <RecargarRenders abierto={verRecarga} onClose={() => setVerRecarga(false)} />

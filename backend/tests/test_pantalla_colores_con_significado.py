@@ -116,3 +116,56 @@ def test_la_herramienta_de_avance_FUNCIONA_y_no_miente():
     assert int(d.group(1)) > 0, (
         "dice que no quedan clases decorativas, y quedan miles. El contador "
         "está roto y el avance parecería terminado")
+
+
+# ── Las tres pantallas que pidió el master (25/08) ───────────────────────────
+#
+# «Empieza por la de Estudio 3D y la de Cocina Montada 3 y Cocina Desmontada.»
+# Cocina Desmontada es `Cascos.jsx` — el nombre del fichero no lo dice, va por
+# la pestaña 'cascos' del menú.
+#
+# Se guarda el recuento MÍNIMO que tenía cada una al migrarla. No el exacto: si
+# fuera exacto, cualquier retoque legítimo lo rompería y acabaría subiéndose el
+# número sin mirar, que es como muere un candado. Con un mínimo, lo que salta es
+# lo que importa — que alguien revierta la pantalla a colores sin significado.
+MIGRADAS = {
+    "AIRenderStudio.jsx": 150,      # Estudio 3D          (eran 183)
+    "CocinaMontada3.jsx": 85,       # Cocina Montada 3    (eran 105)
+    "Cascos.jsx": 38,               # Cocina Desmontada   (eran 46)
+}
+
+
+def test_las_tres_pantallas_del_master_SIGUEN_MIGRADAS():
+    import re as _re
+    comp = os.path.join(FRONT, "src", "components")
+    rx = _re.compile(r"\b(?:bg|text|border|from|to|ring|divide)-(%s)-\d{2,3}"
+                     % "|".join(TOKENS))
+    for fichero, minimo in MIGRADAS.items():
+        cuerpo = _lee(os.path.join(comp, fichero))
+        n = len(rx.findall(cuerpo))
+        assert n >= minimo, (
+            f"{fichero} ha bajado a {n} clases con significado (había {minimo} "
+            "como mínimo). Se ha revertido la pantalla a colores que no dicen "
+            "nada.")
+
+
+def test_los_botones_de_BORRAR_van_de_error_y_no_de_accion():
+    """El fallo que casi se cuela, y que enseña por qué esto no se automatiza.
+
+    La pantalla está en español pero los identificadores en inglés
+    (`deleteOrder`, `removeLine`). Mirando solo palabras españolas, cuatro
+    botones de BORRAR de Cocina Desmontada salieron clasificados como «acción»
+    corriente. Un botón destructivo pintado como uno normal es exactamente lo
+    que hace que el color deje de avisar.
+    """
+    cuerpo = _lee(os.path.join(FRONT, "src", "components", "Cascos.jsx"))
+    for fn in ("deleteOrder", "removeLine"):
+        # Se busca el BOTÓN, no la función: `cuerpo.find(fn)` a secas encuentra
+        # primero la definición, que no lleva clases de color, y la prueba
+        # fallaba sin que hubiera nada roto.
+        i = cuerpo.find(f"onClick={{() => {fn}(")
+        assert i > 0, f"ya no está el botón de {fn} en Cocina Desmontada"
+        trozo = cuerpo[i:i + 320]
+        assert "error-" in trozo, (
+            f"el botón de {fn} ya no va de `error`: un borrar pintado como una "
+            "acción corriente es un accidente esperando")
