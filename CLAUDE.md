@@ -215,10 +215,12 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    compara las dos, porque si se separan alguien cobra de menos. Van dentro del
    candado de importes de Rentabilidad (regla 9). Candado:
    `test_calculo_comisiones.py`.
-   - El tramo lo marca el **PVP** del pedido, NO el coste. Se hizo primero
-     sobre el coste porque el master dijo «importes de costo», y lo corrigió al
-     verlo: «es sobre el PVP». No es un matiz — el PVP es muy superior al coste,
-     así que con el mismo pedido el comercial sube de tramo.
+   - El tramo lo marca la **BASE IMPONIBLE**: el PVP DESPUÉS del descuento y
+     SIN IVA. Costó dos correcciones del master: primero se hizo sobre el coste
+     («importes de costo»), lo corrigió a PVP, y después zanjó lo del descuento
+     con «siempre va sobre la base imponible, no sobre el total con IVA». Ni el
+     coste ni el total con IVA pueden entrar: con el IVA, 5.500 € de base pasan
+     a 6.655 € y saltan de tramo sin valer un euro más para la casa.
    - PENDIENTE de confirmar por el master: qué pasa en 2.500 y 6.000 CLAVADOS
      (hoy el borde va al tramo de arriba, `BORDE_AL_ALZA`).
 

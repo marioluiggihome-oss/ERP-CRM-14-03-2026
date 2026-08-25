@@ -190,29 +190,100 @@ def test_las_comisiones_van_dentro_del_candado_de_importes():
     with open(ruta, "r", encoding="utf-8") as f:
         cuerpo = f.read()
     i = cuerpo.index("Comisiones de cooperativistas")
-    trozo = cuerpo[i:i + 3000]
+    # Ventana amplia: entre el título y las tres cajas se metió la cadena
+    # «PVP − Dto = Base imponible», y una ventana corta dejaba fuera la última.
+    trozo = cuerpo[i:i + 6000]
     assert trozo.count("margenVisible") >= 3, (
         "los importes de las comisiones se pintan sin pasar por el candado de "
         "Rentabilidad: enseñar la pantalla dejaría ver lo que cobra cada uno")
 
 
-def test_el_tramo_se_calcula_sobre_el_PVP_y_no_sobre_el_COSTE():
-    """La corrección del master del 25/08, clavada.
+def test_el_tramo_NO_sale_del_COSTE_sino_de_la_base_imponible():
+    """Las DOS correcciones del master del 25/08, en una sola prueba.
 
-    Se implementó primero sobre el coste porque él dijo «importes de costo», y
-    lo corrigió al verlo. Esta prueba mira la pantalla: si alguien vuelve a
-    pasarle el coste, el comercial baja de tramo y cobra menos sin que nadie se
-    entere — el número seguiría saliendo, solo que más pequeño.
+    Primero se implementó sobre el COSTE, porque él dijo «importes de costo …
+    de valoración»; lo corrigió al verlo: «es sobre el PVP». Y después preguntó
+    por los descuentos y lo zanjó: «siempre va sobre la base imponible, no sobre
+    el total con IVA».
+
+    Se vigila desde la pantalla porque es ahí donde se decide con qué número se
+    entra al tramo. Y este fallo NO SE VE: si alguien vuelve a pasarle el coste
+    —o el PVP sin descontar— el importe sigue saliendo, solo que del tramo
+    equivocado.
     """
     raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ruta = os.path.join(raiz, "frontend", "src", "components", "RentabilidadMV.jsx")
     with open(ruta, "r", encoding="utf-8") as f:
         cuerpo = f.read()
     i = cuerpo.index("Comisiones de cooperativistas")
-    trozo = cuerpo[max(0, i - 1500):i + 500]
-    assert "const valoracion = calc.tot.pvp" in trozo, (
-        "el tramo de la comisión ha vuelto a calcularse sobre algo que no es el "
-        "PVP. El master lo corrigió expresamente: «es sobre el PVP, no sobre el "
-        "costo».")
+    trozo = cuerpo[max(0, i - 2500):i + 500]
+    assert "const valoracion = baseImponible" in trozo, (
+        "el tramo ya no sale de la base imponible")
+    assert "const baseImponible" in trozo and "calc.tot.pvp" in trozo, (
+        "la base imponible ha dejado de derivarse del PVP")
     assert "const valoracion = calc.tot.coste" not in trozo, (
         "vuelve a usarse el COSTE para decidir el tramo")
+    assert "calc.tot.coste" not in trozo.split("const baseImponible")[-1][:400], (
+        "el coste se ha colado en el cálculo de la base imponible")
+
+
+# ── LA BASE IMPONIBLE: con descuento y SIN IVA ───────────────────────────────
+#
+# El master, 25/08: «siempre va sobre la base imponible, no sobre el total con
+# IVA». Esta es la cadena de un presupuesto:
+#
+#     Subtotal (PVP)  −  Descuento  =  BASE IMPONIBLE   ← el tramo sale de aquí
+#     Base imponible  +  IVA        =  Total
+def test_la_base_imponible_descuenta_el_descuento():
+    assert C.base_imponible(1888.11, 30) == 1321.68, (
+        "no cuadra con el presupuesto real del master: 1.888,11 € con un 30% de "
+        "descuento son 1.321,68 € de base imponible")
+    assert C.base_imponible(1000, 0) == 1000
+    assert C.base_imponible(1000, 100) == 0
+
+
+def test_un_descuento_absurdo_no_paga_de_mas_ni_negativo():
+    assert C.base_imponible(1000, -50) == 1000      # un descuento no es negativo
+    assert C.base_imponible(1000, 150) == 0         # ni pasa del 100%
+    assert C.base_imponible(-1000, 10) == 0
+    assert C.base_imponible(None, None) == 0
+
+
+def test_el_descuento_puede_BAJAR_de_tramo_y_asi_debe_ser():
+    """El caso concreto: comisionar sobre dinero que no ha entrado."""
+    bruto = 2700.0
+    assert C.euros_por_mueble_comercial(bruto) == 30
+    base = C.base_imponible(bruto, 30)              # 1.890 €
+    assert C.euros_por_mueble_comercial(base) == 20, (
+        f"con un 30% de descuento la base baja a {base} € y el tramo tiene que "
+        "bajar con ella; si no, se comisiona sobre dinero que no se ha cobrado")
+
+
+def test_el_IVA_NO_puede_entrar_en_el_tramo():
+    """Si se colara el total con IVA, el tramo se inflaría solo.
+
+    5.500 € de base con el 21% son 6.655 €: saltaría de 30 a 40 € por mueble sin
+    que el pedido valga un euro más para la casa. Y además se pagaría comisión
+    sobre dinero de Hacienda.
+    """
+    base = 5500.0
+    con_iva = round(base * 1.21, 2)
+    assert C.euros_por_mueble_comercial(base) == 30
+    assert C.euros_por_mueble_comercial(con_iva) == 40
+    assert C.euros_por_mueble_comercial(base) != C.euros_por_mueble_comercial(con_iva), (
+        "esta prueba existe para dejar constancia de la diferencia: al tramo hay "
+        "que pasarle SIEMPRE la base imponible, nunca el total con IVA")
+
+
+def test_la_pantalla_calcula_la_base_imponible_antes_del_tramo():
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ruta = os.path.join(raiz, "frontend", "src", "components", "RentabilidadMV.jsx")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("Comisiones de cooperativistas")
+    trozo = cuerpo[max(0, i - 2000):i + 4000]
+    assert "baseImponible" in trozo, (
+        "la pantalla ya no calcula la base imponible: estaría metiendo al tramo "
+        "el PVP sin descontar")
+    assert "1.21" not in trozo and "* 1.21" not in trozo, (
+        "hay un IVA metido en el cálculo de la comisión")

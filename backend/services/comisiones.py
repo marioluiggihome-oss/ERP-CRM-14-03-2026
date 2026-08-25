@@ -19,13 +19,33 @@ faltaba era sumarlo y llamarlo por su nombre.
 
 COMERCIALES
 -----------
-Cantidad FIJA por mueble, y el tramo lo marca el **PVP** del pedido.
+Cantidad FIJA por mueble, y el tramo lo marca la **BASE IMPONIBLE** del pedido:
+el PVP DESPUÉS del descuento y SIN IVA.
 
-OJO CON ESTO, que ya se hizo mal una vez: al describirlo, el master dijo
-«importes de costo … de valoración» y se implementó sobre el COSTE. Al verlo en
-pantalla lo corrigió: «es sobre el PVP, no sobre el costo». La diferencia no es
-menor — el PVP de un pedido es muy superior a su coste, así que con el mismo
-pedido el comercial sube de tramo y cobra más.
+Costó dos correcciones llegar aquí, y las dos las hizo el master el 25/08:
+
+  1. Al describirlo dijo «importes de costo … de valoración» y se implementó
+     sobre el COSTE. Lo corrigió al verlo: «es sobre el PVP, no sobre el
+     costo». No es menor — el PVP es muy superior al coste, así que con el
+     mismo pedido el comercial sube de tramo.
+
+  2. Luego preguntó qué pasa con los descuentos y lo zanjó: «siempre va sobre
+     la base imponible, no sobre el total con IVA».
+
+O sea, sobre esta cadena:
+
+    Subtotal (PVP)  −  Descuento  =  BASE IMPONIBLE  ← el tramo sale de aquí
+    Base imponible  +  IVA        =  Total
+
+DOS COSAS QUE NO PUEDEN PASAR NUNCA, y por eso hay pruebas para las dos:
+
+  · Que el tramo salga del TOTAL CON IVA. Sería pagar comisión sobre dinero de
+    Hacienda, y además inflaría el tramo artificialmente: un pedido de 5.500 €
+    de base se iría a 6.655 € con el 21% y saltaría de 30 a 40 € por mueble.
+
+  · Que el tramo salga del subtotal SIN descontar. Sería comisionar sobre
+    dinero que no ha entrado: con un 30% de descuento, un pedido de 2.700 €
+    baja a 1.890 € de base y el tramo cae de 30 a 20.
 
     valoración < 2.500 €          ->  20 € por mueble
     de 2.500 € a 6.000 €          ->  30 € por mueble
@@ -68,8 +88,30 @@ TOPE_COMERCIAL_POR_MUEBLE = 50.0
 BORDE_AL_ALZA = True
 
 
+def base_imponible(pvp: float, descuento_pct: float = 0.0) -> float:
+    """El número con el que se decide el tramo: PVP menos descuento, sin IVA.
+
+    Se pone aquí, y no en la pantalla, para que exista UN SOLO sitio donde está
+    escrito qué es «la base imponible» a efectos de comisión. Si cada pantalla
+    lo calculara a su manera, acabarían pagando cosas distintas.
+
+    El IVA no entra NUNCA: no se suma aquí ni se debe pasar un importe que ya lo
+    lleve dentro.
+    """
+    try:
+        bruto = float(pvp or 0)
+    except (TypeError, ValueError):
+        bruto = 0.0
+    try:
+        dto = float(descuento_pct or 0)
+    except (TypeError, ValueError):
+        dto = 0.0
+    dto = min(max(dto, 0.0), 100.0)      # un descuento no es negativo ni pasa del 100%
+    return round(max(0.0, bruto * (1 - dto / 100.0)), 2)
+
+
 def euros_por_mueble_comercial(valoracion: float) -> float:
-    """Lo que se lleva el comercial POR MUEBLE con esa valoración de pedido."""
+    """Lo que se lleva el comercial POR MUEBLE con esa BASE IMPONIBLE."""
     try:
         v = float(valoracion or 0)
     except (TypeError, ValueError):
@@ -96,8 +138,8 @@ def _entero_no_negativo(n) -> int:
 def comision_comercial(valoracion: float, muebles: int) -> dict:
     """Comisión del comercial de un pedido entero.
 
-    `valoracion` es el PVP del pedido (no el coste: lo corrigió el master el
-    25/08) con el que se decide el tramo, y
+    `valoracion` es la BASE IMPONIBLE del pedido —el PVP después del descuento
+    y sin IVA— con la que se decide el tramo, y
     `muebles` las UNIDADES (no las líneas: una línea de 4 muebles son 4 — regla
     4 de CLAUDE.md, las unidades multiplican).
     """

@@ -482,6 +482,10 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
 };
 
 export default function RentabilidadMV({ esMaster, seed }) {
+  // Descuento comercial que se aplicará al presupuesto. NO afecta al coste ni
+  // al margen de esta pantalla: solo sirve para saber con qué base imponible se
+  // decide el tramo de la comisión del comercial.
+  const [dtoComision, setDtoComision] = useState(0);
   const [pv, setPv] = useState(3.33);
   const [familias, setFamilias] = useState(null);
   const [cargando, setCargando] = useState(false);
@@ -737,12 +741,22 @@ export default function RentabilidadMV({ esMaster, seed }) {
             (CLAUDE.md, regla 8): esto es nómina de gente. */}
         {calc.rows.length > 0 && (() => {
           const uds = lineas.reduce((a, l) => a + l.cant, 0);
-          // EL TRAMO LO MARCA EL PVP, NO EL COSTE. Al describirlo el master
-          // dijo «importes de costo … de valoración» y se implementó sobre el
-          // coste; al verlo lo corrigió: «es sobre el PVP, no sobre el costo»
-          // (25/08). Cambia bastante — el PVP de un pedido es muy superior a su
-          // coste, así que con el mismo pedido el comercial sube de tramo.
-          const valoracion = calc.tot.pvp;
+          // EL TRAMO LO MARCA LA BASE IMPONIBLE: el PVP DESPUÉS del descuento y
+          // SIN IVA. El master, 25/08: «siempre va sobre la base imponible, no
+          // sobre el total con IVA».
+          //
+          // Costó dos correcciones suyas llegar aquí. Primero se hizo sobre el
+          // COSTE («importes de costo … de valoración») y lo corrigió: «es
+          // sobre el PVP». Y después preguntó por los descuentos y lo zanjó con
+          // la base imponible.
+          //
+          // El PVP de esta pantalla no lleva IVA —es la suma de la tarifa—, así
+          // que lo único que faltaba era el descuento. Aquí no había casilla
+          // para él: el descuento se mete en Cocina Montada 3, en otra
+          // pantalla, así que sin esto el tramo salía del PVP SIN DESCONTAR y
+          // se comisionaba sobre dinero que no llega a entrar.
+          const baseImponible = Math.round(calc.tot.pvp * (1 - Math.min(Math.max(Number(dtoComision) || 0, 0), 100) / 100) * 100) / 100;
+          const valoracion = baseImponible;
           const porMuebleCom = comisionPorMueble(valoracion);
           const totalCom = Math.round(porMuebleCom * uds * 100) / 100;
           const manoUd = Number(p.mano) || 0;
@@ -755,6 +769,28 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   Comisiones de cooperativistas
                 </span>
               </div>
+              {/* LA CADENA A LA VISTA. El tramo no sale del PVP: sale de la
+                  base imponible. Enseñarla entera evita la pregunta de «¿sobre
+                  qué se ha calculado esto?», que es la que hizo el master. */}
+              <div className="flex items-center gap-2 flex-wrap mb-2 text-[11px]">
+                <span className="text-slate-500">
+                  {`PVP muebles ${pvpVisible ? eur(calc.tot.pvp) : '•••'}`}
+                </span>
+                <span className="text-slate-400">−</span>
+                <label className="flex items-center gap-1">
+                  <span className="text-slate-500">Dto.</span>
+                  <input type="number" step="any" min="0" max="100" value={dtoComision}
+                    onChange={e => setDtoComision(e.target.value === '' ? '' : Number(e.target.value))}
+                    title="Descuento comercial que se aplicará al presupuesto. Solo sirve para saber con qué base imponible se decide el tramo de la comisión; no toca el coste ni el margen."
+                    className="w-16 px-1.5 py-1 border border-amber-300 rounded-md bg-white font-bold text-right" />
+                  <span className="text-slate-500">%</span>
+                </label>
+                <span className="text-slate-400">=</span>
+                <span className="font-black text-amber-800" title="Base imponible: el PVP tras el descuento, sin IVA. El IVA no entra nunca en el tramo.">
+                  {`Base imponible ${pvpVisible ? eur(baseImponible) : '•••'}`}
+                </span>
+                <span className="text-slate-400 text-[10px]">(el IVA no cuenta)</span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="rounded-lg border border-amber-200 bg-white p-2.5">
                   <div className="text-[10px] font-black text-amber-500 uppercase">Comercial</div>
@@ -764,7 +800,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   <div className="text-[10px] text-slate-500">
                     {`${eur(porMuebleCom)} × ${uds} mueble${uds === 1 ? '' : 's'}`}
                   </div>
-                  <div className="text-[10px] text-slate-400" title="El tramo lo marca el PVP total del pedido.">
+                  <div className="text-[10px] text-slate-400" title="El tramo lo marca la base imponible: el PVP después del descuento y sin IVA.">
                     {`tramo: ${nombreDelTramo(valoracion)}`}
                   </div>
                 </div>
@@ -786,12 +822,13 @@ export default function RentabilidadMV({ esMaster, seed }) {
                     {margenVisible ? eur(totalCom + totalMon) : '•••'}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    {`sobre un PVP de ${pvpVisible ? eur(valoracion) : '•••'}`}
+                    {`sobre una base imponible de ${pvpVisible ? eur(baseImponible) : '•••'}`}
                   </div>
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 mt-2">
-                Comercial: cantidad fija por mueble según el PVP del pedido
+                Comercial: cantidad fija por mueble según la BASE IMPONIBLE del pedido
+                —el PVP tras el descuento, sin IVA—
                 (20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima;
                 tope de 50 €). Montadores: la mano de obra por mueble que hay puesta
                 arriba. Los importes van con el mismo candado que el margen.
