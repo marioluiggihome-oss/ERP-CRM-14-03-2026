@@ -491,6 +491,36 @@ export default function AIRenderStudio({ state, setState }) {
   const creditosPorRender = () => Math.ceil((COSTE_CREDITOS[providerOf()] ?? 1));
   const creditosDeEstaTanda = (n = 1) => creditosPorRender() * Math.max(1, n);
 
+  // El aviso, en UN SOLO SITIO: hay DOS botones de generar —el de la descripción
+  // y el de parámetros— y tener el texto escrito dos veces es tenerlo distinto
+  // el día que se toque uno.
+  //
+  // SALE TAMBIÉN CON CUPO ILIMITADO. La primera versión lo escondía con
+  // `!aiCredits.ilimitado`, y eso dejaba sin el aviso justo a quien más falta le
+  // hace: el master, que es quien paga la factura del proveedor. Que no se te
+  // acaben los créditos no quiere decir que el render sea gratis.
+  const AvisoDeCoste = ({ n = 1 }) => {
+    if (!aiCredits) return null;
+    const cuesta = creditosDeEstaTanda(n);
+    const palabra = cuesta === 1 ? 'crédito' : 'créditos';
+    if (aiCredits.ilimitado) {
+      return (
+        <p className="mt-1.5 text-center text-[11px] font-bold text-slate-500">
+          {`Vas a gastar ${cuesta} ${palabra} · tienes cupo ilimitado.`}
+        </p>
+      );
+    }
+    const quedan = aiCredits.restantes ?? 0;
+    const noLlega = cuesta > quedan;
+    return (
+      <p className={`mt-1.5 text-center text-[11px] font-bold ${noLlega ? 'text-red-600' : 'text-slate-500'}`}>
+        {noLlega
+          ? `Te faltan créditos: esto gasta ${cuesta} y te quedan ${quedan}.`
+          : `Vas a gastar ${cuesta} ${palabra} · te quedan ${quedan}.`}
+      </p>
+    );
+  };
+
   const providerOf = () => {
     // IA 2 (Manus) esta APAGADA: es un agente, no un modelo de imagen, y cada
     // render se iba a minutos —hasta 5— mientras Gemini tarda segundos. El
@@ -3841,17 +3871,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <><Send size={18} /> {variantCount > 1 ? `Generar ${variantCount} variaciones` : 'Generar desde la descripción'}</>
                   )}
                 </button>
-                {/* EL COSTE, ANTES DE PULSAR. Solo el número: aquí NO se dice
-                    nunca qué motor se usa (petición del master, 25/08). */}
-                {aiCredits && !aiCredits.ilimitado && (
-                  <p className={`mt-1.5 text-center text-[11px] font-bold ${
-                    creditosDeEstaTanda(variantCount) > (aiCredits.restantes ?? 0)
-                      ? 'text-red-600' : 'text-slate-500'}`}>
-                    {creditosDeEstaTanda(variantCount) > (aiCredits.restantes ?? 0)
-                      ? `Te faltan créditos: esto gasta ${creditosDeEstaTanda(variantCount)} y te quedan ${aiCredits.restantes ?? 0}.`
-                      : `Vas a gastar ${creditosDeEstaTanda(variantCount)} ${creditosDeEstaTanda(variantCount) === 1 ? 'crédito' : 'créditos'} · te quedan ${aiCredits.restantes ?? 0}.`}
-                  </p>
-                )}
+                <AvisoDeCoste n={variantCount} />
               </div>
             </div>
           ) : (
@@ -3976,6 +3996,10 @@ export default function AIRenderStudio({ state, setState }) {
                   </>
                 )}
               </button>
+              {/* El MISMO aviso que en el otro botón de generar. Son dos
+                  caminos hasta el mismo gasto: si solo avisara uno, por el otro
+                  se gastaría a ciegas. */}
+              <AvisoDeCoste n={1} />
             </div>
           )}
         </div>

@@ -49,9 +49,38 @@ def test_se_avisa_del_coste_antes_de_pulsar():
 def test_el_aviso_cuenta_las_variaciones():
     """Tres variaciones son tres renders, y tres veces el coste."""
     cuerpo = _codigo()
-    assert "creditosDeEstaTanda(variantCount)" in cuerpo, (
-        "el aviso no tiene en cuenta el número de variaciones: diría «1 crédito» "
-        "y gastaría tres")
+    assert "<AvisoDeCoste n={variantCount} />" in cuerpo, (
+        "el aviso del botón de la descripción no tiene en cuenta el número de "
+        "variaciones: diría «1 crédito» y gastaría tres")
+    assert "creditosDeEstaTanda(n)" in cuerpo, (
+        "el aviso ya no multiplica por el número de renders de la tanda")
+
+
+def test_el_aviso_esta_en_LOS_DOS_botones_de_generar():
+    """Hay dos caminos hasta el mismo gasto: el de la descripción y el de
+    parámetros. Si solo avisara uno, por el otro se gastaría a ciegas — y así
+    estuvo la primera versión."""
+    cuerpo = _codigo()
+    assert cuerpo.count("<AvisoDeCoste") >= 2, (
+        f"el aviso de coste solo se pinta {cuerpo.count('<AvisoDeCoste')} vez: "
+        "falta en uno de los dos botones de generar")
+
+
+def test_el_aviso_sale_TAMBIEN_con_cupo_ilimitado():
+    """El fallo que hizo que el master no lo viera.
+
+    La primera versión lo escondía con `!aiCredits.ilimitado`, y con eso se
+    quedaba sin aviso justo quien más falta le hace: el que paga la factura del
+    proveedor. Que no se te acaben los créditos no hace el render gratis.
+    """
+    cuerpo = _codigo()
+    i = cuerpo.index("const AvisoDeCoste")
+    trozo = cuerpo[i:i + 1400]
+    assert "aiCredits.ilimitado" in trozo and "cupo ilimitado" in trozo, (
+        "el aviso ya no dice nada cuando el cupo es ilimitado")
+    assert "!aiCredits.ilimitado &&" not in cuerpo, (
+        "ha vuelto la condición que esconde el aviso a quien tiene cupo "
+        "ilimitado")
 
 
 def test_el_aviso_NO_dice_nunca_que_ia_se_usa():
