@@ -175,6 +175,13 @@ class UserCreate(BaseModel):
     factoryId: Optional[str] = None  # ID de la fábrica asignada
     isMontador: bool = False  # Rol de montador
     montadorId: Optional[str] = None  # ID del montador asignado
+    # A QUÉ NEGOCIO PERTENECE. "cooperativa" (cocinas: la única con
+    # cooperativistas y comisiones), "carpinter" (carpinter.io) o "studio3k"
+    # (Studio3K.io), que son plataformas de suscripción independientes que
+    # comparten este ERP de momento. Por defecto la cooperativa: todos los
+    # usuarios que ya existen son del negocio de siempre. Ver
+    # services/plataformas.py.
+    plataforma: str = "cooperativa"
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -220,6 +227,7 @@ class UserUpdate(BaseModel):
     factoryId: Optional[str] = None  # ID de la fábrica asignada
     isMontador: Optional[bool] = None  # Rol de montador
     montadorId: Optional[str] = None  # ID del montador asignado
+    plataforma: Optional[str] = None  # cooperativa | carpinter | studio3k
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas

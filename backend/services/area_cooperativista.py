@@ -37,6 +37,7 @@ from typing import Iterable, Optional
 
 from services import comisiones as C
 from services import liquidaciones as L
+from services import plataformas as P
 
 COMERCIAL = L.COMERCIAL
 MONTADOR = L.MONTADOR
@@ -57,6 +58,13 @@ def rol_de(user: Optional[dict]) -> Optional[str]:
     por tanto no deja deducir nada del PVP.
     """
     if not user:
+        return None
+    # LA PLATAFORMA MANDA SOBRE EL ROL. carpinter.io y Studio3K son negocios de
+    # suscripción que comparten este ERP «de momento»: un suscriptor marcado
+    # como comercial sigue siendo un suscriptor, no un cooperativista. Se
+    # comprueba aquí, antes que nada, porque este es el único sitio por el que
+    # se entra al área y a la liquidación.
+    if not P.puede_tener_comision(user):
         return None
     if user.get("isMontador"):
         return MONTADOR

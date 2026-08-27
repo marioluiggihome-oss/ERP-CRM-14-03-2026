@@ -5,6 +5,7 @@
  * escrita del titular.
  */
 import React, { useState, useMemo, useEffect } from 'react';
+import { COOPERATIVA as PLATAFORMA_COOPERATIVA, TODAS as PLATAFORMAS, NOMBRES as NOMBRES_PLATAFORMA } from '@/plataformas';
 import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers, Factory, Percent, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI, authHeaders } from '../services/api';
@@ -154,6 +155,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isPrescriptor: false,
     isTienda: false,  // Tienda/Punto de Venta
     isMontador: false,  // Montador/Instalador
+    plataforma: PLATAFORMA_COOPERATIVA,  // cooperativa | carpinter | studio3k
     isCarpintero: false,  // Carpintero/Ebanista (portal con landing propia)
     canManageCarpinteroUsers: false,  // Admin de división: crea sus propios usuarios
     carpinteroLandingUrl: '',  // URL de la web de inicio del portal carpinteros
@@ -800,6 +802,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isPrescriptor: false,
       isTienda: false,
       isMontador: false,
+      plataforma: PLATAFORMA_COOPERATIVA,
       isCarpintero: false,
       canManageCarpinteroUsers: false,
       carpinteroLandingUrl: '',
@@ -874,7 +877,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       linkedClientCodigo: user.linkedClientCodigo || '',
       allowedLibraries: user.allowedLibraries || ['ZC'],
       provinciaCode: user.provinciaCode || '',
-      accessExpirationDate: user.accessExpirationDate || ''
+      accessExpirationDate: user.accessExpirationDate || '',
+      // Los usuarios de antes del 27/08 no traen plataforma: son de la
+      // cooperativa, el negocio de siempre. Mismo defecto que el servidor.
+      plataforma: user.plataforma || PLATAFORMA_COOPERATIVA
     });
   };
 
@@ -2194,6 +2200,37 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           </div>
                         </label>
                       </div>
+                    </div>
+
+                    {/* PLATAFORMA. Tres negocios comparten este ERP «de momento» y solo
+                        uno tiene cooperativistas: cambiar esto decide si el usuario
+                        puede cobrar comisiones, no solo qué ve. Por eso está aquí
+                        arriba, con su explicación, y no escondido como una casilla
+                        más. Ver services/plataformas.py. */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <h4 className="text-sm font-black text-slate-800 uppercase mb-1">Plataforma</h4>
+                      <p className="text-[11px] text-slate-500 mb-2">
+                        A qué negocio pertenece este usuario. Solo la red de distribución
+                        tiene socios cooperativistas y comisiones: carpinter.io y Studio3K
+                        venden suscripciones.
+                      </p>
+                      <select
+                        value={userForm.plataforma || PLATAFORMA_COOPERATIVA}
+                        onChange={(e) => setUserForm({...userForm, plataforma: e.target.value})}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-slate-800 bg-white"
+                        data-testid="user-plataforma-select"
+                      >
+                        {PLATAFORMAS.map((k) => (
+                          <option key={k} value={k}>{NOMBRES_PLATAFORMA[k]}</option>
+                        ))}
+                      </select>
+                      {userForm.plataforma && userForm.plataforma !== PLATAFORMA_COOPERATIVA
+                        && (userForm.isMontador || userForm.isRepresentative) && (
+                        <p className="text-[11px] text-aviso-700 font-bold mt-2">
+                          Ojo: está marcado como montador o comercial, pero al no ser de la
+                          red de distribución NO cobrará comisiones ni verá «Mi área».
+                        </p>
+                      )}
                     </div>
 
                     {/* Technical Capabilities */}

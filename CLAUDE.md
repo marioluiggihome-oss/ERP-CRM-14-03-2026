@@ -359,6 +359,40 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      entero dejaba el CI en verde—. Ahora se fuerza a que la capa de abajo
      devuelva coste y margen para comprobar que el panel los corta de verdad.
 
+21. **TRES PLATAFORMAS EN EL MISMO ERP, Y SOLO UNA REPARTE COMISIONES**
+   (27/08). El master: «carpinter.io y Studio3K son solo para vender
+   suscripciones a usuarios que pagan... no tienen nada que ver con el negocio
+   de los cooperativistas, son plataformas independientes aunque las tengamos
+   metidas en la misma gestión del ERP de momento». El campo es
+   `plataforma`: `cooperativa` · `carpinter` · `studio3k`
+   (`services/plataformas.py`).
+   - **La plataforma se comprueba ANTES que el rol.** Las tres comparten la
+     colección de usuarios, y ahí está el peligro: «comercial» significa cosas
+     distintas en cada negocio. Basta un clic en la pantalla de permisos —marcar
+     comercial a un suscriptor de carpinter.io— para que empiece a salir en la
+     liquidación cobrando comisiones de la cooperativa. No hace falta mala fe.
+     Ser comercial no basta: hay que ser comercial DE LA COOPERATIVA.
+   - **El defecto es `cooperativa`, y eso es una decisión, no un descuido.**
+     Todos los usuarios que existen hoy son del negocio de siempre y ninguno
+     trae el campo. Con cualquier otro defecto, el día del despliegue los
+     cooperativistas de verdad se quedarían sin su área sin que nadie hubiera
+     tocado un solo usuario — y el error se vería en la nómina de fin de mes, no
+     en el CI. Un valor que no se reconozca también cae en `cooperativa`: mejor
+     un usuario mal etiquetado en el negocio de siempre, donde alguien lo verá,
+     que en un limbo del que no sale en ninguna lista.
+   - **El menú es una sugerencia; quien cierra es el servidor.**
+     `frontend/src/plataformas.js` es una copia en pantalla para poder decidir
+     si se enseña «Mi área» sin llamar a nadie. Copia que no se compara se
+     separa, así que el candado EJECUTA en node las funciones del JS y las
+     compara con las del backend usuario a usuario. Si se separan, o el
+     suscriptor ve un botón que le da 403, o —lo que de verdad importa— el
+     cooperativista pierde el suyo y nadie se entera hasta que pregunta.
+   - **La pantalla se abre desde el menú Y desde la bienvenida.** Una pantalla
+     sin puerta no existe: `AreaCooperativista.jsx` estuvo escrita, con sus
+     rutas y sus candados, y sin un solo sitio desde el que abrirla.
+   - Candados: `test_calculo_plataformas.py` y los tres del enlace en
+     `test_pantalla_area_cooperativista.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

@@ -8,8 +8,8 @@ import React from 'react';
 import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
-  ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, PlayCircle
-} from 'lucide-react';
+  ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, PlayCircle, Wallet } from 'lucide-react';
+import { esCooperativista } from '@/plataformas';
 
 // ⬇️ Vídeo promocional de la INTRANET de Luiggi Home (NO el de carpinter.io, que
 //    es otra sección y otros clientes). Enlace de YouTube/Vimeo/Google Drive.
@@ -84,6 +84,10 @@ const MODULES = [
   { tab: 'montajes',        label: 'Montajes',        icon: Wrench,       color: 'bg-orange-600',  group: 'produccion', can: (u, s) => s?.montajesEnabled && (u?.canAccessMontajes || u?.isMontador) },
   { tab: 'luiggifloor',     label: 'Floor',    icon: Layers,       color: 'bg-amber-500',   group: 'produccion', can: (u) => u?.canAccessFloor === true },
   { tab: 'agentesDisenadores', label: 'Agentes IA', icon: Sparkles, color: 'bg-purple-600', group: 'produccion', can: (u) => (u?.canUseAgentesIA || u?.isAdmin) && !u?.isTienda },
+
+  // Mi área: la nómina del cooperativista. Solo la cooperativa la tiene;
+  // carpinter.io y Studio3K son plataformas de suscripción (plataformas.js).
+  { tab: 'miArea',          label: 'Mi área',         desc: 'Lo que llevas ganado y lo que falta para el siguiente tramo', icon: Wallet, color: 'bg-ok-600', group: 'admin', can: (u) => esCooperativista(u) },
 
   // Administración
   { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },

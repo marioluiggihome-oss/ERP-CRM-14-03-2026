@@ -6,8 +6,9 @@
  */
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import GlobalEventReminder from './components/GlobalEventReminder';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes, Calculator } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes, Calculator, Wallet } from 'lucide-react';
 import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
+import { esCooperativista } from '@/plataformas';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -56,6 +57,7 @@ const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de n
 const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // Landing comercial pública de Studio3K / RenderIA
 const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Presupuestador 3 (Relación y códigos MV directa)
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
+const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
 
 
 
@@ -1637,6 +1639,22 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Mi área: la nómina del cooperativista. SOLO cooperativistas de
+                        la cooperativa — carpinter.io y Studio3K son plataformas de
+                        suscripción y ahí no hay comisiones (services/plataformas.py).
+                        El menú solo decide si se ENSEÑA; quien cierra es el servidor. */}
+                    {esCooperativista(state.currentUser) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'miArea'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'miArea' ? 'bg-ok-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="mi-area-nav-btn"
+                        title="Mi área: lo que llevas en progreso, lo que está a cobrar y lo ya cobrado"
+                      >
+                        <Wallet size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Mi área</span>
+                      </button>
+                    )}
+
                     {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
                     {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                       <button 
@@ -1858,6 +1876,9 @@ const App = () => {
             )}
             {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
+            )}
+            {state.currentTab === 'miArea' && esCooperativista(state.currentUser) && (
+              <AreaCooperativista />
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
               <PrescriptorAgenda
