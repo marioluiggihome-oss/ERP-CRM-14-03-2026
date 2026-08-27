@@ -115,6 +115,7 @@ from routes.shop_clients import router as shop_clients_router
 from routes.google_calendar import google_calendar_router
 from routes.kitchen_projects import kitchen_projects_router
 from routes.apollo_prospects import router as apollo_prospects_router
+from routes.cooperativistas import router as cooperativistas_router
 
 # Servicios de backup y tracking
 from services.backup_service import init_backup_service
@@ -306,6 +307,7 @@ api_router.include_router(products_router)
 api_router.include_router(projects_router)
 api_router.include_router(apollo_prospects_router)
 app.include_router(public_crm_router)
+app.include_router(cooperativistas_router)
 
 # Rutas estaticas directas para evitar 404 de crawlers y navegadores
 @app.get("/robots.txt", response_class=PlainTextResponse)

@@ -320,6 +320,26 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      tokens RESUELVEN de verdad (un alias mal escrito daría `undefined` y la
      clase no pintaría nada con el CI en verde) y que el dinero sigue en gris.
 
+20. **El ÁREA del cooperativista: cada uno lo suyo, y nada del dinero de la
+   casa** (25/08). `services/area_cooperativista.py` decide QUIÉN mira;
+   `routes/cooperativistas.py` son tres rutas y ni una más.
+   - **El filtro sale del TOKEN, nunca de la petición.** Si el «de quién son los
+     pedidos» viajara en la URL, cualquiera cambiaría el número y vería la
+     nómina del compañero. Mismo fallo que tenía el motor de render (regla 11),
+     mismo arreglo.
+   - **`filtro_de` devuelve `None`, no `{}`,** cuando el usuario no es
+     cooperativista. Un `{}` pasado a Mongo son TODOS los pedidos de la casa.
+   - **Lista BLANCA de lo que sale** (`CAMPOS_VISIBLES`). Con una lista negra,
+     cualquier campo nuevo del pedido —un coste, un margen— saldría solo el día
+     que alguien lo añada.
+   - **Asignar comercial o montador es del master**: cambiar el comercial de un
+     pedido mueve una comisión de un bolsillo a otro.
+   - Candado: `test_calculo_area_cooperativista.py`. OJO: la primera versión de
+     la prueba del dinero PASABA POR EL MOTIVO EQUIVOCADO —`liquidaciones` no
+     produce campos de dinero, así que el recorte no se ejercía nunca y quitarlo
+     entero dejaba el CI en verde—. Ahora se fuerza a que la capa de abajo
+     devuelva coste y margen para comprobar que el panel los corta de verdad.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

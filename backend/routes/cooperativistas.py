@@ -1,0 +1,125 @@
+# © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
+"""
+EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
+
+Tres rutas y ni una más:
+
+  GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
+  POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
+  GET  /api/cooperativistas/liquidacion    lo que hay que pagar este mes (master)
+
+EL FILTRO NO SE ESCRIBE AQUÍ. Sale de `area_cooperativista.filtro_de(user)`, que
+lo construye a partir del usuario del token. Nunca de un parámetro de la
+petición: si el «de quién son los pedidos» viajara en la URL, cualquiera
+cambiaría el número y vería la nómina del compañero. Es el mismo fallo que tenía
+el motor de render antes del 25/08 —la pantalla ofrecía lo correcto y la API se
+fiaba de lo que le mandaran—, y se arregla igual: decidiéndolo en el servidor a
+partir de quién eres.
+"""
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from routes.cascos import _es_master
+from services import area_cooperativista as AC
+from services import liquidaciones as L
+from services.jwt_service import get_current_user
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/cooperativistas", tags=["cooperativistas"])
+
+
+def _db():
+    from server import db
+    return db
+
+
+@router.get("/mi-area")
+async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
+    """Los tres montones de un cooperativista: en progreso, a cobrar y pagado."""
+    filtro = AC.filtro_de(current_user)
+    if filtro is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Esta área es de los cooperativistas: montadores y comerciales.")
+    try:
+        pedidos = await _db().orders.find(filtro, {"_id": 0}).to_list(1000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"mi-area: no se pudieron leer los pedidos: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo leer tu área.")
+
+    mano = 0.0
+    if AC.rol_de(current_user) == AC.MONTADOR:
+        # La comisión del montador ES la mano de obra por mueble que teclea el
+        # master en Rentabilidad MV (CLAUDE.md, regla 16). No tiene fórmula
+        # propia a propósito: dos números para lo mismo acaban sin cuadrar.
+        try:
+            aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+            mano = float(aj.get("manoObraPorMueble") or 0)
+        except Exception:                                    # noqa: BLE001
+            mano = 0.0
+
+    return {"success": True, "area": AC.panel_de(current_user, pedidos, mano)}
+
+
+@router.post("/asignar")
+async def asignar(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Quién vendió y quién montó un pedido. SOLO el master.
+
+    Va cerrado porque esto decide quién cobra: cambiar el comercial de un pedido
+    es mover una comisión de un bolsillo a otro.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Asignar comercial o montador es del master: decide quién cobra.")
+
+    pedido_id = (payload or {}).get("pedidoId")
+    if not pedido_id:
+        raise HTTPException(status_code=400, detail="Falta el pedido.")
+
+    cambios = {}
+    for clave in ("comercialUserId", "montadorUserId"):
+        if clave in (payload or {}):
+            cambios[clave] = str(payload.get(clave) or "")
+    if not cambios:
+        raise HTTPException(status_code=400, detail="No hay nada que asignar.")
+
+    r = await _db().orders.update_one({"id": pedido_id}, {"$set": cambios})
+    if not r.matched_count:
+        raise HTTPException(status_code=404, detail="Ese pedido no existe.")
+    return {"success": True, "pedidoId": pedido_id, "asignado": cambios}
+
+
+@router.get("/liquidacion")
+async def liquidacion(periodo: str, usuario: str,
+                      current_user: Optional[dict] = Depends(get_current_user)):
+    """Lo que hay que pagarle a alguien este mes. SOLO el master.
+
+    Aquí SÍ viaja el usuario en la petición, y por eso está cerrado al master: es
+    la vista de quien paga, no la de quien cobra.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="La liquidación es del master.")
+    if not periodo or not usuario:
+        raise HTTPException(status_code=400, detail="Faltan el periodo o el usuario.")
+
+    u = await _db().users.find_one({"id": usuario}, {"_id": 0})
+    if not u:
+        raise HTTPException(status_code=404, detail="Ese usuario no existe.")
+    rol = AC.rol_de(u)
+    if not rol:
+        raise HTTPException(status_code=400, detail="Ese usuario no es cooperativista.")
+
+    filtro = AC.filtro_de(u)
+    pedidos = await _db().orders.find(filtro, {"_id": 0}).to_list(2000)
+    mano = 0.0
+    if rol == AC.MONTADOR:
+        aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+        mano = float(aj.get("manoObraPorMueble") or 0)
+    normalizados = [AC.normaliza_pedido(p, mano) for p in pedidos]
+    return {"success": True, "liquidacion": L.liquidacion_del_mes(normalizados, rol, periodo)}

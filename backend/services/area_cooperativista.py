@@ -1,0 +1,128 @@
+# © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
+"""
+EL ÁREA DE UN COOPERATIVISTA: QUÉ VE, Y SOBRE TODO QUÉ NO VE.
+
+`comisiones.py` dice CUÁNTO cobra. `liquidaciones.py` dice CUÁNDO. Este módulo
+dice QUIÉN puede mirar, que es lo que faltaba para que un montador o un
+comercial pudiera entrar con su clave y ver lo suyo.
+
+DOS REGLAS, Y LA SEGUNDA ES LA QUE HAY QUE VIGILAR
+
+1. CADA UNO VE SOLO LO SUYO. Un comercial ve los pedidos que ha vendido; un
+   montador, los que ha montado. Nunca los del compañero. Esto es nómina: ver lo
+   que cobra otro no es un fallo de permisos, es un problema entre personas.
+
+2. LA COMISIÓN NO PUEDE ABRIR LA PUERTA AL DINERO DE LA CASA. Aquí está el
+   riesgo de verdad. Para calcular la comisión hace falta la base imponible del
+   pedido, y de ahí a enseñar el coste, el margen o la tarifa MV hay un paso. El
+   ERP tiene eso cerrado al master en el servidor (CLAUDE.md, reglas 8b y 9), y
+   una pantalla nueva no puede convertirse en la puerta de atrás. La regla del
+   proyecto vale igual aquí: un candado que se rodea por otra ruta no es un
+   candado.
+
+   Lo que sale de aquí: sus muebles, sus euros, su tramo y el estado. Lo que NO
+   sale, jamás: coste, margen, tarifa MV, escandallo, descuentos de proveedor y
+   las comisiones de cualquier otro.
+
+POR QUÉ ESTO NO HABLA CON MONGO. Recibe los pedidos ya leídos y devuelve el
+panel. Así se puede probar entero sin base de datos, que es la única forma de
+tener candados de verdad sobre quién ve el dinero de quién.
+"""
+from __future__ import annotations
+
+from typing import Iterable, Optional
+
+from services import liquidaciones as L
+
+COMERCIAL = L.COMERCIAL
+MONTADOR = L.MONTADOR
+
+# Lo único que sale de un pedido hacia el panel de un cooperativista. Es una
+# lista BLANCA a propósito: con una lista negra, cualquier campo nuevo del
+# pedido —un coste, un margen— saldría solo el día que alguien lo añada.
+CAMPOS_VISIBLES = ("pedidoId", "estado", "euros", "muebles", "periodo",
+                   "porMueble", "tramo", "anomalia")
+
+
+def rol_de(user: Optional[dict]) -> Optional[str]:
+    """Con qué sombrero entra. `None` si no es cooperativista.
+
+    Un usuario puede ser las dos cosas (un montador que además vende). Se
+    devuelve el rol de MONTADOR primero por ser el más restrictivo en importes:
+    su comisión es la mano de obra, que no depende de la valoración del pedido y
+    por tanto no deja deducir nada del PVP.
+    """
+    if not user:
+        return None
+    if user.get("isMontador"):
+        return MONTADOR
+    if user.get("isComercial") or user.get("isRepresentative"):
+        return COMERCIAL
+    return None
+
+
+def filtro_de(user: Optional[dict]) -> Optional[dict]:
+    """El filtro de Mongo con los pedidos de ESE cooperativista, y de nadie más.
+
+    Devuelve `None` cuando el usuario no es cooperativista. `None` no es «sin
+    filtro»: quien llama tiene que tratarlo como «no hay área que enseñar». Un
+    filtro vacío `{}` aquí significaría TODOS los pedidos de la casa.
+    """
+    rol = rol_de(user)
+    uid = (user or {}).get("id")
+    if not rol or not uid:
+        return None
+    return {"montadorUserId": uid} if rol == MONTADOR else {"comercialUserId": uid}
+
+
+def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0) -> dict:
+    """Del documento del pedido a lo poco que necesita la liquidación."""
+    o = order or {}
+    return {
+        "id": o.get("id") or "",
+        "aceptadoAt": o.get("aceptadoAt") or o.get("confirmedAt"),
+        "servidoAt": o.get("servidoAt"),
+        "cobradoAt": o.get("cobradoAt"),
+        "pendienteCobro": o.get("pendienteCobro") or 0,
+        "anulado": bool(o.get("anulado") or o.get("status") == "cancelled"),
+        "muebles": o.get("itemsCount") or 0,
+        "baseImponible": o.get("baseImponible") or 0,
+        "manoPorMueble": mano_por_mueble,
+        "liquidadoEn": o.get("liquidadoEn"),
+    }
+
+
+def _linea_publica(l: dict) -> dict:
+    """Recorta una línea a lo que puede ver un cooperativista."""
+    return {k: l.get(k) for k in CAMPOS_VISIBLES if k in l}
+
+
+def panel_de(user: Optional[dict], pedidos: Iterable[dict],
+             mano_por_mueble: float = 0.0) -> Optional[dict]:
+    """Lo que ve al entrar en su área. `None` si no es cooperativista.
+
+    OJO con `pedidos`: tienen que venir YA filtrados por `filtro_de`. Esta
+    función no vuelve a comprobar de quién son —no puede, no conoce la consulta
+    que los trajo—, así que quien llama es responsable de no traerle los del
+    vecino. El candado lo comprueba desde la ruta, que es donde se decide.
+    """
+    rol = rol_de(user)
+    if not rol:
+        return None
+    normalizados = [normaliza_pedido(p, mano_por_mueble) for p in (pedidos or [])]
+    pan = L.panel(normalizados, rol)
+    return {
+        "rol": rol,
+        "enProgreso": {"euros": pan["enProgreso"]["euros"],
+                       "pedidos": pan["enProgreso"]["pedidos"],
+                       "lineas": [_linea_publica(x) for x in pan["enProgreso"]["lineas"]]},
+        "consolidada": {"euros": pan["consolidada"]["euros"],
+                        "pedidos": pan["consolidada"]["pedidos"],
+                        "lineas": [_linea_publica(x) for x in pan["consolidada"]["lineas"]]},
+        "liquidada": {"euros": pan["liquidada"]["euros"],
+                      "pedidos": pan["liquidada"]["pedidos"],
+                      "lineas": [_linea_publica(x) for x in pan["liquidada"]["lineas"]]},
+    }
