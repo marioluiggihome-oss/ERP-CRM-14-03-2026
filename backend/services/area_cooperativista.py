@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+from services import comisiones as C
 from services import liquidaciones as L
 
 COMERCIAL = L.COMERCIAL
@@ -100,6 +101,45 @@ def _linea_publica(l: dict) -> dict:
     return {k: l.get(k) for k in CAMPOS_VISIBLES if k in l}
 
 
+def _a_tiro(normalizados, rol):
+    """Los pedidos EN PROGRESO que están a un paso de subir de tramo.
+
+    Es el plan de estimulación del master: no basta con enseñar lo ganado, hay
+    que enseñar lo que está a tiro. «Este pedido va por 11.400 €; con 600 € más
+    pasas a 60 € por mueble y son 140 € más para ti.»
+
+    Solo COMERCIALES: la comisión del montador es la mano de obra por mueble y
+    no depende de la valoración, así que para él no hay tramo que perseguir.
+
+    Y solo lo que está EN PROGRESO: perseguir un pedido ya cerrado no sirve de
+    nada, y enseñarlo sería recordarle lo que se dejó por el camino.
+
+    OJO: aquí se usa la base imponible para CALCULAR, pero no sale ni un euro de
+    ella hacia el panel. Lo que se devuelve es cuánto falta y cuánto se gana —
+    nunca el PVP ni el coste del pedido.
+    """
+    if rol != COMERCIAL:
+        return []
+    fuera = []
+    for p in normalizados:
+        if L.estado_de(p) != L.EN_PROGRESO:
+            continue
+        g = C.cuanto_falta_para_el_siguiente_tramo(p["baseImponible"], p["muebles"])
+        if not g:
+            continue
+        fuera.append({
+            "pedidoId": p["id"],
+            "faltan": g["faltan"],
+            "porMuebleAhora": g["porMuebleAhora"],
+            "porMuebleSiSalta": g["porMuebleSiSalta"],
+            "extraTotal": g["extraTotal"],
+            "muebles": g["muebles"],
+        })
+    # Lo más cerca primero: es lo que de verdad se puede empujar hoy.
+    fuera.sort(key=lambda x: x["faltan"])
+    return fuera
+
+
 def panel_de(user: Optional[dict], pedidos: Iterable[dict],
              mano_por_mueble: float = 0.0) -> Optional[dict]:
     """Lo que ve al entrar en su área. `None` si no es cooperativista.
@@ -116,6 +156,7 @@ def panel_de(user: Optional[dict], pedidos: Iterable[dict],
     pan = L.panel(normalizados, rol)
     return {
         "rol": rol,
+        "aTiro": _a_tiro(normalizados, rol),
         "enProgreso": {"euros": pan["enProgreso"]["euros"],
                        "pedidos": pan["enProgreso"]["pedidos"],
                        "lineas": [_linea_publica(x) for x in pan["enProgreso"]["lineas"]]},

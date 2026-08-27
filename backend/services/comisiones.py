@@ -234,6 +234,66 @@ def _nombre_del_tramo(valoracion: float) -> str:
     return f"más de {_euros(anterior)}" if anterior is not None else "todos"
 
 
+def cuanto_falta_para_el_siguiente_tramo(valoracion: float, muebles: int) -> Optional[dict]:
+    """Cuánto le falta a este pedido para saltar de tramo, y qué supone en euros.
+
+    Es el motor del PLAN DE ESTIMULACIÓN que pidió el master: no basta con
+    enseñarle al comercial lo que lleva ganado, hay que enseñarle lo que tiene a
+    un paso. «Este pedido va por 11.400 €; con 600 € más pasas a 60 € por
+    mueble, y con 14 muebles son 140 € más para ti.»
+
+    Devuelve `None` cuando ya está en el tramo más alto: ahí no hay nada que
+    perseguir, y enseñar un objetivo inalcanzable desmotiva en vez de estimular.
+
+    El umbral se calcula con el mismo criterio del borde que el resto del módulo
+    (`BORDE_AL_ALZA`): llegar JUSTO a 12.000 € ya cuenta como el tramo de
+    arriba, así que lo que falta es llegar al número, no pasarlo.
+    """
+    try:
+        v = max(0.0, float(valoracion or 0))
+    except (TypeError, ValueError):
+        v = 0.0
+    uds = _entero_no_negativo(muebles)
+    ahora = euros_por_mueble_comercial(v)
+
+    # CUIDADO CON LA FORMA DE LA TABLA. Cada par es (hasta, euros): «hasta ese
+    # importe se cobra eso». Así que el umbral para saltar NO es el `tope` del
+    # tramo siguiente, sino el del tramo en el que se está AHORA.
+    #
+    # La primera versión cogía el siguiente y decía que a un pedido de 11.400 €
+    # le faltaban 3.600 € cuando le faltaban 600: se saltaba el escalón entero.
+    # Un plan de estimulación que enseña un objetivo seis veces más lejos de lo
+    # que está desanima en vez de estimular, que es lo contrario de para lo que
+    # se hizo.
+    for i, (tope, _euros) in enumerate(TRAMOS_COMERCIAL):
+        if tope is None:
+            break                                  # ya está en el más alto
+        cabe = v < tope if BORDE_AL_ALZA else v <= tope
+        if not cabe:
+            continue
+        if i + 1 >= len(TRAMOS_COMERCIAL):
+            break
+        euros = TRAMOS_COMERCIAL[i + 1][1]
+        faltan = round(max(0.0, tope - v), 2)
+        if not BORDE_AL_ALZA:
+            faltan = round(faltan + 0.01, 2)
+        extra_por_mueble = round(euros - ahora, 2)
+        if extra_por_mueble <= 0:
+            break
+        return {
+            "faltan": faltan,
+            "desde": round(v, 2),
+            "hasta": tope,
+            "porMuebleAhora": ahora,
+            "porMuebleSiSalta": euros,
+            "extraPorMueble": extra_por_mueble,
+            "extraTotal": round(extra_por_mueble * uds, 2),
+            "muebles": uds,
+            "tramoSiguiente": _nombre_del_tramo(tope),
+        }
+    return None
+
+
 def resumen(valoracion: float, muebles: int, mano_por_mueble: float,
             unidades: Optional[int] = None) -> dict:
     """Las dos comisiones de un pedido, juntas. Lo que pinta la pantalla."""

@@ -61,6 +61,11 @@ class SettingsModel(BaseModel):
     defaultBackMaterial: str = "Tablero 8mm"
     defaultGrosor: int = 18
     defaultBackThickness: int = 8
+    # La comision del montador ES esta mano de obra por mueble (CLAUDE.md,
+    # regla 16). No tiene formula propia a proposito: dos numeros para lo mismo
+    # acaban sin cuadrar. Sin configurar, su area sale a cero — y sale a cero de
+    # verdad, no con un valor inventado que le haria creer que cobra algo.
+    manoObraPorMueble: float = 0.0
     defaultEdgeBandingPriceMl: float = 1.77  # Precio canto €/ml (configurable, usado en despiece y presupuestador)
     
     # Email settings
