@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| Denominación | `[ RAZÓN SOCIAL COMPLETA ]` (marca comercial: **Luiggi Home**) |
+| Denominación | **ALEMAR FUTURE 07 SLU** (marca comercial: **Luiggi Home**) |
 | NIF / CIF | `[ CIF ]` |
 | Domicilio social | `[ DIRECCIÓN COMPLETA ]` |
 | Correo de contacto | info@luiggihome.es |

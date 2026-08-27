@@ -7,7 +7,7 @@ cada fichero deja constancia de titularidad y de que el código es confidencial
 y propietario, y le quita a nadie la excusa de "no sabía que no era libre".
 
 OJO con lo que NO se firma: el repo lleva código de terceros copiado dentro
-(shadcn/ui, MIT). Ponerle "propiedad exclusiva de Luiggi Home" a código ajeno
+(shadcn/ui, MIT). Ponerle "propiedad exclusiva de ALEMAR FUTURE 07 SLU" a código ajeno
 no protege nada y encima es falso, así que va excluido a propósito (ver
 EXCLUIDOS y la auditoría de licencias).
 
@@ -22,10 +22,10 @@ import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-TITULAR = "Luiggi Home"
+TITULAR = "ALEMAR FUTURE 07 SLU"
 ANIOS = "2024-2026"
 # Marca de agua para reconocer la cabecera y no duplicarla ni al reescribirla.
-MARCA = "LUIGGI-COPYRIGHT"
+MARCA = "ALEMAR-COPYRIGHT"
 
 LINEAS = [
     f"© {ANIOS} {TITULAR}. Todos los derechos reservados. [{MARCA}]",

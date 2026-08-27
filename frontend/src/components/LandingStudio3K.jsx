@@ -1,5 +1,5 @@
 /*
- * © 2024-2026 Luiggi Home / Studio3K. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * © 2024-2026 ALEMAR FUTURE 07 SLU / Studio3K. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
  * Software comercial y confidencial.
  */
 import React, { useState, useRef, useEffect } from 'react';

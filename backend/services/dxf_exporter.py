@@ -1,4 +1,4 @@
-# © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+# © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
 # Software propietario y confidencial. Ver LICENSE.
 """
 dxf_exporter.py — Exportador vectorial DXF (AutoCAD) para Estudio 3D

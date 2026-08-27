@@ -1,5 +1,5 @@
 /*
- * © 2024-2026 Luiggi Home. Todos los derechos reservados. [LUIGGI-COPYRIGHT]
+ * © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
  * Gestor Comercial Integrado: Presupuestos, Pedidos, Albaranes y Facturas de Venta.
  */
 import React, { useState, useEffect, useMemo } from 'react';

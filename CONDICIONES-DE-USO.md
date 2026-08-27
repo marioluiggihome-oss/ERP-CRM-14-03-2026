@@ -4,7 +4,7 @@
 > lo revise y lo cierre un abogado. Los huecos `[ ]` son datos o decisiones
 > comerciales que no se rellenan a ojo.
 
-**Titular:** `[ RAZÓN SOCIAL ]` — CIF `[ CIF ]` — info@luiggihome.es
+**Titular:** **ALEMAR FUTURE 07 SLU** — CIF `[ CIF ]` — info@luiggihome.es
 **Servicio:** plataforma ERP/CRM accesible en `erp.luiggihome.es`
 **Versión:** 1.0 — `[ FECHA DE ENTRADA EN VIGOR ]`
 
