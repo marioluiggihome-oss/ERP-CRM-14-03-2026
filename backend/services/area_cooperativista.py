@@ -80,17 +80,36 @@ def filtro_de(user: Optional[dict]) -> Optional[dict]:
 
 
 def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0) -> dict:
-    """Del documento del pedido a lo poco que necesita la liquidación."""
+    """Del documento del pedido a lo poco que necesita la liquidación.
+
+    SOLO LOS MUEBLES ENTRAN EN LA COMISIÓN (master, 25/08). Las unidades y la
+    valoración NO son las del pedido entero: se recalculan de sus líneas
+    dejando fuera puertas, costados, regletas y las líneas manuales de
+    servicios. En un pedido corriente eso es la diferencia entre 990 € y 420 €
+    de comisión — se pagaba un 136% de más.
+
+    SI EL PEDIDO NO TRAE SUS LÍNEAS no se puede saber qué era mueble y qué no,
+    así que no se cuenta nada y se marca `sinDesglose`. Contar el pedido entero
+    sería pagar de más, y pagar de más no se devuelve; pagar de menos, al menos,
+    se reclama. Que aparezca marcado es justo lo que hace falta para arreglarlo.
+    """
     o = order or {}
+    lineas = o.get("items") or o.get("lineas") or []
+    if lineas:
+        b = C.base_de_comision(lineas, o.get("descuentoPct") or 0)
+        muebles, base, sin_desglose = b["muebles"], b["baseImponible"], False
+    else:
+        muebles, base, sin_desglose = 0, 0.0, True
     return {
         "id": o.get("id") or "",
+        "muebles": muebles,
+        "baseImponible": base,
+        "sinDesglose": sin_desglose,
         "aceptadoAt": o.get("aceptadoAt") or o.get("confirmedAt"),
         "servidoAt": o.get("servidoAt"),
         "cobradoAt": o.get("cobradoAt"),
         "pendienteCobro": o.get("pendienteCobro") or 0,
         "anulado": bool(o.get("anulado") or o.get("status") == "cancelled"),
-        "muebles": o.get("itemsCount") or 0,
-        "baseImponible": o.get("baseImponible") or 0,
         "manoPorMueble": mano_por_mueble,
         "liquidadoEn": o.get("liquidadoEn"),
     }

@@ -118,6 +118,112 @@ TOPE_COMERCIAL_POR_MUEBLE = 70.0
 BORDE_AL_ALZA = True
 
 
+# ─── QUÉ CUENTA PARA LA COMISIÓN: SOLO LOS MUEBLES ──────────────────────────
+#
+# El master, 25/08/2026: «las líneas de muebles siempre incentivarán a los
+# comerciales, pero las puertas y los costados y las líneas manuales con los
+# distintos servicios que añadamos manualmente no van a llevar compensación de
+# ningún tipo. Solo los muebles».
+#
+# No es un matiz: cambia el DINERO por los dos lados. Contar puertas y costados
+# infla el número de unidades (se paga de más por mueble) y además mete su
+# importe en la valoración, que es la que decide el TRAMO. Un pedido de 11.000 €
+# de muebles con 1.500 € de puertas saltaría a un tramo que no le toca, y
+# cobraría más por cada mueble además de por las puertas.
+#
+# LAS DOS LISTAS SALEN DE DATOS QUE YA ESTABAN EN EL ERP, no de una lista
+# escrita a ojo que se quedaría vieja:
+#
+#   · Categoría «lineal» de `nomenclaturas_pdf.FAMILIAS`: costados, laterales,
+#     regletas, techos y elementos lineales.
+#   · Tipo «matrix» de la tarifa MV: PUERTAS, VITRINA y REJILLA. Son FRENTES —
+#     se tarifan por alto x ancho, no por código de mueble.
+#
+# OJO con no pasarse: un ALTO_VITRINA o una MEDIACOLUMNA_VITRINA SÍ son muebles
+# (un casco con puerta de cristal). Lo que no lo es son las familias de frentes
+# sueltos. Por eso el corte va por `matrix`, no por la palabra «vitrina».
+def _familias_que_no_son_mueble() -> frozenset:
+    fuera = set()
+    try:
+        from services.nomenclaturas_pdf import FAMILIAS
+        fuera |= {k for k, v in FAMILIAS.items()
+                  if isinstance(v, (list, tuple)) and len(v) > 1 and v[1] == "lineal"}
+    except Exception:                                    # noqa: BLE001
+        pass
+    try:
+        import json as _json
+        import os as _os
+        ruta = _os.path.join(_os.path.dirname(_os.path.dirname(
+            _os.path.abspath(__file__))), "data", "mv_tarifas_oficiales.json")
+        with open(ruta, "r", encoding="utf-8") as f:
+            t1 = _json.load(f)["tariffs"]["T1"]
+        fuera |= {k for k, v in t1.items() if v.get("type") == "matrix"}
+    except Exception:                                    # noqa: BLE001
+        pass
+    # Red de seguridad por si algún día no se pudiera leer ninguna de las dos:
+    # mejor de más que de menos, porque de menos se PAGA de más.
+    fuera |= {"PUERTAS", "VITRINA", "VITRINA_INGLESA", "REJILLA_CONFESIONARIO",
+              "COSTADOS_COLOR", "COSTADOS_MELAMINA", "LATERALES_COLOR",
+              "REGLETA_COLOR", "REGLETA_MELAMINA", "TECHO_COLOR",
+              "ELEMENTOS_LINEALES"}
+    return frozenset(fuera)
+
+
+FAMILIAS_SIN_COMISION = _familias_que_no_son_mueble()
+
+
+def es_mueble(linea: dict) -> bool:
+    """¿Esta línea de un pedido incentiva al comercial?
+
+    NO incentivan: puertas, vitrinas y rejillas (frentes), costados, laterales,
+    regletas, techos y elementos lineales, y las LÍNEAS MANUALES — las que
+    alguien teclea a mano para un servicio, que no tienen familia del catálogo.
+
+    Una línea sin familia se trata como servicio y NO cuenta. Es la decisión
+    conservadora a propósito: si un día entra una línea rara sin clasificar,
+    que no se pague de más. Pagar de menos se reclama; pagar de más no se
+    devuelve.
+    """
+    if not linea:
+        return False
+    fam = str(linea.get("familia") or "").strip().upper()
+    if not fam:
+        return False                       # línea manual / servicio
+    return fam not in FAMILIAS_SIN_COMISION
+
+
+def base_de_comision(lineas, descuento_pct: float = 0.0) -> dict:
+    """Las unidades y la valoración que entran en la comisión: SOLO muebles.
+
+    Devuelve también lo que se ha dejado fuera, para poder enseñarlo en pantalla:
+    un comercial que ve «14 muebles» en un pedido de 20 líneas tiene que poder
+    entender por qué, o pensará que le están quitando.
+    """
+    muebles = uds_fuera = 0
+    pvp_muebles = pvp_fuera = 0.0
+    for l in (lineas or []):
+        try:
+            qty = max(0, int(l.get("qty") or l.get("cant") or 1))
+        except (TypeError, ValueError):
+            qty = 0
+        try:
+            pvp = float(l.get("pvp") or 0) * qty
+        except (TypeError, ValueError):
+            pvp = 0.0
+        if es_mueble(l):
+            muebles += qty
+            pvp_muebles += pvp
+        else:
+            uds_fuera += qty
+            pvp_fuera += pvp
+    return {
+        "muebles": muebles,
+        "baseImponible": base_imponible(pvp_muebles, descuento_pct),
+        "pvpMuebles": round(pvp_muebles, 2),
+        "sinComision": {"unidades": uds_fuera, "pvp": round(pvp_fuera, 2)},
+    }
+
+
 def base_imponible(pvp: float, descuento_pct: float = 0.0) -> float:
     """El número con el que se decide el tramo: PVP menos descuento, sin IVA.
 

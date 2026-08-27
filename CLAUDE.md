@@ -237,6 +237,18 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      Se le preguntó si quería un techo por encima de la escala y dijo que no:
      «70 tope de momento» (25/08). Que hoy no recorte nada es la decisión, no un
      cabo suelto.
+   - **SOLO LOS MUEBLES INCENTIVAN** (master, 25/08). Puertas, vitrinas y
+     rejillas (son FRENTES), costados, laterales, regletas, techos, elementos
+     lineales y las **líneas manuales de servicios** no llevan compensación de
+     ningún tipo. Cambia el dinero por los dos lados: cuenta unidades que no
+     existen Y su importe empuja el TRAMO de todos los demás muebles. En un
+     pedido corriente eran 990 € contra 420 € — un 136% de más. El corte NO es
+     una lista escrita a mano: sale de la categoría `lineal` de
+     `nomenclaturas_pdf` y del tipo `matrix` de la tarifa. Ojo: un
+     `ALTO_VITRINA` SÍ es mueble (casco con puerta de cristal); por eso se corta
+     por `matrix` y no por la palabra «vitrina». Un pedido sin sus líneas no
+     paga y se marca `sinDesglose`: pagar de menos se reclama, pagar de más no
+     se devuelve. Candado: `test_calculo_solo_muebles_incentivan.py`.
    - **UN PEDIDO ES UN PEDIDO: no se juntan dos para subir de tramo** (master,
      25/08: «eso que falte en cada pedido tiene que ser en ESE pedido»). Dos
      pedidos de 7.000 € pagan 40 €/mueble cada uno —800 € en total—, no los
