@@ -663,6 +663,32 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     return filas;
   }, [filas, filtroCat]);
 
+  /**
+   * Pone en el CÓDIGO la mano que venía escrita en el texto.
+   *
+   * El servidor lee bien `10 A60I` y devuelve `mano: 'I'`, pero devuelve
+   * también el código de CATÁLOGO, que es `A60D/I` —así se llama el mueble de
+   * una puerta en la tarifa MV, con las dos manos posibles—. Y esta pantalla
+   * saca la mano del CÓDIGO, no del campo `mano`: `A60D/I` significa «sin
+   * decidir», así que la I escrita por el master llegaba y se tiraba, y el
+   * mueble salía marcado «⚠️ Sin mano».
+   *
+   * El master, 25/08: «cuando subo para valorar desde pegado masivo no coge las
+   * manos, cuando sí debería ponerlas si están escritas».
+   *
+   * Se arregla en el código y no leyendo `m.mano` en el rótulo a propósito: el
+   * código es la única fuente de la mano en toda la pantalla —`rotarMano` y
+   * `fijarTodasManos` lo reescriben—, y meter una segunda fuente acabaría con
+   * las dos diciendo cosas distintas en cuanto alguien pulsara el botón.
+   */
+  const aplicarManoEscrita = (m) => {
+    const escrita = String(m?.mano || '').toUpperCase();
+    if (escrita !== 'D' && escrita !== 'I') return m;
+    const cod = String(m.cod || '');
+    if (!/D\/I$/i.test(cod)) return m;          // ya trae mano, o no lleva
+    return { ...m, cod: cod.replace(/D\/I$/i, escrita), mano: escrita };
+  };
+
   const fundir = (prev, nuevos) => {
     const out = [...prev];
     for (const n of nuevos) {
@@ -685,7 +711,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       });
       let d = {}; try { d = await r.json(); } catch { d = {}; }
       if (!r.ok || !d.success) { setAviso(d.detail || 'No se reconoció el mueble. Escríbelo como "1 b60i (altura 80)".'); return; }
-      const nuevos = (d.muebles || []).map((m, i) => ({ ...m, _k: `add-${Date.now()}-${i}` }));
+      const nuevos = (d.muebles || []).map((m, i) =>
+        aplicarManoEscrita({ ...m, _k: `add-${Date.now()}-${i}` }));
       setMuebles(prev => fundir(prev, nuevos));
       setBusca('');
       setFoco(false);
@@ -1407,7 +1434,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 disabled={!busca.trim() || buscando}
                 className="px-6 py-3 rounded-2xl bg-accion-600 hover:bg-accion-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
               >
-                <Plus size={18} /> Añadir Mueble
+                {buscando
+                  ? <><Loader size={18} className="animate-spin" /> Añadiendo…</>
+                  : <><Plus size={18} /> Añadir Mueble</>}
               </button>
             </div>
 
@@ -1483,10 +1512,32 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
         {/* Tabla de Muebles */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 divide-y divide-slate-100 min-h-[300px]">
-          {filasFiltradas.length === 0 ? (
+          {/* MIENTRAS SE BUSCA NO SE ENSEÑA EL VACÍO.
+              Añadir un mueble va al servidor y tarda cerca de un segundo. En
+              ese rato la pantalla entera decía «No hay muebles añadidos», con
+              un girito diminuto dentro del buscador que en una tablet no se ve.
+              El master, dos veces: «tarda un poco, como un segundo, y se queda
+              la pantalla en blanco; da mala imagen». No estaba rota: estaba
+              enseñando un hueco. Ahora ese rato se ocupa con la fila que está a
+              punto de llegar. */}
+          {buscando && filasFiltradas.length === 0 ? (
+            <div className="py-16 space-y-3" aria-live="polite">
+              <p className="text-center text-sm font-bold text-dato-600">
+                Buscando {busca.trim() ? <span className="font-mono">«{busca.trim()}»</span> : 'el mueble'}…
+              </p>
+              {[0, 1].map(i => (
+                <div key={i}
+                  className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 animate-pulse"
+                  style={{ animationDelay: `${i * 140}ms` }}>
+                  <div className="h-3 w-24 rounded bg-slate-200 mb-3" />
+                  <div className="h-2.5 w-2/3 rounded bg-slate-200/80" />
+                </div>
+              ))}
+            </div>
+          ) : filasFiltradas.length === 0 ? (
             <div className="py-20 text-center text-slate-400 space-y-3">
-              <Package size={48} className="mx-auto text-slate-300 opacity-60" />
-              <p className="text-base font-bold text-slate-600">No hay muebles añadidos en este presupuesto</p>
+              <Package size={48} className="mx-auto text-dato-300 opacity-60" />
+              <p className="text-base font-bold text-dato-600">No hay muebles añadidos en este presupuesto</p>
               <p className="text-xs max-w-md mx-auto">
                 Escribe en el buscador superior (ej: <code>1 b60i</code>, <code>asc60d</code>, <code>fregadero 60</code>) o usa el botón <b>Pegado Masivo</b>.
               </p>
