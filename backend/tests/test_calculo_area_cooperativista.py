@@ -44,10 +44,19 @@ COMERCIAL = {"id": "u-com", "isRepresentative": True}
 GERENTE = {"id": "u-ger", "isGerente": True}
 
 
-def pedido(**kw):
-    base = {"id": "PED-1", "confirmedAt": "2026-08-01", "itemsCount": 10,
-            "baseImponible": 13000.0, "servidoAt": None, "cobradoAt": None,
-            "pendienteCobro": 0}
+def pedido(muebles=10, valor=13000.0, **kw):
+    """Un pedido CON SUS LÍNEAS.
+
+    Desde el 25/08 la comisión se calcula de las líneas y no de `itemsCount` /
+    `baseImponible` del pedido entero, porque puertas, costados y servicios no
+    incentivan. Estas fixtures traían el pedido sin líneas y por eso daban cero:
+    no era un fallo del código, era la prueba fabricando un pedido que ya no
+    existe.
+    """
+    base = {"id": "PED-1", "confirmedAt": "2026-08-01",
+            "items": [{"familia": "BAJO", "qty": muebles,
+                       "pvp": round(valor / muebles, 6)}],
+            "servidoAt": None, "cobradoAt": None, "pendienteCobro": 0}
     base.update(kw)
     return base
 

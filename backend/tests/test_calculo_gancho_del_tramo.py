@@ -101,8 +101,11 @@ def _panel(pedidos):
 
 
 def _ped(pid, base, muebles):
+    """Con sus LÍNEAS: la comisión se calcula de ellas, no del pedido entero.
+    Solo muebles, para que el importe del pedido sea el que comisiona."""
     return {"id": pid, "confirmedAt": "2026-08-01",
-            "itemsCount": muebles, "baseImponible": base}
+            "items": [{"familia": "BAJO", "qty": muebles,
+                       "pvp": round(base / muebles, 6)}]}
 
 
 def test_DOS_PEDIDOS_NO_SE_SUMAN_PARA_SUBIR_DE_TRAMO():
@@ -142,9 +145,14 @@ def test_el_gancho_NO_TRAE_NINGUNA_LINEA_AGREGADA():
     escala y por tanto SÍ tiene un tramo por delante que agregar.
     """
     pedidos = [_ped("A", 7000, 10), _ped("B", 3000, 4)]
-    assert sum(p["baseImponible"] for p in pedidos) == 10000, (
-        "los importes de esta prueba han cambiado; si su suma cae en el tramo "
-        "más alto, la fila agregada no se crearía y esto dejaría de probar nada")
+    # La suma se calcula COMO LA CALCULA EL CÓDIGO —de las líneas—, no leyendo
+    # un campo del pedido: desde el 25/08 ese campo ya no existe, y leerlo
+    # rompía la prueba sin que hubiera nada roto.
+    from services import area_cooperativista as _AC
+    suma = sum(_AC.normaliza_pedido(p)["baseImponible"] for p in pedidos)
+    assert suma == 10000, (
+        f"los importes de esta prueba suman {suma}; si caen en el tramo más "
+        "alto, la fila agregada no se crearía y esto dejaría de probar nada")
     pan = _panel(pedidos)
     ids = [t["pedidoId"] for t in pan["aTiro"]]
     assert all(i in ("A", "B") for i in ids), (
