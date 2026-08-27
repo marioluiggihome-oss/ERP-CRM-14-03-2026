@@ -82,3 +82,88 @@ def test_el_gancho_CUADRA_con_lo_que_se_paga_de_verdad():
 def test_una_valoracion_absurda_no_revienta(basura):
     g = falta(basura, 3)
     assert g is None or g["faltan"] >= 0
+
+
+# ── UN PEDIDO ES UN PEDIDO. NO SE JUNTAN. ────────────────────────────────────
+#
+# El master, 25/08/2026: «hay que tener en cuenta que eso que falte en cada
+# pedido tiene que ser en ESE pedido; no se pueden juntar dos pedidos».
+#
+# Ya se comportaba así, pero se amarra porque «enseñar cuánto falta EN TOTAL
+# para el siguiente tramo» es exactamente la clase de mejora que alguien añade
+# con buena intención — y sumando dos pedidos de 7.000 € el comercial vería un
+# tramo de 60 €/mueble que no va a cobrar nunca. Prometer una comisión que no
+# llega es peor que no prometer nada.
+
+def _panel(pedidos):
+    from services.area_cooperativista import panel_de
+    return panel_de({"id": "u1", "isRepresentative": True}, pedidos)
+
+
+def _ped(pid, base, muebles):
+    return {"id": pid, "confirmedAt": "2026-08-01",
+            "itemsCount": muebles, "baseImponible": base}
+
+
+def test_DOS_PEDIDOS_NO_SE_SUMAN_PARA_SUBIR_DE_TRAMO():
+    """Dos de 7.000 € pagan 40 €/mueble cada uno, no los 60 de un 14.000."""
+    pan = _panel([_ped("A", 7000, 10), _ped("B", 7000, 10)])
+    lineas = pan["enProgreso"]["lineas"]
+    assert [l["porMueble"] for l in lineas] == [40.0, 40.0], (
+        f"los pedidos se están valorando juntos: {[l['porMueble'] for l in lineas]}. "
+        "Cada pedido se tarifa por SU base imponible.")
+    assert pan["enProgreso"]["euros"] == 800.0, (
+        "el total no es la suma de cada pedido valorado por separado")
+
+
+def test_EL_GANCHO_ES_DE_CADA_PEDIDO_por_separado():
+    """A cada uno le faltan 2.000 € LOS SUYOS. No 'os faltan 2.000 entre los
+    dos', que es lo que saldría si se agregaran."""
+    pan = _panel([_ped("A", 7000, 10), _ped("B", 7000, 10)])
+    a_tiro = pan["aTiro"]
+    assert len(a_tiro) == 2, "el gancho ha dejado de ser por pedido"
+    for t in a_tiro:
+        assert t["faltan"] == 2000.0
+        assert t["porMuebleSiSalta"] == 50.0
+    assert all("pedidoId" in t for t in a_tiro), (
+        "una línea del gancho sin pedido detrás es un objetivo abstracto: hay "
+        "que poder decirle A QUÉ pedido empujar")
+
+
+def test_el_gancho_NO_TRAE_NINGUNA_LINEA_AGREGADA():
+    """Un `aTiro` con alguna línea sin pedido detrás sería una fila «total»
+    colada por la puerta de atrás.
+
+    OJO CON LOS DATOS DE ESTA PRUEBA. La primera versión usaba pedidos que
+    sumaban 26.000 €, o sea ya en el tramo más alto: una fila agregada ni
+    siquiera se habría creado, así que la prueba no ejercía el caso que dice
+    vigilar. Se comprobó rompiéndolo —añadiendo la fila «total»— y esta prueba
+    siguió en verde. Ahora los importes suman 10.000 €, que está a mitad de
+    escala y por tanto SÍ tiene un tramo por delante que agregar.
+    """
+    pedidos = [_ped("A", 7000, 10), _ped("B", 3000, 4)]
+    assert sum(p["baseImponible"] for p in pedidos) == 10000, (
+        "los importes de esta prueba han cambiado; si su suma cae en el tramo "
+        "más alto, la fila agregada no se crearía y esto dejaría de probar nada")
+    pan = _panel(pedidos)
+    ids = [t["pedidoId"] for t in pan["aTiro"]]
+    assert all(i in ("A", "B") for i in ids), (
+        f"hay líneas que no son de un pedido: {ids}. Una fila «total» junta "
+        "pedidos y promete un tramo que no se va a cobrar.")
+    assert len(pan["aTiro"]) <= len(pedidos)
+
+
+def test_un_pedido_YA_EN_EL_TRAMO_MAS_ALTO_no_se_persigue():
+    pan = _panel([_ped("A", 7000, 10), _ped("C", 16000, 8)])
+    assert "C" not in [t["pedidoId"] for t in pan["aTiro"]]
+
+
+def test_juntar_los_pedidos_DARIA_OTRA_COSA_y_por_eso_no_se_hace():
+    """Se deja escrito el número exacto de lo que NO se hace, para que quien
+    lea esto sepa cuánto se estaría inflando si alguien agregara."""
+    from services import comisiones as C
+    juntos = C.comision_comercial(14000, 20)["total"]      # 60 x 20
+    separados = (C.comision_comercial(7000, 10)["total"]
+                 + C.comision_comercial(7000, 10)["total"])  # 40 x 10 dos veces
+    assert juntos == 1200.0 and separados == 800.0
+    assert _panel([_ped("A", 7000, 10), _ped("B", 7000, 10)])["enProgreso"]["euros"] == separados

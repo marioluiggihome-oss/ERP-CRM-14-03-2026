@@ -237,6 +237,13 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      Se le preguntó si quería un techo por encima de la escala y dijo que no:
      «70 tope de momento» (25/08). Que hoy no recorte nada es la decisión, no un
      cabo suelto.
+   - **UN PEDIDO ES UN PEDIDO: no se juntan dos para subir de tramo** (master,
+     25/08: «eso que falte en cada pedido tiene que ser en ESE pedido»). Dos
+     pedidos de 7.000 € pagan 40 €/mueble cada uno —800 € en total—, no los
+     60 €/mueble y 1.200 € que daría un pedido de 14.000. Ya se comportaba así;
+     se amarró porque «cuánto falta EN TOTAL para el siguiente tramo» es la
+     clase de mejora que alguien añade con buena intención, y prometer una
+     comisión que no va a llegar es peor que no prometer nada.
    - El **rótulo** del tramo se DERIVA de la tabla, no se escribe a mano, en las
      dos puntas. Escrito a mano ya se rompió: al añadir el tramo de 9.000 € el
      importe pasó a 50 € y la etiqueta se quedó en «más de 6.000 €» — el número
