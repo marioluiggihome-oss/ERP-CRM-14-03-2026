@@ -10,6 +10,7 @@ import logging
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
 import base64
+from services.marca import con_marca, nombre_comercial
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,18 @@ async def send_email(
         logger.warning("SendGrid not configured - email not sent")
         return False
     
-    sender = from_email or os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@luiggihome.com')
+    # SIN REMITENTE CONFIGURADO NO SE ENVÍA, y esto no es celo: aquí había un
+    # `'noreply@luiggihome.com'` de reserva, así que una instalación sin
+    # configurar mandaba los correos de sus clientes DESDE EL DOMINIO DE OTRA
+    # EMPRESA. Eso no es un detalle de marca: es suplantación, rebota por SPF y
+    # deja el rastro en la bandeja del destinatario. Mejor no enviar y decirlo.
+    sender = (from_email or os.environ.get('SENDGRID_FROM_EMAIL') or '').strip()
+    if not sender:
+        logger.error(
+            "No hay remitente de correo configurado (SENDGRID_FROM_EMAIL). "
+            "No se envía: mandar desde un dominio ajeno es peor que no mandar.")
+        return False
+
     
     message = Mail(
         from_email=sender,
@@ -80,7 +92,7 @@ async def send_backup_email(to_email: str, backup_data: bytes, backup_name: str)
     """Send database backup via email"""
     return await send_email(
         to_email=to_email,
-        subject=f"LUIGGI HOME - Backup: {backup_name}",
+        subject=con_marca(f"Backup: {backup_name}", separador=" - "),
         html_content=f"""
         <h2>Backup de Base de Datos</h2>
         <p>Se adjunta el backup: <strong>{backup_name}</strong></p>
@@ -100,10 +112,16 @@ async def send_order_confirmation(
     attachments: list = None
 ) -> bool:
     """Send order confirmation email"""
+    # El membrete solo existe si hay marca configurada. Con una marca vacía se
+    # pinta el bloque sin `<h1>` en vez de un `<h1></h1>` hueco: un correo sin
+    # membrete es correcto, uno con una caja vacía arriba parece roto.
+    _marca = nombre_comercial()
+    MARCA_H1 = f'<h1 style="margin: 0;">{_marca}</h1>' if _marca else ''
+    MARCA_PIE = f'<p style="margin: 0;">{_marca}</p>' if _marca else ''
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: #1e1b4b; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0;">LUIGGI HOME</h1>
+            {MARCA_H1}
             <p style="margin: 5px 0 0 0; opacity: 0.8;">Confirmación de Pedido</p>
         </div>
         
@@ -127,7 +145,7 @@ async def send_order_confirmation(
         </div>
         
         <div style="padding: 15px; background: #1e1b4b; color: white; text-align: center; font-size: 12px;">
-            <p style="margin: 0;">LUIGGI HOME - Tu Cocina, tu Hogar, tu Estilo</p>
+            {MARCA_PIE}
         </div>
     </div>
     """

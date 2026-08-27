@@ -3,7 +3,7 @@
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
 """
-Módulo de Facturación - LUIGGI HOME
+Módulo de Facturación
 Generación de facturas PDF, envío por email y gestión del ciclo de vida
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile
@@ -29,6 +29,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from services.db_client import get_db as _get_db
+from services.marca import nombre_comercial
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +212,7 @@ def generate_invoice_pdf(invoice: dict, settings: dict) -> bytes:
     # ── CABECERA ──────────────────────────────────────────────────────────
     logo_img = get_logo_img(settings.get("logo", ""))
     company_info = [
-        Paragraph(settings.get("companyName", "LUIGGI HOME"), h2_style),
+        Paragraph(nombre_comercial(settings), h2_style),
         Paragraph(settings.get("companyAddress", ""), small_style),
         Paragraph(f"NIF/CIF: {settings.get('companyTaxId', '')}", small_style),
         Paragraph(settings.get("companyEmail", ""), small_style),
@@ -616,7 +617,7 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
     settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     pdf = generate_invoice_pdf(inv, settings)
 
-    company = settings.get("companyName", "LUIGGI HOME")
+    company = nombre_comercial(settings)
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #ea580c;">Factura {inv['invoiceNumber']}</h2>

@@ -22,6 +22,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor
 from reportlab.pdfgen import canvas
+from services.marca import con_marca
 
 _DATA = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "mv_tarifas_oficiales.json")
 
@@ -223,7 +224,7 @@ def build_nomenclaturas_pdf(tariff: str = "T1") -> bytes:
         c.drawRightString(W - MR, H - 7.6 * mm, f"Tarifa {tariff} · rellenable")
         c.setFillColor(C_MUT)
         c.setFont("Helvetica", 7)
-        c.drawRightString(W - MR, MB - 6 * mm, f"Luiggi Home ERP · pág. {page_no}")
+        c.drawRightString(W - MR, MB - 6 * mm, con_marca(f"pág. {page_no}", separador=" · "))
 
     def card(col, top_y, fam, meta, codes):
         titulo, tipo, desc = meta

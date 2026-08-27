@@ -28,8 +28,8 @@ const STAGES = [
 const PLANTILLA_HTML =
   `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#212937">
   <h2 style="color:#545cb1">Hola {{primernombre}} 👋</h2>
-  <p>Te escribimos desde <b>Luiggi Home</b> para contarte…</p>
-  <p>Un saludo,<br/>El equipo de Luiggi Home</p>
+  <p>Te escribimos para contarte…</p>
+  <p>Un saludo,<br/>El equipo</p>
 </div>`;
 
 export default function CRMMarketing() {
@@ -252,7 +252,7 @@ export default function CRMMarketing() {
           </div>
 
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre interno de la campaña (ej. Promoción Muebles Altura 80)" className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold" />
-          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Asunto del email (ej. Novedades y Muebles Montados Luiggi Home)" className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium" />
+          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Asunto del email (ej. Novedades y Muebles Montados)" className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium" />
 
           {previewTab === 'editor' ? (
             <textarea value={html} onChange={e => setHtml(e.target.value)} rows={8} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono bg-slate-50" />

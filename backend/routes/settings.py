@@ -40,7 +40,7 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
 # Pydantic models
 class SettingsModel(BaseModel):
     id: str = "global-settings"
-    companyName: str = "LUIGGI HOME"
+    companyName: str = ""          # vacío: la marca la pone cada instalación
     companyAddress: str = ""
     companyPhone: str = ""
     companyEmail: str = ""
@@ -66,7 +66,7 @@ class SettingsModel(BaseModel):
     # Email settings
     emailNotifications: bool = False
     emailSender: str = ""
-    emailSenderName: str = "LUIGGI HOME"
+    emailSenderName: str = ""      # vacío: sin membrete ajeno
     
     # Backup settings
     backupRetentionDays: int = 30

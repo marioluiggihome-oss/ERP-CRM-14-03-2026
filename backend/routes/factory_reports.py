@@ -3,7 +3,7 @@
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
 """
-Factory Reports Router - LUIGGI HOME
+Factory Reports Router
 Sistema de generación de informes PDF para fábrica con despiece y logo
 """
 from fastapi import APIRouter, HTTPException, Depends
@@ -25,6 +25,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import base64
 from io import BytesIO
 from services.db_client import get_db as _get_db
+from services.marca import con_marca
 
 logger = logging.getLogger(__name__)
 
@@ -357,7 +358,9 @@ def create_factory_report_pdf(
     # FOOTER
     # ==========================================
     elements.append(Spacer(1, 15*mm))
-    footer_text = f"Documento generado el {datetime.now().strftime('%d/%m/%Y %H:%M')} - LUIGGI HOME Master Industrial System v2026"
+    footer_text = con_marca(
+        f"Documento generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        separador=" - ")
     elements.append(Paragraph(footer_text, small_style))
     
     # Generar PDF

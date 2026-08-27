@@ -9,6 +9,7 @@ import { Upload, Loader, FileText, Calculator, Trash2, ChevronDown, ChevronUp, C
 import { authHeaders } from '../services/api';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import { CASCOS as _CASCOS_RAW } from '../data/cascos';
+import { conMarca } from '../marca';
 
 const CASCOS = Array.isArray(_CASCOS_RAW) ? _CASCOS_RAW : [];
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -587,7 +588,7 @@ const _diagnostico = async (e) => {
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV }) {
+export default function ProformaImporter({ esMaster, valorPunto, onConvertirMV, settings = null }) {
   // EL VALOR DEL PUNTO DE COCINA DES-MONTADA, EL DE AJUSTES.
   //
   // La tarifa ACB se guarda en PUNTOS y el euro sale de multiplicarla por este
@@ -2410,7 +2411,7 @@ function EditorPuertas({
       doc.text('PEDIDO OFICIAL DE COMPRAS (PUERTAS / COSTADOS / REGLETAS)', 14, 16);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('LUIGGI HOME ERP · Despiece de Tableros y Pedido a Proveedor', 14, 24);
+      doc.text(conMarca('Despiece de Tableros y Pedido a Proveedor', settings), 14, 24);
 
       doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 196, 16, { align: 'right' });
       doc.text(`Proveedor: ${nombreProveedor}`, 196, 24, { align: 'right' });

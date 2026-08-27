@@ -16,7 +16,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Módulo unificado de rentabilidad (solo master). Un selector Sistema: ALVIC / MV
 // enruta al motor correspondiente. Mismo coste de fabricación, distinto sistema de
 // venta. Los clientes NO lo ven (gateado a master en Cocina Desmontada).
-export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorPunto, onClose, onVolcarDesmontada, onVolcarMontada }) {
+export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorPunto, onClose, onVolcarDesmontada, onVolcarMontada, settings = null }) {
   const [sistema, setSistema] = useState(sistemaInicial === 'alvic' || sistemaInicial === 'mv' ? sistemaInicial : 'mv');
   const [relacionMV, setRelacionMV] = useState(null);
   if (!esMaster) return null;
@@ -70,7 +70,7 @@ export default function RentabilidadUnificada({ esMaster, sistemaInicial, valorP
           selector MV/Alvic no se pierda al bajar. Antes se limitaba con
           `max-h-[85vh]`; ahora ocupa todo el hueco que quede bajo la cabecera. */}
       <div className="flex-1 min-h-0 border-2 border-t-0 border-slate-700 rounded-b-2xl bg-white overflow-auto">
-        {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} valorPunto={valorPunto} onConvertirMV={setRelacionMV} />}
+        {sistema === 'mv' ? <RentabilidadMV esMaster={true} /> : <ProformaImporter esMaster={true} valorPunto={valorPunto} onConvertirMV={setRelacionMV} settings={settings} />}
       </div>
     </div>
   );

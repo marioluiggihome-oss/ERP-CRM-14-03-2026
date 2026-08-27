@@ -811,7 +811,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.rect(0, 0, 210, 35, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    const companyBrand = (state?.settings?.companyName || currentUser?.empresa || 'LUIGGI HOME').toUpperCase() + ' · COCINA MONTADA';
+    // Sin marca configurada NO se inventa ninguna: el encabezado se queda
+    // solo con «COCINA MONTADA». Poner aquí un nombre por defecto es cómo se
+    // cuela la marca de una empresa en el presupuesto de otra.
+    const _marca = (state?.settings?.companyName || currentUser?.empresa || '').trim().toUpperCase();
+    const companyBrand = _marca ? `${_marca} · COCINA MONTADA` : 'COCINA MONTADA';
     doc.text(companyBrand, 14, 18);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');

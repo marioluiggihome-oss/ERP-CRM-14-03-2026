@@ -18,6 +18,7 @@ from reportlab.lib.units import mm, cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from PIL import Image
+from services.marca import con_marca
 
 # cairosvg is optional - requires system library libcairo
 try:
@@ -489,7 +490,7 @@ def _draw_mv_cover(canvas, doc):
     # Footer
     canvas.setFillColor(SLATE_400)
     canvas.setFont('Helvetica', 8)
-    canvas.drawCentredString(width / 2, 12 * mm, "© 2026 LUIGGI HOME · Sistema Profesional de Presupuestos")
+    canvas.drawCentredString(width / 2, 12 * mm, con_marca("© 2026 Sistema Profesional de Presupuestos"))
     canvas.restoreState()
 
 
@@ -501,7 +502,7 @@ def _draw_mv_header_footer(canvas, doc):
     canvas.rect(0, height - 12 * mm, width, 12 * mm, fill=1, stroke=0)
     canvas.setFillColor(colors.white)
     canvas.setFont('Helvetica-Bold', 9)
-    canvas.drawString(10 * mm, height - 8 * mm, "CATÁLOGO TÉCNICO 2026 · LUIGGI HOME · Tarifas MV")
+    canvas.drawString(10 * mm, height - 8 * mm, con_marca("CATÁLOGO TÉCNICO 2026 · Tarifas MV"))
     canvas.setFillColor(ORANGE_400)
     canvas.setFont('Helvetica', 8)
     canvas.drawRightString(width - 10 * mm, 8 * mm, f"Página {doc.page}")

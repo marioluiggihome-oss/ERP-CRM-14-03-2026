@@ -253,7 +253,7 @@ export default function LandingStudio3K({ onOpenApp, onClose }) {
     },
     {
       q: '¿Se integra con mi catálogo de muebles y despiece?',
-      a: 'Totalmente. Studio3K está conectado con el ERP de fabricación Luiggi Home: una vez que el cliente aprueba el render, el sistema extrae el despiece de cascos, puertas, golas y herrajes automáticamente.'
+      a: 'Totalmente. Studio3K está conectado con el ERP de fabricación: una vez que el cliente aprueba el render, el sistema extrae el despiece de cascos, puertas, golas y herrajes automáticamente.'
     }
   ];
 
@@ -692,7 +692,7 @@ export default function LandingStudio3K({ onOpenApp, onClose }) {
                   type="text"
                   value={leadForm.empresa}
                   onChange={(e) => setLeadForm({ ...leadForm, empresa: e.target.value })}
-                  placeholder="Ej.: Cocinas Luiggi Home"
+                  placeholder="Ej.: Cocinas del Norte"
                   className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-white/10 text-white text-sm focus:border-indigo-500 focus:outline-none"
                 />
               </div>
@@ -738,7 +738,7 @@ export default function LandingStudio3K({ onOpenApp, onClose }) {
 
       {/* ─── FOOTER ─────────────────────────────────────────────────────── */}
       <footer className="py-8 px-4 sm:px-8 border-t border-white/10 text-center text-xs text-slate-500 font-medium">
-        <p>© 2024–2026 Luiggi Home & Studio3K. Todos los derechos reservados.</p>
+        <p>© 2024–2026 ALEMAR FUTURE 07 SLU & Studio3K. Todos los derechos reservados.</p>
         <p className="mt-1">Tecnología de Inteligencia Artificial Generativa aplicada a la Fabricación y Venta de Muebles de Cocina.</p>
       </footer>
 
