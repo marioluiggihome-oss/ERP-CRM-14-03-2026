@@ -564,7 +564,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
    */
   const setMedidaReal = (k, campo, v) => setMuebles(prev => prev.map(m => {
     if (m._k !== k) return m;
-    const n = v === '' ? null : Number(v);
+    // EN CENTÍMETROS Y CON DECIMALES (master, 28/08: «los costados se pueden
+    // poner con decimales y siempre se escriben normalmente en centímetros»).
+    // Un costado se corta a milímetro, así que 61,5 tiene que llegar entero al
+    // pedido: aquí NO se redondea. Se acepta la coma además del punto, porque
+    // en un teclado español se teclea coma y `Number('61,5')` es NaN — o sea,
+    // la medida se perdería en silencio.
+    const bruto = String(v ?? '').trim().replace(',', '.');
+    const n = bruto === '' ? null : Number(bruto);
     return { ...m, [campo]: Number.isFinite(n) && n > 0 ? n : null };
   }));
 
@@ -1706,7 +1713,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                               pedido. Cambiarlo NO mueve el precio a propósito. */}
                           <label className="flex items-center gap-1">
                             <span className="text-slate-400 font-bold">Ancho</span>
-                            <input type="number" min="0" step="0.1" placeholder="cm"
+                            <input type="number" min="0" step="any" placeholder="cm"
                               value={m.anchoReal ?? ''}
                               onChange={e => setMedidaReal(m._k, 'anchoReal', e.target.value)}
                               title="Ancho definitivo de la pieza. No cambia el precio: eso lo decide la tarifa de al lado."
@@ -1715,7 +1722,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           </label>
                           <label className="flex items-center gap-1">
                             <span className="text-slate-400 font-bold">Alto</span>
-                            <input type="number" min="0" step="0.1" placeholder="cm"
+                            <input type="number" min="0" step="any" placeholder="cm"
                               value={m.altoReal ?? ''}
                               onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
                               title="Alto definitivo de la pieza. No cambia el precio."
@@ -1908,7 +1915,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             >
                               {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
                             </select>
-                            <input type="number" min="0" step="0.1" placeholder="cm reales"
+                            <input type="number" min="0" step="any" placeholder="cm reales"
                               value={m.anchoReal ?? ''}
                               onChange={e => setMedidaReal(m._k, 'anchoReal', e.target.value)}
                               title="Ancho definitivo. No cambia el precio."
@@ -1925,7 +1932,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                              escribe y se graba: master, 28/08 —«en los costados
                              bajos y altos también se debe poder cambiar la
                              medida, tanto de ancho como de alto, en todos»—. */
-                          <input type="number" min="0" step="0.1" placeholder="cm reales"
+                          <input type="number" min="0" step="any" placeholder="cm reales"
                             value={m.altoReal ?? ''}
                             onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
                             title="Alto definitivo. No cambia el precio."

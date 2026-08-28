@@ -62,13 +62,23 @@ def _tarifas():
 
 
 # ── El catálogo ──────────────────────────────────────────────────────────────
-# En T19, T20 y T21 la familia COSTADOS_MELAMINA NO está por 70/90 sino por
-# `ent`/`med` (entero/medio). No se ha tocado a propósito: puede ser que en esas
-# tarifas el proveedor la liste de otra forma, o puede ser un error de la
-# importación. No se sabe, y un dato de tarifa que no se sabe no se ajusta «para
-# que cuadre» — se deja como está y se pregunta. Ver el informe del 25/08.
-SIN_RESOLVER = {("T19", "COSTADOS_MELAMINA"), ("T20", "COSTADOS_MELAMINA"),
-                ("T21", "COSTADOS_MELAMINA")}
+# RESUELTO EL 28/08, con el libro delante. Durante un tiempo T19, T20 y T21
+# tuvieron COSTADOS_MELAMINA por `ent`/`med` en vez de por 70/90, y con valores
+# propios. Se dejó marcado sin tocar —un dato de tarifa que no se sabe no se
+# ajusta «para que cuadre»— hasta poder comprobarlo contra el papel.
+#
+# El master mandó las páginas 102, 108, 114, 120 y 126 (tarifas 17 a 21) y las
+# cinco dicen lo mismo: 19/20, 27/28, 8 y 15. Y en el propio fichero, 18 de las
+# 21 tarifas ya lo tenían así. El costado de melamina es un ACCESORIO y no
+# depende de la tarifa de puerta, que es justo por lo que no varía.
+#
+# Así que las tres eran un error de importación y se corrigieron. Ya no queda
+# nada sin resolver: si vuelve a aparecer algo, se añade aquí.
+SIN_RESOLVER = set()
+
+# Lo que dice el libro, y lo que tienen que decir TODAS las tarifas.
+COSTADO_MELAMINA_DEL_LIBRO = {"CMCB": [19, 20], "CMCC": [27, 28],
+                              "CMBB": [8, None], "CMBC": [15, None]}
 
 
 def test_los_lineales_NO_comparten_tipo_con_los_altos():
@@ -84,18 +94,43 @@ def test_los_lineales_NO_comparten_tipo_con_los_altos():
         "estas familias vuelven a estar como altura: " + ", ".join(fallos[:8]))
 
 
-def test_lo_que_quedo_SIN_RESOLVER_sigue_estando_marcado():
-    """Que una discrepancia esté anotada no puede convertirse en que se olvide.
+def test_NO_QUEDA_NADA_sin_resolver():
+    """Una excepción anotada no puede quedarse ahí de por vida.
 
-    Si algún día T19-T21 pasan a 70/90 como el resto, esta prueba se pone roja y
-    obliga a quitar la excepción — en vez de dejarla ahí de por vida diciendo
-    que hay un problema que ya no existe.
+    Estaba pensada para ponerse en rojo el día que se resolviera, y así fue: el
+    28/08 se corrigieron T19-T21 con el libro delante. Si mañana aparece otra
+    discrepancia se añade a `SIN_RESOLVER` y esta prueba avisa de que hay algo
+    pendiente de preguntar.
     """
-    tarifas = _tarifas()
     for t, f in SIN_RESOLVER:
-        assert tarifas[t][f].get("cols") == ["ent", "med"], (
-            f"{t}/{f} ya no está por ent/med: se resolvió la discrepancia y hay "
-            "que sacarla de SIN_RESOLVER")
+        assert _tarifas()[t][f].get("cols") == ["ent", "med"], (
+            f"{t}/{f} ya no está por ent/med: hay que sacarla de SIN_RESOLVER")
+
+
+def test_el_COSTADO_DE_MELAMINA_vale_lo_mismo_en_TODAS_las_tarifas():
+    """Es un accesorio: no depende de la tarifa de puerta.
+
+    Lo dicen las cinco páginas que mandó el master (17 a 21) y lo tenían ya 18
+    de las 21 tarifas del fichero. T19, T20 y T21 se salían —con columnas
+    `ent`/`med` inventadas y valores propios— y eran un error de importación.
+
+    Este candado existe porque el error volvería igual si alguien re-importa la
+    tarifa con el mismo escáner: aquí se ve enseguida y allí no se ve nunca.
+    """
+    fallos = []
+    for t, familias in _tarifas().items():
+        fam = familias.get("COSTADOS_MELAMINA")
+        if not fam:
+            continue
+        if fam.get("cols"):
+            fallos.append(f"{t}: columnas {fam['cols']} (van por ancho 70/90)")
+        # T1..T3 traen los valores de una edición anterior (7/8 y 13/14); no se
+        # tocan porque el libro que hay delante es el de T17-T21. Lo que NO
+        # puede pasar es que una tarifa tenga valores que no salen en ninguna
+        # edición, que es lo que les pasaba a T19-T21.
+        if t in ("T19", "T20", "T21") and fam["items"] != COSTADO_MELAMINA_DEL_LIBRO:
+            fallos.append(f"{t}: {fam['items']} en vez de {COSTADO_MELAMINA_DEL_LIBRO}")
+    assert not fallos, "; ".join(fallos)
 
 
 def test_los_ALTOS_de_verdad_siguen_yendo_por_ALTURA():

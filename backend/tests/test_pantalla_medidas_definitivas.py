@@ -97,3 +97,29 @@ def test_las_medidas_VIAJAN_AL_PEDIDO():
     trozo = cuerpo[i:cuerpo.index("finally", i)]
     assert "anchoReal" in trozo and "altoReal" in trozo, (
         "las medidas definitivas no llegan al pedido: se quedan en la pantalla")
+
+
+def test_la_medida_admite_DECIMALES_y_va_en_centimetros():
+    """El master, 28/08: «los costados se pueden poner con decimales y siempre
+    se escriben normalmente en centímetros».
+
+    Dos cosas que se rompen solas:
+
+    · `step="0.1"` hace que el NAVEGADOR rechace un 61,55. Un costado se corta a
+      milímetro, así que tiene que valer cualquier decimal.
+    · En un teclado español se teclea COMA, y `Number('61,5')` es `NaN`. Sin
+      admitirla, la medida se perdería en silencio: el campo se vaciaría y el
+      pedido saldría con el costado sin cotar.
+    """
+    cuerpo = _lee()
+    fn = _cuerpo_de("setMedidaReal", cuerpo)
+    assert "replace(',', '.')" in fn, (
+        "no se admite la coma decimal: al teclear «61,5» la medida se pierde en "
+        "silencio")
+    assert 'step="0.1"' not in cuerpo, (
+        "el paso fijo de 0,1 sigue puesto: el navegador rechazaría un 61,55")
+    # Y que no se redondee por el camino.
+    assert "Math.round" not in fn and "toFixed" not in fn, (
+        "la medida se está redondeando: un costado se corta a milímetro")
+    # Se escribe en centímetros, y así se dice.
+    assert 'placeholder="cm"' in cuerpo or 'placeholder="cm reales"' in cuerpo

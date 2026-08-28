@@ -63,7 +63,12 @@ puedo modificar para que queden grabadas las medidas definitivas»). Escribir la
 medida definitiva NO puede tocar el precio: si lo moviera, el presupuesto
 cambiaría solo mientras alguien ajusta cotas y nadie lo relacionaría. Si la
 pieza se sale del escalón, el escalón se cambia a mano al lado — una decisión,
-no un efecto secundario. Candado: `test_pantalla_medidas_definitivas.py`.
+no un efecto secundario. **Se escriben en CENTÍMETROS y con DECIMALES**
+(master, 28/08): un costado se corta a milímetro, así que no se redondea, no se
+fija un paso de 0,1 —el navegador rechazaría un 61,55— y se admite la coma,
+porque en un teclado español se teclea coma y `Number('61,5')` es `NaN`: la
+medida se perdería en silencio. Candado:
+`test_pantalla_medidas_definitivas.py`.
 | Altura libre de techo típica | 2400–2700 |
 
 Cualquier cifra fuera de estos rangos es un ERROR, no una variante: corregir.
