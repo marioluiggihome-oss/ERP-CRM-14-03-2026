@@ -476,6 +476,18 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      elige entre dos cuentas que compartan ficha, que es un error de datos y
      resolverlo a dedo sería pagarle a una por sorteo. Candado:
      `test_calculo_enlace_montador.py`.
+   - **SOLO CUENTAN COCINA MONTADA 3 Y COCINA DESMONTADA** (master, 28/08:
+     «solo lista los pedidos que se hayan realizado desde Cocina Montada 3 o
+     Cocina Desmontada»). Lo dijo viendo en pantalla pedidos de la primera
+     sección de fábrica. El ERP los guarda en sitios distintos: Desmontada en
+     `cascos_orders` (y ahí solo `kind: "pedido"` — un presupuesto no se ha
+     vendido y una compra es al proveedor) y las secciones VIEJAS en `orders`.
+     La lista es BLANCA (`services/origen_pedidos.py`): se dice qué entra, no
+     qué se excluye, porque con una lista negra una sección nueva del ERP se
+     colaría sola en la nómina el día que alguien la añada. Y al ESCRIBIR se
+     tocan las dos colecciones: escribir siempre en `orders` dejaba sin efecto
+     asignar o liquidar un pedido de Desmontada, respondiendo que sí y sin
+     cambiar nada. Candado: `test_calculo_origen_pedidos.py`.
    - **Un pedido sin asignar no da error: no le paga a nadie.** La pantalla
      «Socios» (`SociosCooperativistas.jsx`, dentro del botón **COOP** del menú
      —master, 28/08—, junto con la liquidación del mes) es la que pone quién

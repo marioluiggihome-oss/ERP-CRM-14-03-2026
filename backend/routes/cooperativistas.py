@@ -33,6 +33,7 @@ from services import area_cooperativista as AC
 from services import comisiones as C
 from services import enlace_documentos as ED
 from services import enlace_montador as EM
+from services import origen_pedidos as OP
 from services import liquidaciones as L
 from services.jwt_service import get_current_user
 
@@ -43,6 +44,57 @@ router = APIRouter(prefix="/api/cooperativistas", tags=["cooperativistas"])
 def _db():
     from server import db
     return db
+
+
+async def _guardar_en_el_pedido(pedido_id: str, cambios: dict,
+                                condicion: Optional[dict] = None):
+    """Escribe en el pedido, esté en la colección que esté.
+
+    Cocina Desmontada guarda en `cascos_orders` y las secciones de siempre en
+    `orders`. Escribir siempre en `orders` —como se hacía— dejaba SIN EFECTO
+    asignar un comercial o liquidar un pedido de Desmontada: la llamada
+    respondía que sí y no cambiaba nada, que es la peor forma de fallar.
+
+    Devuelve cuántos documentos se han modificado. La condición viaja dentro del
+    `update` para que dos pulsaciones a la vez no puedan pisarse.
+    """
+    consulta = {"id": pedido_id, **(condicion or {})}
+    tocados = 0
+    for coleccion in (_db().orders, _db().cascos_orders):
+        try:
+            r = await coleccion.update_one(consulta, {"$set": cambios})
+            tocados += r.modified_count
+        except Exception as e:                               # noqa: BLE001
+            logger.error(f"no se pudo escribir en {pedido_id}: {e}")
+    return tocados
+
+
+async def _pedidos_de_la_cooperativa(filtro: Optional[dict] = None) -> list:
+    """Los pedidos que cuentan: Cocina Montada 3 y Cocina Desmontada, y ni uno más.
+
+    El master, 28/08: «solo lista los pedidos que se hayan realizado desde
+    Cocina Montada 3 o Cocina Desmontada». El ERP los guarda en sitios
+    distintos: Desmontada en `cascos_orders` y las secciones VIEJAS en `orders`.
+    Salían todos, incluidos los de la primera sección de fábrica.
+
+    La lista es BLANCA (`services/origen_pedidos.py`): se dice qué entra, no qué
+    se excluye. Con una lista negra, una sección nueva del ERP entraría sola en
+    la nómina el día que alguien la añada.
+    """
+    f = filtro or {}
+    try:
+        de_orders = await _db().orders.find(f, {"_id": 0}).to_list(2000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"no se pudieron leer los pedidos: {e}")
+        de_orders = []
+    try:
+        crudos_cascos = await _db().cascos_orders.find(
+            {**f, "kind": OP.KIND_PEDIDO}, {"_id": 0}).to_list(2000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"no se pudieron leer los pedidos de Cocina Desmontada: {e}")
+        crudos_cascos = []
+    de_cascos = [OP.normaliza_pedido_de_cascos(d) for d in crudos_cascos]
+    return OP.solo_los_que_cuentan(de_orders + de_cascos)
 
 
 async def _familia_por_codigo() -> dict:
@@ -90,8 +142,8 @@ async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
             status_code=403,
             detail="Esta área es de los cooperativistas: montadores y comerciales.")
     try:
-        crudos = await _db().orders.find(filtro, {"_id": 0}).to_list(1000)
-        pedidos = ED.enriquecer_todos(crudos, await _documentos())
+        pedidos = ED.enriquecer_todos(
+            await _pedidos_de_la_cooperativa(filtro), await _documentos())
     except Exception as e:                                   # noqa: BLE001
         logger.error(f"mi-area: no se pudieron leer los pedidos: {e}")
         raise HTTPException(status_code=500, detail="No se pudo leer tu área.")
@@ -145,7 +197,8 @@ async def pedidos_para_asignar(current_user: Optional[dict] = Depends(get_curren
             status_code=403,
             detail="Asignar comercial o montador es del master: decide quién cobra.")
     try:
-        crudos = await _db().orders.find({}, {"_id": 0}).sort("confirmedAt", -1).to_list(1000)
+        crudos = await _pedidos_de_la_cooperativa()
+        crudos.sort(key=lambda o: str(o.get("confirmedAt") or ""), reverse=True)
         usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
     except Exception as e:                                   # noqa: BLE001
         logger.error(f"pedidos: no se pudieron leer: {e}")
@@ -197,9 +250,10 @@ async def asignar(payload: dict, current_user: Optional[dict] = Depends(get_curr
     if not cambios:
         raise HTTPException(status_code=400, detail="No hay nada que asignar.")
 
-    r = await _db().orders.update_one({"id": pedido_id}, {"$set": cambios})
-    if not r.matched_count:
-        raise HTTPException(status_code=404, detail="Ese pedido no existe.")
+    if not await _guardar_en_el_pedido(pedido_id, cambios):
+        raise HTTPException(
+            status_code=404,
+            detail="Ese pedido no existe o ya estaba asignado a esa persona.")
     return {"success": True, "pedidoId": pedido_id, "asignado": cambios}
 
 
@@ -238,8 +292,7 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
     filtro = AC.filtro_de(u)
     try:
         crudos = ED.enriquecer_todos(
-            await _db().orders.find(filtro, {"_id": 0}).to_list(2000),
-            await _documentos())
+            await _pedidos_de_la_cooperativa(filtro), await _documentos())
         aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     except Exception as e:                                   # noqa: BLE001
         logger.error(f"liquidar: no se pudieron leer los pedidos: {e}")
@@ -260,9 +313,10 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
             continue
         congelada = L.congelar(n, rol, periodo)
         try:
-            await _db().orders.update_one(
-                {"id": crudo.get("id"), "liquidadoEn": {"$in": [None, ""]}},
-                {"$set": {"liquidadoEn": periodo, L.CONGELADA: congelada}})
+            await _guardar_en_el_pedido(
+                crudo.get("id"),
+                {"liquidadoEn": periodo, L.CONGELADA: congelada},
+                {"liquidadoEn": {"$in": [None, ""]}})
         except Exception as e:                               # noqa: BLE001
             logger.error(f"liquidar: no se pudo cerrar {crudo.get('id')}: {e}")
             raise HTTPException(
@@ -293,7 +347,7 @@ async def aplicar_sugerencias(current_user: Optional[dict] = Depends(get_current
             status_code=403,
             detail="Asignar comercial o montador es del master: decide quién cobra.")
     try:
-        pedidos = await _db().orders.find({}, {"_id": 0}).to_list(2000)
+        pedidos = await _pedidos_de_la_cooperativa()
         usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
         montajes = await _db().montajes.find({}, {"_id": 0}).to_list(5000)
     except Exception as e:                                   # noqa: BLE001
@@ -306,13 +360,13 @@ async def aplicar_sugerencias(current_user: Optional[dict] = Depends(get_current
         if not pedido_id:
             continue
         try:
-            r = await _db().orders.update_one(
-                {"id": pedido_id, "montadorUserId": {"$in": [None, ""]}},
-                {"$set": {"montadorUserId": s["montadorUserId"]}})
+            tocados = await _guardar_en_el_pedido(
+                pedido_id, {"montadorUserId": s["montadorUserId"]},
+                {"montadorUserId": {"$in": [None, ""]}})
         except Exception as e:                               # noqa: BLE001
             logger.error(f"aplicar-sugerencias: {pedido_id}: {e}")
             continue
-        if r.modified_count:
+        if tocados:
             puestos.append({"pedidoId": pedido_id, "nombre": s["nombre"]})
     return {"success": True, "asignados": puestos, "total": len(puestos)}
 
@@ -338,8 +392,8 @@ async def liquidacion(periodo: str, usuario: str,
         raise HTTPException(status_code=400, detail="Ese usuario no es cooperativista.")
 
     filtro = AC.filtro_de(u)
-    crudos = await _db().orders.find(filtro, {"_id": 0}).to_list(2000)
-    pedidos = ED.enriquecer_todos(crudos, await _documentos())
+    pedidos = ED.enriquecer_todos(
+        await _pedidos_de_la_cooperativa(filtro), await _documentos())
     mano = 0.0
     if rol == AC.MONTADOR:
         aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}

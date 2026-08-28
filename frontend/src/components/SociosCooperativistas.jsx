@@ -250,6 +250,7 @@ export default function SociosCooperativistas() {
                       </div>
                       <div className="text-[10px] text-dato-500">
                         {p.referencia ? `${p.referencia} · ` : ''}{fecha(p.fecha)}
+                        {p.origen ? ` · ${p.origen}` : ''}
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top text-right tabular-nums font-bold text-dato-700">
@@ -294,10 +295,11 @@ export default function SociosCooperativistas() {
         )}
 
         <p className="text-[10px] text-dato-400 mt-3">
-          Los muebles son los que cuentan para la comisión, no las líneas del
-          pedido: puertas, costados, regletas y los servicios que añades a mano
-          no incentivan. Un «?» es un pedido sin desglose, que no paga hasta que
-          se arregle.
+          Aquí solo salen los pedidos de <b>Cocina Montada 3</b> y <b>Cocina
+          Desmontada</b>. Los muebles son los que cuentan para la comisión, no las
+          líneas del pedido: puertas, costados, regletas y los servicios que
+          añades a mano no incentivan. Un «?» es un pedido sin desglose, que no
+          paga hasta que se arregle.
         </p>
       </div>
     </div>

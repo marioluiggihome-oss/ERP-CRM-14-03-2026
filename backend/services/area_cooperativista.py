@@ -254,6 +254,9 @@ def pedido_para_asignar(order: dict, nombres: Optional[dict] = None,
         "pedidoId": o.get("id") or "",
         "referencia": o.get("budgetNumber") or o.get("projectReference") or "",
         "cliente": (o.get("customerName") or "").strip(),
+        # De qué sección salió. No es un adorno: si vuelve a colarse un pedido
+        # que no toca, se ve de dónde ha entrado (services/origen_pedidos.py).
+        "origen": o.get("origenNombre") or o.get("origen") or "",
         "fecha": o.get("confirmedAt") or "",
         "muebles": n["muebles"],
         "sinDesglose": n["sinDesglose"],
