@@ -114,3 +114,45 @@ def test_el_PDF_SIGUE_SIENDO_LEGIBLE_por_el_importador():
     campos = _campos(_pdf())
     assert all(k.startswith("nota_") for k in campos), (
         f"han cambiado los nombres de los campos: {list(campos)[:3]}")
+
+
+def test_el_PDF_DEJA_ESCRIBIR_de_verdad():
+    """`/NeedAppearances` es lo que hace que un visor te deje rellenar.
+
+    EL FALLO, encontrado por el master el 28/08: descargó la plantilla, la abrió
+    y no le dejaba escribir en los recuadros. El PDF estaba bien —campos de
+    texto, editables, con apariencia— pero sin esta bandera el documento le dice
+    al visor «las casillas ya vienen dibujadas, no las repintes», y varios
+    visores lo entienden como que no hay nada que escribir: se ve la casilla y
+    al tocarla no pasa nada.
+
+    Es de las cosas que no dan error en ninguna parte: el PDF se genera, se
+    descarga y se abre. Solo se nota al intentar usarlo.
+    """
+    from pypdf import PdfReader
+    acro = PdfReader(io.BytesIO(_pdf())).trailer["/Root"]["/AcroForm"]
+    # `bool(...)` y no `is True`: pypdf devuelve su propio `BooleanObject`, que
+    # se imprime como True y no ES True. Comparar por identidad daba rojo con el
+    # PDF bien hecho.
+    assert bool(acro.get("/NeedAppearances")), (
+        "el formulario no lleva `/NeedAppearances`: se descarga bien y no se "
+        "puede rellenar, que es justo lo que pasó el 28/08")
+
+
+def test_ningun_recuadro_esta_BLOQUEADO_ni_oculto():
+    """La otra forma de que no se pueda escribir: el campo llega de solo lectura
+    o la anotación viene marcada como oculta. Ninguna de las dos da error."""
+    from pypdf import PdfReader
+    SOLO_LECTURA, OCULTO = 1, 2
+    problemas = []
+    for pagina in PdfReader(io.BytesIO(_pdf())).pages:
+        for anot in (pagina.get("/Annots") or []):
+            obj = anot.get_object()
+            if obj.get("/Subtype") != "/Widget":
+                continue
+            nombre = obj.get("/T") or "?"
+            if int(obj.get("/Ff") or 0) & SOLO_LECTURA:
+                problemas.append(f"{nombre}: de solo lectura")
+            if int(obj.get("/F") or 0) & OCULTO:
+                problemas.append(f"{nombre}: oculto")
+    assert not problemas, "; ".join(problemas[:5])

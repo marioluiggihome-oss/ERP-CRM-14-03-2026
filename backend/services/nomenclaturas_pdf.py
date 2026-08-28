@@ -205,6 +205,18 @@ def build_nomenclaturas_pdf(tariff: str = "T1") -> bytes:
     W, H = A4
     c = canvas.Canvas(buf, pagesize=A4)
     c.setTitle("Nomenclaturas MV — Catálogo de familias (rellenable)")
+    # NEEDAPPEARANCES: que el LECTOR dibuje lo que se teclea.
+    #
+    # Sin esta bandera, el PDF le dice al visor «las casillas ya vienen
+    # dibujadas, no las repintes» — y varios visores lo interpretan como que no
+    # hay nada que escribir: la casilla se ve, pero al tocarla no pasa nada. El
+    # master lo encontró el 28/08: descargó la plantilla y no le dejaba
+    # rellenar.
+    #
+    # Con ella puesta, el visor regenera la apariencia al escribir, que es lo
+    # que hace falta para que se pueda rellenar en Acrobat, en Firefox, en
+    # Preview y en los lectores de móvil.
+    c.acroForm.needAppearances = True
 
     ML, MR, MT, MB = 14 * mm, 14 * mm, 16 * mm, 14 * mm
     col_gap = 6 * mm
@@ -341,7 +353,43 @@ def build_nomenclaturas_pdf(tariff: str = "T1") -> bytes:
 
     c.showPage()
     c.save()
-    return buf.getvalue()
+    return _que_los_lectores_dejen_escribir(buf.getvalue())
+
+
+def _que_los_lectores_dejen_escribir(pdf: bytes) -> bytes:
+    """Marca el formulario con `/NeedAppearances`, o no se puede rellenar.
+
+    EL PROBLEMA, encontrado por el master el 28/08: descargó la plantilla, la
+    abrió y no le dejaba escribir en los recuadros. El PDF estaba bien —campos
+    de texto, editables, con su apariencia— pero le faltaba esta bandera.
+
+    Sin ella, el documento le dice al visor «las casillas ya vienen dibujadas,
+    no las repintes», y varios visores lo entienden como que no hay nada que
+    escribir: la casilla se ve y al tocarla no pasa nada. Con ella, el visor
+    regenera la apariencia según se teclea, que es lo que hace falta.
+
+    Se pone AQUÍ y no en reportlab porque su `acroForm.needAppearances` no
+    llega a escribirse en el fichero — se probó y sale `None`. Si un día
+    reportlab lo soporta, esto sobra; mientras tanto, lo que cuenta es lo que
+    hay dentro del PDF, y el candado mide eso.
+    """
+    from io import BytesIO
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import BooleanObject, NameObject
+
+    lector = PdfReader(BytesIO(pdf))
+    escritor = PdfWriter(clone_from=lector)
+    acro = escritor._root_object.get("/AcroForm")
+    if acro is None:                       # sin formulario no hay nada que marcar
+        return pdf
+    # El AcroForm puede venir como referencia indirecta; hay que resolverla o el
+    # `[...] =` peta con «IndirectObject does not support item assignment».
+    if hasattr(acro, "get_object"):
+        acro = acro.get_object()
+    acro[NameObject("/NeedAppearances")] = BooleanObject(True)
+    fuera = BytesIO()
+    escritor.write(fuera)
+    return fuera.getvalue()
 
 
 if __name__ == "__main__":
