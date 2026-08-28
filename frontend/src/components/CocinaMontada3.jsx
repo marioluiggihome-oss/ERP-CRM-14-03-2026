@@ -1179,45 +1179,45 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 <div className="absolute right-0 mt-1.5 z-50 w-72 bg-white rounded-xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-700 animate-in fade-in zoom-in-95">
                   <button
                     onClick={() => { setMenuImportar(false); setShowPegadoMasivo(true); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3.5 py-3.5 sm:py-2.5 hover:bg-accion-50 active:bg-accion-100 flex items-start gap-3 sm:gap-2.5 border-b border-slate-100 transition-colors"
                   >
                     <List size={16} className="text-dato-600 mt-0.5 shrink-0" />
                     <div>
-                      <span className="block text-xs font-black text-slate-800">Pegado Masivo (Texto / WhatsApp)</span>
-                      <span className="block text-[9px] text-slate-500 font-medium">Pega la relación de muebles en masa o móntalos a mano</span>
+                      <span className="block text-[13px] sm:text-xs font-black text-slate-800">Pegado Masivo (Texto / WhatsApp)</span>
+                      <span className="block text-[11px] sm:text-[9px] text-slate-500 font-medium leading-snug">Pega la relación de muebles en masa o móntalos a mano</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => { setMenuImportar(false); relacionInputRef.current?.click(); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3.5 py-3.5 sm:py-2.5 hover:bg-accion-50 active:bg-accion-100 flex items-start gap-3 sm:gap-2.5 border-b border-slate-100 transition-colors"
                   >
                     <Sparkles size={16} className="text-dato-500 mt-0.5 shrink-0" />
                     <div>
-                      <span className="block text-xs font-black text-slate-800">Desde plantilla (PDF nomenclaturas)</span>
-                      <span className="block text-[9px] text-slate-500 font-medium">Sube la plantilla rellenada con los códigos MV</span>
+                      <span className="block text-[13px] sm:text-xs font-black text-slate-800">Desde plantilla (PDF nomenclaturas)</span>
+                      <span className="block text-[11px] sm:text-[9px] text-slate-500 font-medium leading-snug">Sube la plantilla rellenada con los códigos MV</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => { setMenuImportar(false); alvicInputRef.current?.click(); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 border-b border-slate-100 transition-colors"
+                    className="w-full text-left px-3.5 py-3.5 sm:py-2.5 hover:bg-accion-50 active:bg-accion-100 flex items-start gap-3 sm:gap-2.5 border-b border-slate-100 transition-colors"
                   >
                     <Package size={16} className="text-dato-600 mt-0.5 shrink-0" />
                     <div>
-                      <span className="block text-xs font-black text-slate-800">Desde presupuesto Alvic (PDF)</span>
-                      <span className="block text-[9px] text-slate-500 font-medium">Proforma Alvic → equivalencia de muebles y cascos</span>
+                      <span className="block text-[13px] sm:text-xs font-black text-slate-800">Desde presupuesto Alvic (PDF)</span>
+                      <span className="block text-[11px] sm:text-[9px] text-slate-500 font-medium leading-snug">Proforma Alvic → equivalencia de muebles y cascos</span>
                     </div>
                   </button>
 
                   <button
                     onClick={() => { setMenuImportar(false); descargarPlantillaEnBlanco(); }}
-                    className="w-full text-left px-3 py-2.5 hover:bg-accion-50 flex items-start gap-2.5 transition-colors"
+                    className="w-full text-left px-3.5 py-3.5 sm:py-2.5 hover:bg-accion-50 active:bg-accion-100 flex items-start gap-3 sm:gap-2.5 transition-colors"
                   >
                     <Download size={16} className="text-dato-600 mt-0.5 shrink-0" />
                     <div>
-                      <span className="block text-xs font-black text-slate-800">Descargar plantilla en blanco</span>
-                      <span className="block text-[9px] text-slate-500 font-medium">PDF rellenable con las 58 familias</span>
+                      <span className="block text-[13px] sm:text-xs font-black text-slate-800">Descargar plantilla en blanco</span>
+                      <span className="block text-[11px] sm:text-[9px] text-slate-500 font-medium leading-snug">PDF rellenable con las 58 familias</span>
                     </div>
                   </button>
                 </div>

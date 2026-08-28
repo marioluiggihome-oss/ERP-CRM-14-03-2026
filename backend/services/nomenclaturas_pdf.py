@@ -209,8 +209,13 @@ def build_nomenclaturas_pdf(tariff: str = "T1") -> bytes:
     ML, MR, MT, MB = 14 * mm, 14 * mm, 16 * mm, 14 * mm
     col_gap = 6 * mm
     col_w = (W - ML - MR - col_gap) / 2.0
-    card_h = 32 * mm
-    row_gap = 3 * mm
+    # FICHA MÁS ALTA Y CAMPO MÁS GRANDE (master, 28/08: «que el PDF rellenable
+    # sea mejor, con los campos un poquito más grandes cuando se descarga»).
+    # Esto se rellena a mano, muchas veces en una tablet y con el dedo: un
+    # recuadro de 6,6 mm y letra de 8 no se ve ni se acierta. Caben menos fichas
+    # por página, y da igual: el PDF es para trabajar, no para ahorrar papel.
+    card_h = 41 * mm
+    row_gap = 3.4 * mm
 
     field_n = [0]
 
@@ -235,46 +240,61 @@ def build_nomenclaturas_pdf(tariff: str = "T1") -> bytes:
         c.setStrokeColor(C_LINE); c.setLineWidth(1)
         c.roundRect(x, y, col_w, card_h, 3 * mm, stroke=1, fill=1)
         # caja icono
-        ib = 20 * mm
+        ib = 24 * mm
         ix, iy = x + 3 * mm, y + card_h - ib - 3 * mm
         c.setFillColor(C_ICONB); c.setStrokeColor(C_LINE)
         c.roundRect(ix, iy, ib, ib, 2 * mm, stroke=1, fill=1)
         _draw_icon(c, tipo, ix, iy, ib)
         # texto
         tx = ix + ib + 3.5 * mm
-        c.setFillColor(C_TXT); c.setFont("Helvetica-Bold", 9.3)
-        c.drawString(tx, y + card_h - 6.2 * mm, titulo[:34])
+        c.setFillColor(C_TXT); c.setFont("Helvetica-Bold", 10.2)
+        c.drawString(tx, y + card_h - 6.6 * mm, titulo[:32])
         # familia (código base) chip
         base = min(codes, key=len) if codes else ""
         base = re.sub(r"\d.*$", "", base) or base
         c.setFillColor(C_ACC_L)
         cw = c.stringWidth(base, "Helvetica-Bold", 8) + 5 * mm
-        c.roundRect(tx, y + card_h - 11.6 * mm, cw, 4.4 * mm, 2 * mm, stroke=0, fill=1)
-        c.setFillColor(C_ACC); c.setFont("Helvetica-Bold", 8)
-        c.drawString(tx + 2.5 * mm, y + card_h - 10.6 * mm, base)
+        c.roundRect(tx, y + card_h - 12.4 * mm, cw, 5.0 * mm, 2 * mm, stroke=0, fill=1)
+        c.setFillColor(C_ACC); c.setFont("Helvetica-Bold", 8.6)
+        c.drawString(tx + 2.5 * mm, y + card_h - 11.2 * mm, base)
         # anchos
         ws = _widths(codes)
         if ws:
             txt = "Anchos: " + "·".join(str(w) for w in ws) + " cm"
         else:
             txt = f"{len(codes)} referencia(s)"
-        c.setFillColor(C_MUT); c.setFont("Helvetica", 6.6)
-        c.drawString(tx, y + card_h - 15.4 * mm, txt[:52])
+        c.setFillColor(C_MUT); c.setFont("Helvetica", 7.2)
+        c.drawString(tx, y + card_h - 17.0 * mm, txt[:50])
         if desc:
-            c.drawString(tx, y + card_h - 18.4 * mm, desc[:52])
-        # campo rellenable (banda amarilla inferior)
-        fh = 6.6 * mm
-        fx, fy = x + 3 * mm, y + 2.6 * mm
+            c.drawString(tx, y + card_h - 20.6 * mm, desc[:50])
+        # ── EL RECUADRO PARA RELLENAR ────────────────────────────────────
+        # Sigue siendo UNO por familia, y eso es a propósito: quien lo lee al
+        # subirlo (`mv_relacion.extract_campos`) junta el valor con la ETIQUETA
+        # del recuadro, así que una nota sin código —«2 · 60x80»— se entiende
+        # porque se sabe de qué familia es. Partirlo en cuatro casillas sueltas
+        # (uds, ancho, alto, notas) daría cuatro valores sin relación entre
+        # ellos y habría que rehacer el lector; no compensa.
+        #
+        # Lo que sí cambia es el TAMAÑO y la PISTA. Antes ponía «Notas / medidas
+        # / uds» y había que adivinar el formato; ahora se enseña escrito.
+        fh = 10.5 * mm
+        fx, fy = x + 3 * mm, y + 3 * mm
         fw = col_w - 6 * mm
-        c.setFillColor(C_FIELD); c.setStrokeColor(C_FIELDB); c.setLineWidth(0.8)
-        c.roundRect(fx, fy, fw, fh, 1.5 * mm, stroke=1, fill=1)
-        c.setFillColor(C_MUT); c.setFont("Helvetica-Oblique", 6.2)
-        c.drawString(tx, fy + fh + 1.0 * mm, "Notas / medidas / uds:")
+        c.setFillColor(C_FIELD); c.setStrokeColor(C_FIELDB); c.setLineWidth(1.0)
+        c.roundRect(fx, fy, fw, fh, 1.8 * mm, stroke=1, fill=1)
+        # La etiqueta, con el formato que se espera. Un ejemplo vale más que una
+        # explicación: quien rellena copia el patrón sin leer nada.
+        c.setFillColor(C_MUT); c.setFont("Helvetica-Bold", 6.8)
+        c.drawString(fx, fy + fh + 1.4 * mm, "Uds · código o medidas")
+        c.setFillColor(HexColor("#94a3b8")); c.setFont("Helvetica-Oblique", 6.4)
+        ej = f"ej.:  2 · {codes[0]}" if codes else "ej.:  2 · 60x80"
+        c.drawRightString(fx + fw, fy + fh + 1.4 * mm, ej[:34])
         field_n[0] += 1
         c.acroForm.textfield(
             name=f"nota_{field_n[0]}", tooltip=f"{titulo}",
-            x=fx + 1 * mm, y=fy + 0.8 * mm, width=fw - 2 * mm, height=fh - 1.6 * mm,
-            borderWidth=0, forceBorder=False, fontSize=8,
+            x=fx + 1.2 * mm, y=fy + 1.2 * mm,
+            width=fw - 2.4 * mm, height=fh - 2.4 * mm,
+            borderWidth=0, forceBorder=False, fontSize=11,
             fillColor=C_FIELD, textColor=C_TXT, fieldFlags="",
         )
 
