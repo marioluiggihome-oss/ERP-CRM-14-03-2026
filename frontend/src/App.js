@@ -25,7 +25,6 @@ const ManufacturingReport = lazy(() => import('./components/ManufacturingReport'
 const CRMLayout = lazy(() => import('./components/CRMLayout'));
 const Digitalizador = lazy(() => import('./components/Digitalizador'));
 const ResumenCocinas = lazy(() => import('./components/ResumenCocinas'));
-const Cascos = lazy(() => import('./components/Cascos'));
 const PropData = lazy(() => import('./components/PropData'));
 const Armarios2 = lazy(() => import('./components/Armarios2'));
 const CocinasIA = lazy(() => import('./components/CocinasIA'));
@@ -56,7 +55,6 @@ const Expediente = lazy(() => import('./components/Expediente')); // Expediente 
 const Almacen = lazy(() => import('./components/Almacen')); // Existencias, reservas y plan de compra
 const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de negocio de la fábrica (SOLO MASTER)
 const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // Landing comercial pública de Studio3K / RenderIA
-const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Presupuestador 3 (Relación y códigos MV directa)
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
 const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
 const CoopPanel = lazy(() => import('./components/CoopPanel')); // COOP: socios, pedidos y liquidación (master)
@@ -1820,13 +1818,18 @@ const App = () => {
                 onLinesConsumed={() => setState(p => ({ ...p, p2PendingLines: null, p2PendingLibrary: null }))}
               /></ErrorBoundary>
             )}
-            {state.currentTab === 'cocinaMontada3' && (
+            {['presupuestador', 'cocinaMontada3', 'cascos'].includes(state.currentTab)
+              && puedeEntrarPresupuestador(state.currentUser) && (
               <ErrorBoundary>
-                <CocinaMontada3
+                <PresupuestadorPanel
                   currentUser={state.currentUser}
                   state={state}
                   setState={setState}
                   logo={state.logo}
+                  pestanaInicial={
+                    state.currentTab === 'cascos' ? PRE_DESMONTADA
+                      : state.currentTab === 'cocinaMontada3' ? PRE_MONTADA
+                      : state.presupuestadorTab}
                 />
               </ErrorBoundary>
             )}
@@ -1842,11 +1845,6 @@ const App = () => {
             )}
             {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
             {state.currentTab === 'resumenCocinas' && state.currentUser?.canUseResumenTotales === true && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
-            {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && (
-              <ErrorBoundary>
-              <Cascos state={state} setState={setState} />
-              </ErrorBoundary>
-            )}
             {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
             {state.currentTab === 'armarios2' && state.currentUser?.canUseArmarios2 === true && <ErrorBoundary><Armarios2 state={state} /></ErrorBoundary>}
             {state.currentTab === 'cocinasai' && (state.currentUser?.canUseCocinasAI === true || state.currentUser?.isAdmin) && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}

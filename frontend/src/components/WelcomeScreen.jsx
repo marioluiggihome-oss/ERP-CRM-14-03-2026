@@ -9,6 +9,7 @@ import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
   ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, PlayCircle, Wallet, Users } from 'lucide-react';
+import { puedeEntrar as puedeEntrarPresupuestador } from '@/presupuestador';
 import { esCooperativista } from '@/plataformas';
 
 // ⬇️ Vídeo promocional de la INTRANET de Luiggi Home (NO el de carpinter.io, que
@@ -57,13 +58,14 @@ const MODULES = [
   { tab: 'agendaNegocios',  label: 'Agenda Negocios', icon: CalendarDays, color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.isPrescriptor },
   { tab: 'presupuestador2', label: 'Cocina Montada',  desc: 'Presupuestador 1',   icon: Receipt,      color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false },
   { tab: 'budget',          label: 'Cocina Montada 2',desc: 'Presupuestador 2',   icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
-  { tab: 'cocinaMontada3',  label: 'Cocina Montada 3',desc: 'Relación rápida por códigos MV', icon: Layers, color: 'bg-indigo-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false || u?.isAdmin },
+  // PRESUPUESTADOR: Cocina Montada y Cocina Desmontada bajo una sola puerta
+  // (master, 28/08). Quién ve qué pestaña lo decide `presupuestador.js`.
+  { tab: 'presupuestador',  label: 'Presupuestador',  desc: 'Cocina Montada y Cocina Desmontada', icon: Layers, color: 'bg-indigo-600', group: 'ventas', can: (u) => puedeEntrarPresupuestador(u) },
   { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
   { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
   { tab: 'invoices',        label: 'Gestión Comercial', desc: 'Presupuestos, Pedidos de Venta, Albaranes y Facturas', icon: Receipt, color: 'bg-orange-500', group: 'ventas', can: (u) => u?.canAccessInvoices !== false },
   { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'admin',  can: (u) => u?.canAccessRentabilidad === true },
   { tab: 'resumenCocinas',  label: 'Resumen Totales', icon: Layers,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseResumenTotales === true },
-  { tab: 'cascos',          label: 'Cocina Desmontada',icon: Box,         color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },
   { tab: 'electros',        label: 'Electros',        desc: 'Catálogo y bodegones de electrodomésticos', icon: Zap, color: 'bg-amber-500', group: 'ventas', can: (u) => !u?.isTienda },
   { tab: 'propdata',        label: 'Obra Nueva y Prescripción', desc: 'Promociones, arquitectos y prescriptores', icon: Building2, color: 'bg-sky-600', group: 'ventas', can: (u) => !u?.isTienda && u?.canUsePropData === true },
   { tab: 'armarios2',       label: 'Armarios IA',     desc: 'Boceto rápido con IA', icon: Sparkles, color: 'bg-fuchsia-600', group: 'diseno', can: (u) => !u?.isTienda && u?.canUseArmarios2 === true },

@@ -533,6 +533,34 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - Candados: `test_calculo_plataformas.py`, `test_calculo_asignar_socios.py`
      y los tres del enlace en `test_pantalla_area_cooperativista.py`.
 
+22. **EL PRESUPUESTADOR: DOS PANTALLAS, UNA PUERTA** (28/08). Cocina Montada 3
+   y Cocina Desmontada viven bajo una sección llamada «Presupuestador», en
+   pestañas. **Se junta la CARCASA, no los motores**: cada pestaña pinta la
+   pantalla que ya existía, sin tocarla por dentro, y cada una sigue guardando
+   donde guardaba —Montada por tarifa MV, Desmontada en `cascos_orders` con su
+   expediente y su compra al proveedor—. Unificar el almacenamiento rompería lo
+   que hace que COOP distinga el origen de cada pedido (regla 21).
+   - **LOS PERMISOS NO CAMBIAN**, y eso es lo importante:
+     `canUsePresupuestador3` para Montada (donde «no estar desactivado» ya era
+     el criterio) y `canUseCascos` explícito para Desmontada, nunca para una
+     tienda. Mover pantallas de sitio no puede cambiar quién entra: si de paso
+     se movieran los permisos, nadie sabría si un usuario dejó de ver algo por
+     el rediseño o porque se lo quitamos. `frontend/src/presupuestador.js` los
+     resuelve en un solo sitio y el candado los compara usuario a usuario.
+   - **LOS CAMINOS VIEJOS SIGUEN VIVOS.** `cocinaMontada3` y `cascos` abren su
+     pestaña dentro de la sección. Una pantalla a la que se llegaba y ya no se
+     llega es una pantalla perdida, y hay enlaces y estado de navegador con esos
+     nombres.
+   - **La pestaña que no se ve NO se desmonta**, se oculta: si se desmontara,
+     cambiar de pestaña vaciaría una relación a medio hacer — y en Cocina
+     Montada 3 eso puede ser una cocina entera tecleada a mano.
+   - El corte por permiso está SOLO en pantalla, a propósito y de momento: la
+     regla 8 pide cerrarlo también en el servidor, pero eso es apretar un
+     candado y el 28/08 apretar uno dejó al master sin sus propios precios (ver
+     `services/master.py`). Se hará con el orden correcto: primero comprobar a
+     quién afecta, después cerrar.
+   - Candado: `test_pantalla_presupuestador.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
