@@ -45,6 +45,28 @@ def _db():
     return db
 
 
+async def _familia_por_codigo() -> dict:
+    """`código de producto` → familia MV (`B60D/I` → «BAJO»).
+
+    Las líneas de un pedido guardan el CÓDIGO, no la familia, y sin la familia
+    no se puede saber qué cuenta para la comisión: puertas y costados no
+    incentivan. La familia vive en el catálogo, en `category`.
+    """
+    try:
+        productos = await _db().products.find(
+            {}, {"_id": 0, "code": 1, "category": 1}).to_list(20000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"no se pudo leer el catálogo para clasificar líneas: {e}")
+        return {}
+    fuera = {}
+    for pr in productos:
+        cod = str((pr or {}).get("code") or "").strip().upper()
+        cat = str((pr or {}).get("category") or "").strip().upper()
+        if cod and cat:
+            fuera[cod] = cat
+    return fuera
+
+
 async def _documentos():
     """Albaranes y facturas de Gestión Comercial, para saber qué se ha servido.
 
@@ -86,7 +108,9 @@ async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
         except Exception:                                    # noqa: BLE001
             mano = C.mano_de_obra_de(current_user)
 
-    return {"success": True, "area": AC.panel_de(current_user, pedidos, mano)}
+    return {"success": True,
+            "area": AC.panel_de(current_user, pedidos, mano,
+                                await _familia_por_codigo())}
 
 
 @router.get("/socios")
@@ -139,7 +163,8 @@ async def pedidos_para_asignar(current_user: Optional[dict] = Depends(get_curren
     # siendo del master (services/enlace_montador.py).
     propuestas = EM.sugerencias(crudos, montajes, usuarios)
 
-    lista = [AC.pedido_para_asignar(o, nombres) for o in crudos]
+    familias = await _familia_por_codigo()
+    lista = [AC.pedido_para_asignar(o, nombres, familias) for o in crudos]
     for fila in lista:
         fila["sugerencia"] = propuestas.get(fila["pedidoId"])
     lista.sort(key=lambda p: (not p["sinAsignar"], p["fecha"]), reverse=False)
@@ -221,13 +246,14 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
         raise HTTPException(status_code=500, detail="No se pudo leer la liquidación.")
 
     mano = C.mano_de_obra_de(u, aj) if rol == AC.MONTADOR else 0.0
+    familias = await _familia_por_codigo()
 
     pagados, total, ya_estaban = [], 0.0, 0
     for crudo in crudos:
         if crudo.get("liquidadoEn"):
             ya_estaban += 1
             continue
-        n = AC.normaliza_pedido(crudo, mano)
+        n = AC.normaliza_pedido(crudo, mano, familias)
         if L.estado_de(n) != L.CONSOLIDADA:
             continue
         if L.periodo_de_consolidacion(n) != periodo:
@@ -319,5 +345,6 @@ async def liquidacion(periodo: str, usuario: str,
         aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
         # La del montador que se está liquidando, no la de quien mira.
         mano = C.mano_de_obra_de(u, aj)
-    normalizados = [AC.normaliza_pedido(p, mano) for p in pedidos]
+    familias = await _familia_por_codigo()
+    normalizados = [AC.normaliza_pedido(p, mano, familias) for p in pedidos]
     return {"success": True, "liquidacion": L.liquidacion_del_mes(normalizados, rol, periodo)}

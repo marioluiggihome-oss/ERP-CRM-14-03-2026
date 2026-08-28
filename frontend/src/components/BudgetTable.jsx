@@ -1065,7 +1065,13 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
           code: product?.code || item.productCode || item.customReference || 'Manual',
           name: product?.name || item.productName || item.manualDescription || 'Artículo manual',
           quantity: item.quantity,
-          price: details.total
+          price: details.total,
+          // LA FAMILIA VIAJA CON LA LÍNEA. Sin ella, el pedido guardado no sabe
+          // qué era mueble y qué era puerta o costado, y la comisión del
+          // cooperativista sale a cero (se vio en producción el 28/08). Se
+          // guarda aquí para que un pedido viejo siga contando aunque el
+          // producto cambie de categoría o desaparezca del catálogo.
+          familia: product?.category || ''
         };
       })));
       

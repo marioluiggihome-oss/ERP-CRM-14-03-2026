@@ -50,7 +50,12 @@ router = APIRouter(prefix="/plan-negocio", tags=["plan-negocio"], dependencies=_
 
 # MASTER de verdad. Ver la nota de arriba: `isGerente` e `isDirectorComercial`
 # sirven para ver Cascos, no para ver el coste de compra ni el margen.
-_MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
+# `isAdmin` NO abre esta puerta (master, 28/08): administrar el ERP y ver lo
+# que le cuesta a la casa cada mueble no son el mismo permiso. La lista
+# manda desde `services/master.py`; aquí va el valor porque hay pruebas que
+# ejecutan trozos de este fichero sueltos, y `test_calculo_master_unico.py`
+# comprueba que las copias no se separan.
+_MASTER_FLAGS = ("isPrimaryAdmin", "isMaster")
 
 
 def _es_master(user: Optional[dict]) -> bool:

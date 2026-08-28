@@ -190,6 +190,11 @@ _UNLIMITED_FLAGS = ("isAdmin", "isPrimaryAdmin", "isGerente", "isDirectorComerci
 # ilimitado no se entera uno de cuánto se gasta ni de si el aviso de "sin
 # renders" funciona.
 _MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
+# OJO: esta lista NO es la de `services/master.py`, aunque se llame igual. Allí
+# se decide quién ve el dinero de la casa; aquí, a quién se le puede poner cupo
+# de renders para medir el gasto. Un administrador entra en las dos por motivos
+# distintos, así que apretar aquella no aprieta esta — y unificarlas cambiaría
+# los créditos de sitio sin que nadie lo hubiera pedido.
 # Cupo del master. 0 = ilimitado (como antes). Se puede cambiar sin tocar código
 # escribiendo `master_credits` en ai_usage_config.
 CUPO_MASTER_POR_DEFECTO = 40

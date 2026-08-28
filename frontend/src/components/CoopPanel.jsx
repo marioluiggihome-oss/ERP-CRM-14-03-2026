@@ -5,10 +5,11 @@
  * escrita del titular.
  */
 import React, { lazy, Suspense, useState } from 'react';
-import { Users, Wallet, Loader } from 'lucide-react';
+import { Users, Wallet, Loader, UserCog } from 'lucide-react';
 
 const SociosCooperativistas = lazy(() => import('./SociosCooperativistas'));
 const LiquidarMes = lazy(() => import('./LiquidarMes'));
+const CoopUsuarios = lazy(() => import('./CoopUsuarios'));
 
 /**
  * COOP: LA GESTIÓN DE LA COOPERATIVA, EN UN SOLO SITIO.
@@ -22,16 +23,20 @@ const LiquidarMes = lazy(() => import('./LiquidarMes'));
  * falso, porque lo liquidado no vuelve a entrar nunca.
  */
 const PESTANAS = [
+  { id: 'usuarios', label: 'Usuarios', icono: UserCog },
   { id: 'socios', label: 'Socios y pedidos', icono: Users },
   { id: 'liquidar', label: 'Liquidar el mes', icono: Wallet },
 ];
 
 export default function CoopPanel() {
-  const [pestana, setPestana] = useState('socios');
+  const [pestana, setPestana] = useState('usuarios');
   return (
     <div className="h-full flex flex-col bg-slate-50">
-      <div className="shrink-0 border-b border-slate-200 bg-white px-4 sm:px-8 pt-3">
-        <div className="max-w-6xl mx-auto flex gap-1">
+      {/* `hueco-logo` deja sitio al logo flotante del ERP, que si no se come la
+          primera pestaña: se leía «OCIOS Y PEDIDOS». Y las pestañas hacen scroll
+          en horizontal para que en el móvil no se aplasten unas contra otras. */}
+      <div className="shrink-0 border-b border-slate-200 bg-white px-4 sm:px-8 pt-3 hueco-logo">
+        <div className="max-w-6xl mx-auto flex gap-1 overflow-x-auto">
           {PESTANAS.map(({ id, label, icono: Icono }) => (
             <button
               key={id}
@@ -53,7 +58,9 @@ export default function CoopPanel() {
             <Loader className="animate-spin mr-2" size={18} /> Cargando…
           </div>
         )}>
-          {pestana === 'socios' ? <SociosCooperativistas /> : <LiquidarMes />}
+          {pestana === 'usuarios' && <CoopUsuarios />}
+          {pestana === 'socios' && <SociosCooperativistas />}
+          {pestana === 'liquidar' && <LiquidarMes />}
         </Suspense>
       </div>
     </div>

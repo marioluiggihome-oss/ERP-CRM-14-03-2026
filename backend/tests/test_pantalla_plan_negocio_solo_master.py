@@ -100,8 +100,20 @@ def modulo():
 
 def test_solo_el_master_pasa(modulo):
     """CANDADO PRINCIPAL."""
-    for flag in ("isAdmin", "isPrimaryAdmin", "isMaster"):
+    for flag in ("isPrimaryAdmin", "isMaster"):
         assert modulo._es_master({flag: True}) is True, f"{flag} deberia entrar"
+
+
+def test_un_ADMIN_A_SECAS_ya_no_pasa(modulo):
+    """Master, 28/08: `isAdmin` sale de la puerta del dinero.
+
+    Administrar el ERP y ver lo que le cuesta a la casa cada mueble no son el
+    mismo permiso. Con `isAdmin` dentro, cualquier administrador veia el plan de
+    negocio, la tarifa del proveedor y el margen — y el dia que se le de admin a
+    quien lleve carpinter.io o Studio3K, la diferencia se nota en euros.
+    """
+    assert modulo._es_master({"isAdmin": True}) is False, (
+        "`isAdmin` ha vuelto a abrir el plan de negocio")
 
 
 def test_un_gerente_NO_pasa(modulo):
@@ -126,7 +138,10 @@ def test_no_se_usa_la_lista_ancha_de_roles(modulo):
     assert "ADMIN_ROLE_FLAGS" not in src, (
         "el plan de negocio ha pasado a usar la lista ancha de roles: entrarian "
         "gerente y director comercial")
-    assert modulo._MASTER_FLAGS == ("isAdmin", "isPrimaryAdmin", "isMaster")
+    assert modulo._MASTER_FLAGS == ("isPrimaryAdmin", "isMaster"), (
+        "la lista del master ha cambiado. Si es a proposito, hay que tocarla "
+        "tambien en `services/master.py` y en las otras copias — eso lo vigila "
+        "`test_calculo_master_unico.py`")
 
 
 # ─── 2. La guarda esta en TODOS los endpoints ───────────────────────────────

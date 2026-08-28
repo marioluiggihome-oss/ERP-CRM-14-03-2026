@@ -97,7 +97,8 @@ def filtro_de(user: Optional[dict]) -> Optional[dict]:
     return {"montadorUserId": uid} if rol == MONTADOR else {"comercialUserId": uid}
 
 
-def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0) -> dict:
+def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0,
+                    familia_por_codigo: Optional[dict] = None) -> dict:
     """Del documento del pedido a lo poco que necesita la liquidación.
 
     SOLO LOS MUEBLES ENTRAN EN LA COMISIÓN (master, 25/08). Las unidades y la
@@ -113,9 +114,25 @@ def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0) -> dict:
     """
     o = order or {}
     lineas = o.get("items") or o.get("lineas") or []
+    # LOS PEDIDOS DE VERDAD NO GUARDAN LA FAMILIA en la línea: guardan el código
+    # (`B60D/I`) y la familia vive en el catálogo, en `category`. Quien llama
+    # pasa ese mapa; sin él, las líneas antiguas no se pueden clasificar.
+    if lineas and familia_por_codigo:
+        lineas = [dict(l, _familiaResuelta=(
+                    C.familia_de(l)
+                    or familia_por_codigo.get(str((l or {}).get("code") or "").strip().upper(), "")))
+                  for l in lineas]
     if lineas:
         b = C.base_de_comision(lineas, o.get("descuentoPct") or 0)
-        muebles, base, sin_desglose = b["muebles"], b["baseImponible"], False
+        muebles, base = b["muebles"], b["baseImponible"]
+        # NO SE SABE NO ES CERO. Si NINGUNA línea se ha podido clasificar, este
+        # pedido no tiene «0 muebles»: es que no se sabe lo que lleva. Se marca
+        # `sinDesglose` para que salga «?» y no pague, en vez de un 0 que parece
+        # un dato y que dejaría a alguien sin cobrar sin decir por qué
+        # (CLAUDE.md, regla 7). Se vio en producción el 28/08.
+        sin_desglose = b["sinClasificar"] >= b["lineas"] > 0
+        if sin_desglose:
+            muebles, base = 0, 0.0
     else:
         muebles, base, sin_desglose = 0, 0.0, True
     return {
@@ -216,7 +233,8 @@ def socios_de(usuarios: Iterable[dict]) -> dict:
     }
 
 
-def pedido_para_asignar(order: dict, nombres: Optional[dict] = None) -> dict:
+def pedido_para_asignar(order: dict, nombres: Optional[dict] = None,
+                        familia_por_codigo: Optional[dict] = None) -> dict:
     """Una línea de la pantalla de asignación del master.
 
     Trae el nombre del cliente y la fecha para poder reconocer el pedido, quién
@@ -228,7 +246,7 @@ def pedido_para_asignar(order: dict, nombres: Optional[dict] = None) -> dict:
     rutas nuevas, menos sitios hay por los que se pueda escapar.
     """
     o = order or {}
-    n = normaliza_pedido(o)
+    n = normaliza_pedido(o, 0.0, familia_por_codigo)
     quien = nombres or {}
     com = o.get("comercialUserId") or ""
     mon = o.get("montadorUserId") or ""
@@ -248,7 +266,8 @@ def pedido_para_asignar(order: dict, nombres: Optional[dict] = None) -> dict:
 
 
 def panel_de(user: Optional[dict], pedidos: Iterable[dict],
-             mano_por_mueble: float = 0.0) -> Optional[dict]:
+             mano_por_mueble: float = 0.0,
+             familia_por_codigo: Optional[dict] = None) -> Optional[dict]:
     """Lo que ve al entrar en su área. `None` si no es cooperativista.
 
     OJO con `pedidos`: tienen que venir YA filtrados por `filtro_de`. Esta
@@ -259,7 +278,8 @@ def panel_de(user: Optional[dict], pedidos: Iterable[dict],
     rol = rol_de(user)
     if not rol:
         return None
-    normalizados = [normaliza_pedido(p, mano_por_mueble) for p in (pedidos or [])]
+    normalizados = [normaliza_pedido(p, mano_por_mueble, familia_por_codigo)
+                    for p in (pedidos or [])]
     pan = L.panel(normalizados, rol)
     return {
         "rol": rol,

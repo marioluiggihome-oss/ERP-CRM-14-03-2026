@@ -148,7 +148,10 @@ BORDE_AL_ALZA = True
 def _familias_que_no_son_mueble() -> frozenset:
     fuera = set()
     try:
-        from services.nomenclaturas_pdf import FAMILIAS
+        # OJO: se llama FAM_META. Estuvo escrito `FAMILIAS` —que no existe— y el
+        # `except` de abajo se lo tragaba, así que esta fuente NUNCA se leyó y
+        # todo dependía de la red de seguridad escrita a mano.
+        from services.nomenclaturas_pdf import FAM_META as FAMILIAS
         fuera |= {k for k, v in FAMILIAS.items()
                   if isinstance(v, (list, tuple)) and len(v) > 1 and v[1] == "lineal"}
     except Exception:                                    # noqa: BLE001
@@ -175,6 +178,58 @@ def _familias_que_no_son_mueble() -> frozenset:
 FAMILIAS_SIN_COMISION = _familias_que_no_son_mueble()
 
 
+def familia_de(linea: dict) -> str:
+    """La familia MV de una línea de pedido, o cadena vacía si no se sabe.
+
+    LOS PEDIDOS DE VERDAD NO TRAEN `familia`. Se vio en producción el 28/08: la
+    pantalla de COOP enseñaba «0 muebles» en todos los pedidos, o sea comisión
+    cero para todo el mundo. Las líneas que guarda `orders.py` son
+    `{code, name, quantity, price}` —lo que manda `BudgetTable.jsx`— y aquí se
+    leía `familia`, `qty` y `pvp`, que son los nombres que usaban MIS pruebas y
+    no el ERP. Un candado escrito contra datos inventados no protege nada.
+
+    La familia es la `category` del producto del catálogo (`B25D/I` → «BAJO»),
+    así que se acepta también ese nombre, y quien llama puede pasar la familia ya
+    resuelta por código en `_familiaResuelta`.
+    """
+    l = linea or {}
+    for clave in ("familia", "_familiaResuelta", "category", "categoria"):
+        v = str(l.get(clave) or "").strip().upper()
+        if v:
+            return v
+    return ""
+
+
+def unidades_de(linea: dict) -> int:
+    """Las unidades de una línea. `quantity` es el nombre que usa el ERP."""
+    l = linea or {}
+    for clave in ("qty", "cant", "quantity", "unidades"):
+        if l.get(clave) is not None:
+            try:
+                return max(0, int(float(l[clave])))
+            except (TypeError, ValueError):
+                return 0
+    return 1
+
+
+def importe_de(linea: dict) -> float:
+    """El PVP de la línea. OJO: `price` del ERP ya viene multiplicado por las
+    unidades (`details.total` en BudgetTable), y `pvp` es por unidad."""
+    l = linea or {}
+    if l.get("pvp") is not None:
+        try:
+            return float(l["pvp"]) * unidades_de(l)
+        except (TypeError, ValueError):
+            return 0.0
+    for clave in ("price", "totalPrice", "importe"):
+        if l.get(clave) is not None:
+            try:
+                return float(l[clave])
+            except (TypeError, ValueError):
+                return 0.0
+    return 0.0
+
+
 def es_mueble(linea: dict) -> bool:
     """¿Esta línea de un pedido incentiva al comercial?
 
@@ -189,10 +244,7 @@ def es_mueble(linea: dict) -> bool:
     """
     if not linea:
         return False
-    fam = str(linea.get("familia") or "").strip().upper()
-    if not fam:
-        return False                       # línea manual / servicio
-    return fam not in FAMILIAS_SIN_COMISION
+    return familia_de(linea) not in FAMILIAS_SIN_COMISION if familia_de(linea) else False
 
 
 def base_de_comision(lineas, descuento_pct: float = 0.0) -> dict:
@@ -205,25 +257,26 @@ def base_de_comision(lineas, descuento_pct: float = 0.0) -> dict:
     muebles = uds_fuera = 0
     pvp_muebles = pvp_fuera = 0.0
     for l in (lineas or []):
-        try:
-            qty = max(0, int(l.get("qty") or l.get("cant") or 1))
-        except (TypeError, ValueError):
-            qty = 0
-        try:
-            pvp = float(l.get("pvp") or 0) * qty
-        except (TypeError, ValueError):
-            pvp = 0.0
+        qty = unidades_de(l)
+        pvp = importe_de(l)
         if es_mueble(l):
             muebles += qty
             pvp_muebles += pvp
         else:
             uds_fuera += qty
             pvp_fuera += pvp
+    lineas_lista = list(lineas or [])
+    sin_clasificar = sum(1 for l in lineas_lista if not familia_de(l))
     return {
         "muebles": muebles,
         "baseImponible": base_imponible(pvp_muebles, descuento_pct),
         "pvpMuebles": round(pvp_muebles, 2),
         "sinComision": {"unidades": uds_fuera, "pvp": round(pvp_fuera, 2)},
+        # Cuántas líneas no se ha podido saber qué eran. Si son TODAS, el pedido
+        # no es «cero muebles»: es «no se sabe», y eso se rotula «?» en vez de
+        # un 0 que parece un dato (CLAUDE.md, regla 7).
+        "sinClasificar": sin_clasificar,
+        "lineas": len(lineas_lista),
     }
 
 

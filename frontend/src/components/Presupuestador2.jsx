@@ -675,6 +675,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       notes: it.notes || '',
       itemType: it.itemType || null,
       finish: it.finish || null,
+      // La familia del catálogo viaja con la línea: sin ella el pedido guardado
+      // no sabe qué era mueble y qué era puerta o costado, y la comisión del
+      // cooperativista sale a cero (visto en producción el 28/08).
+      familia: prod?.category || '',
     };
   }), [cart, products, pointValue, unitFull, discountFactor]);
 
@@ -825,7 +829,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       formData.append('notes', orderNotes || notes || '');
       formData.append('items', JSON.stringify(buildMontadaItems().map(it => ({
         name: it.manualDescription, code: it.customReference, qty: it.quantity,
-        price: (it.manualPoints || 0) * pointValue,
+        price: (it.manualPoints || 0) * pointValue, familia: it.familia || '',
         width: it.customWidth || 0, height: it.customHeight || 0, depth: it.customDepth || 0,
         itemType: it.itemType || null, finish: it.finish || null,
       }))));

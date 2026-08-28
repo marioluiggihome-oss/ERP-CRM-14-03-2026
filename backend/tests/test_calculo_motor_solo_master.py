@@ -35,7 +35,12 @@ from routes.ai_engine import MOTOR_DE_PRODUCCION, motor_permitido  # noqa: E402
 from services.ai_usage import coste_de_motor  # noqa: E402
 
 MASTER = {"id": "u-1", "username": "master", "isMaster": True}
-ADMIN = {"id": "u-2", "username": "jefe", "isAdmin": True}
+# El master de verdad de la casa: la cuenta `admin` lleva `isPrimaryAdmin`.
+ADMIN = {"id": "u-2", "username": "jefe", "isPrimaryAdmin": True}
+# Y un administrador A SECAS, que desde el 28/08 ya NO es master: administra el
+# ERP pero no ve el dinero de la casa ni gasta en los motores de pruebas, que
+# cuestan 3,3x por render.
+ADMIN_A_SECAS = {"id": "u-5", "username": "admin2", "isAdmin": True}
 # OJO CON ESTE: gerente y director comercial NO son master. Si el candado se
 # escribiera con `ADMIN_ROLE_FLAGS` en vez de con `_es_master`, este usuario
 # pasaría — y los motores de pruebas son del master, no de la dirección.
@@ -47,7 +52,9 @@ MOTORES_DE_PRUEBAS = ("banana_pro", "flux", "manus", "gemini_premium")
 
 @pytest.mark.parametrize("motor", MOTORES_DE_PRUEBAS)
 def test_quien_no_es_master_no_puede_pedir_un_motor_de_pruebas(motor):
-    for usuario in (COMERCIAL, GERENTE):
+    # ADMIN_A_SECAS entra aquí desde el 28/08: administrar el ERP no da derecho
+    # a los motores de pruebas, que cuestan 3,3x por render.
+    for usuario in (COMERCIAL, GERENTE, ADMIN_A_SECAS):
         elegido = motor_permitido(usuario, motor)
         assert elegido == MOTOR_DE_PRODUCCION, (
             f"«{usuario['username']}» ha conseguido el motor '{motor}' pidiéndolo "
