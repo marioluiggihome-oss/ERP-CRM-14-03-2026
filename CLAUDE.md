@@ -419,8 +419,19 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - **La pantalla se abre desde el menú Y desde la bienvenida.** Una pantalla
      sin puerta no existe: `AreaCooperativista.jsx` estuvo escrita, con sus
      rutas y sus candados, y sin un solo sitio desde el que abrirla.
-   - Candados: `test_calculo_plataformas.py` y los tres del enlace en
-     `test_pantalla_area_cooperativista.py`.
+   - **Un pedido sin asignar no da error: no le paga a nadie.** La pantalla
+     «Socios» (`SociosCooperativistas.jsx`, solo master) es la que pone quién
+     vendió y quién montó cada pedido, y sin ella el área entera enseña ceros.
+     Los pedidos sin asignar salen primero y se cuentan, porque un pedido
+     servido y cobrado sin dueño no se queja: simplemente no aparece en la
+     nómina de nadie. La lista de socios sale por lista BLANCA
+     (`CAMPOS_DEL_SOCIO`) —dentro del usuario hay contraseña, descuentos y
+     permisos— y ahí no puede aparecer quien no sea socio: si saliera el
+     comercial en nómina, asignarle un pedido lo metería en la liquidación por
+     la puerta de atrás. La pantalla NO enseña el importe del pedido: el master
+     podría verlo, pero para decidir quién montó una cocina no hace falta.
+   - Candados: `test_calculo_plataformas.py`, `test_calculo_asignar_socios.py`
+     y los tres del enlace en `test_pantalla_area_cooperativista.py`.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

@@ -177,6 +177,76 @@ def _a_tiro(normalizados, rol):
     return fuera
 
 
+# Lo único que sale de un usuario hacia la pantalla de asignación. Lista BLANCA,
+# igual que `CAMPOS_VISIBLES`: el documento del usuario lleva dentro la
+# contraseña, los descuentos comerciales y sus permisos, y una pantalla de
+# «elige quién montó esto» no tiene por qué enseñar nada de eso.
+CAMPOS_DEL_SOCIO = ("id", "nombre", "rol", "manoObraPorMueble")
+
+
+def socio_publico(user: Optional[dict]) -> Optional[dict]:
+    """Un socio, reducido a lo que hace falta para elegirlo en una lista.
+
+    Devuelve `None` si no es socio, para que la lista no se pueda rellenar por
+    accidente con usuarios que no cobran.
+    """
+    rol = rol_de(user)
+    if not rol:
+        return None
+    u = user or {}
+    ficha = {
+        "id": u.get("id") or "",
+        "nombre": (u.get("clientName") or u.get("username") or "").strip(),
+        "rol": rol,
+    }
+    # La mano de obra solo tiene sentido —y solo se enseña— para el montador.
+    if rol == MONTADOR:
+        ficha["manoObraPorMueble"] = C.mano_de_obra_de(u)
+    return ficha
+
+
+def socios_de(usuarios: Iterable[dict]) -> dict:
+    """Los socios que hay, separados por rol y listos para dos desplegables."""
+    fichas = [f for f in (socio_publico(u) for u in (usuarios or [])) if f]
+    return {
+        "comerciales": sorted([f for f in fichas if f["rol"] == COMERCIAL],
+                              key=lambda f: f["nombre"].lower()),
+        "montadores": sorted([f for f in fichas if f["rol"] == MONTADOR],
+                             key=lambda f: f["nombre"].lower()),
+    }
+
+
+def pedido_para_asignar(order: dict, nombres: Optional[dict] = None) -> dict:
+    """Una línea de la pantalla de asignación del master.
+
+    Trae el nombre del cliente y la fecha para poder reconocer el pedido, quién
+    lo tiene asignado ahora, y los muebles que cuentan para la comisión — que no
+    son los del pedido entero (puertas, costados y servicios no incentivan).
+
+    NO trae el importe. La pantalla es del master y podría verlo, pero para
+    decidir quién montó un pedido no hace falta: cuanto menos dinero viaje por
+    rutas nuevas, menos sitios hay por los que se pueda escapar.
+    """
+    o = order or {}
+    n = normaliza_pedido(o)
+    quien = nombres or {}
+    com = o.get("comercialUserId") or ""
+    mon = o.get("montadorUserId") or ""
+    return {
+        "pedidoId": o.get("id") or "",
+        "referencia": o.get("budgetNumber") or o.get("projectReference") or "",
+        "cliente": (o.get("customerName") or "").strip(),
+        "fecha": o.get("confirmedAt") or "",
+        "muebles": n["muebles"],
+        "sinDesglose": n["sinDesglose"],
+        "comercialUserId": com,
+        "montadorUserId": mon,
+        "comercial": quien.get(com, ""),
+        "montador": quien.get(mon, ""),
+        "sinAsignar": not com or not mon,
+    }
+
+
 def panel_de(user: Optional[dict], pedidos: Iterable[dict],
              mano_por_mueble: float = 0.0) -> Optional[dict]:
     """Lo que ve al entrar en su área. `None` si no es cooperativista.

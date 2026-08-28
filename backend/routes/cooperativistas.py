@@ -5,9 +5,11 @@
 """
 EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
 
-Tres rutas y ni una más:
+Cinco rutas y ni una más:
 
   GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
+  GET  /api/cooperativistas/socios         quién es socio, para elegirlo (master)
+  GET  /api/cooperativistas/pedidos        pedidos y su asignación de hoy (master)
   POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
   GET  /api/cooperativistas/liquidacion    lo que hay que pagar este mes (master)
 
@@ -66,6 +68,54 @@ async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
             mano = C.mano_de_obra_de(current_user)
 
     return {"success": True, "area": AC.panel_de(current_user, pedidos, mano)}
+
+
+@router.get("/socios")
+async def socios(current_user: Optional[dict] = Depends(get_current_user)):
+    """Quién es socio cooperativista, para poder elegirlo al asignar. SOLO master.
+
+    Va cerrado por lo mismo que `asignar`: esta lista es «quién cobra en esta
+    casa». Y sale por la lista BLANCA de `socio_publico`, no volcando el usuario
+    entero — dentro del documento hay contraseña, descuentos y permisos.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="La lista de socios es del master.")
+    try:
+        usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"socios: no se pudieron leer los usuarios: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo leer la lista de socios.")
+    return {"success": True, "socios": AC.socios_de(usuarios)}
+
+
+@router.get("/pedidos")
+async def pedidos_para_asignar(current_user: Optional[dict] = Depends(get_current_user)):
+    """Los pedidos y quién los tiene asignados hoy. SOLO master.
+
+    Los que están SIN ASIGNAR van primero: son los que no le pagan a nadie, y
+    son justo los que hay que ver. Un pedido servido y cobrado sin comercial ni
+    montador no da ningún error — simplemente no aparece en la nómina de nadie,
+    y de eso no se entera nunca el que tenía que cobrar.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Asignar comercial o montador es del master: decide quién cobra.")
+    try:
+        crudos = await _db().orders.find({}, {"_id": 0}).sort("confirmedAt", -1).to_list(1000)
+        usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"pedidos: no se pudieron leer: {e}")
+        raise HTTPException(status_code=500, detail="No se pudieron leer los pedidos.")
+
+    socios = AC.socios_de(usuarios)
+    nombres = {f["id"]: f["nombre"]
+               for f in socios["comerciales"] + socios["montadores"]}
+    lista = [AC.pedido_para_asignar(o, nombres) for o in crudos]
+    lista.sort(key=lambda p: (not p["sinAsignar"], p["fecha"]), reverse=False)
+    lista.sort(key=lambda p: p["sinAsignar"], reverse=True)
+    return {"success": True, "pedidos": lista, "socios": socios,
+            "sinAsignar": sum(1 for p in lista if p["sinAsignar"])}
 
 
 @router.post("/asignar")

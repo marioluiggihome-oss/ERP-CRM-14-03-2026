@@ -58,6 +58,7 @@ const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // L
 const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Presupuestador 3 (Relación y códigos MV directa)
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
 const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
+const SociosCooperativistas = lazy(() => import('./components/SociosCooperativistas')); // Quién cobra cada pedido (master)
 
 
 
@@ -1655,6 +1656,20 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Socios: quién vendió y quién montó cada pedido. SOLO master —
+                        decide quién cobra, igual que el endpoint. */}
+                    {(state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'socios'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'socios' ? 'bg-master-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="socios-nav-btn"
+                        title="Socios cooperativistas: quién vendió y quién montó cada pedido"
+                      >
+                        <Users size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Socios</span>
+                      </button>
+                    )}
+
                     {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
                     {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                       <button 
@@ -1879,6 +1894,9 @@ const App = () => {
             )}
             {state.currentTab === 'miArea' && esCooperativista(state.currentUser) && (
               <AreaCooperativista />
+            )}
+            {state.currentTab === 'socios' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
+              <SociosCooperativistas />
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
               <PrescriptorAgenda
