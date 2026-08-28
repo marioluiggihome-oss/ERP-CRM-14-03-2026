@@ -208,7 +208,20 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 16. **Las COMISIONES de los cooperativistas son NÓMINA: los números los dicta
    el master** (25/08). Montadores: su comisión ES la mano de obra por mueble
    que ya se teclea en Rentabilidad MV — no tiene fórmula propia a propósito,
-   porque dos números para lo mismo acaban sin cuadrar. Comerciales: cantidad
+   porque dos números para lo mismo acaban sin cuadrar. Son **17 € por mueble
+   montado** (master, 28/08; antes eran 20) y **cada montador puede tener la
+   suya**: manda la de su ficha, si no la de la casa, si no los 17.
+   `comisiones.mano_de_obra_de()` lo resuelve en un solo sitio. Un **0 puesto a
+   propósito se respeta**: se mira si la cifra ESTÁ, no si es verdadera — las
+   rutas lo leían con `float(... or 0)`, y con un `or` ese 0 se cae al escalón
+   siguiente y el montador cobra los 17 € cuando el master había decidido que
+   no cobra (en un pedido de 40 muebles, 680 € que no se recuperan). Una cifra
+   corrupta tampoco cae en el defecto: cae en el escalón siguiente, para que un
+   dato roto no invente una nómina. La pantalla de Rentabilidad calcula el
+   margen con esta misma cifra y el candado compara las dos, porque si se
+   separan la pantalla enseña un margen y la nómina paga otra cosa sin que
+   ninguno de los dos números parezca un error
+   (`test_calculo_mano_de_obra_montador.py`). Comerciales: cantidad
    FIJA por mueble según la valoración del pedido: **20 € por debajo de
    2.500 €, 30 € hasta 6.000 €, 40 € hasta 9.000 €, 50 € hasta 12.000 €, 60 €
    hasta 15.000 € y 70 € por encima**, con un tope de 70 € por mueble (el tope

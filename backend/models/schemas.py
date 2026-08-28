@@ -188,6 +188,10 @@ class UserCreate(BaseModel):
     # es SOLO para estas dos marcas (master, 27/08). Ver services/plataformas.py.
     esCooperativistaComercial: bool = False
     esCooperativistaMontador: bool = False
+    # Su mano de obra por mueble montado, si el master le pone una distinta a la
+    # de la casa. `None` = cobra la de la casa. Un 0 tecleado a proposito SI se
+    # respeta, por eso es Optional y no un 0.0 (services/comisiones.py).
+    manoObraPorMueble: Optional[float] = None
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -236,6 +240,7 @@ class UserUpdate(BaseModel):
     plataforma: Optional[str] = None  # cooperativa | carpinter | studio3k
     esCooperativistaComercial: Optional[bool] = None  # socio: cobra por tramos
     esCooperativistaMontador: Optional[bool] = None   # socio: cobra mano de obra
+    manoObraPorMueble: Optional[float] = None  # su € por mueble; None = la de la casa
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas

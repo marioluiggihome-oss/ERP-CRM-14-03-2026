@@ -145,6 +145,12 @@ export const RULES = {
 };
 export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
 
+// La mano de obra por mueble montado. Se exporta para que el candado la
+// compare con `comisiones.MANO_DE_OBRA_POR_DEFECTO` del backend: si se
+// separan, la pantalla calcula el margen con una cifra y la nomina paga con
+// otra, y nadie ve un error.
+export const MANO_DE_OBRA_POR_DEFECTO = 17;
+
 // Costes por defecto de componentes MV (editables en la UI de Rentabilidad)
 export const MV_COSTES_DEFAULT = {
   doorM2: 26,       // € por m² de puerta (tarifa base)
@@ -152,7 +158,10 @@ export const MV_COSTES_DEFAULT = {
   pata4: 0.64,      // € por juego de 4 patas
   colgador: 3.50,   // € por colgador de mueble alto (2 por mueble)
   soporte: 0.30,    // € por soporte/balda (4 por balda)
-  mano: 20,         // € mano de obra por mueble
+  // 17 € por mueble MONTADO (master, 28/08). Es la cifra de la casa: cada
+  // montador puede tener la suya en su ficha, y esa es la que cobra
+  // (backend `services/comisiones.py`, `mano_de_obra_de`).
+  mano: MANO_DE_OBRA_POR_DEFECTO,
   cajon: 41.34,     // € por cajón
   gaveta: 54.37,    // € por gaveta
   dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV

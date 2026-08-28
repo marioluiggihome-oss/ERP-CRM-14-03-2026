@@ -63,9 +63,10 @@ class SettingsModel(BaseModel):
     defaultBackThickness: int = 8
     # La comision del montador ES esta mano de obra por mueble (CLAUDE.md,
     # regla 16). No tiene formula propia a proposito: dos numeros para lo mismo
-    # acaban sin cuadrar. Sin configurar, su area sale a cero — y sale a cero de
-    # verdad, no con un valor inventado que le haria creer que cobra algo.
-    manoObraPorMueble: float = 0.0
+    # acaban sin cuadrar. Son 17 € (master, 28/08) y es la cifra DE LA CASA: el
+    # montador que tenga la suya propia cobra la suya (services/comisiones.py,
+    # `mano_de_obra_de`).
+    manoObraPorMueble: float = 17.0
     defaultEdgeBandingPriceMl: float = 1.77  # Precio canto €/ml (configurable, usado en despiece y presupuestador)
     
     # Email settings

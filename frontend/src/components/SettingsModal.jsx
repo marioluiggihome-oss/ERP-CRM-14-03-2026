@@ -158,6 +158,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     plataforma: PLATAFORMA_COOPERATIVA,  // cooperativa | carpinter | studio3k
     esCooperativistaComercial: false,  // socio: cobra por tramos
     esCooperativistaMontador: false,   // socio: cobra mano de obra
+    manoObraPorMueble: null,           // su € por mueble; null = la de la casa
     isCarpintero: false,  // Carpintero/Ebanista (portal con landing propia)
     canManageCarpinteroUsers: false,  // Admin de división: crea sus propios usuarios
     carpinteroLandingUrl: '',  // URL de la web de inicio del portal carpinteros
@@ -807,6 +808,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       plataforma: PLATAFORMA_COOPERATIVA,
       esCooperativistaComercial: false,
       esCooperativistaMontador: false,
+      manoObraPorMueble: null,
       isCarpintero: false,
       canManageCarpinteroUsers: false,
       carpinteroLandingUrl: '',
@@ -887,7 +889,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       plataforma: user.plataforma || PLATAFORMA_COOPERATIVA,
       // Socio se marca: nadie lo es por defecto (master, 27/08).
       esCooperativistaComercial: !!user.esCooperativistaComercial,
-      esCooperativistaMontador: !!user.esCooperativistaMontador
+      esCooperativistaMontador: !!user.esCooperativistaMontador,
+      // `?? null` y no `|| null`: un 0 puesto a propósito por el master
+      // es una decisión suya y no se puede caer al valor de la casa.
+      manoObraPorMueble: user.manoObraPorMueble ?? null
     });
   };
 
@@ -2267,6 +2272,33 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <span title="Socio montador: cobra la mano de obra por mueble." className="text-xs font-bold text-slate-700">Montador cooperativista</span>
                           </label>
                         </div>
+                        {/* SU mano de obra por mueble. Vacío = cobra la de la casa.
+                            Se deja vacío a propósito en vez de precargar los 17: un
+                            número escrito ahí parece una decisión tomada para esta
+                            persona, y no lo es. */}
+                        {userForm.esCooperativistaMontador && (
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-slate-600">
+                              Su mano de obra por mueble montado:
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={userForm.manoObraPorMueble ?? ''}
+                              placeholder="la de la casa"
+                              onChange={(e) => setUserForm({
+                                ...userForm,
+                                manoObraPorMueble: e.target.value === '' ? null : Number(e.target.value),
+                              })}
+                              className="w-28 px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-slate-800 bg-white"
+                              data-testid="mano-obra-montador-input"
+                            />
+                            <span className="text-[11px] text-slate-500">
+                              € · en blanco cobra la de la casa
+                            </span>
+                          </div>
+                        )}
                         {userForm.plataforma && userForm.plataforma !== PLATAFORMA_COOPERATIVA
                           && (userForm.esCooperativistaComercial || userForm.esCooperativistaMontador) && (
                           <p className="text-[11px] text-aviso-700 font-bold mt-2">
