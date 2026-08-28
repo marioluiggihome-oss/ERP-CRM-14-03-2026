@@ -296,6 +296,29 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      sale con pendiente, no se paga Y se marca (`es_anomalia`) en vez de quedarse
      callado entre los normales. Un candado que se apoya en que nadie se
      equivoque no es un candado.
+   - **UNA COMISIÓN PAGADA SE LEE, NO SE CALCULA** (28/08, al poder tener cada
+     montador su mano de obra). Al cerrar el mes se guarda en el pedido lo que
+     se ha pagado por él (`comisionCongelada`) y desde ahí ese importe no
+     depende de la tarifa de hoy: sin esto, cambiarle los 17 € a un montador
+     movería hacia atrás las liquidaciones ya pagadas y la nómina de agosto
+     dejaría de cuadrar con lo que se pagó en agosto, sin que saltara ningún
+     error. Se congela POR ROL: el mismo pedido lo cobran dos personas
+     distintas, y leer la del otro es pagarle lo que no es suyo. Una
+     congelación corrupta vuelve a calcular en vez de devolver cero — un dato
+     roto no puede dejar a nadie sin cobrar en silencio.
+   - **`liquidadoEn` no lo escribía NADIE** hasta el 28/08: se leía en cinco
+     sitios y el estado LIQUIDADA no se alcanzaba nunca, así que la misma
+     comisión podía entrar en la liquidación de septiembre, la de octubre y la
+     de noviembre. Lo escribe `POST /liquidar`, que es IDEMPOTENTE: se salta lo
+     ya liquidado y el `update` lleva la condición dentro, para que dos
+     pulsaciones a la vez no paguen dos veces.
+   - **Se leen los nombres que el ERP YA usa**: `deliveredAt` (lo estampa
+     `projects.py` al pasar a «entregado») y `paidAt` (`invoices.py` al pasar a
+     «paid»), además de `servidoAt`/`cobradoAt`. Sin eso, un pedido entregado y
+     cobrado de verdad se quedaba en «en progreso» para siempre esperando a un
+     campo que no le pone nadie. No se inventa ningún cruce entre colecciones:
+     si el documento trae la fecha, se usa. Candado:
+     `test_calculo_congelar_comision.py`.
    - Un pedido anulado o sin aceptar devuelve `None`, no cero euros: una línea a
      cero en el panel del comercial es recordarle lo que no va a cobrar. Y el
      panel NO da un total que sume los tres montones — son promesas de distinto

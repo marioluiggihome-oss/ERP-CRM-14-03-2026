@@ -5,13 +5,14 @@
 """
 EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
 
-Cinco rutas y ni una más:
+Seis rutas y ni una más:
 
   GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
   GET  /api/cooperativistas/socios         quién es socio, para elegirlo (master)
   GET  /api/cooperativistas/pedidos        pedidos y su asignación de hoy (master)
   POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
   GET  /api/cooperativistas/liquidacion    lo que hay que pagar este mes (master)
+  POST /api/cooperativistas/liquidar       cierra el mes: paga y congela (master)
 
 EL FILTRO NO SE ESCRIBE AQUÍ. Sale de `area_cooperativista.filtro_de(user)`, que
 lo construye a partir del usuario del token. Nunca de un parámetro de la
@@ -145,6 +146,77 @@ async def asignar(payload: dict, current_user: Optional[dict] = Depends(get_curr
     if not r.matched_count:
         raise HTTPException(status_code=404, detail="Ese pedido no existe.")
     return {"success": True, "pedidoId": pedido_id, "asignado": cambios}
+
+
+@router.post("/liquidar")
+async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Cierra el mes de un cooperativista: paga y CONGELA. SOLO el master.
+
+    Hasta ahora `liquidadoEn` se leía en todas partes y no lo escribía nadie, así
+    que el estado LIQUIDADA no existía: la misma comisión podía entrar en la
+    liquidación de septiembre, la de octubre y la de noviembre, y el ERP no
+    tenía forma de saberlo. «Liquidada = ya pagada, no vuelve a entrar nunca»
+    (CLAUDE.md, regla 17) era una intención escrita, no una barrera.
+
+    Al cerrar se guarda EN CADA PEDIDO lo que se ha pagado por él. Desde ese
+    momento esos euros no se recalculan: cambiar mañana la mano de obra de un
+    montador ya no mueve hacia atrás lo que se le pagó en agosto.
+
+    ES IDEMPOTENTE: un pedido que ya lleva `liquidadoEn` se salta. Volver a
+    pulsar no paga dos veces, que es el error que no se puede permitir aquí.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(status_code=403, detail="Liquidar es del master.")
+
+    usuario = str(payload.get("usuario") or "").strip()
+    periodo = str(payload.get("periodo") or "").strip()
+    if not usuario or not periodo:
+        raise HTTPException(status_code=400, detail="Faltan el periodo o el usuario.")
+
+    u = await _db().users.find_one({"id": usuario}, {"_id": 0})
+    if not u:
+        raise HTTPException(status_code=404, detail="Ese usuario no existe.")
+    rol = AC.rol_de(u)
+    if not rol:
+        raise HTTPException(status_code=400, detail="Ese usuario no es cooperativista.")
+
+    filtro = AC.filtro_de(u)
+    try:
+        crudos = await _db().orders.find(filtro, {"_id": 0}).to_list(2000)
+        aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"liquidar: no se pudieron leer los pedidos: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo leer la liquidación.")
+
+    mano = C.mano_de_obra_de(u, aj) if rol == AC.MONTADOR else 0.0
+
+    pagados, total, ya_estaban = [], 0.0, 0
+    for crudo in crudos:
+        if crudo.get("liquidadoEn"):
+            ya_estaban += 1
+            continue
+        n = AC.normaliza_pedido(crudo, mano)
+        if L.estado_de(n) != L.CONSOLIDADA:
+            continue
+        if L.periodo_de_consolidacion(n) != periodo:
+            continue
+        congelada = L.congelar(n, rol, periodo)
+        try:
+            await _db().orders.update_one(
+                {"id": crudo.get("id"), "liquidadoEn": {"$in": [None, ""]}},
+                {"$set": {"liquidadoEn": periodo, L.CONGELADA: congelada}})
+        except Exception as e:                               # noqa: BLE001
+            logger.error(f"liquidar: no se pudo cerrar {crudo.get('id')}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="No se pudo cerrar la liquidación; no se ha pagado nada más.")
+        pagados.append({"pedidoId": crudo.get("id"), "euros": congelada["euros"],
+                        "muebles": congelada["muebles"]})
+        total += congelada["euros"]
+
+    return {"success": True, "periodo": periodo, "rol": rol,
+            "pedidos": pagados, "total": round(total, 2),
+            "yaLiquidados": ya_estaban}
 
 
 @router.get("/liquidacion")

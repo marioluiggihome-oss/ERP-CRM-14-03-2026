@@ -85,6 +85,10 @@ COMERCIAL = "comercial"
 MONTADOR = "montador"
 
 # Medio céntimo. Por debajo de esto es redondeo; por encima es deuda y no libera.
+# Dónde vive, dentro del pedido, la comisión ya pagada. Mientras esta clave
+# esté, esos euros no se recalculan nunca más.
+CONGELADA = "comisionCongelada"
+
 TOLERANCIA_COBRO = 0.005
 
 # En qué mes cae una comisión consolidada: en el de la ENTREGA de la mercancía.
@@ -146,8 +150,14 @@ def normaliza(pedido: dict) -> dict:
     silencio — y en silencio, aquí, significa que alguien cobra de menos.
     """
     p = pedido or {}
-    servido = _fecha(p.get("servidoAt"))
-    cobrado = _fecha(p.get("cobradoAt"))
+    # `deliveredAt` y `paidAt` son los nombres que el ERP ya usa para lo mismo
+    # (`projects.py` los estampa al pasar a «entregado», `invoices.py` al pasar a
+    # «paid»). Se aceptan como alternativa para que un pedido que ya trae la
+    # fecha buena no se quede en «en progreso» para siempre esperando a un campo
+    # que no le pone nadie. No se inventa ningún cruce entre colecciones: si el
+    # documento trae la fecha, se usa; si no, no hay entrega.
+    servido = _fecha(p.get("servidoAt") or p.get("deliveredAt"))
+    cobrado = _fecha(p.get("cobradoAt") or p.get("paidAt"))
     return {
         "id": p.get("id") or p.get("_id") or "",
         "aceptadoAt": _fecha(p.get("aceptadoAt") or p.get("acceptedAt")),
@@ -159,6 +169,7 @@ def normaliza(pedido: dict) -> dict:
         "baseImponible": _num(p.get("baseImponible")),
         "manoPorMueble": _num(p.get("manoPorMueble")),
         "liquidadoEn": p.get("liquidadoEn") or None,
+        "congelada": p.get(CONGELADA) or None,
         "comercialId": p.get("comercialId") or "",
         "montadorUserId": p.get("montadorUserId") or "",
     }
@@ -231,11 +242,33 @@ def euros_de(pedido: dict, rol: str) -> float:
 
 
 def linea(pedido: dict, rol: str) -> Optional[dict]:
-    """Una línea del panel: qué pedido, en qué estado y cuántos euros."""
+    """Una línea del panel: qué pedido, en qué estado y cuántos euros.
+
+    LO YA PAGADO NO SE VUELVE A CALCULAR: SE LEE. Si el pedido lleva su comisión
+    congelada, esos son los euros, y no los que saldrían hoy. Sin esto, cambiar
+    la mano de obra de un montador —que es justo lo que el master pidió poder
+    hacer— movería hacia atrás las liquidaciones de meses ya pagados, y la
+    nómina de agosto dejaría de cuadrar con lo que se pagó en agosto. La
+    comisión de un pedido servido es un hecho del pasado, no una fórmula que se
+    recalcula cada vez que alguien abre la pantalla.
+    """
     p = normaliza(pedido)
     est = estado_de(p)
     if est is None:
         return None
+    congelada = p["congelada"] if isinstance(p["congelada"], dict) else None
+    if congelada and congelada.get("rol") == rol:
+        return {
+            "pedidoId": p["id"],
+            "estado": est,
+            "anomalia": es_anomalia(p),
+            "euros": _num(congelada.get("euros")),
+            "muebles": _entero(congelada.get("muebles")),
+            "periodo": congelada.get("periodo") or p["liquidadoEn"],
+            "porMueble": _num(congelada.get("porMueble")),
+            "tramo": congelada.get("tramo"),
+            "congelada": True,
+        }
     return {
         "pedidoId": p["id"],
         "estado": est,
@@ -247,6 +280,27 @@ def linea(pedido: dict, rol: str) -> Optional[dict]:
                       if rol == COMERCIAL else round(p["manoPorMueble"], 2)),
         "tramo": (comisiones._nombre_del_tramo(p["baseImponible"])
                   if rol == COMERCIAL else None),
+        "congelada": False,
+    }
+
+
+def congelar(pedido: dict, rol: str, periodo: str) -> dict:
+    """Los números de esa comisión, tal como quedan el día que se paga.
+
+    Se guardan EN EL PEDIDO. A partir de ahí ese importe ya no depende de la
+    tarifa de hoy, ni de la mano de obra que tenga hoy el montador, ni de que
+    alguien toque una línea del pedido: es lo que se pagó.
+    """
+    l = linea(pedido, rol)
+    if l is None:
+        raise ValueError("ese pedido no genera comisión: no se puede congelar")
+    return {
+        "rol": rol,
+        "periodo": periodo,
+        "euros": l["euros"],
+        "muebles": l["muebles"],
+        "porMueble": l["porMueble"],
+        "tramo": l["tramo"],
     }
 
 
