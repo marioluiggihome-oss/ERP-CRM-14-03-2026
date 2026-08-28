@@ -8,6 +8,7 @@ guarda los pedidos de cascos por usuario. El catálogo vive en el frontend
 (generado desde la tarifa oficial).
 """
 from fastapi import APIRouter, HTTPException, Depends
+from services import origen_pedidos as _OP
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import logging
@@ -50,6 +51,16 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "id": oid,
             "userId": (existing or {}).get("userId") or uid,  # nunca se toma del payload
             "kind": str(payload.get("kind") or "pedido"),   # 'presupuesto' | 'pedido' | 'compra'
+            # DE QUÉ SECCIÓN SALE. Esta colección es, de siempre, Cocina
+            # Desmontada; desde el 28/08 Cocina Montada 3 también crea pedidos
+            # aquí y se distingue por esta marca. Va por lista BLANCA: un origen
+            # que no se reconoce se guarda vacío y entonces manda la deducción
+            # de `services/origen_pedidos.py`. Sin la lista, cualquiera podría
+            # meter un pedido en la nómina de la cooperativa mandando un origen
+            # inventado en el cuerpo de la petición.
+            "origen": (str(payload.get("origen") or "").strip().lower()
+                       if str(payload.get("origen") or "").strip().lower()
+                       in _OP.ORIGENES_QUE_CUENTAN else ""),
             "expediente": str(payload.get("expediente") or ""),  # vínculo venta <-> compra
             "cliente": str(payload.get("cliente") or ""),
             "ref": str(payload.get("ref") or ""),

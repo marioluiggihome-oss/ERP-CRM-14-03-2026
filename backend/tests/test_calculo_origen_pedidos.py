@@ -128,3 +128,63 @@ def test_al_escribir_se_tocan_LAS_DOS_COLECCIONES():
     assert cuerpo.count("_db().orders.update_one") == 0, (
         "hay escrituras que van solo a `orders`: en un pedido de Cocina "
         "Desmontada no harían nada y nadie se enteraría")
+
+
+# ── PEDIDOS DESDE COCINA MONTADA 3 ──────────────────────────────────────────
+#
+# El master, 28/08: «necesito crear pedidos desde Cocina Montada 3». Hasta
+# entonces esa pantalla solo guardaba presupuestos, así que sus cocinas no
+# llegaban nunca a la cooperativa. Ahora crea pedidos en la misma colección que
+# Cocina Desmontada, y se distinguen por la marca `origen`.
+
+def test_un_pedido_de_CM3_se_reconoce_por_su_marca_y_no_como_desmontada():
+    """Los dos viven en `cascos_orders` con `kind: "pedido"`. Sin la marca, un
+    pedido de Cocina Montada 3 se contaría como de Desmontada — las dos entran
+    en la cooperativa, pero mezclarlas haría imposible saber de dónde sale el
+    trabajo."""
+    cm3 = {"id": "cm3-ped-1", "kind": "pedido", "origen": "cocina_montada_3",
+           "cliente": "Ruiz", "lines": []}
+    assert OP.origen_de(cm3) == OP.MONTADA_3
+    assert OP.cuenta_para_la_cooperativa(cm3)
+    assert OP.solo_los_que_cuentan([cm3])[0]["origenNombre"] == "Cocina Montada 3"
+
+
+def test_el_ORIGEN_que_llega_por_la_PETICION_pasa_por_lista_blanca():
+    """Es el mismo fallo que tuvo el motor de render: la pantalla mandaba lo
+    correcto y la API se fiaba de lo que le llegara.
+
+    El origen viaja en el cuerpo de la petición. Si se guardara tal cual,
+    cualquiera con sesión podría meter en la nómina de la cooperativa un pedido
+    de la sección que fuera, mandando el origen que le conviniera.
+    """
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "routes", "cascos.py")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index('"origen":')
+    trozo = cuerpo[i:i + 400]
+    assert "_OP.ORIGENES_QUE_CUENTAN" in trozo, (
+        "el origen que llega en la petición se guarda sin comprobar: por ahí se "
+        "mete cualquier pedido en la nómina de la cooperativa")
+
+
+def test_la_pantalla_de_CM3_manda_LA_FAMILIA_y_el_importe_ya_multiplicado():
+    """Sin `familia` el pedido entra con «0 muebles» y no paga a nadie; y si
+    `price` fuera por unidad, el cálculo lo multiplicaría otra vez e inflaría la
+    base imponible, subiendo de tramo al comercial sin que el pedido valiera un
+    euro más."""
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ruta = os.path.join(raiz, "frontend", "src", "components", "CocinaMontada3.jsx")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("const pasarAPedido")
+    trozo = cuerpo[i:cuerpo.index("};", cuerpo.index("finally", i))]
+    assert "origen: 'cocina_montada_3'" in trozo, (
+        "el pedido de CM3 no lleva su marca de origen: entraría como si fuera de "
+        "Cocina Desmontada")
+    assert "kind: 'pedido'" in trozo, "se está creando un presupuesto, no un pedido"
+    assert "familia:" in trozo, (
+        "las líneas van sin familia: el pedido entraría en COOP con «0 muebles»")
+    assert "(Number(m.pvp) || 0) * (Number(m.qty) || 1)" in trozo, (
+        "el importe de la línea no lleva las unidades dentro; el cálculo espera "
+        "`price` ya multiplicado")

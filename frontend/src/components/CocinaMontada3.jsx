@@ -26,7 +26,7 @@ import {
   Copy, Layers, ArrowUpDown, ChevronRight, HelpCircle, Package,
   ClipboardList, CheckCircle2, ChevronDown, Boxes, Box, X, Printer, FileUp,
   User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft,
-  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play, List
+  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play, List, ShoppingCart
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -970,6 +970,66 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     }
   };
 
+  /**
+   * PASAR LA RELACIÓN A PEDIDO.
+   *
+   * El master, 28/08: «necesito crear pedidos desde Cocina Montada 3». Hasta
+   * ahora esta pantalla solo guardaba PRESUPUESTOS, así que sus cocinas no
+   * llegaban nunca a la cooperativa: un presupuesto no se ha vendido y no paga
+   * comisión a nadie.
+   *
+   * Se guarda como pedido con la marca `origen`, que es lo que hace que entre
+   * en COOP (`services/origen_pedidos.py`). Sin esa marca sería indistinguible
+   * de un pedido de Cocina Desmontada.
+   *
+   * LAS LÍNEAS VAN CON SU FAMILIA Y SU IMPORTE YA MULTIPLICADO. Es lo que espera
+   * el cálculo de comisiones: `price` es el total de la línea y `familia` es lo
+   * que decide si ese mueble incentiva o no. Sin la familia, el pedido entraría
+   * con «0 muebles».
+   */
+  const pasarAPedido = async () => {
+    if (!muebles.length) { setAviso('Añade al menos un mueble para pedir.'); return; }
+    // Se avisa porque un pedido SÍ cuenta: entra en la cooperativa y genera
+    // comisión. Un presupuesto no.
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(
+      `Vas a crear un PEDIDO de ${totalUds} mueble${totalUds === 1 ? '' : 's'} `
+      + `para ${cliente || 'Cliente General'}.\n\n`
+      + 'Un pedido cuenta para la cooperativa y genera comisión; un presupuesto no.\n\n¿Seguimos?')) return;
+    setGuardando(true); setAviso('');
+    try {
+      const payload = {
+        id: `cm3-ped-${Date.now()}`,
+        kind: 'pedido',
+        origen: 'cocina_montada_3',
+        cliente: cliente || 'Cliente General',
+        ref: ref || '',
+        expediente: ref || '',
+        ivaRate: Number(ivaRate) || 21,
+        descuento: Number(descuento) || 0,
+        total: totalPvp,
+        lines: filas.map(m => ({
+          code: m.cod || '',
+          name: m.etiqueta || m.desc || m.cod || '',
+          familia: m.familia || '',
+          quantity: Number(m.qty) || 1,
+          price: (Number(m.pvp) || 0) * (Number(m.qty) || 1),
+        })),
+      };
+      const r = await fetch(`${API_URL}/api/cascos/orders`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify(payload),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || 'Error al crear el pedido');
+      setAviso('');
+      alert('✓ Pedido creado. Ya aparece en COOP para asignarle comercial y montador.');
+    } catch (e) {
+      setAviso(`No se pudo crear el pedido: ${e.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const guardarPresupuesto = async () => {
     if (!muebles.length) { setAviso('Añade al menos un mueble para guardar.'); return; }
     setGuardando(true); setAviso('');
@@ -1156,6 +1216,15 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             title="Crear orden de fabricación en taller"
           >
             <Factory size={12} /> Fabricar
+          </button>
+          <button
+            onClick={pasarAPedido}
+            disabled={!muebles.length || guardando}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ok-600 hover:bg-ok-700 text-white text-[10px] font-black shadow-sm transition-all disabled:opacity-40"
+            title="Crear un PEDIDO con esta relación: cuenta para la cooperativa y genera comisión"
+            data-testid="cm3-pasar-a-pedido"
+          >
+            {guardando ? <Loader size={12} className="animate-spin" /> : <ShoppingCart size={12} />} Pedido
           </button>
           <button
             onClick={guardarPresupuesto}
