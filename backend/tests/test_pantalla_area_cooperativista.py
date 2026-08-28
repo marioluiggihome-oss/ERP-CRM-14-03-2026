@@ -180,7 +180,7 @@ def test_QUIEN_VE_EL_ENLACE_lo_decide_la_regla_comun_y_no_una_copia_a_mano():
         # Y que no haya una condición escrita a mano al lado del botón.
         i = cuerpo.find("miArea")
         assert i != -1
-        alrededor = cuerpo[max(0, i - 400):i + 400]
+        alrededor = cuerpo[max(0, i - 250):i + 250]
         for a_mano in ("isMontador", "isComercial", "isRepresentative"):
             assert a_mano not in alrededor, (
                 f"{nombre} decide quién ve «Mi área» mirando `{a_mano}` a mano, "

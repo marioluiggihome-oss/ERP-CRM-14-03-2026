@@ -89,9 +89,7 @@ const MODULES = [
   // carpinter.io y Studio3K son plataformas de suscripción (plataformas.js).
   { tab: 'miArea',          label: 'Mi área',         desc: 'Lo que llevas ganado y lo que falta para el siguiente tramo', icon: Wallet, color: 'bg-ok-600', group: 'admin', can: (u) => esCooperativista(u) },
 
-  { tab: 'socios',          label: 'Socios',          desc: 'Quién vendió y quién montó cada pedido', icon: Users, color: 'bg-master-600', group: 'admin', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
-
-  { tab: 'liquidar',        label: 'Liquidar',        desc: 'Cierre mensual de comisiones de los cooperativistas', icon: Wallet, color: 'bg-master-600', group: 'admin', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
+  { tab: 'coop',            label: 'COOP',            desc: 'Socios cooperativistas, asignación de pedidos y liquidación del mes', icon: Users, color: 'bg-master-600', group: 'admin', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
 
   // Administración
   { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },

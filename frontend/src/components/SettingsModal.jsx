@@ -97,6 +97,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Fichas de la agenda de montajes, para vincularlas con la cuenta.
+  const [fichasMontador, setFichasMontador] = useState([]);
   const [isFullScreen, setIsFullScreen] = useState(false); // Estado para pantalla completa
   const [userRoleFilter, setUserRoleFilter] = useState('all'); // Filtro por rol de usuario
   
@@ -857,6 +859,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canChangeLogo: false
     });
   };
+
+  // Se cargan una vez: son pocas y hacen falta en cuanto se abre una ficha.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/api/montadores`,
+          { headers: authHeaders() });
+        if (!r.ok) return;                       // sin agenda, sin sugerencias
+        const d = await r.json().catch(() => []);
+        setFichasMontador(Array.isArray(d) ? d : (d.montadores || []));
+      } catch { /* la vinculación es opcional: no rompe la pantalla */ }
+    })();
+  }, []);
 
   const handleEditUser = (user) => {
     // Director Comercial, Responsable Delegación o comercial pueden editar tiendas
@@ -2272,6 +2288,38 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <span title="Socio montador: cobra la mano de obra por mueble." className="text-xs font-bold text-slate-700">Montador cooperativista</span>
                           </label>
                         </div>
+                        {/* LA FICHA DE LA AGENDA. Es el puente entre el montaje que ya
+                            está agendado y la cuenta con la que entra: con esto el ERP
+                            puede proponer solo quién montó cada pedido, en vez de que el
+                            master lo diga a mano uno por uno. Sin ficha no pasa nada
+                            malo — solo que no habrá sugerencia. */}
+                        {userForm.esCooperativistaMontador && (
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-slate-600">
+                              Su ficha en la agenda de montajes:
+                            </span>
+                            <select
+                              value={userForm.montadorId || ''}
+                              onChange={(e) => setUserForm({...userForm, montadorId: e.target.value || null})}
+                              className="px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-slate-800 bg-white"
+                              data-testid="montador-ficha-select"
+                            >
+                              <option value="">— sin vincular —</option>
+                              {(fichasMontador || []).map((f) => (
+                                <option key={f.id} value={f.id}>{f.name || f.id}</option>
+                              ))}
+                            </select>
+                            <span className="text-[11px] text-slate-500">
+                              sirve para proponer quién montó cada pedido
+                            </span>
+                            <p className="w-full text-[11px] text-slate-500 mt-1">
+                              En la agenda hay montadores externos y de la cooperativa.
+                              Vincular la ficha NO hace socio a nadie: quien cobra es
+                              quien tiene marcado «Montador cooperativista» aquí arriba.
+                            </p>
+                          </div>
+                        )}
+
                         {/* SU mano de obra por mueble. Vacío = cobra la de la casa.
                             Se deja vacío a propósito en vez de precargar los 17: un
                             número escrito ahí parece una decisión tomada para esta

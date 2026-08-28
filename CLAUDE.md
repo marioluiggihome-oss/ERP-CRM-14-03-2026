@@ -456,8 +456,29 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - **La pantalla se abre desde el menú Y desde la bienvenida.** Una pantalla
      sin puerta no existe: `AreaCooperativista.jsx` estuvo escrita, con sus
      rutas y sus candados, y sin un solo sitio desde el que abrirla.
+   - **EN LA AGENDA DE MONTAJES HAY EXTERNOS Y SOCIOS, MEZCLADOS** (master,
+     28/08: «los montadores pueden ser externos o miembros de la cooperativa;
+     tenlo muy presente»). Los dos montan cocinas y los dos tienen ficha; solo
+     el socio cobra comisión. La agenda NO puede ser la puerta por la que un
+     externo entre en la nómina: vincular su ficha con una cuenta no hace socio
+     a nadie — eso lo decide la marca `esCooperativistaMontador`, y nada más.
+   - **LA AGENDA PROPONE, EL MASTER ASIGNA** (28/08). La ficha de montador
+     (`montadores.id`, la agenda de montajes) y la cuenta con la que entra eran
+     dos mundos: el master repetía a mano quién montó cada pedido cuando el ERP
+     ya lo sabía. El puente es `usuario.montadorId`, un campo que existía en el
+     modelo y no leía nadie (`services/enlace_montador.py`). Se SUGIERE y no se
+     asigna: aplicarlo es un clic suyo, porque ahorrar clics no puede
+     convertirse en pagar por deducción. **En la duda se calla**, y son tres
+     dudas: ficha sin cuenta, cuenta que no es socio montador (un montador en
+     nómina monta cocinas igual y no cobra comisión) y varios montadores
+     distintos en el mismo pedido. Tampoco se propone encima de lo ya asignado
+     —sería una invitación a deshacer una decisión del master sin querer— ni se
+     elige entre dos cuentas que compartan ficha, que es un error de datos y
+     resolverlo a dedo sería pagarle a una por sorteo. Candado:
+     `test_calculo_enlace_montador.py`.
    - **Un pedido sin asignar no da error: no le paga a nadie.** La pantalla
-     «Socios» (`SociosCooperativistas.jsx`, solo master) es la que pone quién
+     «Socios» (`SociosCooperativistas.jsx`, dentro del botón **COOP** del menú
+     —master, 28/08—, junto con la liquidación del mes) es la que pone quién
      vendió y quién montó cada pedido, y sin ella el área entera enseña ceros.
      Los pedidos sin asignar salen primero y se cuentan, porque un pedido
      servido y cobrado sin dueño no se queja: simplemente no aparece en la

@@ -5,13 +5,14 @@
 """
 EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
 
-Seis rutas y ni una más:
+Siete rutas y ni una más:
 
   GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
   GET  /api/cooperativistas/socios         quién es socio, para elegirlo (master)
   GET  /api/cooperativistas/pedidos        pedidos y su asignación de hoy (master)
   POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
   GET  /api/cooperativistas/liquidacion    lo que hay que pagar este mes (master)
+  POST /api/cooperativistas/aplicar-sugerencias  el montador que dice la agenda
   POST /api/cooperativistas/liquidar       cierra el mes: paga y congela (master)
 
 EL FILTRO NO SE ESCRIBE AQUÍ. Sale de `area_cooperativista.filtro_de(user)`, que
@@ -31,6 +32,7 @@ from routes.cascos import _es_master
 from services import area_cooperativista as AC
 from services import comisiones as C
 from services import enlace_documentos as ED
+from services import enlace_montador as EM
 from services import liquidaciones as L
 from services.jwt_service import get_current_user
 
@@ -128,11 +130,23 @@ async def pedidos_para_asignar(current_user: Optional[dict] = Depends(get_curren
     socios = AC.socios_de(usuarios)
     nombres = {f["id"]: f["nombre"]
                for f in socios["comerciales"] + socios["montadores"]}
+    try:
+        montajes = await _db().montajes.find({}, {"_id": 0}).to_list(5000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"pedidos: no se pudieron leer los montajes: {e}")
+        montajes = []
+    # La agenda ya sabe quién montó cada cocina. Se PROPONE; asignar sigue
+    # siendo del master (services/enlace_montador.py).
+    propuestas = EM.sugerencias(crudos, montajes, usuarios)
+
     lista = [AC.pedido_para_asignar(o, nombres) for o in crudos]
+    for fila in lista:
+        fila["sugerencia"] = propuestas.get(fila["pedidoId"])
     lista.sort(key=lambda p: (not p["sinAsignar"], p["fecha"]), reverse=False)
     lista.sort(key=lambda p: p["sinAsignar"], reverse=True)
     return {"success": True, "pedidos": lista, "socios": socios,
-            "sinAsignar": sum(1 for p in lista if p["sinAsignar"])}
+            "sinAsignar": sum(1 for p in lista if p["sinAsignar"]),
+            "sugerencias": sum(1 for p in lista if p.get("sugerencia"))}
 
 
 @router.post("/asignar")
@@ -235,6 +249,46 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
     return {"success": True, "periodo": periodo, "rol": rol,
             "pedidos": pagados, "total": round(total, 2),
             "yaLiquidados": ya_estaban}
+
+
+@router.post("/aplicar-sugerencias")
+async def aplicar_sugerencias(current_user: Optional[dict] = Depends(get_current_user)):
+    """Pone el montador que dice la agenda, en los pedidos que no tienen ninguno.
+
+    SOLO el master, y solo porque es él quien pulsa: la sugerencia sale de la
+    agenda de montajes, pero aplicarla es una decisión suya (regla 20).
+
+    NO PISA NADA. Solo se tocan los pedidos SIN montador, y la condición va
+    dentro del `update`, para que dos pulsaciones a la vez no puedan cambiarle
+    el montador a un pedido que acaba de asignarse.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Asignar comercial o montador es del master: decide quién cobra.")
+    try:
+        pedidos = await _db().orders.find({}, {"_id": 0}).to_list(2000)
+        usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
+        montajes = await _db().montajes.find({}, {"_id": 0}).to_list(5000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"aplicar-sugerencias: no se pudo leer: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo leer la agenda.")
+
+    propuestas = EM.sugerencias(pedidos, montajes, usuarios)
+    puestos = []
+    for pedido_id, s in propuestas.items():
+        if not pedido_id:
+            continue
+        try:
+            r = await _db().orders.update_one(
+                {"id": pedido_id, "montadorUserId": {"$in": [None, ""]}},
+                {"$set": {"montadorUserId": s["montadorUserId"]}})
+        except Exception as e:                               # noqa: BLE001
+            logger.error(f"aplicar-sugerencias: {pedido_id}: {e}")
+            continue
+        if r.modified_count:
+            puestos.append({"pedidoId": pedido_id, "nombre": s["nombre"]})
+    return {"success": True, "asignados": puestos, "total": len(puestos)}
 
 
 @router.get("/liquidacion")

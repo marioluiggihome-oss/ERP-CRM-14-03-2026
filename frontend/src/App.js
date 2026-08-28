@@ -58,8 +58,7 @@ const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // L
 const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Presupuestador 3 (Relación y códigos MV directa)
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
 const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
-const SociosCooperativistas = lazy(() => import('./components/SociosCooperativistas')); // Quién cobra cada pedido (master)
-const LiquidarMes = lazy(() => import('./components/LiquidarMes')); // Cierre mensual de comisiones (master)
+const CoopPanel = lazy(() => import('./components/CoopPanel')); // COOP: socios, pedidos y liquidación (master)
 
 
 
@@ -1657,30 +1656,18 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Socios: quién vendió y quién montó cada pedido. SOLO master —
-                        decide quién cobra, igual que el endpoint. */}
+                    {/* COOP: la gestión de la cooperativa —socios, asignación de
+                        pedidos y liquidación del mes— en un solo sitio. SOLO master:
+                        por aquí se decide quién cobra y se cierra la nómina. */}
                     {(state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
                       <button
-                        onClick={() => setState(p => ({...p, currentTab: 'socios'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'socios' ? 'bg-master-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="socios-nav-btn"
-                        title="Socios cooperativistas: quién vendió y quién montó cada pedido"
+                        onClick={() => setState(p => ({...p, currentTab: 'coop'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'coop' ? 'bg-master-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="coop-nav-btn"
+                        title="COOP: socios cooperativistas, asignación de pedidos y liquidación del mes"
                       >
                         <Users size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Socios</span>
-                      </button>
-                    )}
-
-                    {/* Liquidar: cerrar el mes y pagar. SOLO master — compromete dinero. */}
-                    {(state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'liquidar'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'liquidar' ? 'bg-master-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="liquidar-nav-btn"
-                        title="Liquidar el mes: lo que se le paga a cada cooperativista"
-                      >
-                        <Wallet size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Liquidar</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">COOP</span>
                       </button>
                     )}
 
@@ -1909,11 +1896,8 @@ const App = () => {
             {state.currentTab === 'miArea' && esCooperativista(state.currentUser) && (
               <AreaCooperativista />
             )}
-            {state.currentTab === 'socios' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
-              <SociosCooperativistas />
-            )}
-            {state.currentTab === 'liquidar' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
-              <LiquidarMes />
+            {state.currentTab === 'coop' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
+              <CoopPanel />
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
               <PrescriptorAgenda

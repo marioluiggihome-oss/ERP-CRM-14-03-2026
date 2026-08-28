@@ -52,6 +52,7 @@ export default function SociosCooperativistas() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState('');
   const [guardado, setGuardado] = useState('');
+  const [aplicando, setAplicando] = useState(false);
 
   const cabeceras = useCallback(() => {
     const t = localStorage.getItem('token');
@@ -94,6 +95,22 @@ export default function SociosCooperativistas() {
       setError('No se pudo conectar con el servidor.');
     } finally {
       setGuardando('');
+    }
+  };
+
+  const aplicarSugerencias = async () => {
+    setAplicando(true);
+    try {
+      const r = await fetch(`${API_URL}/api/cooperativistas/aplicar-sugerencias`, {
+        method: 'POST', headers: cabeceras(),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.detail || 'No se pudieron aplicar.'); return; }
+      await cargar();
+    } catch {
+      setError('No se pudo conectar con el servidor.');
+    } finally {
+      setAplicando(false);
     }
   };
 
@@ -179,6 +196,24 @@ export default function SociosCooperativistas() {
           </div>
         )}
 
+        {(datos?.sugerencias || 0) > 0 && (
+          <div className="mb-3 rounded-xl border border-accion-300 bg-accion-50 px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs font-bold text-accion-800">
+              La agenda de montajes sabe quién montó {datos.sugerencias} pedido
+              {datos.sugerencias === 1 ? '' : 's'} que no tiene{datos.sugerencias === 1 ? '' : 'n'} montador.
+              Solo se proponen socios: los montadores externos no entran.
+            </span>
+            <button
+              onClick={aplicarSugerencias}
+              disabled={aplicando}
+              className="px-3 py-1.5 rounded-lg bg-accion-600 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 hover:bg-accion-700 transition-colors"
+              data-testid="aplicar-sugerencias-btn"
+            >
+              {aplicando ? 'Aplicando…' : 'Poner los de la agenda'}
+            </button>
+          </div>
+        )}
+
         {sinAsignar > 0 && (
           <div className="mb-3 flex items-center gap-2 text-xs font-black text-aviso-800">
             <AlertTriangle size={15} />
@@ -240,6 +275,16 @@ export default function SociosCooperativistas() {
                         guardando={guardando === p.pedidoId}
                         onChange={(v) => asignar(p.pedidoId, 'montadorUserId', v)}
                       />
+                      {p.sugerencia && (
+                        <button
+                          onClick={() => asignar(p.pedidoId, 'montadorUserId', p.sugerencia.montadorUserId)}
+                          disabled={guardando === p.pedidoId}
+                          className="mt-1 text-[10px] font-bold text-accion-700 hover:underline text-left disabled:opacity-40"
+                          title={`La agenda dice que lo montó ${p.sugerencia.porque}`}
+                        >
+                          agenda: {p.sugerencia.nombre} →
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

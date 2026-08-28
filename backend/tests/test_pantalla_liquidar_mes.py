@@ -91,14 +91,27 @@ def test_las_ANOMALIAS_se_enseñan_antes_de_pagar():
     assert "anomalia" in cuerpo and "sin estar cobrado" in cuerpo
 
 
-def test_la_pantalla_SE_ABRE_y_solo_para_el_master():
+def test_la_pantalla_SE_ABRE_desde_COOP_y_solo_para_el_master():
+    """El master, 28/08: «un botón que en vez de poner socios ponga COOP».
+
+    Las dos pantallas de la cooperativa —asignar y liquidar— viven bajo ese
+    botón. Se comprueba que el botón existe, que está cerrado al master y que
+    dentro se llega a liquidar: una pantalla sin puerta no existe.
+    """
     cuerpo = _lee(APP)
-    assert "LiquidarMes" in cuerpo, "la pantalla no se importa: no hay forma de abrirla"
-    assert "liquidar-nav-btn" in cuerpo, "no hay botón en la barra"
+    assert "CoopPanel" in cuerpo, "el panel COOP no se importa: no hay forma de abrirlo"
+    assert "coop-nav-btn" in cuerpo, "no hay botón COOP en la barra"
+    assert ">COOP<" in cuerpo, (
+        "el botón ya no dice COOP en mayúsculas, que es como lo pidió el master")
+
     # Se busca el sitio que PINTA la pantalla, no el que colorea el botón: la
-    # primera aparición de `currentTab === 'liquidar'` es la del `className`,
-    # y comprobar esa dejaría pasar una pestaña abierta de par en par.
-    m = re.search(r"\{state\.currentTab === 'liquidar' &&([^\n]*)", cuerpo)
-    assert m, "no se pinta la pestaña de liquidar en ninguna parte"
+    # primera aparición de `currentTab === 'coop'` es la del `className`, y
+    # comprobar esa dejaría pasar una pestaña abierta de par en par.
+    m = re.search(r"\{state\.currentTab === 'coop' &&([^\n]*)", cuerpo)
+    assert m, "no se pinta el panel COOP en ninguna parte"
     assert "isMaster" in m.group(1), (
-        f"la pestaña de liquidar no está cerrada al master: {m.group(1)[:120]}")
+        f"el panel COOP no está cerrado al master: {m.group(1)[:120]}")
+
+    panel = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopPanel.jsx"))
+    assert "LiquidarMes" in panel and "SociosCooperativistas" in panel, (
+        "el panel COOP no lleva dentro las dos pantallas de la cooperativa")
