@@ -55,7 +55,7 @@ router = APIRouter(prefix="/plan-negocio", tags=["plan-negocio"], dependencies=_
 # manda desde `services/master.py`; aquí va el valor porque hay pruebas que
 # ejecutan trozos de este fichero sueltos, y `test_calculo_master_unico.py`
 # comprueba que las copias no se separan.
-_MASTER_FLAGS = ("isPrimaryAdmin", "isMaster")
+_MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
 
 
 def _es_master(user: Optional[dict]) -> bool:

@@ -9,6 +9,7 @@ import GlobalEventReminder from './components/GlobalEventReminder';
 import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes, Calculator, Wallet } from 'lucide-react';
 import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
 import { esCooperativista } from '@/plataformas';
+import { MONTADA as PRE_MONTADA, DESMONTADA as PRE_DESMONTADA, puedeEntrar as puedeEntrarPresupuestador } from '@/presupuestador';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -59,6 +60,7 @@ const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Pre
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
 const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
 const CoopPanel = lazy(() => import('./components/CoopPanel')); // COOP: socios, pedidos y liquidación (master)
+const PresupuestadorPanel = lazy(() => import('./components/PresupuestadorPanel')); // Presupuestador: Cocina Montada + Desmontada
 
 
 
@@ -1336,16 +1338,19 @@ const App = () => {
                     </button>
                     )}
 
-                    {/* Presupuestador 3 (Relación Directa MV por Códigos) */}
-                    {(state.currentUser?.canUsePresupuestador3 !== false) && (
+                    {/* PRESUPUESTADOR: Cocina Montada y Cocina Desmontada, que son
+                        las dos formas de presupuestar una cocina, bajo una sola
+                        puerta (master, 28/08). Quién ve qué pestaña lo decide
+                        `presupuestador.js`, con los permisos de SIEMPRE. */}
+                    {puedeEntrarPresupuestador(state.currentUser) && (
                       <button
-                        onClick={() => setState(p => ({...p, currentTab: 'cocinaMontada3'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinaMontada3' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        title="Cocina Montada 3: Presupuestación rápida por relación y códigos"
-                        data-testid="cocina-montada-3-nav-btn"
+                        onClick={() => setState(p => ({...p, currentTab: 'presupuestador', presupuestadorTab: undefined}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        title="Presupuestador: Cocina Montada y Cocina Desmontada"
+                        data-testid="presupuestador-nav-btn"
                       >
                         <Layers size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada 3</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Presupuestador</span>
                       </button>
                     )}
 
@@ -1369,17 +1374,6 @@ const App = () => {
                       >
                         <Layers size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Resumen Tot.</span>
-                      </button>
-                    )}
-
-                    {/* Presupuestador de Cascos - permiso específico */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUseCascos === true && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'cascos'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cascos' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <Box size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Desmontada</span>
                       </button>
                     )}
 

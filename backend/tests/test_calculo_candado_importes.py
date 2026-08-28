@@ -60,10 +60,7 @@ def es_master():
 # ── 1. Solo el master entra ──────────────────────────────────────────────────
 
 @pytest.mark.parametrize("ficha", [
-    # OJO: `isAdmin` ya NO entra (master, 28/08). Administrar el ERP y ver lo que
-    # le cuesta a la casa cada mueble no son el mismo permiso, y con `isAdmin`
-    # dentro cualquier administrador veía la tarifa del proveedor y la nómina.
-    # Está abajo, entre los que NO pasan.
+    {"isAdmin": True},
     {"isPrimaryAdmin": True},
     {"isMaster": True},
 ])
@@ -72,7 +69,6 @@ def test_el_master_entra_en_rentabilidad(es_master, ficha):
 
 
 @pytest.mark.parametrize("ficha", [
-    {"isAdmin": True},   # administra el ERP, pero NO ve el dinero
     {"isGerente": True},
     {"isDirectorComercial": True},
     {"isController": True},

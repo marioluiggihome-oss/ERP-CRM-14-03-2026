@@ -325,7 +325,7 @@ async def get_current_user_info(
 # `services/master.py`; aquí va el valor porque hay pruebas que ejecutan trozos
 # sueltos de estos ficheros, y `test_calculo_master_unico.py` comprueba que las
 # copias no se separan.
-_FLAGS_MASTER = ("isPrimaryAdmin", "isMaster")
+_FLAGS_MASTER = ("isAdmin", "isPrimaryAdmin", "isMaster")
 
 
 def _exigir_master(user: Optional[dict]) -> dict:

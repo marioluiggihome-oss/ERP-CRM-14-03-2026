@@ -33,13 +33,23 @@ from __future__ import annotations
 
 from typing import Optional
 
-# Los dos únicos que abren la puerta del dinero. `isAdmin` NO está, y no es un
-# olvido: ver el ERP no es ver lo que gana la casa.
-FLAGS_MASTER = ("isPrimaryAdmin", "isMaster")
+# QUIÉN ABRE LA PUERTA DEL DINERO.
+#
+# El 28/08 se quitó `isAdmin` de esta lista y HUBO QUE DEVOLVERLO EL MISMO DÍA.
+# La idea era buena —administrar el ERP y ver lo que le cuesta a la casa cada
+# mueble no son el mismo permiso— pero la cuenta con la que trabaja el master
+# es `isAdmin`, así que al apretarlo se quedó fuera de su propia tarifa: Cocina
+# Montada 3 dejó de poder leer los precios MV y TODA la relación salía a
+# 0,00 €. Un presupuesto a cero es lo peor que puede pasar aquí: no da error,
+# se puede imprimir y se puede enviar.
+#
+# La lección no es que la idea fuera mala, es el orden: primero se marca
+# `isPrimaryAdmin` o `isMaster` a quien tenga que entrar, se comprueba que
+# entra, y DESPUÉS se estrecha la lista. Al revés se echa a la calle al dueño.
+FLAGS_MASTER = ("isAdmin", "isPrimaryAdmin", "isMaster")
 
-# Lo que era antes. Se deja escrito para que quede claro qué se quitó y cuándo,
-# y para que el candado pueda comprobar que `isAdmin` sigue fuera.
-FLAGS_ANTIGUOS = ("isAdmin", "isPrimaryAdmin", "isMaster")
+# Hacia dónde se quería ir, para cuando se retome con las cuentas ya marcadas.
+FLAGS_ESTRECHOS = ("isPrimaryAdmin", "isMaster")
 
 
 def es_master(user: Optional[dict]) -> bool:

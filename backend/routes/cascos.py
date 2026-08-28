@@ -262,7 +262,7 @@ async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depen
 # manda desde `services/master.py`; aquí va el valor porque hay pruebas que
 # ejecutan trozos de este fichero sueltos, y `test_calculo_master_unico.py`
 # comprueba que las copias no se separan.
-_MASTER_FLAGS = ("isPrimaryAdmin", "isMaster")
+_MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
 
 
 def _es_master(user: Optional[dict]) -> bool:
