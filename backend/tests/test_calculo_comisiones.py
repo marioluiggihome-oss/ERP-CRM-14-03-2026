@@ -349,6 +349,72 @@ def test_la_pantalla_calcula_la_base_imponible_antes_del_tramo():
         "hay un IVA metido en el cálculo de la comisión")
 
 
+def test_la_ESCALA_QUE_SE_EXPLICA_en_pantalla_sale_de_la_tabla(tmp_path):
+    """El párrafo que explica las comisiones tiene que decir la escala de VERDAD.
+
+    Estaba escrito a mano y se quedó atrás: decía «20 € por debajo de 2.500 €,
+    30 € hasta 6.000 €, 40 € por encima; tope de 50 €» cuando ya había seis
+    tramos y el tope era de 70 €. Los importes que se pagaban eran los buenos
+    —eso ya lo vigilaba el candado de al lado, que compara las FUNCIONES—, así
+    que el CI estuvo en verde con la explicación mintiendo. Y en nómina eso es
+    peor que no explicar nada: el comercial que lo lee se fía y hace cuentas con
+    una escala que no existe.
+
+    Aquí se EJECUTA en node la frase de la pantalla y se comprueba, tramo a
+    tramo, que nombra todas las cantidades y todas las fronteras del cálculo.
+    """
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no hay node en esta máquina")
+
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ruta = os.path.join(raiz, "frontend", "src", "components", "RentabilidadMV.jsx")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+
+    trozos = []
+    for marca, fin in (
+        ("export const TRAMOS_COMISION_COMERCIAL = [", "];"),
+        ("export const TOPE_COMISION_POR_MUEBLE = ", ";"),
+        ("const eurosDelTramo = ", ";\n"),
+        ("export const escalaDeComisionEnPalabras = ", "\n};"),
+    ):
+        assert marca in cuerpo, f"ya no está «{marca.strip()}» en la pantalla"
+        i = cuerpo.index(marca)
+        j = cuerpo.index(fin, i) + len(fin)
+        trozos.append(cuerpo[i:j].replace("export const", "const", 1))
+
+    guion = tmp_path / "escala.mjs"
+    guion.write_text("\n".join(trozos)
+                     + "\nconsole.log(JSON.stringify(escalaDeComisionEnPalabras()));\n",
+                     encoding="utf-8")
+    salida = subprocess.run([node, str(guion)], capture_output=True, text=True, timeout=60)
+    assert salida.returncode == 0, (
+        f"la frase de la escala no corre: {salida.stderr.strip()}")
+    frase = json.loads(salida.stdout)
+
+    # Todas las cantidades por mueble que paga el cálculo tienen que aparecer.
+    for _, euros in C.TRAMOS_COMERCIAL:
+        assert f"{int(euros)} €" in frase, (
+            f"la explicación no nombra los {int(euros)} € por mueble que sí se "
+            f"pagan. Dice: «{frase}»")
+    # Y todas las fronteras, con el punto de los miles.
+    for tope, _ in C.TRAMOS_COMERCIAL:
+        if tope is None:
+            continue
+        assert C._euros(tope) in frase, (
+            f"la explicación no nombra la frontera de {C._euros(tope)}. "
+            f"Dice: «{frase}»")
+    # El tope, que es el que se quedó en 50 € mientras la escala subía a 70.
+    assert f"tope de {int(C.TOPE_COMERCIAL_POR_MUEBLE)} €" in frase, (
+        f"la explicación no dice el tope de verdad ({int(C.TOPE_COMERCIAL_POR_MUEBLE)} €). "
+        f"Dice: «{frase}»")
+
+
 def test_la_pantalla_PAGA_Y_ROTULA_igual_que_el_calculo(tmp_path):
     """El candado fuerte: se EJECUTA el código de la pantalla y se compara.
 

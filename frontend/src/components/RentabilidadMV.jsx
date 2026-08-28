@@ -222,6 +222,26 @@ const eurosDelTramo = (v) => `${String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\
  * explicación mintiendo, que es peor que no explicar nada. Derivándolo, añadir
  * un tramo no puede desincronizar el rótulo.
  */
+/**
+ * La escala entera en una frase, DERIVADA de la tabla.
+ *
+ * El párrafo que explicaba esto estaba escrito a mano y se quedó atrás: decía
+ * «20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima; tope de
+ * 50 €» cuando ya había seis tramos y el tope era de 70 €. Es el mismo fallo
+ * que ya tuvo el rótulo del tramo, y el mismo arreglo: si la escala se escribe
+ * a mano en algún sitio, ese sitio acaba mintiendo. Y en nómina, una
+ * explicación que miente es peor que ninguna, porque quien la lee se fía.
+ */
+export const escalaDeComisionEnPalabras = () => {
+  const partes = TRAMOS_COMISION_COMERCIAL.map((t, i) => {
+    const euros = `${Math.min(t.euros, TOPE_COMISION_POR_MUEBLE)} €`;
+    if (t.hasta === null) return `${euros} por encima`;
+    if (i === 0) return `${euros} por debajo de ${eurosDelTramo(t.hasta)}`;
+    return `${euros} hasta ${eurosDelTramo(t.hasta)}`;
+  });
+  return `${partes.join(', ')}; tope de ${TOPE_COMISION_POR_MUEBLE} € por mueble`;
+};
+
 export const nombreDelTramo = (valoracion) => {
   const v = Number(valoracion) || 0;
   let anterior = null;
@@ -1259,9 +1279,8 @@ export default function RentabilidadMV({ esMaster, seed }) {
               </div>
               <p className="text-[10px] text-slate-400 mt-2">
                 Comercial: cantidad fija por mueble según la BASE IMPONIBLE del pedido
-                —el PVP tras el descuento, sin IVA—
-                (20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima;
-                tope de 50 €). Montadores: la mano de obra por mueble que hay puesta
+                —el PVP tras el descuento, sin IVA— ({escalaDeComisionEnPalabras()}).
+                Montadores: la mano de obra por mueble que hay puesta
                 arriba. Los importes van con el mismo candado que el margen.
               </p>
             </div>
