@@ -5,6 +5,7 @@
  * escrita del titular.
  */
 import React, { useState, useMemo, useEffect } from 'react';
+import { COOPERATIVA as PLATAFORMA_COOPERATIVA, TODAS as PLATAFORMAS, NOMBRES as NOMBRES_PLATAFORMA } from '@/plataformas';
 import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers, Factory, Percent, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI, authHeaders } from '../services/api';
@@ -154,6 +155,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isPrescriptor: false,
     isTienda: false,  // Tienda/Punto de Venta
     isMontador: false,  // Montador/Instalador
+    plataforma: PLATAFORMA_COOPERATIVA,  // cooperativa | carpinter | studio3k
+    esCooperativistaComercial: false,  // socio: cobra por tramos
+    esCooperativistaMontador: false,   // socio: cobra mano de obra
+    manoObraPorMueble: null,           // su € por mueble; null = la de la casa
     isCarpintero: false,  // Carpintero/Ebanista (portal con landing propia)
     canManageCarpinteroUsers: false,  // Admin de división: crea sus propios usuarios
     carpinteroLandingUrl: '',  // URL de la web de inicio del portal carpinteros
@@ -800,6 +805,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isPrescriptor: false,
       isTienda: false,
       isMontador: false,
+      plataforma: PLATAFORMA_COOPERATIVA,
+      esCooperativistaComercial: false,
+      esCooperativistaMontador: false,
+      manoObraPorMueble: null,
       isCarpintero: false,
       canManageCarpinteroUsers: false,
       carpinteroLandingUrl: '',
@@ -874,7 +883,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       linkedClientCodigo: user.linkedClientCodigo || '',
       allowedLibraries: user.allowedLibraries || ['ZC'],
       provinciaCode: user.provinciaCode || '',
-      accessExpirationDate: user.accessExpirationDate || ''
+      accessExpirationDate: user.accessExpirationDate || '',
+      // Los usuarios de antes del 27/08 no traen plataforma: son de la
+      // cooperativa, el negocio de siempre. Mismo defecto que el servidor.
+      plataforma: user.plataforma || PLATAFORMA_COOPERATIVA,
+      // Socio se marca: nadie lo es por defecto (master, 27/08).
+      esCooperativistaComercial: !!user.esCooperativistaComercial,
+      esCooperativistaMontador: !!user.esCooperativistaMontador,
+      // `?? null` y no `|| null`: un 0 puesto a propósito por el master
+      // es una decisión suya y no se puede caer al valor de la casa.
+      manoObraPorMueble: user.manoObraPorMueble ?? null
     });
   };
 
@@ -2193,6 +2211,101 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <span className="text-[10px] text-slate-500">Sistema Tarifas T1-T21</span>
                           </div>
                         </label>
+                      </div>
+                    </div>
+
+                    {/* PLATAFORMA. Tres negocios comparten este ERP «de momento» y solo
+                        uno tiene cooperativistas: cambiar esto decide si el usuario
+                        puede cobrar comisiones, no solo qué ve. Por eso está aquí
+                        arriba, con su explicación, y no escondido como una casilla
+                        más. Ver services/plataformas.py. */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <h4 className="text-sm font-black text-slate-800 uppercase mb-1">Plataforma</h4>
+                      <p className="text-[11px] text-slate-500 mb-2">
+                        A qué negocio pertenece este usuario. Solo la red de distribución
+                        tiene socios cooperativistas y comisiones: carpinter.io y Studio3K
+                        venden suscripciones.
+                      </p>
+                      <select
+                        value={userForm.plataforma || PLATAFORMA_COOPERATIVA}
+                        onChange={(e) => setUserForm({...userForm, plataforma: e.target.value})}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-slate-800 bg-white"
+                        data-testid="user-plataforma-select"
+                      >
+                        {PLATAFORMAS.map((k) => (
+                          <option key={k} value={k}>{NOMBRES_PLATAFORMA[k]}</option>
+                        ))}
+                      </select>
+
+                      {/* SOCIO COOPERATIVISTA. Se marca aquí, y solo aquí: no se
+                          deduce de «Montador» ni de «Comercial», que son los roles
+                          genéricos del ERP y los tiene medio mundo. Estas dos
+                          casillas son las ÚNICAS que reparten comisión. */}
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <p className="text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1">
+                          Socio cooperativista
+                        </p>
+                        <p className="text-[11px] text-slate-500 mb-2">
+                          Solo estos dos roles cobran comisión y ven «Mi área». El resto
+                          —incluidos el comercial y el montador en nómina— son
+                          independientes y no llevan compensación.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer bg-white px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={!!userForm.esCooperativistaComercial}
+                              onChange={(e) => setUserForm({...userForm, esCooperativistaComercial: e.target.checked})}
+                              className="w-4 h-4 rounded accent-ok-600"
+                              data-testid="cooperativista-comercial-checkbox"
+                            />
+                            <span title="Socio comercial: cobra por tramos según la valoración del pedido." className="text-xs font-bold text-slate-700">Comercial cooperativista</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer bg-white px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={!!userForm.esCooperativistaMontador}
+                              onChange={(e) => setUserForm({...userForm, esCooperativistaMontador: e.target.checked})}
+                              className="w-4 h-4 rounded accent-ok-600"
+                              data-testid="cooperativista-montador-checkbox"
+                            />
+                            <span title="Socio montador: cobra la mano de obra por mueble." className="text-xs font-bold text-slate-700">Montador cooperativista</span>
+                          </label>
+                        </div>
+                        {/* SU mano de obra por mueble. Vacío = cobra la de la casa.
+                            Se deja vacío a propósito en vez de precargar los 17: un
+                            número escrito ahí parece una decisión tomada para esta
+                            persona, y no lo es. */}
+                        {userForm.esCooperativistaMontador && (
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-slate-600">
+                              Su mano de obra por mueble montado:
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={userForm.manoObraPorMueble ?? ''}
+                              placeholder="la de la casa"
+                              onChange={(e) => setUserForm({
+                                ...userForm,
+                                manoObraPorMueble: e.target.value === '' ? null : Number(e.target.value),
+                              })}
+                              className="w-28 px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-slate-800 bg-white"
+                              data-testid="mano-obra-montador-input"
+                            />
+                            <span className="text-[11px] text-slate-500">
+                              € · en blanco cobra la de la casa
+                            </span>
+                          </div>
+                        )}
+                        {userForm.plataforma && userForm.plataforma !== PLATAFORMA_COOPERATIVA
+                          && (userForm.esCooperativistaComercial || userForm.esCooperativistaMontador) && (
+                          <p className="text-[11px] text-aviso-700 font-bold mt-2">
+                            Ojo: está marcado como socio cooperativista, pero al no ser de la
+                            red de distribución NO cobrará comisiones ni verá «Mi área».
+                          </p>
+                        )}
                       </div>
                     </div>
 

@@ -145,6 +145,12 @@ export const RULES = {
 };
 export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
 
+// La mano de obra por mueble montado. Se exporta para que el candado la
+// compare con `comisiones.MANO_DE_OBRA_POR_DEFECTO` del backend: si se
+// separan, la pantalla calcula el margen con una cifra y la nomina paga con
+// otra, y nadie ve un error.
+export const MANO_DE_OBRA_POR_DEFECTO = 17;
+
 // Costes por defecto de componentes MV (editables en la UI de Rentabilidad)
 export const MV_COSTES_DEFAULT = {
   doorM2: 26,       // € por m² de puerta (tarifa base)
@@ -152,7 +158,10 @@ export const MV_COSTES_DEFAULT = {
   pata4: 0.64,      // € por juego de 4 patas
   colgador: 3.50,   // € por colgador de mueble alto (2 por mueble)
   soporte: 0.30,    // € por soporte/balda (4 por balda)
-  mano: 20,         // € mano de obra por mueble
+  // 17 € por mueble MONTADO (master, 28/08). Es la cifra de la casa: cada
+  // montador puede tener la suya en su ficha, y esa es la que cobra
+  // (backend `services/comisiones.py`, `mano_de_obra_de`).
+  mano: MANO_DE_OBRA_POR_DEFECTO,
   cajon: 41.34,     // € por cajón
   gaveta: 54.37,    // € por gaveta
   dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
@@ -222,6 +231,26 @@ const eurosDelTramo = (v) => `${String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\
  * explicación mintiendo, que es peor que no explicar nada. Derivándolo, añadir
  * un tramo no puede desincronizar el rótulo.
  */
+/**
+ * La escala entera en una frase, DERIVADA de la tabla.
+ *
+ * El párrafo que explicaba esto estaba escrito a mano y se quedó atrás: decía
+ * «20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima; tope de
+ * 50 €» cuando ya había seis tramos y el tope era de 70 €. Es el mismo fallo
+ * que ya tuvo el rótulo del tramo, y el mismo arreglo: si la escala se escribe
+ * a mano en algún sitio, ese sitio acaba mintiendo. Y en nómina, una
+ * explicación que miente es peor que ninguna, porque quien la lee se fía.
+ */
+export const escalaDeComisionEnPalabras = () => {
+  const partes = TRAMOS_COMISION_COMERCIAL.map((t, i) => {
+    const euros = `${Math.min(t.euros, TOPE_COMISION_POR_MUEBLE)} €`;
+    if (t.hasta === null) return `${euros} por encima`;
+    if (i === 0) return `${euros} por debajo de ${eurosDelTramo(t.hasta)}`;
+    return `${euros} hasta ${eurosDelTramo(t.hasta)}`;
+  });
+  return `${partes.join(', ')}; tope de ${TOPE_COMISION_POR_MUEBLE} € por mueble`;
+};
+
 export const nombreDelTramo = (valoracion) => {
   const v = Number(valoracion) || 0;
   let anterior = null;
@@ -1259,9 +1288,8 @@ export default function RentabilidadMV({ esMaster, seed }) {
               </div>
               <p className="text-[10px] text-slate-400 mt-2">
                 Comercial: cantidad fija por mueble según la BASE IMPONIBLE del pedido
-                —el PVP tras el descuento, sin IVA—
-                (20 € por debajo de 2.500 €, 30 € hasta 6.000 €, 40 € por encima;
-                tope de 50 €). Montadores: la mano de obra por mueble que hay puesta
+                —el PVP tras el descuento, sin IVA— ({escalaDeComisionEnPalabras()}).
+                Montadores: la mano de obra por mueble que hay puesta
                 arriba. Los importes van con el mismo candado que el margen.
               </p>
             </div>

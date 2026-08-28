@@ -208,7 +208,20 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 16. **Las COMISIONES de los cooperativistas son NÓMINA: los números los dicta
    el master** (25/08). Montadores: su comisión ES la mano de obra por mueble
    que ya se teclea en Rentabilidad MV — no tiene fórmula propia a propósito,
-   porque dos números para lo mismo acaban sin cuadrar. Comerciales: cantidad
+   porque dos números para lo mismo acaban sin cuadrar. Son **17 € por mueble
+   montado** (master, 28/08; antes eran 20) y **cada montador puede tener la
+   suya**: manda la de su ficha, si no la de la casa, si no los 17.
+   `comisiones.mano_de_obra_de()` lo resuelve en un solo sitio. Un **0 puesto a
+   propósito se respeta**: se mira si la cifra ESTÁ, no si es verdadera — las
+   rutas lo leían con `float(... or 0)`, y con un `or` ese 0 se cae al escalón
+   siguiente y el montador cobra los 17 € cuando el master había decidido que
+   no cobra (en un pedido de 40 muebles, 680 € que no se recuperan). Una cifra
+   corrupta tampoco cae en el defecto: cae en el escalón siguiente, para que un
+   dato roto no invente una nómina. La pantalla de Rentabilidad calcula el
+   margen con esta misma cifra y el candado compara las dos, porque si se
+   separan la pantalla enseña un margen y la nómina paga otra cosa sin que
+   ninguno de los dos números parezca un error
+   (`test_calculo_mano_de_obra_montador.py`). Comerciales: cantidad
    FIJA por mueble según la valoración del pedido: **20 € por debajo de
    2.500 €, 30 € hasta 6.000 €, 40 € hasta 9.000 €, 50 € hasta 12.000 €, 60 €
    hasta 15.000 € y 70 € por encima**, con un tope de 70 € por mueble (el tope
@@ -358,6 +371,56 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      produce campos de dinero, así que el recorte no se ejercía nunca y quitarlo
      entero dejaba el CI en verde—. Ahora se fuerza a que la capa de abajo
      devuelva coste y margen para comprobar que el panel los corta de verdad.
+
+21. **TRES PLATAFORMAS EN EL MISMO ERP, Y SOLO UNA REPARTE COMISIONES**
+   (27/08). El master: «carpinter.io y Studio3K son solo para vender
+   suscripciones a usuarios que pagan... no tienen nada que ver con el negocio
+   de los cooperativistas, son plataformas independientes aunque las tengamos
+   metidas en la misma gestión del ERP de momento». El campo es
+   `plataforma`: `cooperativa` · `carpinter` · `studio3k`
+   (`services/plataformas.py`).
+   - **La plataforma se comprueba ANTES que el rol.** Las tres comparten la
+     colección de usuarios, y ahí está el peligro: «comercial» significa cosas
+     distintas en cada negocio. Basta un clic en la pantalla de permisos —marcar
+     comercial a un suscriptor de carpinter.io— para que empiece a salir en la
+     liquidación cobrando comisiones de la cooperativa. No hace falta mala fe.
+     Ser comercial no basta: hay que ser comercial DE LA COOPERATIVA.
+   - **SER SOCIO SE MARCA, NO SE DEDUCE DEL ROL** (27/08, corrigiendo la
+     primera versión). El master: «no todos son de la cooperativa. Comercial
+     cooperativista sí, montador cooperativista también. Los demás son
+     independientes. El rol de comisiones solamente es para estos dos». La
+     primera versión sacaba el socio de `isMontador` / `isRepresentative`, y ahí
+     estaba el dinero: `isRepresentative` es el comercial de toda la vida de la
+     casa —hay comerciales sembrados con ese flag en `seed_comerciales.py`— e
+     `isMontador` es el de la agenda de montajes. Con aquello entraba en la
+     liquidación medio ERP sin que nadie lo hubiera decidido. Ahora hacen falta
+     las dos cosas: estar en la cooperativa Y llevar la marca
+     (`esCooperativistaComercial` / `esCooperativistaMontador`).
+   - **Son DOS marcas y no una casilla «es cooperativista»** porque el rol
+     decide CÓMO se paga: el comercial por tramos según la valoración, el
+     montador la mano de obra por mueble. Quien lleve las dos entra como
+     MONTADOR, que es el rol que no deja deducir el PVP del pedido.
+   - **El defecto es `cooperativa`, y eso es una decisión, no un descuido.**
+     Todos los usuarios que existen hoy son del negocio de siempre y ninguno
+     trae el campo. Con cualquier otro defecto, el día del despliegue los
+     cooperativistas de verdad se quedarían sin su área sin que nadie hubiera
+     tocado un solo usuario — y el error se vería en la nómina de fin de mes, no
+     en el CI. Ojo: el defecto es de PLATAFORMA, no de socio. Nadie cobra por
+     defecto; ser de la cooperativa es condición necesaria y no suficiente. Un valor que no se reconozca también cae en `cooperativa`: mejor
+     un usuario mal etiquetado en el negocio de siempre, donde alguien lo verá,
+     que en un limbo del que no sale en ninguna lista.
+   - **El menú es una sugerencia; quien cierra es el servidor.**
+     `frontend/src/plataformas.js` es una copia en pantalla para poder decidir
+     si se enseña «Mi área» sin llamar a nadie. Copia que no se compara se
+     separa, así que el candado EJECUTA en node las funciones del JS y las
+     compara con las del backend usuario a usuario. Si se separan, o el
+     suscriptor ve un botón que le da 403, o —lo que de verdad importa— el
+     cooperativista pierde el suyo y nadie se entera hasta que pregunta.
+   - **La pantalla se abre desde el menú Y desde la bienvenida.** Una pantalla
+     sin puerta no existe: `AreaCooperativista.jsx` estuvo escrita, con sus
+     rutas y sus candados, y sin un solo sitio desde el que abrirla.
+   - Candados: `test_calculo_plataformas.py` y los tres del enlace en
+     `test_pantalla_area_cooperativista.py`.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

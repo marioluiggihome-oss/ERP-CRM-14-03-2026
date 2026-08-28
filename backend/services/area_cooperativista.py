@@ -37,6 +37,7 @@ from typing import Iterable, Optional
 
 from services import comisiones as C
 from services import liquidaciones as L
+from services import plataformas as P
 
 COMERCIAL = L.COMERCIAL
 MONTADOR = L.MONTADOR
@@ -49,18 +50,35 @@ CAMPOS_VISIBLES = ("pedidoId", "estado", "euros", "muebles", "periodo",
 
 
 def rol_de(user: Optional[dict]) -> Optional[str]:
-    """Con qué sombrero entra. `None` si no es cooperativista.
+    """Con qué sombrero entra. `None` si no es SOCIO cooperativista.
 
-    Un usuario puede ser las dos cosas (un montador que además vende). Se
-    devuelve el rol de MONTADOR primero por ser el más restrictivo en importes:
-    su comisión es la mano de obra, que no depende de la valoración del pedido y
-    por tanto no deja deducir nada del PVP.
+    SER COOPERATIVISTA SE MARCA, NO SE DEDUCE DEL ROL DEL ERP (master, 27/08):
+    «comercial cooperativista sí, montador cooperativista también; los demás son
+    independientes; el rol de comisiones solamente es para estos dos».
+
+    La primera versión miraba `isMontador` / `isRepresentative`, y eso metía en
+    la nómina al comercial y al montador de toda la vida de la casa, que son
+    roles genéricos del ERP y no socios. Ahora hacen falta las dos cosas: estar
+    en la cooperativa Y llevar la marca de socio.
+
+    Un socio puede ser las dos cosas (un montador que además vende). Se devuelve
+    MONTADOR primero por ser el más restrictivo en importes: su comisión es la
+    mano de obra, que no depende de la valoración del pedido y por tanto no deja
+    deducir nada del PVP.
     """
     if not user:
         return None
-    if user.get("isMontador"):
+    # LA PLATAFORMA MANDA SOBRE EL ROL. carpinter.io y Studio3K son negocios de
+    # suscripción que comparten este ERP «de momento»: un suscriptor marcado
+    # como cooperativista sigue siendo un suscriptor. Se comprueba aquí, antes
+    # que nada, porque este es el único sitio por el que se entra al área y a la
+    # liquidación. (`es_cooperativista_*` ya lo comprueba; se deja explícito
+    # porque este orden —plataforma primero— es la regla, no un detalle.)
+    if not P.puede_tener_comision(user):
+        return None
+    if P.es_cooperativista_montador(user):
         return MONTADOR
-    if user.get("isComercial") or user.get("isRepresentative"):
+    if P.es_cooperativista_comercial(user):
         return COMERCIAL
     return None
 

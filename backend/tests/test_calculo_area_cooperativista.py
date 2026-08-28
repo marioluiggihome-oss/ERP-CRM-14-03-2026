@@ -39,8 +39,13 @@ from services import area_cooperativista as AC  # noqa: E402
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUTA = os.path.join(RAIZ, "routes", "cooperativistas.py")
 
-MONTADOR = {"id": "u-mon", "isMontador": True}
-COMERCIAL = {"id": "u-com", "isRepresentative": True}
+# SOCIO SE MARCA, NO SE DEDUCE (master, 27/08): «comercial cooperativista sí,
+# montador cooperativista también; los demás son independientes». Estas fixtures
+# traían el rol genérico del ERP —`isMontador`, `isRepresentative`—, que es el
+# montador de la agenda y el comercial de toda la vida de la casa. Con eso
+# cobraba comisión medio ERP, así que ahora llevan la marca de socio.
+MONTADOR = {"id": "u-mon", "esCooperativistaMontador": True}
+COMERCIAL = {"id": "u-com", "esCooperativistaComercial": True}
 GERENTE = {"id": "u-ger", "isGerente": True}
 
 

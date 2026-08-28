@@ -26,6 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from routes.cascos import _es_master
 from services import area_cooperativista as AC
+from services import comisiones as C
 from services import liquidaciones as L
 from services.jwt_service import get_current_user
 
@@ -59,9 +60,10 @@ async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
         # propia a propósito: dos números para lo mismo acaban sin cuadrar.
         try:
             aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
-            mano = float(aj.get("manoObraPorMueble") or 0)
+            # Su cifra si la tiene, si no la de la casa (services/comisiones.py).
+            mano = C.mano_de_obra_de(current_user, aj)
         except Exception:                                    # noqa: BLE001
-            mano = 0.0
+            mano = C.mano_de_obra_de(current_user)
 
     return {"success": True, "area": AC.panel_de(current_user, pedidos, mano)}
 
@@ -120,6 +122,7 @@ async def liquidacion(periodo: str, usuario: str,
     mano = 0.0
     if rol == AC.MONTADOR:
         aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
-        mano = float(aj.get("manoObraPorMueble") or 0)
+        # La del montador que se está liquidando, no la de quien mira.
+        mano = C.mano_de_obra_de(u, aj)
     normalizados = [AC.normaliza_pedido(p, mano) for p in pedidos]
     return {"success": True, "liquidacion": L.liquidacion_del_mes(normalizados, rol, periodo)}

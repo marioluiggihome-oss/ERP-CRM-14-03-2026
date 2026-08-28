@@ -122,3 +122,67 @@ def test_las_ANOMALIAS_se_cuentan_y_se_explican():
     cuerpo = _lee()
     assert "anomalia" in cuerpo and "sin estar cobrados" in cuerpo, (
         "la pantalla no enseña los pedidos marcados como anomalía")
+
+
+# ── EL ENLACE DEL MENÚ ────────────────────────────────────────────────────────
+#
+# El master lo pidió por su nombre el 25/08: «el enlace en el menú tienes que
+# crear en la red de distribución varias cosas que vamos a diferenciar». Una
+# pantalla sin puerta no existe: `AreaCooperativista.jsx` estuvo escrita, con
+# sus rutas y sus candados, y sin un solo sitio desde el que abrirla.
+#
+# Estas tres pruebas vigilan las tres mitades del enlace: que esté en la barra,
+# que esté en la pantalla de bienvenida, y que las dos decidan quién lo ve con
+# la MISMA regla que el servidor —nunca con una copia escrita a mano—.
+
+APP = os.path.join(RAIZ, "frontend", "src", "App.js")
+BIENVENIDA = os.path.join(RAIZ, "frontend", "src", "components", "WelcomeScreen.jsx")
+
+
+def _lee_ruta(ruta):
+    with open(ruta, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def test_el_AREA_SE_ABRE_desde_la_barra_de_menu():
+    cuerpo = _lee_ruta(APP)
+    assert "AreaCooperativista" in cuerpo, (
+        "la pantalla del cooperativista no se importa en App.js: está escrita y "
+        "no hay forma de abrirla")
+    assert "mi-area-nav-btn" in cuerpo, "no hay botón de «Mi área» en la barra"
+    assert "currentTab === 'miArea'" in cuerpo, (
+        "el botón no lleva a ninguna parte: falta pintar la pestaña")
+
+
+def test_el_AREA_esta_tambien_en_la_pantalla_de_BIENVENIDA():
+    """Es por donde entra todo el mundo al abrir el ERP. Un montador que solo
+    tenga esto no debería tener que buscarlo en una barra de iconos."""
+    cuerpo = _lee_ruta(BIENVENIDA)
+    assert "'miArea'" in cuerpo, "«Mi área» no está entre los módulos de bienvenida"
+
+
+def test_QUIEN_VE_EL_ENLACE_lo_decide_la_regla_comun_y_no_una_copia_a_mano():
+    """Las dos pantallas preguntan a `plataformas.js`, que es lo que se compara
+    con el servidor en `test_calculo_plataformas.py`.
+
+    Si aquí se escribiera la condición a mano —`isMontador || isComercial`— el
+    menú le enseñaría «Mi área» a un suscriptor de carpinter.io, que al entrar
+    se comería un 403; y el día que la regla cambie, cambiaría en un sitio y no
+    en el otro. Es exactamente lo que ya pasó con el rótulo de los tramos de
+    comisión: el importe bien y la explicación mintiendo.
+    """
+    for ruta, nombre in ((APP, "App.js"), (BIENVENIDA, "WelcomeScreen.jsx")):
+        cuerpo = _lee_ruta(ruta)
+        assert "esCooperativista" in cuerpo, (
+            f"{nombre} no usa `esCooperativista` de plataformas.js")
+        assert "plataformas" in cuerpo, (
+            f"{nombre} no importa la regla común de plataformas")
+        # Y que no haya una condición escrita a mano al lado del botón.
+        i = cuerpo.find("miArea")
+        assert i != -1
+        alrededor = cuerpo[max(0, i - 400):i + 400]
+        for a_mano in ("isMontador", "isComercial", "isRepresentative"):
+            assert a_mano not in alrededor, (
+                f"{nombre} decide quién ve «Mi área» mirando `{a_mano}` a mano, "
+                "en vez de preguntarle a plataformas.js. Así es como el menú y "
+                "el servidor se separan.")

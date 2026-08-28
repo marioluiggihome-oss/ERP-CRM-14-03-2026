@@ -13,9 +13,12 @@ acabarían diciendo cosas distintas, y entonces alguien cobra de menos.
 MONTADORES
 ----------
 Su comisión ES la mano de obra que ya se teclea en la casilla de Rentabilidad
-MV (`MV_COSTES_DEFAULT.mano`, 20 € por mueble por defecto). No es un concepto
-nuevo ni un porcentaje: es ese importe, por mueble fabricado. Lo único que
-faltaba era sumarlo y llamarlo por su nombre.
+MV. No es un concepto nuevo ni un porcentaje: es ese importe, por mueble
+montado. Lo único que faltaba era sumarlo y llamarlo por su nombre.
+
+Son 17 € por mueble (master, 28/08) y CADA MONTADOR PUEDE TENER LA SUYA: el
+master le pone su cifra a quien haga falta y, si no se la pone, cobra la de la
+casa. Ver `mano_de_obra_de()`.
 
 COMERCIALES
 -----------
@@ -287,6 +290,40 @@ def comision_comercial(valoracion: float, muebles: int) -> dict:
         "total": round(por_mueble * uds, 2),
         "tramo": _nombre_del_tramo(valoracion),
     }
+
+
+# Lo que cobra un montador por mueble montado si nadie le ha puesto otra cosa.
+# El master, 28/08/2026: «la rentabilidad por mueble montado va a ser de 17
+# euros, no de 20». Vive aquí y no en la pantalla porque este fichero es el que
+# dice CUÁNTO se cobra (regla 16); la pantalla y los ajustes leen de aquí.
+MANO_DE_OBRA_POR_DEFECTO = 17.0
+
+
+def mano_de_obra_de(user: Optional[dict], ajustes: Optional[dict] = None) -> float:
+    """€ por mueble montado de ESE montador.
+
+    Manda lo que el master le haya puesto a él; si no tiene cifra propia, la de
+    la casa; y si tampoco hay ajuste, el valor por defecto.
+
+    OJO CON EL CERO. Se mira si la cifra ESTÁ, no si es verdadera: un 0 tecleado
+    a propósito por el master es una decisión suya y se respeta. Con un
+    `or` —que es como estaba escrito en las rutas— un 0 se caería al siguiente
+    escalón y el montador cobraría sin que nadie lo hubiera decidido, que es el
+    error que más caro sale: pagar de más no se devuelve.
+
+    Un valor que no sea un número (una casilla con texto, un `None` guardado
+    raro) NO cae en el defecto: cae en el escalón siguiente, para que un dato
+    corrupto no invente una nómina.
+    """
+    for fuente, clave in (((user or {}), "manoObraPorMueble"),
+                          ((ajustes or {}), "manoObraPorMueble")):
+        if clave not in fuente or fuente[clave] is None:
+            continue
+        try:
+            return max(0.0, float(fuente[clave]))
+        except (TypeError, ValueError):
+            continue
+    return MANO_DE_OBRA_POR_DEFECTO
 
 
 def comision_montadores(mano_por_mueble: float, muebles: int) -> dict:
