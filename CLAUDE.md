@@ -372,12 +372,28 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      comercial a un suscriptor de carpinter.io— para que empiece a salir en la
      liquidación cobrando comisiones de la cooperativa. No hace falta mala fe.
      Ser comercial no basta: hay que ser comercial DE LA COOPERATIVA.
+   - **SER SOCIO SE MARCA, NO SE DEDUCE DEL ROL** (27/08, corrigiendo la
+     primera versión). El master: «no todos son de la cooperativa. Comercial
+     cooperativista sí, montador cooperativista también. Los demás son
+     independientes. El rol de comisiones solamente es para estos dos». La
+     primera versión sacaba el socio de `isMontador` / `isRepresentative`, y ahí
+     estaba el dinero: `isRepresentative` es el comercial de toda la vida de la
+     casa —hay comerciales sembrados con ese flag en `seed_comerciales.py`— e
+     `isMontador` es el de la agenda de montajes. Con aquello entraba en la
+     liquidación medio ERP sin que nadie lo hubiera decidido. Ahora hacen falta
+     las dos cosas: estar en la cooperativa Y llevar la marca
+     (`esCooperativistaComercial` / `esCooperativistaMontador`).
+   - **Son DOS marcas y no una casilla «es cooperativista»** porque el rol
+     decide CÓMO se paga: el comercial por tramos según la valoración, el
+     montador la mano de obra por mueble. Quien lleve las dos entra como
+     MONTADOR, que es el rol que no deja deducir el PVP del pedido.
    - **El defecto es `cooperativa`, y eso es una decisión, no un descuido.**
      Todos los usuarios que existen hoy son del negocio de siempre y ninguno
      trae el campo. Con cualquier otro defecto, el día del despliegue los
      cooperativistas de verdad se quedarían sin su área sin que nadie hubiera
      tocado un solo usuario — y el error se vería en la nómina de fin de mes, no
-     en el CI. Un valor que no se reconozca también cae en `cooperativa`: mejor
+     en el CI. Ojo: el defecto es de PLATAFORMA, no de socio. Nadie cobra por
+     defecto; ser de la cooperativa es condición necesaria y no suficiente. Un valor que no se reconozca también cae en `cooperativa`: mejor
      un usuario mal etiquetado en el negocio de siempre, donde alguien lo verá,
      que en un limbo del que no sale en ninguna lista.
    - **El menú es una sugerencia; quien cierra es el servidor.**

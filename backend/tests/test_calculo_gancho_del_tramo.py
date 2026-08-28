@@ -97,7 +97,9 @@ def test_una_valoracion_absurda_no_revienta(basura):
 
 def _panel(pedidos):
     from services.area_cooperativista import panel_de
-    return panel_de({"id": "u1", "isRepresentative": True}, pedidos)
+    # Socio comercial: el rol genérico `isRepresentative` ya no basta (master,
+    # 27/08 — el comercial en nómina no cobra comisión).
+    return panel_de({"id": "u1", "esCooperativistaComercial": True}, pedidos)
 
 
 def _ped(pid, base, muebles):

@@ -182,6 +182,12 @@ class UserCreate(BaseModel):
     # usuarios que ya existen son del negocio de siempre. Ver
     # services/plataformas.py.
     plataforma: str = "cooperativa"
+    # SOCIO COOPERATIVISTA. Se marca, no se deduce del rol: `isRepresentative`
+    # es el comercial de toda la vida de la casa e `isMontador` el de la agenda
+    # de montajes, y ninguno de los dos es socio por serlo. El rol de comisiones
+    # es SOLO para estas dos marcas (master, 27/08). Ver services/plataformas.py.
+    esCooperativistaComercial: bool = False
+    esCooperativistaMontador: bool = False
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -228,6 +234,8 @@ class UserUpdate(BaseModel):
     isMontador: Optional[bool] = None  # Rol de montador
     montadorId: Optional[str] = None  # ID del montador asignado
     plataforma: Optional[str] = None  # cooperativa | carpinter | studio3k
+    esCooperativistaComercial: Optional[bool] = None  # socio: cobra por tramos
+    esCooperativistaMontador: Optional[bool] = None   # socio: cobra mano de obra
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas

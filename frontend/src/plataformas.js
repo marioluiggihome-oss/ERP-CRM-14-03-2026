@@ -49,11 +49,22 @@ export const esDeLaCooperativa = (u) => plataformaDe(u) === COOPERATIVA;
 export const puedeTenerComision = (u) => esDeLaCooperativa(u);
 
 /**
- * Quién ve «Mi área». Mismo orden que el servidor: primero la plataforma,
- * después el rol.
+ * SER COOPERATIVISTA SE MARCA, NO SE DEDUCE.
+ *
+ * El master, 27/08/2026: «no todos son de la cooperativa. Comercial
+ * cooperativista sí, montador cooperativista también. Los demás son
+ * independientes. El rol de comisiones solamente es para estos dos».
+ *
+ * La primera versión sacaba el socio del rol genérico del ERP (`isMontador`,
+ * `isRepresentative`), y con eso el comercial y el montador de toda la vida de
+ * la casa entraban en la nómina sin que nadie lo hubiera decidido.
  */
-export const esCooperativista = (u) => {
-  if (!u) return false;
-  if (!puedeTenerComision(u)) return false;
-  return !!(u.isMontador || u.isComercial || u.isRepresentative);
-};
+export const esCooperativistaMontador = (u) =>
+  !!(u && u.esCooperativistaMontador) && puedeTenerComision(u);
+
+export const esCooperativistaComercial = (u) =>
+  !!(u && u.esCooperativistaComercial) && puedeTenerComision(u);
+
+/** Quién ve «Mi área»: socio de la cooperativa, y nadie más. */
+export const esCooperativista = (u) =>
+  esCooperativistaMontador(u) || esCooperativistaComercial(u);

@@ -35,10 +35,18 @@ os.environ.setdefault("JWT_SECRET", "secreto-de-pruebas-largo-y-aleatorio-012345
 from services import area_cooperativista as AC          # noqa: E402
 from services import plataformas as P                    # noqa: E402
 
-COOPERATIVISTA = {"id": "u-coop", "isComercial": True}
-MONTADOR_COOP = {"id": "u-mon", "isMontador": True, "plataforma": "cooperativa"}
-SUSCRIPTOR_CARPINTER = {"id": "u-car", "isComercial": True, "plataforma": "carpinter"}
-SUSCRIPTOR_STUDIO3K = {"id": "u-s3k", "isMontador": True, "plataforma": "studio3k"}
+COOPERATIVISTA = {"id": "u-coop", "esCooperativistaComercial": True}
+MONTADOR_COOP = {"id": "u-mon", "esCooperativistaMontador": True,
+                 "plataforma": "cooperativa"}
+SUSCRIPTOR_CARPINTER = {"id": "u-car", "esCooperativistaComercial": True,
+                        "plataforma": "carpinter"}
+SUSCRIPTOR_STUDIO3K = {"id": "u-s3k", "esCooperativistaMontador": True,
+                       "plataforma": "studio3k"}
+
+# El comercial y el montador DE TODA LA VIDA de la casa. Tienen el rol genérico
+# del ERP y NO son socios: no cobran ni un euro de comisión.
+COMERCIAL_DE_LA_CASA = {"id": "u-com", "isComercial": True, "isRepresentative": True}
+MONTADOR_DE_LA_CASA = {"id": "u-mnt", "isMontador": True}
 
 # Un pedido aceptado, con sus líneas y con las dos manos puestas: el mismo
 # pedido le llega al cooperativista y al suscriptor, para que la única
@@ -78,7 +86,7 @@ def test_una_plataforma_QUE_NO_EXISTE_no_manda_al_usuario_a_un_limbo():
     """
     for basura in ("", "  ", "COOPERATIVA_X", "carpinteria", None, 7, [],
                    "cooperativa; drop"):
-        u = {"id": "u", "isComercial": True, "plataforma": basura}
+        u = {"id": "u", "esCooperativistaComercial": True, "plataforma": basura}
         assert P.plataforma_de(u) == P.COOPERATIVA, f"con «{basura}»"
         assert AC.rol_de(u) == AC.COMERCIAL, f"con «{basura}»"
 
@@ -91,7 +99,8 @@ def test_el_nombre_de_la_plataforma_NO_distingue_mayusculas():
     por una mayúscula.
     """
     for escrito in ("Carpinter", "CARPINTER", " carpinter ", "Studio3K", "STUDIO3K"):
-        u = {"id": "u", "isComercial": True, "isMontador": True, "plataforma": escrito}
+        u = {"id": "u", "esCooperativistaComercial": True,
+             "esCooperativistaMontador": True, "plataforma": escrito}
         assert not P.es_de_la_cooperativa(u), f"«{escrito}» ha caído en la cooperativa"
         assert AC.rol_de(u) is None, f"«{escrito}» cobra comisión"
 
@@ -103,11 +112,20 @@ def test_un_SUSCRIPTOR_marcado_comercial_NO_es_cooperativista():
     cualquiera— y es de carpinter.io. No cobra.
     """
     assert not P.puede_tener_comision(SUSCRIPTOR_CARPINTER)
+    # También se comprueba `es_cooperativista` A SOLAS, y no solo a través de
+    # `rol_de`: `rol_de` mira la plataforma por su cuenta, así que esa
+    # redundancia tapaba el fallo. Se vio rompiéndolo — quitar el corte de
+    # plataforma de dentro de `es_cooperativista_*` dejaba las 30 pruebas en
+    # verde. Una comprobación de más no es un candado de más.
+    assert not P.es_cooperativista(SUSCRIPTOR_CARPINTER)
+    assert not P.es_cooperativista_comercial(SUSCRIPTOR_CARPINTER)
     assert AC.rol_de(SUSCRIPTOR_CARPINTER) is None
     assert AC.filtro_de(SUSCRIPTOR_CARPINTER) is None
 
 
 def test_un_SUSCRIPTOR_marcado_montador_tampoco():
+    assert not P.es_cooperativista(SUSCRIPTOR_STUDIO3K)
+    assert not P.es_cooperativista_montador(SUSCRIPTOR_STUDIO3K)
     assert AC.rol_de(SUSCRIPTOR_STUDIO3K) is None
     assert AC.filtro_de(SUSCRIPTOR_STUDIO3K) is None
 
@@ -170,9 +188,69 @@ def test_las_TRES_estan_y_solo_UNA_tiene_cooperativistas():
         assert P.NOMBRES.get(k), f"la plataforma «{k}» no tiene nombre en pantalla"
     # Cada plataforma nueva tiene que decidir a conciencia si reparte nómina.
     for k in P.TODAS:
-        u = {"id": "u", "isComercial": True, "plataforma": k}
+        u = {"id": "u", "esCooperativistaComercial": True, "plataforma": k}
         assert P.puede_tener_comision(u) == (k == P.COOPERATIVA), (
             f"«{k}» reparte comisiones sin que nadie lo haya decidido")
+
+
+def test_el_COMERCIAL_DE_LA_CASA_no_cobra_comision():
+    """La corrección del master del 27/08, y el euro que costaba.
+
+    «No todos son de la cooperativa. Comercial cooperativista sí, montador
+    cooperativista también. Los demás son independientes. El rol de comisiones
+    solamente es para estos dos.»
+
+    La primera versión deducía el socio del rol genérico del ERP, y ahí está el
+    dinero: `isRepresentative` es el comercial de toda la vida de la casa —hay
+    comerciales sembrados con ese flag en `scripts/seed_comerciales.py`— e
+    `isMontador` es el de la agenda de montajes. Con aquello, TODOS ellos
+    entraban en la liquidación cobrando comisión de cooperativista sin que nadie
+    lo hubiera decidido, y el primero que lo habría notado es quien la cobrara.
+    """
+    for u, quien in ((COMERCIAL_DE_LA_CASA, "el comercial de la casa"),
+                     (MONTADOR_DE_LA_CASA, "el montador de la casa")):
+        assert not P.es_cooperativista(u), f"{quien} figura como socio"
+        assert AC.rol_de(u) is None, f"{quien} entra en la nómina"
+        assert AC.filtro_de(u) is None, f"{quien} tiene área"
+        assert AC.panel_de(u, [PEDIDO], 12.0) is None, f"{quien} ve un panel"
+
+
+def test_SER_SOCIO_SE_MARCA_y_no_se_deduce_de_ningun_otro_campo():
+    """Ningún rol del ERP, por sí solo, convierte a nadie en socio.
+
+    Se prueban de uno en uno todos los sombreros que reparte la pantalla de
+    permisos. Si mañana alguien vuelve a colar aquí un `or user.get(...)`, esto
+    se pone rojo con el nombre del campo que lo ha hecho.
+    """
+    for campo in ("isAdmin", "isMaster", "isPrimaryAdmin", "isGerente",
+                  "isDirectorComercial", "isDirectorFabrica", "isRepresentative",
+                  "isComercial", "isMontador", "isPrescriptor", "isTienda",
+                  "isFabrica", "isResponsableDelegacion", "isController",
+                  "canAccessMontajes", "canAccessRentabilidad"):
+        u = {"id": "u", "plataforma": "cooperativa", campo: True}
+        assert AC.rol_de(u) is None, (
+            f"«{campo}» convierte a alguien en cooperativista él solo. El rol de "
+            "comisiones es SOLO de las dos marcas de socio (master, 27/08).")
+
+
+def test_las_DOS_MARCAS_pagan_distinto_y_el_montador_manda_si_lleva_las_dos():
+    """Son dos marcas y no una casilla «es cooperativista» porque el rol decide
+    CÓMO se paga: el comercial por tramos según la valoración, el montador la
+    mano de obra por mueble. No es la misma nómina.
+
+    Si lleva las dos, se devuelve MONTADOR, que es el más restrictivo en
+    importes: su comisión no depende de la valoración del pedido y por tanto no
+    deja deducir nada del PVP.
+    """
+    solo_com = {"id": "u", "esCooperativistaComercial": True}
+    solo_mon = {"id": "u", "esCooperativistaMontador": True}
+    las_dos = {"id": "u", "esCooperativistaComercial": True,
+               "esCooperativistaMontador": True}
+    assert AC.rol_de(solo_com) == AC.COMERCIAL
+    assert AC.rol_de(solo_mon) == AC.MONTADOR
+    assert AC.rol_de(las_dos) == AC.MONTADOR, (
+        "quien lleva las dos marcas tiene que entrar como montador: es el rol "
+        "que no deja deducir el PVP del pedido")
 
 
 def test_la_pantalla_decide_igual_que_el_servidor(tmp_path):
@@ -202,17 +280,21 @@ def test_la_pantalla_decide_igual_que_el_servidor(tmp_path):
         cuerpo = f.read()
 
     casos = [
-        {"id": "a", "isComercial": True},                                    # sin campo
-        {"id": "b", "isComercial": True, "plataforma": "cooperativa"},
-        {"id": "c", "isMontador": True, "plataforma": "cooperativa"},
-        {"id": "d", "isRepresentative": True},
-        {"id": "e", "isComercial": True, "plataforma": "carpinter"},
-        {"id": "f", "isMontador": True, "plataforma": "studio3k"},
-        {"id": "g", "isComercial": True, "plataforma": "CARPINTER"},
-        {"id": "h", "isComercial": True, "plataforma": " carpinter "},
-        {"id": "i", "isComercial": True, "plataforma": "loquesea"},
-        {"id": "j", "plataforma": "cooperativa"},                            # sin rol
-        {"id": "k", "isAdmin": True},                                        # sin rol
+        {"id": "a", "esCooperativistaComercial": True},                  # sin plataforma
+        {"id": "b", "esCooperativistaComercial": True, "plataforma": "cooperativa"},
+        {"id": "c", "esCooperativistaMontador": True, "plataforma": "cooperativa"},
+        {"id": "d", "esCooperativistaComercial": True,
+         "esCooperativistaMontador": True},                              # las dos cosas
+        {"id": "e", "esCooperativistaComercial": True, "plataforma": "carpinter"},
+        {"id": "f", "esCooperativistaMontador": True, "plataforma": "studio3k"},
+        {"id": "g", "esCooperativistaComercial": True, "plataforma": "CARPINTER"},
+        {"id": "h", "esCooperativistaComercial": True, "plataforma": " carpinter "},
+        {"id": "i", "esCooperativistaComercial": True, "plataforma": "loquesea"},
+        # Los roles genéricos del ERP, que NO son socios.
+        {"id": "j", "isComercial": True, "isRepresentative": True},
+        {"id": "k", "isMontador": True, "plataforma": "cooperativa"},
+        {"id": "l", "isAdmin": True},
+        {"id": "m", "plataforma": "cooperativa"},
         {},
     ]
 

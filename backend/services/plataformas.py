@@ -73,5 +73,49 @@ def puede_tener_comision(user: Optional[dict]) -> bool:
 
     Se llama antes que cualquier comprobación de rol. Un suscriptor de
     carpinter.io marcado como «comercial» sigue siendo un suscriptor.
+
+    OJO: esto dice en qué NEGOCIO está, no que sea socio. Ser de la cooperativa
+    es condición necesaria y no suficiente: dentro de la cooperativa la mayoría
+    de la gente tampoco cobra comisión (ver `SER_COOPERATIVISTA_SE_MARCA`).
     """
     return es_de_la_cooperativa(user)
+
+
+# ── QUIÉN ES SOCIO COOPERATIVISTA ────────────────────────────────────────────
+#
+# El master, 27/08/2026, corrigiendo la primera versión de esto: «no todos son
+# de la cooperativa. Comercial cooperativista sí, montador cooperativista
+# también. Los demás son independientes. El rol de comisiones solamente es para
+# estos dos».
+#
+# SER COOPERATIVISTA SE MARCA, NO SE DEDUCE. La primera versión sacaba el socio
+# del rol genérico del ERP —`isMontador`, `isRepresentative`— y eso estaba mal
+# por donde más duele: `isRepresentative` es el comercial de toda la vida de la
+# casa (hay comerciales sembrados con ese flag en `scripts/seed_comerciales.py`)
+# e `isMontador` es el de la agenda de montajes. Con aquello, TODOS ellos
+# entraban en la liquidación cobrando comisión de cooperativista sin que nadie
+# lo hubiera decidido.
+#
+# Son dos marcas y no una sola casilla «es cooperativista» porque el rol decide
+# CÓMO se paga: el comercial cobra por tramos según la valoración del pedido y
+# el montador cobra la mano de obra por mueble. No es la misma nómina.
+SER_COOPERATIVISTA_SE_MARCA = ("esCooperativistaComercial",
+                               "esCooperativistaMontador")
+
+
+def es_cooperativista_montador(user: Optional[dict]) -> bool:
+    return bool((user or {}).get("esCooperativistaMontador")) and puede_tener_comision(user)
+
+
+def es_cooperativista_comercial(user: Optional[dict]) -> bool:
+    return bool((user or {}).get("esCooperativistaComercial")) and puede_tener_comision(user)
+
+
+def es_cooperativista(user: Optional[dict]) -> bool:
+    """Socio de la cooperativa: uno de los dos roles, y de la cooperativa.
+
+    Todo lo demás —gerencia, dirección comercial, tienda, fábrica, prescriptor,
+    controller y el comercial o el montador en nómina— es independiente y no
+    cobra comisión.
+    """
+    return es_cooperativista_montador(user) or es_cooperativista_comercial(user)
