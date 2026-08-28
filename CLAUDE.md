@@ -54,6 +54,16 @@ Muebles (catálogo MV / cascos ACB de este proyecto):
 | Fondo altos | ~330 |
 | Fondo bajos | ~580 |
 | Anchos estándar (cm) | 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120 |
+
+**EL ESCALÓN DE LA TARIFA NO ES LA MEDIDA.** En costados, laterales y regletas,
+el «hasta 70 / hasta 90» de la tarifa MV decide lo que CUESTA la pieza; el ancho
+y el alto reales son lo que se fabrica, se escriben aparte y viajan con el
+pedido (master, 28/08: «aunque pongas hasta 70 o hasta 90, esas medidas las
+puedo modificar para que queden grabadas las medidas definitivas»). Escribir la
+medida definitiva NO puede tocar el precio: si lo moviera, el presupuesto
+cambiaría solo mientras alguien ajusta cotas y nadie lo relacionaría. Si la
+pieza se sale del escalón, el escalón se cambia a mano al lado — una decisión,
+no un efecto secundario. Candado: `test_pantalla_medidas_definitivas.py`.
 | Altura libre de techo típica | 2400–2700 |
 
 Cualquier cifra fuera de estos rangos es un ERROR, no una variante: corregir.
@@ -462,6 +472,11 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      el socio cobra comisión. La agenda NO puede ser la puerta por la que un
      externo entre en la nómina: vincular su ficha con una cuenta no hace socio
      a nadie — eso lo decide la marca `esCooperativistaMontador`, y nada más.
+   - **Los socios se dan de alta desde COOP** (master, 28/08). En la pestaña
+     Usuarios hay «+ Nuevo socio»: se crea ya marcado con su rol y en la
+     plataforma de la cooperativa, que es la única que reparte comisiones. Los
+     permisos del ERP se le dan luego a conciencia en el panel Master — un
+     montador entra a ver lo suyo, no a presupuestar.
    - **QUIEN GRABA EL PEDIDO SE LO LLEVA, SI ES SOCIO** (master, 28/08:
      «dependiendo del usuario que grabe el pedido, así comisionará, si son
      usuarios cooperativistas»). Le ahorra al master asignar a mano el caso

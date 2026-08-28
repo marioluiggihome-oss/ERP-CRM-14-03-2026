@@ -545,6 +545,29 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   /** Elige la COLUMNA de tarifa de una pieza lineal por su ancho (70 / 90).
    *  Se le pasa a `puntosLocal` el mueble YA actualizado: si se le pasara `m`,
    *  leería el ancho viejo y el precio iría un clic por detrás. */
+  /**
+   * LA MEDIDA DE VERDAD DE LA PIEZA, QUE NO ES LA DEL PRECIO.
+   *
+   * El master, 28/08: «aunque pongas hasta 70 o hasta 90, esas medidas las
+   * puedo modificar para que queden grabadas las medidas definitivas», y «en
+   * los costados bajos y altos también se debe poder cambiar la medida, tanto
+   * de ancho como de alto, en todos».
+   *
+   * Son dos cosas distintas y hay que no mezclarlas:
+   *   · el ESCALÓN («hasta 70», «hasta 90») decide lo que CUESTA;
+   *   · el ancho y el alto reales son lo que se fabrica y lo que va al pedido.
+   *
+   * Por eso esto NO toca el pvp: cambiar la medida definitiva de un costado no
+   * puede mover el precio por accidente. Si la pieza se sale del escalón, el
+   * escalón se cambia a mano al lado, que es una decisión, no un efecto
+   * secundario.
+   */
+  const setMedidaReal = (k, campo, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const n = v === '' ? null : Number(v);
+    return { ...m, [campo]: Number.isFinite(n) && n > 0 ? n : null };
+  }));
+
   const setAnchoTarifa = (k, v) => setMuebles(prev => prev.map(m => {
     if (m._k !== k) return m;
     const conAncho = { ...m, anchoTarifa: Number(v) || ANCHO_POR_DEFECTO_LINEAL };
@@ -1014,6 +1037,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           familia: m.familia || '',
           quantity: Number(m.qty) || 1,
           price: (Number(m.pvp) || 0) * (Number(m.qty) || 1),
+          // Las medidas DEFINITIVAS, que no son el escalón de la tarifa. Van al
+          // pedido porque son lo que se fabrica.
+          anchoReal: m.anchoReal ?? null,
+          altoReal: m.altoReal ?? null,
         })),
       };
       const r = await fetch(`${API_URL}/api/cascos/orders`, {
@@ -1664,14 +1691,38 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         /* Costados, laterales y regletas: la tarifa va por ANCHO
                            de la pieza. Antes aquí ponía «ancho —» y el alto se
                            elegía en un desplegable — justo al revés. */
-                        <label className="flex items-center gap-1">
-                          <span className="text-slate-400 font-bold">Ancho</span>
-                          <select value={m.anchoTarifa || opcionesAnc[0]}
-                            onChange={e => setAnchoTarifa(m._k, e.target.value)}
-                            className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs">
-                            {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
-                          </select>
-                        </label>
+                        <>
+                          <label className="flex items-center gap-1">
+                            <span className="text-slate-400 font-bold">Tarifa</span>
+                            <select value={m.anchoTarifa || opcionesAnc[0]}
+                              onChange={e => setAnchoTarifa(m._k, e.target.value)}
+                              title="El escalón que decide el PRECIO de la pieza"
+                              className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs">
+                              {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
+                            </select>
+                          </label>
+                          {/* LA MEDIDA DE VERDAD. El escalón de arriba dice lo que
+                              cuesta; esto es lo que se fabrica y lo que va al
+                              pedido. Cambiarlo NO mueve el precio a propósito. */}
+                          <label className="flex items-center gap-1">
+                            <span className="text-slate-400 font-bold">Ancho</span>
+                            <input type="number" min="0" step="0.1" placeholder="cm"
+                              value={m.anchoReal ?? ''}
+                              onChange={e => setMedidaReal(m._k, 'anchoReal', e.target.value)}
+                              title="Ancho definitivo de la pieza. No cambia el precio: eso lo decide la tarifa de al lado."
+                              data-testid="medida-ancho-real"
+                              className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs" />
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <span className="text-slate-400 font-bold">Alto</span>
+                            <input type="number" min="0" step="0.1" placeholder="cm"
+                              value={m.altoReal ?? ''}
+                              onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
+                              title="Alto definitivo de la pieza. No cambia el precio."
+                              data-testid="medida-alto-real"
+                              className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs" />
+                          </label>
+                        </>
                       ) : (
                         <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
                           {m.ancho ? `${m.ancho} cm de ancho` : 'ancho —'}
@@ -1848,23 +1899,37 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           enseñar un guion. */}
                       <td className="py-3 px-3 text-center font-bold text-slate-700">
                         {opcionesAnc ? (
-                          <select
-                            value={m.anchoTarifa || opcionesAnc[0]}
-                            onChange={e => setAnchoTarifa(m._k, e.target.value)}
-                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-dato-400"
-                          >
-                            {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
-                          </select>
+                          <div className="flex flex-col items-center gap-1">
+                            <select
+                              value={m.anchoTarifa || opcionesAnc[0]}
+                              onChange={e => setAnchoTarifa(m._k, e.target.value)}
+                              title="El escalón que decide el PRECIO"
+                              className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-dato-400"
+                            >
+                              {opcionesAnc.map(a => <option key={a} value={a}>hasta {a} cm</option>)}
+                            </select>
+                            <input type="number" min="0" step="0.1" placeholder="cm reales"
+                              value={m.anchoReal ?? ''}
+                              onChange={e => setMedidaReal(m._k, 'anchoReal', e.target.value)}
+                              title="Ancho definitivo. No cambia el precio."
+                              className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-[11px] outline-none focus:border-dato-400" />
+                          </div>
                         ) : (m.ancho ? `${m.ancho} cm` : '—')}
                       </td>
 
                       {/* Alto */}
                       <td className="py-3 px-3 text-center">
                         {opcionesAnc ? (
-                          /* Un costado no elige alto: el suyo lo fija su propio
-                             tipo (de alto, de bajo, de columna…), que es lo que
-                             dice la descripción de la fila en la tarifa. */
-                          <span className="text-slate-400">—</span>
+                          /* El TIPO de costado (de alto, de bajo, de columna…)
+                             sigue fijando su precio, pero el alto de verdad se
+                             escribe y se graba: master, 28/08 —«en los costados
+                             bajos y altos también se debe poder cambiar la
+                             medida, tanto de ancho como de alto, en todos»—. */
+                          <input type="number" min="0" step="0.1" placeholder="cm reales"
+                            value={m.altoReal ?? ''}
+                            onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
+                            title="Alto definitivo. No cambia el precio."
+                            className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-[11px] outline-none focus:border-dato-400" />
                         ) : opcionesAlt ? (
                           <select
                             value={m.alto || opcionesAlt[0]}

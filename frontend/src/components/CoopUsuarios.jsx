@@ -31,6 +31,8 @@ export default function CoopUsuarios() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState('');
   const [hecho, setHecho] = useState('');
+  const [abierto, setAbierto] = useState(false);
+  const [nuevo, setNuevo] = useState({ username: '', password: '', clientName: '', rol: 'montador' });
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -57,6 +59,47 @@ export default function CoopUsuarios() {
       setTimeout(() => setHecho(''), 2000);
     } catch {
       setError('No se pudo guardar el cambio.');
+    } finally {
+      setGuardando('');
+    }
+  };
+
+  /**
+   * ALTA DE UN SOCIO DESDE AQUÍ.
+   *
+   * El master, 28/08: «vamos a crear un usuario para usuario cooperativista
+   * montador; genera ese perfil para acceder a ese usuario desde el máster, en
+   * la sección COOP, creación de usuarios».
+   *
+   * Se crea YA MARCADO con su rol de socio —es a lo que se viene a esta
+   * pantalla— y con la plataforma de la cooperativa, que es la única que
+   * reparte comisiones. Los permisos del ERP se quedan en lo mínimo: un
+   * montador entra a ver lo suyo, no a presupuestar. Lo demás se le da luego en
+   * el panel Master, a conciencia.
+   */
+  const crear = async () => {
+    if (!nuevo.username || !nuevo.password || !nuevo.clientName) {
+      setError('Hacen falta usuario, contraseña y nombre.'); return;
+    }
+    setGuardando('nuevo');
+    try {
+      await usersAPI.create({
+        username: nuevo.username.trim(),
+        password: nuevo.password,
+        clientName: nuevo.clientName.trim(),
+        plataforma: COOPERATIVA,
+        esCooperativistaMontador: nuevo.rol === 'montador',
+        esCooperativistaComercial: nuevo.rol === 'comercial',
+        // Marcarlo montador de la agenda si lo es, para poder vincular su ficha.
+        isMontador: nuevo.rol === 'montador',
+        isActive: true,
+      });
+      setNuevo({ username: '', password: '', clientName: '', rol: 'montador' });
+      setAbierto(false);
+      await cargar();
+      setError('');
+    } catch (e) {
+      setError(e.message || 'No se pudo crear el usuario.');
     } finally {
       setGuardando('');
     }
@@ -89,6 +132,76 @@ export default function CoopUsuarios() {
             {error}
           </div>
         )}
+
+        <div className="mb-4">
+          <button
+            onClick={() => setAbierto(v => !v)}
+            className="px-3 py-1.5 rounded-lg bg-master-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-master-700 transition-colors"
+            data-testid="coop-crear-usuario-btn"
+          >
+            {abierto ? 'Cancelar' : '+ Nuevo socio'}
+          </button>
+          {abierto && (
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-dato-500">Nombre</span>
+                <input
+                  value={nuevo.clientName}
+                  onChange={(e) => setNuevo({ ...nuevo, clientName: e.target.value })}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-dato-800"
+                  data-testid="coop-nuevo-nombre"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-dato-500">Rol</span>
+                <select
+                  value={nuevo.rol}
+                  onChange={(e) => setNuevo({ ...nuevo, rol: e.target.value })}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-dato-800 bg-white"
+                  data-testid="coop-nuevo-rol"
+                >
+                  <option value="montador">Montador cooperativista</option>
+                  <option value="comercial">Comercial cooperativista</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-dato-500">Usuario</span>
+                <input
+                  value={nuevo.username}
+                  autoComplete="off"
+                  onChange={(e) => setNuevo({ ...nuevo, username: e.target.value })}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-dato-800"
+                  data-testid="coop-nuevo-usuario"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-dato-500">Contraseña</span>
+                <input
+                  type="password"
+                  value={nuevo.password}
+                  autoComplete="new-password"
+                  onChange={(e) => setNuevo({ ...nuevo, password: e.target.value })}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-dato-800"
+                  data-testid="coop-nuevo-password"
+                />
+              </label>
+              <div className="sm:col-span-2 flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={crear}
+                  disabled={guardando === 'nuevo'}
+                  className="px-3 py-1.5 rounded-lg bg-ok-600 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 hover:bg-ok-700 transition-colors"
+                  data-testid="coop-nuevo-guardar"
+                >
+                  {guardando === 'nuevo' ? 'Creando…' : 'Crear socio'}
+                </button>
+                <span className="text-[11px] text-dato-500">
+                  Se crea en la red de distribución y ya marcado como socio. Los
+                  permisos del ERP se los das luego en el panel Master.
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="mb-3 rounded-xl border border-aviso-300 bg-aviso-50 px-3 py-2 text-[11px] font-bold text-aviso-800 flex items-start gap-2">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
