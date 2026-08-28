@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from routes.cascos import _es_master
 from services import area_cooperativista as AC
 from services import comisiones as C
+from services import enlace_documentos as ED
 from services import liquidaciones as L
 from services.jwt_service import get_current_user
 
@@ -42,6 +43,20 @@ def _db():
     return db
 
 
+async def _documentos():
+    """Albaranes y facturas de Gestión Comercial, para saber qué se ha servido.
+
+    Sin esto ningún pedido consolida nunca: `liquidaciones` espera `servidoAt` y
+    `cobradoAt` en el pedido y no los escribe nadie — el ERP los tiene, pero en
+    el albarán y en la factura (`services/enlace_documentos.py`).
+    """
+    try:
+        return await _db().invoices.find({}, {"_id": 0}).to_list(5000)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"no se pudieron leer los documentos: {e}")
+        return []
+
+
 @router.get("/mi-area")
 async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
     """Los tres montones de un cooperativista: en progreso, a cobrar y pagado."""
@@ -51,7 +66,8 @@ async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
             status_code=403,
             detail="Esta área es de los cooperativistas: montadores y comerciales.")
     try:
-        pedidos = await _db().orders.find(filtro, {"_id": 0}).to_list(1000)
+        crudos = await _db().orders.find(filtro, {"_id": 0}).to_list(1000)
+        pedidos = ED.enriquecer_todos(crudos, await _documentos())
     except Exception as e:                                   # noqa: BLE001
         logger.error(f"mi-area: no se pudieron leer los pedidos: {e}")
         raise HTTPException(status_code=500, detail="No se pudo leer tu área.")
@@ -182,7 +198,9 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
 
     filtro = AC.filtro_de(u)
     try:
-        crudos = await _db().orders.find(filtro, {"_id": 0}).to_list(2000)
+        crudos = ED.enriquecer_todos(
+            await _db().orders.find(filtro, {"_id": 0}).to_list(2000),
+            await _documentos())
         aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     except Exception as e:                                   # noqa: BLE001
         logger.error(f"liquidar: no se pudieron leer los pedidos: {e}")
@@ -240,7 +258,8 @@ async def liquidacion(periodo: str, usuario: str,
         raise HTTPException(status_code=400, detail="Ese usuario no es cooperativista.")
 
     filtro = AC.filtro_de(u)
-    pedidos = await _db().orders.find(filtro, {"_id": 0}).to_list(2000)
+    crudos = await _db().orders.find(filtro, {"_id": 0}).to_list(2000)
+    pedidos = ED.enriquecer_todos(crudos, await _documentos())
     mano = 0.0
     if rol == AC.MONTADOR:
         aj = await _db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}

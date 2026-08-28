@@ -91,6 +91,8 @@ const MODULES = [
 
   { tab: 'socios',          label: 'Socios',          desc: 'Quién vendió y quién montó cada pedido', icon: Users, color: 'bg-master-600', group: 'admin', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
 
+  { tab: 'liquidar',        label: 'Liquidar',        desc: 'Cierre mensual de comisiones de los cooperativistas', icon: Wallet, color: 'bg-master-600', group: 'admin', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
+
   // Administración
   { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },
 ];

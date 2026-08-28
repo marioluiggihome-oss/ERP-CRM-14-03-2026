@@ -59,6 +59,7 @@ const CocinaMontada3 = lazy(() => import('./components/CocinaMontada3')); // Pre
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
 const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
 const SociosCooperativistas = lazy(() => import('./components/SociosCooperativistas')); // Quién cobra cada pedido (master)
+const LiquidarMes = lazy(() => import('./components/LiquidarMes')); // Cierre mensual de comisiones (master)
 
 
 
@@ -1670,6 +1671,19 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Liquidar: cerrar el mes y pagar. SOLO master — compromete dinero. */}
+                    {(state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'liquidar'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'liquidar' ? 'bg-master-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="liquidar-nav-btn"
+                        title="Liquidar el mes: lo que se le paga a cada cooperativista"
+                      >
+                        <Wallet size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Liquidar</span>
+                      </button>
+                    )}
+
                     {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
                     {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                       <button 
@@ -1897,6 +1911,9 @@ const App = () => {
             )}
             {state.currentTab === 'socios' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
               <SociosCooperativistas />
+            )}
+            {state.currentTab === 'liquidar' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
+              <LiquidarMes />
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
               <PrescriptorAgenda

@@ -312,6 +312,20 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      de noviembre. Lo escribe `POST /liquidar`, que es IDEMPOTENTE: se salta lo
      ya liquidado y el `update` lleva la condición dentro, para que dos
      pulsaciones a la vez no paguen dos veces.
+   - **EL ALBARÁN Y LA FACTURA SON LA FUENTE** (28/08). Nadie escribía
+     `servidoAt` ni `cobradoAt`, así que ningún pedido consolidaba jamás — el
+     área entera enseñaba una promesa que no se cumplía nunca. El ERP sí lo
+     sabe, en Gestión Comercial: el ALBARÁN dice que la mercancía salió y la
+     FACTURA `paid` que el dinero entró (`services/enlace_documentos.py`). Se
+     ata por `projectId` y `budgetNumber`, las referencias que el gestor ya
+     guarda, y por NADA más: dos pedidos del mismo cliente por el mismo importe
+     son cosa de todos los días, y confundirlos es pagarle a quien no le toca.
+     Un pedido sin referencia se queda sin servir a propósito. Con varias
+     entregas manda el ÚLTIMO albarán —hasta entonces la mercancía no está
+     fuera del todo—, y con varias facturas hacen falta TODAS pagadas: una
+     pagada y otra a medias es un pedido a medio cobrar. Lo que el pedido ya
+     traiga escrito manda sobre el documento. Candado:
+     `test_calculo_enlace_documentos.py`.
    - **Se leen los nombres que el ERP YA usa**: `deliveredAt` (lo estampa
      `projects.py` al pasar a «entregado») y `paidAt` (`invoices.py` al pasar a
      «paid»), además de `servidoAt`/`cobradoAt`. Sin eso, un pedido entregado y
