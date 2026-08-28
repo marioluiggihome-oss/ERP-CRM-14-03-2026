@@ -462,6 +462,16 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      el socio cobra comisión. La agenda NO puede ser la puerta por la que un
      externo entre en la nómina: vincular su ficha con una cuenta no hace socio
      a nadie — eso lo decide la marca `esCooperativistaMontador`, y nada más.
+   - **QUIEN GRABA EL PEDIDO SE LO LLEVA, SI ES SOCIO** (master, 28/08:
+     «dependiendo del usuario que grabe el pedido, así comisionará, si son
+     usuarios cooperativistas»). Le ahorra al master asignar a mano el caso
+     normal —el comercial que teclea su propio pedido—, con tres cierres: SOLO
+     si `rol_de` dice que es socio (un comercial en nómina o un suscriptor
+     graban pedidos igual y no cobran), en SU rol (el montador no puede entrar
+     como comercial: cobran distinto) y **sin pisar nunca lo ya asignado**, ni
+     al re-guardar el mismo pedido. Para eso el documento anterior se lee CON
+     sus asignaciones: leerlo sin ellas haría que la comprobación diera siempre
+     vacío y pisara siempre.
    - **LA AGENDA PROPONE, EL MASTER ASIGNA** (28/08). La ficha de montador
      (`montadores.id`, la agenda de montajes) y la cuenta con la que entra eran
      dos mundos: el master repetía a mano quién montó cada pedido cuando el ERP

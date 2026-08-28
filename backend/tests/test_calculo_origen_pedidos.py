@@ -188,3 +188,66 @@ def test_la_pantalla_de_CM3_manda_LA_FAMILIA_y_el_importe_ya_multiplicado():
     assert "(Number(m.pvp) || 0) * (Number(m.qty) || 1)" in trozo, (
         "el importe de la línea no lleva las unidades dentro; el cálculo espera "
         "`price` ya multiplicado")
+
+
+# ── QUIEN GRABA EL PEDIDO SE LO LLEVA ───────────────────────────────────────
+#
+# El master, 28/08: «dependiendo del usuario que grabe el pedido, así
+# comisionará, si son usuarios cooperativistas».
+#
+# Le ahorra asignar a mano el caso normal —el comercial que teclea su propio
+# pedido— pero es dinero, así que tiene tres candados: solo socios, en SU rol, y
+# sin pisar nunca lo que el master ya decidió.
+
+def _trozo_de_guardar_pedido():
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "routes", "cascos.py")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("QUIEN GRABA EL PEDIDO SE LO LLEVA")
+    return cuerpo[i:cuerpo.index("update_one", i) + 200]
+
+
+def test_solo_un_SOCIO_se_lleva_el_pedido_que_graba():
+    """Se pregunta a `rol_de`, que ya exige la marca de socio Y la plataforma.
+
+    Un comercial en nómina o un suscriptor de carpinter.io graban pedidos igual
+    y no cobran. Si aquí se mirara `isRepresentative` —el rol genérico— entraría
+    en la nómina medio ERP por la puerta de grabar un pedido.
+    """
+    trozo = _trozo_de_guardar_pedido()
+    assert "_AC.rol_de(current_user)" in trozo, (
+        "no se comprueba que quien graba sea SOCIO: cualquiera que teclee un "
+        "pedido se lo llevaría")
+    for generico in ("isRepresentative", "isComercial", "isMontador"):
+        assert generico not in trozo, (
+            f"se está mirando «{generico}», que es el rol genérico del ERP y no "
+            "la marca de socio")
+
+
+def test_se_asigna_EN_SU_ROL_y_no_en_el_otro():
+    """El comercial cobra por tramos y el montador la mano de obra. Un montador
+    que grabe un pedido no puede entrar como comercial."""
+    trozo = _trozo_de_guardar_pedido()
+    assert "_AC.COMERCIAL" in trozo and "comercialUserId" in trozo
+    assert "_AC.MONTADOR" in trozo and "montadorUserId" in trozo
+
+
+def test_NO_SE_PISA_lo_que_el_master_ya_asigno():
+    """Asignar es del master (regla 20). Si él lo puso en otro bolsillo, manda
+    él; y al re-guardar el mismo pedido tampoco se reescribe."""
+    trozo = _trozo_de_guardar_pedido()
+    assert 'not (existing or {}).get(_clave)' in trozo, (
+        "se asigna sin mirar si ya estaba asignado: re-guardar un pedido le "
+        "quitaría la comisión a quien el master hubiera puesto")
+    # Y el documento anterior tiene que traerse esos campos, o la comprobación
+    # de arriba miraría siempre vacío y pisaría siempre.
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "routes", "cascos.py")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("cascos_orders.find_one(")
+    proyeccion = cuerpo[i:i + 260]
+    assert '"comercialUserId": 1' in proyeccion and '"montadorUserId": 1' in proyeccion, (
+        "el pedido anterior se lee sin sus asignaciones, así que la "
+        "comprobación de «ya estaba asignado» siempre daría vacío y pisaría")

@@ -8,6 +8,7 @@ guarda los pedidos de cascos por usuario. El catálogo vive en el frontend
 (generado desde la tarifa oficial).
 """
 from fastapi import APIRouter, HTTPException, Depends
+from services import area_cooperativista as _AC
 from services import origen_pedidos as _OP
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -43,7 +44,9 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
         uid = (current_user or {}).get("id") or "anonymous"
         oid = (payload or {}).get("id") or f"casco-{uuid.uuid4().hex[:10]}"
         now = datetime.now(timezone.utc).isoformat()
-        existing = await _get_db().cascos_orders.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+        existing = await _get_db().cascos_orders.find_one(
+            {"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1,
+                          "comercialUserId": 1, "montadorUserId": 1})
         # Al re-guardar por id, comprobar propiedad (evita pisar el pedido de otro).
         if existing and not _can_access(existing, current_user):
             raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
@@ -72,6 +75,25 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "createdAt": (existing or {}).get("createdAt") or now,
             "updatedAt": now,
         }
+        # QUIEN GRABA EL PEDIDO SE LO LLEVA, SI ES SOCIO (master, 28/08: «dependiendo
+        # del usuario que grabe el pedido, así comisionará, si son usuarios
+        # cooperativistas»). Le ahorra al master asignar a mano el caso normal:
+        # el comercial que teclea su propio pedido.
+        #
+        # TRES CANDADOS, y los tres son dinero:
+        #  · SOLO si es SOCIO. Se pregunta a `area_cooperativista.rol_de`, que ya
+        #    exige la marca de socio Y la plataforma: un comercial en nómina o un
+        #    suscriptor de carpinter.io graban pedidos igual y no cobran.
+        #  · NUNCA se pisa lo que ya estaba. Si el master lo asignó a otro, manda
+        #    él (regla 20); y al re-guardar el mismo pedido no se reescribe.
+        #  · Se pone en SU rol. Un montador que grabe un pedido no puede entrar
+        #    como comercial: cobran de forma distinta.
+        _rol = _AC.rol_de(current_user)
+        _clave = ("comercialUserId" if _rol == _AC.COMERCIAL else
+                  "montadorUserId" if _rol == _AC.MONTADOR else None)
+        if _clave and not (existing or {}).get(_clave):
+            doc[_clave] = uid
+
         await _get_db().cascos_orders.update_one({"id": oid}, {"$set": doc}, upsert=True)
         doc.pop("_id", None)
         return {"success": True, "order": doc}
