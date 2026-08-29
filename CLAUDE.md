@@ -606,6 +606,26 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      pantallas. Y comprueba que su propio reconocedor SÍ encuentra el fallo
      cuando se le da: un detector que no detecta nada da cero y el CI en verde.
 
+24. **EL ERP ES ESPAÑOL Y NADIE LO TRADUCE** (29/08). `index.html` decía
+   `<html lang="en">` con todo escrito en castellano. Un Chrome de móvil en
+   español, con «traducir siempre las páginas en inglés» puesto, se cree la
+   etiqueta y TRADUCE el ERP solo, sin preguntar: para traducir mete cada texto
+   dentro de un `<font>`, o sea que le cambia el DOM a React por debajo. La
+   siguiente vez que React va a mover algo, el nodo ya no está donde lo dejó —
+   `NotFoundError: insertBefore` — y eso no rompe una pantalla, **tumba la
+   aplicación entera**. En el portátil no pasaba porque ahí Chrome pregunta
+   antes.
+   - Y aunque no tumbara nada: por estas pantallas pasan `B60D/I`, `CMCB`,
+     medidas y euros. **«BAJO» no es una palabra que traducir, es una familia de
+     la tarifa MV.**
+   - Van las TRES marcas, que se refuerzan: `lang="es"` (que además es lo que
+     leen los lectores de pantalla, así que estaba mal por dos motivos),
+     `translate="no"` en el `<html>` y `<meta name="google" content="notranslate">`,
+     que es la que de verdad respeta Chrome.
+   - Candado: `test_pantalla_no_traducir.py`. Su reconocedor **ignora los
+     comentarios**, porque el propio fichero explica el fallo citando un
+     `lang="en"` de ejemplo que si no lo engañaría.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
