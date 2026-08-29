@@ -10,6 +10,7 @@ import jwt
 import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
+import logging
 from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -17,6 +18,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 # Configuración JWT
 # JWT_SECRET es OBLIGATORIO: sin él, la app no debe arrancar (evita secretos por defecto
 # inseguros y secretos aleatorios distintos por proceso que invalidarían los tokens).
+logger = logging.getLogger(__name__)
+
 JWT_SECRET = os.environ.get('JWT_SECRET')
 if not JWT_SECRET:
     raise RuntimeError(
@@ -137,7 +140,29 @@ def verify_refresh_token(token: str) -> Dict[str, Any]:
 
 
 def _payload_to_user(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Construir el dict de usuario a partir del payload del token JWT."""
+    """El usuario MÍNIMO que cabe en el token. Es un respaldo, no la ficha.
+
+    OJO, ESTO ES LO QUE ERA TODO EL `current_user` DEL SERVIDOR, y ahí estuvo un
+    fallo que costó tres pantallas y un apagón. Son TRECE campos escritos a mano
+    en 2025: todo permiso añadido después NO EXISTE para el backend, por muy
+    marcado que esté en la ficha del usuario.
+
+    Lo que se rompía, y ninguno daba un error que se entendiera:
+
+      · `esCooperativistaMontador` no llega → `area_cooperativista.rol_de`
+        devuelve None → «Mi área» contesta «esta área es de los cooperativistas»
+        AL COOPERATIVISTA. El área entera no funcionó nunca para un socio de
+        verdad; en las pruebas se le pasaba la ficha completa a mano.
+      · `canUseCascos` no llega → el corte del Presupuestador en el servidor
+        (29/08) veía a todo el mundo sin permiso de Cocina Desmontada.
+      · `isPrimaryAdmin` e `isMaster` no llegan → `es_master` solo podía mirar
+        `isAdmin`. Por eso quitarlo el 28/08 dejó al master fuera de su propia
+        tarifa: los otros dos flags NO EXISTÍAN aquí. Y por eso estrechar
+        `FLAGS_MASTER` con la ficha ya marcada habría dejado a la casa entera
+        sin ver un euro — la marca está en Mongo y aquí no llegaba.
+
+    Ahora esto solo se usa si la ficha no se puede leer (ver `_usuario_del_token`).
+    """
     return {
         "id": payload.get("sub"),
         "username": payload.get("username"),
@@ -152,6 +177,46 @@ def _payload_to_user(payload: Dict[str, Any]) -> Dict[str, Any]:
         "isController": payload.get("isController", False),
         "canAccessRentabilidad": payload.get("canAccessRentabilidad", False),
     }
+
+
+async def _usuario_del_token(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """EL USUARIO SALE DE SU FICHA, NO DEL TOKEN.
+
+    Un token se firma al entrar y vale 24 horas. Decidir permisos con lo que se
+    firmó ayer tiene dos problemas, y los dos se han visto en producción:
+
+      1. LO QUE NO ESTABA EN LA LISTA NO EXISTE. El token lleva trece campos
+         escritos a mano, así que cualquier permiso nuevo —ser socio
+         cooperativista, `canUseCascos`, `isPrimaryAdmin`— era invisible para el
+         servidor por muy marcado que estuviera. Ver `_payload_to_user`.
+      2. QUITAR UN PERMISO NO QUITABA NADA hasta que la persona volviera a
+         entrar. El master marca una casilla, comprueba y no pasa nada: eso no
+         es un permiso, es una sugerencia con retardo de un día.
+
+    Se lee la ficha y se completa con lo del token (`id` y `username` mandan
+    desde el token, que es lo que se firmó). Si la ficha no se puede leer —Mongo
+    caído, un id que ya no existe— se sigue con lo que trae el token: un
+    problema de base de datos no puede echar del ERP a todo el mundo a la vez.
+    """
+    base = _payload_to_user(payload)
+    uid = base.get("id")
+    if not uid:
+        return base
+    try:
+        from services.db_client import get_db
+        doc = await get_db().users.find_one({"id": uid}, {"_id": 0, "password": 0})
+    except Exception as e:                                   # noqa: BLE001
+        logger.warning("no se pudo leer la ficha de %s, se sigue con el token: %s", uid, e)
+        return base
+    if not doc:
+        # La cuenta ya no está. No se inventa una ficha: lo que trae el token.
+        return base
+    # La ficha manda en los permisos; el token manda en quién eres.
+    fuera = {**base, **doc}
+    fuera["id"] = uid
+    fuera["username"] = base.get("username") or doc.get("username")
+    fuera.pop("password", None)
+    return fuera
 
 
 async def tiene_acceso_rentabilidad(user: Dict[str, Any]) -> bool:
@@ -217,7 +282,7 @@ async def get_current_user(
     from services.sesiones import token_revocado
     if await token_revocado(payload):
         return None
-    return _payload_to_user(payload)
+    return await _usuario_del_token(payload)
 
 
 async def require_auth(
@@ -242,7 +307,9 @@ async def require_auth(
         raise HTTPException(
             status_code=401,
             detail="Tu sesión se ha cerrado desde el Panel Maestro. Vuelve a entrar.")
-    return _payload_to_user(payload)
+    # La ficha, no el token: los permisos se deciden con lo que hay HOY en el
+    # usuario, no con lo que se firmó al entrar. Ver `_usuario_del_token`.
+    return await _usuario_del_token(payload)
 
 
 async def require_admin(
