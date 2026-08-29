@@ -156,16 +156,43 @@ def test_el_ORIGEN_que_llega_por_la_PETICION_pasa_por_lista_blanca():
     El origen viaja en el cuerpo de la petición. Si se guardara tal cual,
     cualquiera con sesión podría meter en la nómina de la cooperativa un pedido
     de la sección que fuera, mandando el origen que le conviniera.
+
+    SE EJECUTA LA FUNCIÓN, no se lee el fichero. La primera versión de esta
+    prueba buscaba `"origen":` en el texto de `routes/cascos.py` y leía los 400
+    caracteres siguientes; el día que apareció otro `"origen":` más arriba —en la
+    proyección de un `find_one`— la prueba se puso roja acusando a un trozo de
+    código que no era. Un candado que señala el sitio equivocado hace perder el
+    tiempo igual que uno que no salta.
     """
+    from routes.cascos import _origen_valido
+
+    for bueno in OP.ORIGENES_QUE_CUENTAN:
+        assert _origen_valido(bueno) == bueno
+    assert _origen_valido("  COCINA_MONTADA_3 ") == OP.MONTADA_3, (
+        "un origen bueno con espacios o mayúsculas se está tirando")
+    for malo in ("fabrica", "orders", "cooperativa", "", None, 123, {"a": 1}):
+        assert _origen_valido(malo) == "", (
+            f"«{malo!r}» se está guardando como origen: por ahí se mete "
+            "cualquier pedido en la nómina de la cooperativa")
+
+
+def test_un_guardado_que_no_trae_el_ORIGEN_no_puede_borrarlo():
+    """Se escribe con un `$set` del documento entero (misma trampa que la regla
+    12 de CLAUDE.md con las medidas). Sin respaldar lo que ya había, re-guardar
+    un pedido de Cocina Montada 3 desde otra pantalla lo dejaría sin origen — y
+    pasaría a contarse como Cocina Desmontada sin que nadie tocara nada."""
     ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         "routes", "cascos.py")
     with open(ruta, "r", encoding="utf-8") as f:
         cuerpo = f.read()
-    i = cuerpo.index('"origen":')
-    trozo = cuerpo[i:i + 400]
-    assert "_OP.ORIGENES_QUE_CUENTAN" in trozo, (
-        "el origen que llega en la petición se guarda sin comprobar: por ahí se "
-        "mete cualquier pedido en la nómina de la cooperativa")
+    i = cuerpo.index('"origen": _origen_valido(')
+    linea = cuerpo[i:cuerpo.index("\n", i)]
+    assert '(existing or {}).get("origen")' in linea, (
+        "el origen no se respalda con el que ya tenía el pedido: un guardado que "
+        "no lo traiga lo borra")
+    assert '"origen": 1' in cuerpo[:i], (
+        "el `find_one` no se trae el `origen`, así que el respaldo de arriba "
+        "siempre valdrá vacío y no protege nada")
 
 
 def test_la_pantalla_de_CM3_manda_LA_FAMILIA_y_el_importe_ya_multiplicado():
@@ -251,3 +278,40 @@ def test_NO_SE_PISA_lo_que_el_master_ya_asigno():
     assert '"comercialUserId": 1' in proyeccion and '"montadorUserId": 1' in proyeccion, (
         "el pedido anterior se lee sin sus asignaciones, así que la "
         "comprobación de «ya estaba asignado» siempre daría vacío y pisaría")
+
+
+def test_UN_PEDIDO_DE_MONTADA_3_NO_SE_ROTULA_COMO_DESMONTADA():
+    """`cascos_orders` ya no es solo Cocina Desmontada.
+
+    Desde el 28/08 los PEDIDOS de Cocina Montada 3 se guardan en esa misma
+    colección, con su `origen` puesto. `normaliza_pedido_de_cascos` los marcaba
+    a TODOS como Desmontada, así que en COOP cada pedido de Montada 3 salía con
+    la sección equivocada.
+
+    Contar, contaban —las dos están en la lista blanca—, pero el rótulo es justo
+    lo que hay que mirar el día que se cuele un pedido que no toca: si miente, el
+    «solo Montada 3 o Desmontada» que pidió el master no se puede comprobar.
+    """
+    d = OP.normaliza_pedido_de_cascos(
+        {"id": "cm3-ped-1", "kind": "pedido", "origen": OP.MONTADA_3,
+         "cliente": "Ana", "lines": []})
+    assert d["origen"] == OP.MONTADA_3, (
+        "un pedido de Cocina Montada 3 se está rotulando como Cocina Desmontada")
+    assert d["origenNombre"] == "Cocina Montada 3"
+
+
+def test_un_pedido_de_cascos_SIN_origen_sigue_siendo_desmontada():
+    """La otra mitad: los pedidos de siempre no traen `origen`, y esa colección
+    ES Cocina Desmontada. Sin esto se quedarían sin sección."""
+    d = OP.normaliza_pedido_de_cascos({"id": "c1", "kind": "pedido", "cliente": "Ana"})
+    assert d["origen"] == OP.DESMONTADA
+    assert d["origenNombre"] == "Cocina Desmontada"
+
+
+def test_un_origen_QUE_NO_CUENTA_no_se_cuela_por_esta_puerta():
+    """Escribir `origen: "fabrica"` en un documento de `cascos_orders` no puede
+    servir para meter en la nómina una sección que no está en la lista blanca —
+    ni para inventarse un rótulo que no existe."""
+    d = OP.normaliza_pedido_de_cascos({"id": "x", "kind": "pedido", "origen": "fabrica"})
+    assert d["origen"] in OP.ORIGENES_QUE_CUENTAN
+    assert d["origenNombre"] == "Cocina Desmontada"

@@ -17,17 +17,18 @@ DOS COSAS SE ARREGLAN AQUÍ.
    aprieta y tres que se quedan abiertas, y nadie lo nota hasta que alguien ve
    lo que no debía.
 
-2. `isAdmin` YA NO ABRE ESTA PUERTA (master, 28/08). Estaba dentro, así que
-   CUALQUIER administrador veía la tarifa del proveedor, el margen de la casa y
-   la nómina de los cooperativistas — y con el botón COOP, además, podía decidir
-   quién cobra y cerrar el mes. «Administrar el ERP» y «ver lo que le cuesta a
-   la casa cada mueble» no son el mismo permiso, y el día que se le dé admin a
-   quien lleve carpinter.io o Studio3K, la diferencia se nota en euros.
+2. `isAdmin` TODAVÍA ABRE ESTA PUERTA, y está a medias a propósito. Se quitó
+   el 28/08 —«administrar el ERP» y «ver lo que le cuesta a la casa cada mueble»
+   no son el mismo permiso— y hubo que devolverlo el mismo día: la cuenta con la
+   que trabaja el master es `isAdmin`, así que al apretarlo se quedó fuera de su
+   propia tarifa y Cocina Montada 3 salió entera a 0,00 €. Ver la nota de
+   `FLAGS_MASTER`.
 
-SI TE QUEDAS FUERA. Tu cuenta necesita `isPrimaryAdmin` o `isMaster`. La cuenta
-`admin` ya lo lleva (`scripts/sync_admin_permissions.py` lo pone), pero si algún
-día un usuario tuyo pierde el acceso a Rentabilidad o a COOP, es esto: hay que
-marcarle uno de los dos, no `isAdmin`.
+CÓMO SE TERMINA, cuando se retome: marcar `isPrimaryAdmin` (o `isMaster`) a las
+cuentas que tienen que entrar, COMPROBAR que entran, y solo entonces cambiar
+`FLAGS_MASTER` por `FLAGS_ESTRECHOS`. En ese orden, nunca al revés.
+
+SI TE QUEDAS FUERA hoy: te falta `isAdmin`, `isPrimaryAdmin` o `isMaster`.
 """
 from __future__ import annotations
 

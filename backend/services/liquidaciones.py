@@ -84,11 +84,38 @@ LIQUIDADA = "liquidada"
 COMERCIAL = "comercial"
 MONTADOR = "montador"
 
-# Medio céntimo. Por debajo de esto es redondeo; por encima es deuda y no libera.
-# Dónde vive, dentro del pedido, la comisión ya pagada. Mientras esta clave
-# esté, esos euros no se recalculan nunca más.
+# UN PEDIDO LO COBRAN DOS PERSONAS, Y CADA UNA SE LIQUIDA POR SU CUENTA.
+#
+# Aquí estuvo el fallo más caro de todo este módulo, y no daba ningún error. La
+# marca de «ya pagado» era UNA sola para el pedido entero (`liquidadoEn`), pero
+# del mismo pedido cobran el comercial y el montador. Al cerrar el mes de uno,
+# el pedido quedaba marcado como liquidado Y EL OTRO SE QUEDABA SIN COBRAR: su
+# línea pasaba a «liquidada» en pantalla —o sea, se le decía que ya se le había
+# pagado— y `POST /liquidar` se la saltaba para siempre. En un pedido de 7.000 €
+# con 10 muebles eso son 400 € que el comercial no vuelve a ver.
+#
+# Así que la marca y el importe congelado van POR ROL, en cuatro claves. El
+# congelado ya se guardaba con su `rol` dentro (regla 17 de CLAUDE.md); lo que
+# faltaba era que la marca de pagado hiciera lo mismo.
+LIQUIDADO_POR_ROL = {
+    COMERCIAL: "liquidadoEnComercial",
+    MONTADOR: "liquidadoEnMontador",
+}
+CONGELADA_POR_ROL = {
+    COMERCIAL: "comisionCongeladaComercial",
+    MONTADOR: "comisionCongeladaMontador",
+}
+
+# LAS CLAVES VIEJAS, que se siguen LEYENDO y ya no se escriben. Un pedido
+# liquidado antes de este arreglo trae `liquidadoEn` y `comisionCongelada`, y el
+# `rol` que lleva el congelado dentro dice de quién era. Si no se puede saber de
+# quién era —congelado ausente o corrupto—, se da por liquidado para LOS DOS: en
+# la duda no se vuelve a pagar, porque pagar de menos se reclama y pagar de más
+# no se devuelve.
+LIQUIDADO_LEGADO = "liquidadoEn"
 CONGELADA = "comisionCongelada"
 
+# Medio céntimo. Por debajo de esto es redondeo; por encima es deuda y no libera.
 TOLERANCIA_COBRO = 0.005
 
 # En qué mes cae una comisión consolidada: en el de la ENTREGA de la mercancía.
@@ -168,11 +195,54 @@ def normaliza(pedido: dict) -> dict:
         "muebles": _entero(p.get("muebles")),
         "baseImponible": _num(p.get("baseImponible")),
         "manoPorMueble": _num(p.get("manoPorMueble")),
-        "liquidadoEn": p.get("liquidadoEn") or None,
-        "congelada": p.get(CONGELADA) or None,
-        "comercialId": p.get("comercialId") or "",
+        # POR ROL: del mismo pedido cobran dos personas y cada una se liquida
+        # por su cuenta. Ver la nota de `LIQUIDADO_POR_ROL`.
+        **_pagado_por_rol(p),
+        "comercialUserId": p.get("comercialUserId") or "",
         "montadorUserId": p.get("montadorUserId") or "",
     }
+
+
+def _pagado_por_rol(p: dict) -> dict:
+    """Qué se ha pagado ya, y a quién, leyendo también las claves viejas.
+
+    Se resuelve UNA vez y se deja escrito en el pedido normalizado, para que
+    `normaliza` siga siendo idempotente: pasarle su propia salida tiene que dar
+    lo mismo, o el segundo paso perdería el legado ya traducido.
+    """
+    legado_liq = p.get(LIQUIDADO_LEGADO) or None
+    legado_cong = p.get(CONGELADA)
+    legado_cong = legado_cong if isinstance(legado_cong, dict) else None
+    # De quién era la comisión vieja. Si no se sabe, el legado vale para los dos:
+    # en la duda no se paga otra vez.
+    rol_legado = (legado_cong or {}).get("rol")
+    fuera = {}
+    for rol in (COMERCIAL, MONTADOR):
+        liq = p.get(LIQUIDADO_POR_ROL[rol]) or None
+        cong = p.get(CONGELADA_POR_ROL[rol])
+        cong = cong if isinstance(cong, dict) else None
+        if not liq and legado_liq and rol_legado in (rol, None):
+            liq = legado_liq
+        if not cong and legado_cong and rol_legado == rol:
+            cong = legado_cong
+        fuera[LIQUIDADO_POR_ROL[rol]] = liq
+        fuera[CONGELADA_POR_ROL[rol]] = cong
+    return fuera
+
+
+def liquidado_en(pedido: dict, rol: str) -> Optional[str]:
+    """El periodo en que se le pagó ESE pedido a ESE rol, o None si no se ha
+    pagado. Nunca mira lo del otro rol: eso fue el fallo que se arregló aquí."""
+    if rol not in LIQUIDADO_POR_ROL:
+        raise ValueError(f"rol desconocido: {rol!r}")
+    return _pagado_por_rol(pedido or {})[LIQUIDADO_POR_ROL[rol]]
+
+
+def congelada_de(pedido: dict, rol: str) -> Optional[dict]:
+    """La comisión ya pagada de ese rol, tal como se congeló el día que se pagó."""
+    if rol not in CONGELADA_POR_ROL:
+        raise ValueError(f"rol desconocido: {rol!r}")
+    return _pagado_por_rol(pedido or {})[CONGELADA_POR_ROL[rol]]
 
 
 def esta_servido(p: dict) -> bool:
@@ -184,8 +254,16 @@ def esta_cobrado(p: dict) -> bool:
     return p["cobradoAt"] is not None and p["pendienteCobro"] <= TOLERANCIA_COBRO
 
 
-def estado_de(pedido: dict) -> Optional[str]:
-    """El estado de la comisión de un pedido, o None si no cuenta para nada.
+def estado_de(pedido: dict, rol: Optional[str] = None) -> Optional[str]:
+    """El estado de la comisión de un pedido PARA ESE ROL, o None si no cuenta.
+
+    EL ROL HACE FALTA, y por eso está el aviso de abajo. «Liquidada» es del
+    comercial o del montador, nunca del pedido: al pagarle a uno, el otro seguía
+    teniendo su comisión pendiente y esta función la daba por pagada.
+
+    Sin rol se contesta lo conservador —liquidada si lo está para cualquiera de
+    los dos— porque quien no dice de quién pregunta no puede recibir un «te
+    queda por cobrar» que a lo mejor no es suyo.
 
     Devuelve None —y no «cero euros»— cuando el pedido ni siquiera está
     aceptado o se ha caído: son cosas distintas y mezclarlas haría que un pedido
@@ -195,7 +273,8 @@ def estado_de(pedido: dict) -> Optional[str]:
     p = normaliza(pedido)
     if p["anulado"] or p["aceptadoAt"] is None:
         return None
-    if p["liquidadoEn"]:
+    roles = (rol,) if rol else (COMERCIAL, MONTADOR)
+    if any(p[LIQUIDADO_POR_ROL[r]] for r in roles):
         return LIQUIDADA
     if esta_servido(p) and esta_cobrado(p):
         return CONSOLIDADA
@@ -252,19 +331,22 @@ def linea(pedido: dict, rol: str) -> Optional[dict]:
     comisión de un pedido servido es un hecho del pasado, no una fórmula que se
     recalcula cada vez que alguien abre la pantalla.
     """
+    if rol not in LIQUIDADO_POR_ROL:
+        raise ValueError(f"rol desconocido: {rol!r}")
     p = normaliza(pedido)
-    est = estado_de(p)
+    est = estado_de(p, rol)
     if est is None:
         return None
-    congelada = p["congelada"] if isinstance(p["congelada"], dict) else None
-    if congelada and congelada.get("rol") == rol:
+    liquidado = p[LIQUIDADO_POR_ROL[rol]]
+    congelada = p[CONGELADA_POR_ROL[rol]]
+    if congelada:
         return {
             "pedidoId": p["id"],
             "estado": est,
             "anomalia": es_anomalia(p),
             "euros": _num(congelada.get("euros")),
             "muebles": _entero(congelada.get("muebles")),
-            "periodo": congelada.get("periodo") or p["liquidadoEn"],
+            "periodo": congelada.get("periodo") or liquidado,
             "porMueble": _num(congelada.get("porMueble")),
             "tramo": congelada.get("tramo"),
             "congelada": True,
@@ -275,7 +357,7 @@ def linea(pedido: dict, rol: str) -> Optional[dict]:
         "anomalia": es_anomalia(p),
         "euros": euros_de(p, rol),
         "muebles": p["muebles"],
-        "periodo": p["liquidadoEn"] if est == LIQUIDADA else periodo_de_consolidacion(p),
+        "periodo": liquidado if est == LIQUIDADA else periodo_de_consolidacion(p),
         "porMueble": (comisiones.euros_por_mueble_comercial(p["baseImponible"])
                       if rol == COMERCIAL else round(p["manoPorMueble"], 2)),
         "tramo": (comisiones._nombre_del_tramo(p["baseImponible"])

@@ -146,7 +146,13 @@ def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0,
         "pendienteCobro": o.get("pendienteCobro") or 0,
         "anulado": bool(o.get("anulado") or o.get("status") == "cancelled"),
         "manoPorMueble": mano_por_mueble,
-        "liquidadoEn": o.get("liquidadoEn"),
+        # QUÉ SE HA PAGADO YA, Y A QUIÉN. Va por rol —del mismo pedido cobran el
+        # comercial y el montador— y se copian también las claves viejas, que
+        # `liquidaciones` sigue sabiendo leer para los pedidos de antes.
+        L.LIQUIDADO_LEGADO: o.get(L.LIQUIDADO_LEGADO),
+        L.CONGELADA: o.get(L.CONGELADA),
+        **{k: o.get(k) for k in L.LIQUIDADO_POR_ROL.values()},
+        **{k: o.get(k) for k in L.CONGELADA_POR_ROL.values()},
     }
 
 
@@ -176,7 +182,10 @@ def _a_tiro(normalizados, rol):
         return []
     fuera = []
     for p in normalizados:
-        if L.estado_de(p) != L.EN_PROGRESO:
+        # CON EL ROL: «liquidada» es de una persona, no del pedido. Sin pasarlo,
+        # un pedido que ya se le pagó al montador desaparecería de lo que el
+        # comercial todavía tiene a tiro.
+        if L.estado_de(p, COMERCIAL) != L.EN_PROGRESO:
             continue
         g = C.cuanto_falta_para_el_siguiente_tramo(p["baseImponible"], p["muebles"])
         if not g:

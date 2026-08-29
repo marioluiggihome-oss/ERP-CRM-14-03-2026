@@ -45,7 +45,7 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
         oid = (payload or {}).get("id") or f"casco-{uuid.uuid4().hex[:10]}"
         now = datetime.now(timezone.utc).isoformat()
         existing = await _get_db().cascos_orders.find_one(
-            {"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1,
+            {"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1, "origen": 1,
                           "comercialUserId": 1, "montadorUserId": 1})
         # Al re-guardar por id, comprobar propiedad (evita pisar el pedido de otro).
         if existing and not _can_access(existing, current_user):
@@ -61,9 +61,14 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             # de `services/origen_pedidos.py`. Sin la lista, cualquiera podría
             # meter un pedido en la nómina de la cooperativa mandando un origen
             # inventado en el cuerpo de la petición.
-            "origen": (str(payload.get("origen") or "").strip().lower()
-                       if str(payload.get("origen") or "").strip().lower()
-                       in _OP.ORIGENES_QUE_CUENTAN else ""),
+            #
+            # UN GUARDADO QUE NO LO TRAIGA NO PUEDE BORRARLO (misma razón que la
+            # regla 12 de CLAUDE.md con las medidas): esto se escribe con un
+            # `$set` del documento entero, así que sin el respaldo de lo que ya
+            # había, re-guardar un pedido de Cocina Montada 3 desde otra pantalla
+            # lo dejaría sin origen — y entonces pasaría a contarse como Cocina
+            # Desmontada sin que nadie hubiera tocado nada.
+            "origen": _origen_valido(payload.get("origen")) or (existing or {}).get("origen") or "",
             "expediente": str(payload.get("expediente") or ""),  # vínculo venta <-> compra
             "cliente": str(payload.get("cliente") or ""),
             "ref": str(payload.get("ref") or ""),
@@ -102,6 +107,17 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
     except Exception as e:
         logger.error(f"Create casco order error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _origen_valido(v) -> str:
+    """El origen que trae la petición, SOLO si está en la lista blanca.
+
+    Va por lista blanca y no por saneado: el origen decide si un pedido entra en
+    la nómina de la cooperativa (`services/origen_pedidos.py`), así que un valor
+    inventado en el cuerpo de la petición no puede colarse.
+    """
+    o = str(v or "").strip().lower()
+    return o if o in _OP.ORIGENES_QUE_CUENTAN else ""
 
 
 @router.get("/cascos/orders")
@@ -257,11 +273,14 @@ async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depen
 # pasan la tarifa del proveedor, el descuento y el margen. La pantalla ya lo
 # cierra a master, y si aquí se dejara la lista ancha el cierre sería de adorno
 # (basta llamar a la API a mano).
-# `isAdmin` NO abre esta puerta (master, 28/08): administrar el ERP y ver lo
-# que le cuesta a la casa cada mueble no son el mismo permiso. La lista
-# manda desde `services/master.py`; aquí va el valor porque hay pruebas que
-# ejecutan trozos de este fichero sueltos, y `test_calculo_master_unico.py`
-# comprueba que las copias no se separan.
+# QUIÉN ES EL MASTER. `isAdmin` SIGUE DENTRO, y no por descuido: se quitó el
+# 28/08 y hubo que devolverlo el mismo día, porque la cuenta con la que trabaja
+# el master es `isAdmin` y al apretarlo se quedó fuera de su propia tarifa —
+# Cocina Montada 3 salía entera a 0,00 €. Se estrechará cuando las cuentas que
+# tienen que entrar lleven `isPrimaryAdmin`, y no antes. La lista manda desde
+# `services/master.py`; aquí va el valor porque hay pruebas que ejecutan trozos
+# de este fichero sueltos, y `test_calculo_master_unico.py` comprueba que las
+# copias no se separan.
 _MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
 
 

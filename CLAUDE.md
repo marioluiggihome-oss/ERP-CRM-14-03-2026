@@ -321,6 +321,23 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      distintas, y leer la del otro es pagarle lo que no es suyo. Una
      congelación corrupta vuelve a calcular en vez de devolver cero — un dato
      roto no puede dejar a nadie sin cobrar en silencio.
+   - **UN PEDIDO LO COBRAN DOS PERSONAS, Y CADA UNA SE LIQUIDA POR SU CUENTA**
+     (29/08, auditando). La marca de «ya pagado» era UNA sola para el pedido
+     (`liquidadoEn`), así que al cerrarle el mes al montador el comercial se
+     quedaba sin cobrar PARA SIEMPRE: `POST /liquidar` se lo saltaba y en su
+     panel la línea ponía «liquidada». En un pedido de 7.000 € con 10 muebles
+     son 400 € que no reclama nadie, porque la pantalla le dice que ya se los
+     pagaron. No daba ningún error. Ahora la marca y el importe congelado van
+     por rol (`liquidadoEnComercial` / `liquidadoEnMontador` y sus congeladas);
+     los pedidos cerrados antes se siguen leyendo por el `rol` que llevan dentro
+     del congelado, y si no se puede saber de quién eran cuentan para los dos —
+     en la duda no se paga otra vez. `estado_de` PIDE EL ROL: «liquidada» es de
+     una persona, nunca del pedido. Candado:
+     `test_calculo_liquidar_por_rol.py`.
+   - **Y si el `update` no toca nada, NO se ha pagado nada.** La condición de
+     idempotencia viaja dentro del `update`, pero el resultado se ignoraba: dos
+     pulsaciones a la vez daban el total del mes por duplicado en pantalla
+     aunque el segundo no escribiera un euro.
    - **`liquidadoEn` no lo escribía NADIE** hasta el 28/08: se leía en cinco
      sitios y el estado LIQUIDADA no se alcanzaba nunca, así que la misma
      comisión podía entrar en la liquidación de septiembre, la de octubre y la
@@ -518,6 +535,16 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      tocan las dos colecciones: escribir siempre en `orders` dejaba sin efecto
      asignar o liquidar un pedido de Desmontada, respondiendo que sí y sin
      cambiar nada. Candado: `test_calculo_origen_pedidos.py`.
+   - **EL ROTULO DEL ORIGEN NO PUEDE MENTIR** (29/08, auditando). Desde que
+     Cocina Montada 3 crea pedidos, `cascos_orders` ya no es solo Cocina
+     Desmontada — y la traducción de esa colección marcaba TODOS los pedidos
+     como Desmontada, así que en COOP los de Montada 3 salían con la sección
+     equivocada. Contar contaban (las dos están en la lista blanca), pero el
+     rótulo es justo lo que hay que mirar el día que se cuele un pedido que no
+     toca: si miente, el «solo Montada 3 o Desmontada» que pidió el master no se
+     puede comprobar. Y el origen se RESPALDA al guardar: se escribe con un
+     `$set` del documento entero, así que sin respaldo un re-guardado que no lo
+     trajera lo borraría y el pedido pasaría a contarse como Desmontada solo.
    - **Un pedido sin asignar no da error: no le paga a nadie.** La pantalla
      «Socios» (`SociosCooperativistas.jsx`, dentro del botón **COOP** del menú
      —master, 28/08—, junto con la liquidación del mes) es la que pone quién
@@ -560,6 +587,24 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      `services/master.py`). Se hará con el orden correcto: primero comprobar a
      quién afecta, después cerrar.
    - Candado: `test_pantalla_presupuestador.py`.
+
+23. **NINGÚN HOOK POR DEBAJO DE UN `return`: eso deja el ERP EN NEGRO** (29/08).
+   El master: «cuando entro en máster sale este error», con la pantalla
+   completamente negra en el móvil. En `SettingsModal.jsx` —el panel Master— se
+   había colado un `useEffect` debajo del `if (!isOpen) return null` que ese
+   componente tiene a media altura: cerrado, React ejecutaba 87 hooks; abierto,
+   88. Eso es «Rendered more hooks than during the previous render», y React no
+   tira esa pantalla: tira el árbol ENTERO. El ERP completo se va a negro y solo
+   vuelve recargando.
+   - **No lo avisa nada.** El build pasa, ESLint con esta configuración no lo
+     ve, y ningún otro candado mira si una pantalla se llega a PINTAR: todos
+     vigilan lo que el ERP calcula.
+   - La regla es la de React de siempre: los hooks van TODOS antes del primer
+     `return` del componente. Lo que se condiciona es lo que hacen dentro
+     (`useEffect(() => { if (!isOpen) return; … }, [isOpen])`).
+   - Candado: `test_pantalla_hooks_antes_del_return.py`, que barre las 92
+     pantallas. Y comprueba que su propio reconocedor SÍ encuentra el fallo
+     cuando se le da: un detector que no detecta nada da cero y el CI en verde.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

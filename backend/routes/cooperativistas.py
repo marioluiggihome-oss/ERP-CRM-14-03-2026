@@ -271,8 +271,16 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
     momento esos euros no se recalculan: cambiar mañana la mano de obra de un
     montador ya no mueve hacia atrás lo que se le pagó en agosto.
 
-    ES IDEMPOTENTE: un pedido que ya lleva `liquidadoEn` se salta. Volver a
-    pulsar no paga dos veces, que es el error que no se puede permitir aquí.
+    ES IDEMPOTENTE: un pedido que ya está liquidado PARA ESE ROL se salta.
+    Volver a pulsar no paga dos veces, que es el error que no se puede permitir
+    aquí. Y si el `update` no llega a tocar nada —porque otro lo cerró en el
+    mismo instante— ese pedido NO se cuenta como pagado: antes se sumaba igual y
+    la pantalla daba el total dos veces.
+
+    POR ROL, Y ESTO COSTÓ 400 € EN UNA PRUEBA. La marca de pagado era una sola
+    para el pedido, pero de un pedido cobran DOS personas. Al cerrarle el mes al
+    montador, el pedido quedaba marcado y el comercial se quedaba sin cobrar
+    para siempre: aquí se saltaba, y en su panel la línea ponía «liquidada».
     """
     if not _es_master(current_user):
         raise HTTPException(status_code=403, detail="Liquidar es del master.")
@@ -301,27 +309,35 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
     mano = C.mano_de_obra_de(u, aj) if rol == AC.MONTADOR else 0.0
     familias = await _familia_por_codigo()
 
+    clave_liquidado = L.LIQUIDADO_POR_ROL[rol]
+    clave_congelada = L.CONGELADA_POR_ROL[rol]
+
     pagados, total, ya_estaban = [], 0.0, 0
     for crudo in crudos:
-        if crudo.get("liquidadoEn"):
+        if L.liquidado_en(crudo, rol):
             ya_estaban += 1
             continue
         n = AC.normaliza_pedido(crudo, mano, familias)
-        if L.estado_de(n) != L.CONSOLIDADA:
+        if L.estado_de(n, rol) != L.CONSOLIDADA:
             continue
         if L.periodo_de_consolidacion(n) != periodo:
             continue
         congelada = L.congelar(n, rol, periodo)
         try:
-            await _guardar_en_el_pedido(
+            tocados = await _guardar_en_el_pedido(
                 crudo.get("id"),
-                {"liquidadoEn": periodo, L.CONGELADA: congelada},
-                {"liquidadoEn": {"$in": [None, ""]}})
+                {clave_liquidado: periodo, clave_congelada: congelada},
+                {clave_liquidado: {"$in": [None, ""]}})
         except Exception as e:                               # noqa: BLE001
             logger.error(f"liquidar: no se pudo cerrar {crudo.get('id')}: {e}")
             raise HTTPException(
                 status_code=500,
                 detail="No se pudo cerrar la liquidación; no se ha pagado nada más.")
+        # SI NO SE TOCÓ NADA, NO SE HA PAGADO NADA. Otra pulsación a la vez lo
+        # cerró primero: contarlo aquí daría el mes por duplicado en pantalla.
+        if not tocados:
+            ya_estaban += 1
+            continue
         pagados.append({"pedidoId": crudo.get("id"), "euros": congelada["euros"],
                         "muebles": congelada["muebles"]})
         total += congelada["euros"]

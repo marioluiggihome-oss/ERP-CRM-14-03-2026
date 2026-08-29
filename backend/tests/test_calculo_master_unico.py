@@ -3,18 +3,20 @@
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
 """
-QUIÉN ES EL MASTER: UNA SOLA LISTA, Y SIN `isAdmin` DENTRO.
+QUIÉN ES EL MASTER: UNA SOLA LISTA, Y HOY CON `isAdmin` DENTRO.
 
 Por esta puerta pasan la tarifa MV, el coste, el margen, la rentabilidad, las
 comisiones de los cooperativistas y el cierre del mes.
 
 DOS COSAS QUE VIGILA ESTE CANDADO.
 
-1. QUE `isAdmin` SIGA FUERA (master, 28/08). Estaba dentro, así que CUALQUIER
-   administrador veía la tarifa del proveedor y la nómina — y con el botón COOP,
-   además, decidía quién cobra y cerraba el mes. Administrar el ERP y ver lo que
-   le cuesta a la casa cada mueble no son el mismo permiso, y el día que se le dé
-   admin a quien lleve carpinter.io la diferencia se nota en euros.
+1. QUE `isAdmin` SIGA DENTRO — hoy, y esto sorprende, porque la intención es la
+   contraria. Se quitó el 28/08 con buen criterio (administrar el ERP y ver lo
+   que le cuesta a la casa cada mueble no son el mismo permiso) y hubo que
+   devolverlo el mismo día: la cuenta con la que trabaja el master es `isAdmin`
+   y Cocina Montada 3 salió entera a 0,00 €. El candado lo sujeta AHÍ para que
+   nadie lo vuelva a apretar sin marcar antes `isPrimaryAdmin` a quien tiene que
+   entrar. `FLAGS_ESTRECHOS` guarda a dónde se va cuando eso esté hecho.
 
 2. QUE LAS COPIAS NO SE SEPAREN. La misma tupla vive en tres ficheros de rutas
    —porque hay pruebas que ejecutan trozos sueltos de esos ficheros y un import
@@ -90,10 +92,13 @@ def test_quien_NO_es_master_sigue_fuera():
 def test_el_master_de_verdad_SI_entra():
     """La otra mitad: un candado que cierra de más deja la casa sin dueño.
 
-    La cuenta `admin` lleva `isPrimaryAdmin` (lo pone
-    `scripts/sync_admin_permissions.py`), así que apretar esto no deja fuera al
-    master. Si algún día alguien pierde el acceso a Rentabilidad o a COOP, es
-    esto: hay que marcarle `isPrimaryAdmin` o `isMaster`, no `isAdmin`.
+    Aquí había escrito que la cuenta `admin` ya lleva `isPrimaryAdmin` y que por
+    eso apretar la lista no dejaba fuera al master. NO ERA VERDAD, y se vio en
+    producción el 28/08: se apretó, el master se quedó sin sus propios precios y
+    Cocina Montada 3 salió a 0,00 €. Queda escrito porque el error no fue el
+    cambio, fue darlo por hecho: lo que dice un script de sincronización no es lo
+    que hay en la base de datos, y antes de estrechar un permiso hay que MIRAR
+    quién queda dentro.
     """
     assert M.es_master({"isPrimaryAdmin": True})
     assert M.es_master({"isMaster": True})

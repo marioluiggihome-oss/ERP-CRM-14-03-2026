@@ -13,7 +13,10 @@ EL ERP GUARDA LOS PEDIDOS EN SITIOS DISTINTOS SEGÚN QUIÉN LOS HAGA:
 
     Cocina Desmontada   → colección `cascos_orders`, con `kind: "pedido"`
                           (`presupuesto` y `compra` NO son pedidos).
-    Cocina Montada 3    → `projects`, con `tipo: "cocina_montada_3"`.
+    Cocina Montada 3    → `cascos_orders` TAMBIÉN, desde el 28/08, con
+                          `kind: "pedido"` y su `origen` puesto. La colección ya
+                          no basta para saber de dónde viene un pedido: manda el
+                          `origen` que trae escrito.
     Las secciones VIEJAS (BudgetTable, Presupuestador 2) → colección `orders`.
 
 LA LISTA ES BLANCA, y eso es lo importante. Se dice qué orígenes SÍ entran, no
@@ -84,14 +87,24 @@ def solo_los_que_cuentan(pedidos: Iterable[dict]) -> list:
 
 
 def normaliza_pedido_de_cascos(doc: dict) -> dict:
-    """Un pedido de Cocina Desmontada, con los nombres que usa la liquidación.
+    """Un pedido guardado en `cascos_orders`, con los nombres que usa la liquidación.
 
     `cascos_orders` guarda `cliente`, `ref` y `lines`; el resto del ERP dice
     `customerName`, `budgetNumber` e `items`. Se traduce aquí y en un solo sitio:
     si cada pantalla lo tradujera por su cuenta, acabarían contando cosas
     distintas.
+
+    EL ORIGEN NO SE PISA. En esta colección no solo hay Cocina Desmontada: desde
+    el 28/08 los PEDIDOS de Cocina Montada 3 se guardan aquí también, con su
+    `origen` puesto. Esta función los marcaba a todos como Desmontada, así que en
+    COOP cada pedido de Montada 3 salía con la sección equivocada. Contar,
+    contaban —las dos están en la lista blanca—, pero el rótulo es justo lo que
+    hay que mirar el día que se cuele un pedido que no toca: si miente, el
+    «solo Montada 3 o Desmontada» que pidió el master no se puede comprobar.
     """
     d = doc or {}
+    marcado = str(d.get("origen") or "").strip().lower()
+    origen = marcado if marcado in ORIGENES_QUE_CUENTAN else DESMONTADA
     return {
         **d,
         "id": d.get("id") or "",
@@ -101,6 +114,6 @@ def normaliza_pedido_de_cascos(doc: dict) -> dict:
         "items": d.get("lines") or d.get("items") or [],
         "confirmedAt": d.get("createdAt") or d.get("confirmedAt"),
         "descuentoPct": d.get("descuento") or 0,
-        "origen": DESMONTADA,
-        "origenNombre": NOMBRES[DESMONTADA],
+        "origen": origen,
+        "origenNombre": NOMBRES[origen],
     }

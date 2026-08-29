@@ -321,9 +321,13 @@ async def get_current_user_info(
 # Ahora se marca una fecha de corte y `require_auth` rechaza todo token emitido
 # antes. Efecto inmediato, sin redespliegue, y se puede echar a uno solo.
 
-# `isAdmin` NO abre esta puerta (master, 28/08). La lista manda desde
+# QUIÉN ES EL MASTER. `isAdmin` SIGUE DENTRO, y no por descuido: se quitó el
+# 28/08 y hubo que devolverlo el mismo día, porque la cuenta con la que trabaja
+# el master es `isAdmin` y al apretarlo se quedó fuera de su propia tarifa —
+# Cocina Montada 3 salía entera a 0,00 €. Se estrechará cuando las cuentas que
+# tienen que entrar lleven `isPrimaryAdmin`, y no antes. La lista manda desde
 # `services/master.py`; aquí va el valor porque hay pruebas que ejecutan trozos
-# sueltos de estos ficheros, y `test_calculo_master_unico.py` comprueba que las
+# de este fichero sueltos, y `test_calculo_master_unico.py` comprueba que las
 # copias no se separan.
 _FLAGS_MASTER = ("isAdmin", "isPrimaryAdmin", "isMaster")
 

@@ -618,6 +618,28 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     loadDashboardMetrics();
   }, [isOpen, activeTab, dashboardPeriod]);
 
+  // FICHAS DE LA AGENDA DE MONTAJES, para poder vincularlas con la cuenta.
+  //
+  // OJO CON DÓNDE VA ESTE HOOK. Estuvo escrito MÁS ABAJO, después del
+  // `if (!isOpen) return null` — y eso tumbaba el ERP entero al abrir el panel
+  // Master: con el panel cerrado React ejecutaba 87 hooks y al abrirlo 88, que
+  // es «Rendered more hooks than during the previous render» y la pantalla en
+  // negro. Un hook va SIEMPRE antes del primer `return` del componente, sin
+  // excepción; lo que se condiciona es lo que hace dentro, como aquí.
+  useEffect(() => {
+    if (!isOpen) return;                       // no se pide hasta que se abre
+    (async () => {
+      try {
+        const r = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/api/montadores`,
+          { headers: authHeaders() });
+        if (!r.ok) return;                     // sin agenda, sin sugerencias
+        const d = await r.json().catch(() => []);
+        setFichasMontador(Array.isArray(d) ? d : (d.montadores || []));
+      } catch { /* la vinculación es opcional: no rompe la pantalla */ }
+    })();
+  }, [isOpen]);
+
   // Lista de usuarios que pueden tener tiendas asignadas (Director, Gerente, Responsable, Comercial)
   const representatives = useMemo(() => state.users.filter(u => u.isAdmin || u.isGerente || u.isDirectorComercial || u.isResponsableDelegacion || u.isRepresentative), [state.users]);
 
@@ -859,20 +881,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canChangeLogo: false
     });
   };
-
-  // Se cargan una vez: son pocas y hacen falta en cuanto se abre una ficha.
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/montadores`,
-          { headers: authHeaders() });
-        if (!r.ok) return;                       // sin agenda, sin sugerencias
-        const d = await r.json().catch(() => []);
-        setFichasMontador(Array.isArray(d) ? d : (d.montadores || []));
-      } catch { /* la vinculación es opcional: no rompe la pantalla */ }
-    })();
-  }, []);
 
   const handleEditUser = (user) => {
     // Director Comercial, Responsable Delegación o comercial pueden editar tiendas

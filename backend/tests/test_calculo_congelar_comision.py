@@ -161,8 +161,10 @@ def test_la_ruta_de_liquidar_NO_PAGA_DOS_VECES_y_es_del_master():
     """Se comprueba en el fichero de rutas, no solo en la pantalla.
 
     Lo que hace falta: que sea del master, que solo pague lo CONSOLIDADO, que se
-    salte lo que ya lleva `liquidadoEn`, y que el `update` lleve la condición de
-    no estar liquidado — para que dos pulsaciones a la vez no paguen dos veces.
+    salte lo que ese ROL ya tenga liquidado, que el `update` lleve la condición
+    de no estar liquidado —para que dos pulsaciones a la vez no paguen dos
+    veces— y que si el `update` no toca nada, ese pedido NO se cuente como
+    pagado.
     """
     ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         "routes", "cooperativistas.py")
@@ -176,10 +178,17 @@ def test_la_ruta_de_liquidar_NO_PAGA_DOS_VECES_y_es_del_master():
     assert "L.CONSOLIDADA" in trozo, (
         "liquidar no comprueba que el pedido esté consolidado: pagaría comisiones "
         "de mercancía sin servir o sin cobrar")
-    assert 'crudo.get("liquidadoEn")' in trozo, (
-        "liquidar no se salta los pedidos ya liquidados: pagaría dos veces")
-    assert '"liquidadoEn": {"$in": [None, ""]}' in trozo, (
+    assert "L.liquidado_en(crudo, rol)" in trozo, (
+        "liquidar no se salta lo que ESE ROL ya tiene liquidado: pagaría dos veces")
+    assert 'clave_liquidado: {"$in": [None, ""]}' in trozo, (
         "el update no lleva la condición de no estar ya liquidado. Sin ella, dos "
         "pulsaciones seguidas pagan dos veces el mismo pedido")
+    assert "L.LIQUIDADO_POR_ROL[rol]" in trozo and "L.CONGELADA_POR_ROL[rol]" in trozo, (
+        "liquidar marca el pedido entero en vez de marcarlo POR ROL. De un pedido "
+        "cobran el comercial y el montador: con una marca sola, al pagarle a uno "
+        "el otro se queda sin cobrar para siempre")
+    assert "if not tocados:" in trozo, (
+        "liquidar cuenta como pagado un pedido cuyo update no ha tocado nada: el "
+        "total del mes saldría duplicado")
     assert "L.congelar" in trozo, (
         "liquidar no congela: al mes siguiente el importe volvería a calcularse")
