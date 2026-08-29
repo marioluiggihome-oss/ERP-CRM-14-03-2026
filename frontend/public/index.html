@@ -1,11 +1,33 @@
 <!doctype html>
-<html lang="en">
+<!--
+     lang="es" Y "no traducir". LAS DOS COSAS, Y LAS DOS SON NECESARIAS.
+
+     Ponía `lang="en"` con el ERP entero escrito en castellano. En un Chrome de
+     móvil en español, con «traducir siempre las páginas en inglés» puesto —que
+     es lo que tiene medio mundo—, Chrome se cree la etiqueta y TRADUCE la
+     página solo, sin preguntar. Para traducir reescribe todos los nodos de
+     texto metiéndolos en `<font>`, o sea que le cambia el DOM a React por
+     debajo; y la siguiente vez que React va a mover algo se encuentra con que
+     el nodo ya no está donde lo dejó:
+
+         NotFoundError: Failed to execute 'insertBefore' on 'Node'
+
+     que tumba la aplicación entera. Pasa en el móvil y no en el portátil
+     porque en el portátil Chrome pregunta antes.
+
+     Y aunque no tumbara nada, TRADUCIR ESTE ERP ES UN DESTROZO: aquí hay
+     códigos de mueble (`B60D/I`), medidas y euros. Un traductor automático se
+     los lleva por delante y nadie se entera de que el número que está mirando
+     ya no es el que puso el ERP.
+-->
+<html lang="es" translate="no">
     <head>
         <meta charset="utf-8" />
         <!-- viewport-fit=cover: en tablets y móviles con esquinas redondeadas o
              barra de gestos, sin esto queda una franja muerta arriba y abajo. -->
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0f172a" />
+        <meta name="google" content="notranslate" />
         <meta name="description" content="Sistema profesional de presupuestos para distribuidores de cocinas" />
 
         <!-- INSTALABLE COMO APP. Es el equivalente real al F11 del portátil:

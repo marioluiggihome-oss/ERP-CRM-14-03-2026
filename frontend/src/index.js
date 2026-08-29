@@ -99,10 +99,15 @@ class ErrorBoundary extends React.Component {
       // reventado, que es la mitad del trabajo de arreglarlo.
       const pila = (this.state.errorInfo?.componentStack || '')
         .split('\n').filter(Boolean).slice(0, 12).join('\n');
+      // EL «DÓNDE» VA PRIMERO. Iba detrás de seis líneas de pila minificada
+      // (`en Al`, `en Vl`, `en Wl`…, que no dicen nada), así que en la pantalla
+      // de un móvil quedaba cortado justo lo único que sirve para arreglarlo:
+      // en qué componente ha reventado. El master mandó una foto del error y la
+      // parte útil no salía.
       const detalle = [
         errMsg,
-        this.state.error?.stack ? `\n${String(this.state.error.stack).split('\n').slice(0, 6).join('\n')}` : '',
         pila ? `\nDónde:${pila}` : '',
+        this.state.error?.stack ? `\n${String(this.state.error.stack).split('\n').slice(0, 6).join('\n')}` : '',
         `\n${window.location.pathname}${window.location.hash || ''}`,
       ].filter(Boolean).join('\n');
       return (

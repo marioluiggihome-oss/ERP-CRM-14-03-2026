@@ -1959,7 +1959,13 @@ const App = () => {
           <Suspense fallback={null}>
             {/* Panel Maestro: si el usuario es admin de división Carpinter.io (canManageCarpinteroUsers && !isAdmin)
                 mostramos el panel independiente sin branding ni tabs de Luiggi Home.
-                Para todos los demás (admin, gerente, comerciales) mostramos el SettingsModal completo. */}
+                Para todos los demás (admin, gerente, comerciales) mostramos el SettingsModal completo.
+
+                CON SU RED. Era de las pocas pantallas del ERP sin `ErrorBoundary`,
+                y justo la que más tiene: es el panel más grande que hay. Sin
+                red, un fallo aquí no se queda en «no se abre el panel» — se
+                lleva por delante el ERP entero y hay que recargar. */}
+            <ErrorBoundary>
             {state.currentUser?.canManageCarpinteroUsers && !state.currentUser?.isAdmin ? (
               <CarpinterPanel
                 isOpen={state.showSettings || false}
@@ -1974,6 +1980,7 @@ const App = () => {
                 setState={setState} 
               />
             )}
+            </ErrorBoundary>
           </Suspense>
 
           {/* Maintenance Panel Modal - ADMIN ONLY */}

@@ -13,6 +13,12 @@ const Cascos = lazy(() => import('./Cascos'));
 
 const ICONOS = { [MONTADA]: Layers, [DESMONTADA]: Box };
 
+const Cargando = () => (
+  <div className="h-full flex items-center justify-center text-dato-500">
+    <Loader className="animate-spin mr-2" size={18} /> Cargando…
+  </div>
+);
+
 /**
  * PRESUPUESTADOR: LAS DOS FORMAS DE PRESUPUESTAR UNA COCINA, EN UN SITIO.
  *
@@ -98,29 +104,36 @@ export default function PresupuestadorPanel({ currentUser, state, setState, logo
       )}
 
       <div className="flex-1 min-h-0 relative">
-        <Suspense fallback={(
-          <div className="h-full flex items-center justify-center text-dato-500">
-            <Loader className="animate-spin mr-2" size={18} /> Cargando…
-          </div>
-        )}>
-          {/* Se ocultan con CSS en vez de desmontarlas: así una relación a medio
-              hacer no se pierde al mirar la otra pestaña. */}
-          {vistas.has(MONTADA) && (
-            <div className={`h-full ${activa === MONTADA ? '' : 'hidden'}`}>
+        {/* CADA PESTAÑA CON SU PROPIO `Suspense`, no las dos dentro de uno.
+            Compartiéndolo, abrir la segunda pestaña hace que el código de esa
+            pestaña se esté cargando MIENTRAS la primera ya está pintada: el
+            boundary tapa a las dos, esconde el DOM de la que ya estaba y lo
+            vuelve a meter al terminar. Es mover por debajo lo que React cree
+            tener colocado, y de ahí salen los `insertBefore` que tumban la
+            aplicación entera. Con un boundary por pestaña, cargar una no toca
+            la otra.
+
+            Y se ocultan con CSS en vez de desmontarlas: así una relación a
+            medio hacer no se pierde al mirar la otra pestaña. */}
+        {vistas.has(MONTADA) && (
+          <div className={`h-full ${activa === MONTADA ? '' : 'hidden'}`}>
+            <Suspense fallback={<Cargando />}>
               <CocinaMontada3
                 currentUser={currentUser}
                 state={state}
                 setState={setState}
                 logo={logo}
               />
-            </div>
-          )}
-          {vistas.has(DESMONTADA) && (
-            <div className={`h-full ${activa === DESMONTADA ? '' : 'hidden'}`}>
+            </Suspense>
+          </div>
+        )}
+        {vistas.has(DESMONTADA) && (
+          <div className={`h-full ${activa === DESMONTADA ? '' : 'hidden'}`}>
+            <Suspense fallback={<Cargando />}>
               <Cascos state={state} setState={setState} />
-            </div>
-          )}
-        </Suspense>
+            </Suspense>
+          </div>
+        )}
       </div>
     </div>
   );
