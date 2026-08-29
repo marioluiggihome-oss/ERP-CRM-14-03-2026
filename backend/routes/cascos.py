@@ -682,18 +682,42 @@ def _can_use_mv(user: Optional[dict]) -> bool:
 
 
 def _ve_precios_mv(user: Optional[dict]) -> bool:
-    """¿Puede ver el DINERO de la tarifa MV (puntos, PVP, valor de punto)?
+    """¿Puede ver el DINERO de la tarifa MV fuera del Presupuestador?
 
     SOLO EL MASTER (24/08/2026, a petición suya: «quiero que la tarifa MV sea
     solo mía»). La tarifa es lo que le cuesta a la casa cada mueble: por ahí se
     lee el margen entero.
 
-    El corte va donde tiene que ir —en el precio, no en el código—, así que
-    quien monta un pedido sigue pudiendo hacerlo; lo que no ve es el euro.
-    Cerrarlo entero habría dejado Cocina Montada 3 y la Relación sin funcionar
-    para todo el que no sea el master.
+    OJO, ESTA SIGUE SIENDO LA PUERTA ESTRECHA. La de PRESUPUESTAR es la de
+    abajo, y son dos a propósito: el master abrió los precios del Presupuestador
+    (29/08) y no dijo nada del resto. Lo que se decide aquí —la relación del
+    Estudio 3D, entre otros— se queda como estaba, porque ampliar de más un
+    permiso de dinero «ya que estamos» es justo lo que no se hace.
     """
     return _es_master(user)
+
+
+def _precios_para_presupuestar(user: Optional[dict]) -> bool:
+    """¿Puede ver los PRECIOS dentro del Presupuestador, para valorar la cocina?
+
+    El master, 29/08: «los usuarios que tengan activo Cocina Montada 3, lo que
+    se va a llamar ahora Presupuestador, que vean precios para poder
+    presupuestar». Es un cambio de la regla 8b hecho por quien la puso: un
+    presupuestador que no valora no sirve para nada.
+
+    Y ARREGLA ALGO PEOR QUE LA FALTA DE PRECIOS. Este mismo endpoint es el único
+    que da las FAMILIAS y los CÓDIGOS, así que con el corte anterior la pantalla
+    no se quedaba sin euros: se quedaba MUERTA — el catálogo no cargaba y no
+    había ni muebles que añadir. Lo que la regla 8b quería cortar es el COSTE y
+    el MARGEN, no el precio de venta.
+
+    LO QUE SIGUE SIENDO SOLO DEL MASTER, que es la mitad que importa: la tarifa
+    en crudo para Rentabilidad (`mv/detectar-pdf`), las proformas del proveedor,
+    el PDF de las 126 páginas y la pantalla de Rentabilidad MV entera —coste de
+    compra, mano de obra, margen y €/m²—. Por ahí sí se lee lo que le cuesta a
+    la casa cada mueble; por el PVP de venta, no.
+    """
+    return _es_master(user) or _PRE.puede_montada(user)
 
 
 def sin_precios(muebles):
@@ -730,10 +754,12 @@ async def mv_tarifas(current_user: Optional[dict] = Depends(get_current_user)):
     dice «esta cocina es una T4», dice «esta cocina es ZENIT». Elegir por número
     de tarifa es pedirle al comercial que se sepa la tabla de memoria.
 
-    SOLO MASTER: la tarifa es información de coste. La guarda va aquí, en el
-    endpoint, no en el botón: esconder el desplegable no cierra ninguna puerta.
+    QUIÉN ENTRA: quien pueda presupuestar (master, 29/08). Antes era solo el
+    master y con eso el desplegable de acabados salía vacío para todos los
+    demás: no se podía ni decir que la cocina es un ZENIT. La guarda va aquí, en
+    el endpoint, no en el botón — esconder el desplegable no cierra nada.
     """
-    if not _es_master(current_user):
+    if not _precios_para_presupuestar(current_user):
         raise HTTPException(status_code=403, detail="Sin permiso para consultar tarifas MV.")
     try:
         with open(_MV_PATH, "r", encoding="utf-8") as f:
@@ -769,7 +795,7 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
     de chapa (índice 1) como valor simple para facilitar el uso comercial.
     """
     # La tarifa en crudo ES el dinero: códigos CON sus puntos. Master.
-    if not _ve_precios_mv(current_user):
+    if not _precios_para_presupuestar(current_user):
         raise HTTPException(status_code=403, detail="La tarifa MV es solo del master.")
     try:
         with open(_MV_PATH, "r", encoding="utf-8") as f:
@@ -876,7 +902,7 @@ async def mv_detectar_relacion(payload: dict, current_user: Optional[dict] = Dep
     quien monta pedidos sin poder leer su propia relación."""
     if not _can_use_mv(current_user):
         raise HTTPException(status_code=403, detail="Sin permiso para importar o analizar relaciones MV.")
-    _con_precios = _ve_precios_mv(current_user)
+    _con_precios = _precios_para_presupuestar(current_user)
     import base64 as _b64, re as _re
     tariff = (payload or {}).get("tariff") or "T1"
     texto = (payload or {}).get("texto")

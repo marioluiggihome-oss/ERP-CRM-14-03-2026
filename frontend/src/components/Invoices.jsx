@@ -538,7 +538,7 @@ const Invoices = ({ currentUser, state }) => {
           <button
             onClick={abrirVolcado}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs shadow-lg transition-all border border-indigo-400/30"
-            title="Volcar un presupuesto de Cocina Montada 3, Cascos o Taller directo al gestor"
+            title="Volcar un presupuesto del Presupuestador, Cascos o Taller directo al gestor"
           >
             <Sparkles size={16} /> Volcar Presupuesto
           </button>

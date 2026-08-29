@@ -1606,8 +1606,17 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Planificación de Producción de Fábrica */}
-                    {(state.currentUser?.canAccessFabrica === true || state.currentUser?.isAdmin || state.currentUser?.isMaster) && (
+                    {/* Planificación de Producción de Fábrica.
+
+                        EL MISMO PERMISO QUE EN LA BIENVENIDA, que es la casilla
+                        que el master tiene delante cuando lo activa o lo quita.
+                        Aquí se miraba `canAccessFabrica` y allí
+                        `canAccessPlanificacion`: o sea que desactivarlo no lo
+                        quitaba del menú lateral —el master lo vio— y activarlo
+                        no siempre lo ponía. Dos permisos para una sección es
+                        uno que se aprieta y otro que se queda abierto. */}
+                    {(state.currentUser?.canAccessPlanificacion !== false
+                      && !state.currentUser?.isTienda) && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'planificacionProduccion'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'planificacionProduccion' ? 'bg-indigo-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}

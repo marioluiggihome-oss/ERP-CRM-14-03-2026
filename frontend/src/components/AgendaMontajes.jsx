@@ -344,29 +344,32 @@ const AgendaMontajes = ({ currentUser }) => {
   const getMontajeStatus = (status) => MONTAJE_STATUS.find(s => s.value === status) || MONTAJE_STATUS[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="hueco-logo-centrado flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
-              <Wrench className="text-white" size={24} />
+        <div className="hueco-logo-centrado flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-6">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Wrench className="text-white" size={22} />
             </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900">Agenda de Montajes</h1>
-              <p className="text-sm text-slate-500">Gestión de montadores e instalaciones</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 leading-tight">Agenda de Montajes</h1>
+              <p className="text-xs sm:text-sm text-slate-500">Gestión de montadores e instalaciones</p>
             </div>
           </div>
-          
+
           <GoogleCalendarConnect compact onStatusChange={(s) => setGoogleConnected(!!s.connected)} />
 
-          {/* Tabs */}
-          <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm">
+          {/* PESTAÑAS. Van en su propia línea cuando no caben, y hacen scroll en
+              horizontal en vez de aplastarse: en una tablet de 8,6" las tres
+              con su contador no entran al lado del título, y antes se salían
+              por la derecha y quedaban cortadas. */}
+          <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm w-full sm:w-auto overflow-x-auto">
             {/* Solo mostrar pestaña Montadores a admins */}
             {(!currentUser?.isMontador || currentUser?.isAdmin) && (
               <button
                 onClick={() => setActiveTab('montadores')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
                   activeTab === 'montadores' 
                     ? 'bg-orange-500 text-white shadow-md' 
                     : 'text-slate-600 hover:bg-slate-100'
@@ -378,7 +381,7 @@ const AgendaMontajes = ({ currentUser }) => {
             )}
             <button
               onClick={() => setActiveTab('montajes')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'montajes' 
                   ? 'bg-orange-500 text-white shadow-md' 
                   : 'text-slate-600 hover:bg-slate-100'
@@ -389,7 +392,7 @@ const AgendaMontajes = ({ currentUser }) => {
             </button>
             <button
               onClick={() => setActiveTab('calendario')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'calendario' 
                   ? 'bg-orange-500 text-white shadow-md' 
                   : 'text-slate-600 hover:bg-slate-100'

@@ -74,7 +74,13 @@ def test_hay_endpoint_que_lista_las_tarifas_con_sus_acabados():
     i = src.index('@router.get("/cascos/mv/tarifas")')
     cuerpo = src[i:i + 2000]
     assert "acabados" in cuerpo
-    assert '_es_master' in cuerpo, "la tarifa es informacion de coste: solo master"
+    # 29/08: la lista de tarifas y acabados la ve quien pueda PRESUPUESTAR, no
+    # solo el master (ver `_precios_para_presupuestar` en routes/cascos.py).
+    # Sin ella el desplegable de acabados salía vacío para todos los demás y no
+    # se podía ni decir que la cocina es un ZENIT. El coste sigue cerrado.
+    assert '_precios_para_presupuestar' in cuerpo, (
+        "la lista de tarifas se ha quedado sin guarda: la puerta va en el "
+        "endpoint, no en el desplegable")
 
 
 def test_los_incrementos_no_se_cuelan_como_acabados():

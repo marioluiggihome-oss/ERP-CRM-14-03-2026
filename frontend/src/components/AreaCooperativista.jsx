@@ -96,7 +96,10 @@ export default function AreaCooperativista() {
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-5xl mx-auto">
-      <div>
+      {/* `hueco-logo` deja sitio al logo flotante del ERP. Sin esto el logo se
+          come el principio del título: en el móvil ponía «rea» en vez de «Mi
+          área», que parece un fallo de la pantalla y es solo un solape. */}
+      <div className="hueco-logo">
         <h1 className="text-xl font-black text-dato-900">Mi área</h1>
         <p className="text-[13px] text-dato-500">
           {esMontador ? 'Comisión de montaje' : 'Comisión comercial'} · se liquida una vez al mes

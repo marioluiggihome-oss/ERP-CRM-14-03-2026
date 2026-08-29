@@ -1105,7 +1105,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                 onClick={() => onExportMontada(muebles, { tarifa, acabadoCasco, valorPunto: pv })}
                 className="px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm shadow-xl shadow-indigo-600/20 transition-all flex items-center gap-2"
               >
-                <CheckCircle2 size={18} /> Cocina Montada 3
+                <CheckCircle2 size={18} /> Presupuestador
               </button>
             )}
             <button

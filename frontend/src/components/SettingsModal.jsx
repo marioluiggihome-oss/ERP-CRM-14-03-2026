@@ -1784,7 +1784,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canAuthorizePermissions && <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[9px] font-black">AUTORIZA</span>}
                               {user.canAccessArmarios && <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-[9px] font-black">ARMARIOS</span>}
                               {user.canUseAIAnalysis && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">IA LAB</span>}
-                              {user.canUseKitchenDesigner && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">3D ESTUDIO</span>}
+                              {user.canUseKitchenDesigner && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">COCINAS POR MÓDULOS</span>}
                               {user.canSeeCost && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">VER COSTO</span>}
                               {user.canViewTechnicalDespiece && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-black">INFORMES</span>}
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
@@ -2256,7 +2256,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             onChange={(e) => setUserForm({...userForm, canUsePresupuestador3: e.target.checked})}
                             className="w-5 h-5 rounded border-2 border-indigo-300"
                           />
-                          <span title="Habilita Cocina Montada 3 (presupuestación rápida por códigos MV)." className="text-sm font-black text-slate-900">Uso Cocina Montada 3</span>
+                          <span title="Habilita el Presupuestador (relación rápida por códigos MV). Con esto activo, el usuario VE PRECIOS y puede valorar la cocina." className="text-sm font-black text-slate-900">Uso Presupuestador</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -2500,7 +2500,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUsePresupuestador3: e.target.checked})}
                                 className="w-4 h-4 rounded accent-indigo-600"
                               />
-                              <span title="Acceso al presupuestador Cocina Montada 3 (por relación y códigos MV)." className="text-xs font-bold text-slate-700">Cocina Montada 3</span>
+                              <span title="Acceso al Presupuestador (relación y códigos MV). Con esto activo ve precios y puede presupuestar." className="text-xs font-bold text-slate-700">Presupuestador</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2721,12 +2721,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseKitchenDesigner: e.target.checked})}
                                 className="w-4 h-4 rounded accent-emerald-600"
                               />
-                              <span className="text-xs font-black text-amber-800">Estudio 3D</span>
+                              {/* SE LLAMA COMO SE LLAMA EN EL MENÚ. La casilla
+                                  ponía «Estudio 3D» y la sección se llama
+                                  «Cocinas por módulos»: el master la buscó para
+                                  desactivarla y no la encontró. Un permiso que
+                                  no se puede encontrar es un permiso que no se
+                                  puede quitar. */}
+                              <span title="Abre «Cocinas por módulos» (diseño por módulos y chequeo de fabricabilidad) y el acceso a Estudio 3D." className="text-xs font-black text-amber-800">Cocinas por módulos</span>
                             </label>
                             {/* Tipos permitidos dentro de Estudio 3D (por partidas). Vacío = todos. */}
                             {!!userForm.canUseKitchenDesigner && (
                               <div className="col-span-2 sm:col-span-3 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2">
-                                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wide mb-1.5">Estudio 3D · tipos permitidos <span className="text-emerald-500 font-bold normal-case">(vacío = todos)</span></p>
+                                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wide mb-1.5">Cocinas por módulos · tipos permitidos <span className="text-emerald-500 font-bold normal-case">(vacío = todos)</span></p>
                                 <div className="flex flex-wrap gap-1.5">
                                   {ESTUDIO_3D_TIPOS.map(tp => {
                                     const sel = Array.isArray(userForm.estudio3dTipos) ? userForm.estudio3dTipos : [];

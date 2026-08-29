@@ -75,8 +75,8 @@ def test_el_ORIGEN_viaja_con_el_pedido_para_poder_verlo():
     dónde ha entrado."""
     fuera = OP.solo_los_que_cuentan([DESMONTADA, MONTADA_3, DE_FABRICA])
     assert [p["origen"] for p in fuera] == [OP.DESMONTADA, OP.MONTADA_3]
-    assert fuera[0]["origenNombre"] == "Cocina Desmontada"
-    assert fuera[1]["origenNombre"] == "Cocina Montada 3"
+    assert fuera[0]["origenNombre"] == OP.NOMBRES[OP.DESMONTADA]
+    assert fuera[1]["origenNombre"] == OP.NOMBRES[OP.MONTADA_3]
 
 
 def test_lo_MARCADO_manda_sobre_lo_deducido():
@@ -146,7 +146,7 @@ def test_un_pedido_de_CM3_se_reconoce_por_su_marca_y_no_como_desmontada():
            "cliente": "Ruiz", "lines": []}
     assert OP.origen_de(cm3) == OP.MONTADA_3
     assert OP.cuenta_para_la_cooperativa(cm3)
-    assert OP.solo_los_que_cuentan([cm3])[0]["origenNombre"] == "Cocina Montada 3"
+    assert OP.solo_los_que_cuentan([cm3])[0]["origenNombre"] == OP.NOMBRES[OP.MONTADA_3]
 
 
 def test_el_ORIGEN_que_llega_por_la_PETICION_pasa_por_lista_blanca():
@@ -297,7 +297,7 @@ def test_UN_PEDIDO_DE_MONTADA_3_NO_SE_ROTULA_COMO_DESMONTADA():
          "cliente": "Ana", "lines": []})
     assert d["origen"] == OP.MONTADA_3, (
         "un pedido de Cocina Montada 3 se está rotulando como Cocina Desmontada")
-    assert d["origenNombre"] == "Cocina Montada 3"
+    assert d["origenNombre"] == OP.NOMBRES[OP.MONTADA_3]
 
 
 def test_un_pedido_de_cascos_SIN_origen_sigue_siendo_desmontada():
@@ -305,7 +305,7 @@ def test_un_pedido_de_cascos_SIN_origen_sigue_siendo_desmontada():
     ES Cocina Desmontada. Sin esto se quedarían sin sección."""
     d = OP.normaliza_pedido_de_cascos({"id": "c1", "kind": "pedido", "cliente": "Ana"})
     assert d["origen"] == OP.DESMONTADA
-    assert d["origenNombre"] == "Cocina Desmontada"
+    assert d["origenNombre"] == OP.NOMBRES[OP.DESMONTADA]
 
 
 def test_un_origen_QUE_NO_CUENTA_no_se_cuela_por_esta_puerta():
@@ -314,4 +314,4 @@ def test_un_origen_QUE_NO_CUENTA_no_se_cuela_por_esta_puerta():
     ni para inventarse un rótulo que no existe."""
     d = OP.normaliza_pedido_de_cascos({"id": "x", "kind": "pedido", "origen": "fabrica"})
     assert d["origen"] in OP.ORIGENES_QUE_CUENTAN
-    assert d["origenNombre"] == "Cocina Desmontada"
+    assert d["origenNombre"] == OP.NOMBRES[OP.DESMONTADA]

@@ -2,16 +2,32 @@
 # Software propietario y confidencial. Ver LICENSE.
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
-"""La TARIFA MV es solo del master (24/08/2026, a petición suya).
+"""El COSTE de la tarifa MV es solo del master. El PRECIO DE VENTA, no.
 
-«Tarifa» es el DINERO: puntos, PVP y valor de punto. Por ahí se lee lo que le
-cuesta a la casa cada mueble, o sea el margen entero.
+24/08/2026, el master: «quiero que la tarifa MV sea solo mía». Y 29/08, el
+mismo: «los usuarios que tengan activo Cocina Montada 3, lo que se va a llamar
+ahora Presupuestador, que vean precios para poder presupuestar».
+
+No se contradice: lo que se protege es lo que le CUESTA a la casa cada mueble
+—el margen—, y eso vive en la pantalla de Rentabilidad MV, en las proformas del
+proveedor y en el PDF de las 126 páginas. El PVP de venta es otra cosa: es lo
+que se le dice al cliente, y sin él un presupuestador no presupuesta.
+
+DOS PUERTAS, Y POR ESO HAY DOS FUNCIONES:
+  · `_ve_precios_mv`            → master. Todo lo demás (la relación del
+                                  Estudio 3D, entre otros).
+  · `_precios_para_presupuestar` → master O quien tenga el Presupuestador
+                                  activo. Solo los tres endpoints de esa
+                                  pantalla.
+
+Ampliar de más un permiso de dinero «ya que estamos» es justo lo que no se
+hace: el master abrió el Presupuestador y no dijo nada del resto.
 
 EL CORTE VA EN EL PRECIO, NO EN EL CÓDIGO. Un «B60D» no es información de
-coste: es cómo se llama un mueble. Cerrar también los códigos habría dejado
-Cocina Montada 3 y la Relación sin funcionar para todo el que no sea el master
-— gente que necesita leer su propia relación para montar un pedido, y que con
-este cierre la sigue leyendo, pero sin ver un euro.
+coste: es cómo se llama un mueble. Y ojo: hasta el 29/08 este corte dejaba la
+pantalla del Presupuestador MUERTA, no sin euros — el endpoint de la tarifa es
+el único que da las FAMILIAS, así que el catálogo no cargaba y no había ni
+muebles que añadir.
 
 Estas pruebas LLAMAN A LOS ENDPOINTS con un usuario que no es master. Mirar el
 código no vale: la regla 8 de CLAUDE.md ya avisa de que un cierre solo en la
@@ -41,6 +57,13 @@ NADIE = None
 
 NO_MASTER = [GERENTE, COMERCIAL, MONTADOR, NADIE]
 
+# Con el Presupuestador DESACTIVADO a mano. Es el único caso en el que un
+# usuario con sesión se queda sin los precios del Presupuestador, y por eso es
+# el que hay que probar: si `canUsePresupuestador3: False` no cerrara, el
+# permiso no serviría de nada.
+SIN_PRESUPUESTADOR = {"canUsePresupuestador3": False, "email": "sin@luiggihome.es"}
+FUERA_DEL_PRESUPUESTADOR = [SIN_PRESUPUESTADOR, NADIE]
+
 
 def _cocina():
     return {"tipo": "lineal",
@@ -53,12 +76,27 @@ def _cocina():
 
 # ── La tarifa en crudo: cerrada ─────────────────────────────────────────────
 
-@pytest.mark.parametrize("usuario", NO_MASTER)
-def test_la_tarifa_en_crudo_no_la_ve_nadie_mas(usuario):
+@pytest.mark.parametrize("usuario", FUERA_DEL_PRESUPUESTADOR)
+def test_la_tarifa_no_la_ve_QUIEN_NO_TIENE_EL_PRESUPUESTADOR(usuario):
+    """Quitar el permiso tiene que cerrar de verdad, no solo esconder el botón."""
     from routes.cascos import mv_tarifa
     with pytest.raises(HTTPException) as ex:
         asyncio.run(mv_tarifa("T1", usuario))
     assert ex.value.status_code == 403
+
+
+@pytest.mark.parametrize("usuario", [GERENTE, COMERCIAL, MONTADOR])
+def test_QUIEN_TIENE_EL_PRESUPUESTADOR_SI_VE_LOS_PRECIOS(usuario):
+    """El cambio del master del 29/08, y la mitad que más se nota.
+
+    Antes esto daba 403, y no dejaba a la pantalla «sin euros»: la dejaba
+    MUERTA. Este endpoint es el único que devuelve las FAMILIAS, así que el
+    catálogo no cargaba y no había ni un mueble que añadir a la relación.
+    """
+    from routes.cascos import mv_tarifa
+    r = asyncio.run(mv_tarifa("T1", usuario))
+    assert r["familias"], "sin familias no hay catálogo: la pantalla se queda muerta"
+    assert r["pointValue"], "sin valor de punto no se puede valorar nada"
 
 
 def test_el_master_SI_ve_la_tarifa():
@@ -124,9 +162,13 @@ def test_el_aviso_de_sin_precio_no_miente_cuando_estan_ocultos():
         f"el aviso dice que estos muebles no tienen precio y sí lo tienen: {r['sinPrecio']}"
 
 
-@pytest.mark.parametrize("usuario", [GERENTE, MONTADOR])
-def test_la_relacion_de_CASCOS_tambien_sale_sin_precios(usuario):
-    """El mismo criterio por la otra puerta: la relación escrita a mano."""
+@pytest.mark.parametrize("usuario", FUERA_DEL_PRESUPUESTADOR)
+def test_la_relacion_de_CASCOS_sale_sin_precios_SIN_EL_PERMISO(usuario):
+    """La relación escrita a mano es del Presupuestador: sigue el mismo permiso.
+
+    Sin él salen los CÓDIGOS pero no el dinero, que es el corte de siempre:
+    quien monta un pedido tiene que poder leer su relación.
+    """
     from routes.cascos import mv_detectar_relacion
     r = asyncio.run(mv_detectar_relacion({"texto": "1 b60d (altura 80)"}, usuario))
     assert r["muebles"], "se ha quedado sin muebles"
@@ -134,6 +176,16 @@ def test_la_relacion_de_CASCOS_tambien_sale_sin_precios(usuario):
     assert r["totalPvp"] is None
     assert all(m.get("pvp") is None and m.get("pts") is None for m in r["muebles"])
     assert all(m.get("cod") for m in r["muebles"]), "se han perdido los códigos"
+
+
+@pytest.mark.parametrize("usuario", [GERENTE, COMERCIAL, MONTADOR])
+def test_la_relacion_de_CASCOS_SI_trae_precios_CON_el_permiso(usuario):
+    """La otra mitad del cambio del 29/08: con el Presupuestador activo, la
+    relación se valora. Es lo que se copia a WhatsApp y lo que se pasa a pedido."""
+    from routes.cascos import mv_detectar_relacion
+    r = asyncio.run(mv_detectar_relacion({"texto": "1 b60d (altura 80)"}, usuario))
+    assert not r.get("preciosOcultos")
+    assert r["totalPvp"] and r["totalPvp"] > 0, "la relación sale sin valorar"
 
 
 def test_el_master_SI_ve_los_precios_en_cascos():

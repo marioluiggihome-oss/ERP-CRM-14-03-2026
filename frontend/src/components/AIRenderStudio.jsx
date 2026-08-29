@@ -4370,7 +4370,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <span className="text-[10px] font-black uppercase tracking-wide text-indigo-500">Volcar a:</span>
                     {puedeAbrirMontada3 && (
                       <button onClick={() => volcarRelacionMV('montada3')} disabled={cargandoMV}
-                        title="Volcar a Cocina Montada 3 (presupuesto por relación y códigos). Allí se abre la revisión antes de mezclar nada con lo que ya tengas."
+                        title="Volcar al Presupuestador (presupuesto por relación y códigos). Allí se abre la revisión antes de mezclar nada con lo que ya tengas."
                         className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                         <CheckCircle size={12} /> Cocina Montada 3
                       </button>

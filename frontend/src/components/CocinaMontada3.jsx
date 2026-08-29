@@ -1127,7 +1127,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-black text-white tracking-tight">Cocina Montada 3</h1>
+              <h1 className="text-sm font-black text-white tracking-tight">Presupuestador</h1>
               <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[9px] font-black uppercase">Tarifa {tarifa}</span>
             </div>
             <p className="text-[9px] text-indigo-200/70 font-medium leading-none">

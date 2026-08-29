@@ -37,9 +37,17 @@ DESMONTADA = "cocina_desmontada"
 # LOS ÚNICOS que cuentan para la cooperativa (master, 28/08).
 ORIGENES_QUE_CUENTAN = (MONTADA_3, DESMONTADA)
 
+# CÓMO SE LEE cada origen. El VALOR (`cocina_montada_3`) NO se toca nunca: está
+# escrito dentro de cada pedido guardado y con él cuadra la nómina. Renombrar la
+# pantalla no puede mover un dato.
+#
+# El master, 29/08: Cocina Montada 3 pasa a llamarse «Presupuestador». Se deja
+# «· Montada» al lado porque aquí los dos rótulos salen juntos, uno debajo de
+# otro, y a secas no se distinguirían: las dos secciones viven dentro del
+# Presupuestador.
 NOMBRES = {
-    MONTADA_3: "Cocina Montada 3",
-    DESMONTADA: "Cocina Desmontada",
+    MONTADA_3: "Presupuestador · Montada",
+    DESMONTADA: "Presupuestador · Desmontada",
 }
 
 # Lo que `cascos_orders` considera un pedido de verdad. Un «presupuesto» todavía

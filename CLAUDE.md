@@ -158,6 +158,26 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - Ni `require_admin` ni ninguna lista ancha: por ahí pasan gerente y director
      comercial. Se usa el `_es_master` de `routes/cascos.py`, que es la puerta
      del MV, también desde `routes/products.py`.
+   - **EL PVP DE VENTA SE ABRE AL PRESUPUESTADOR** (29/08, a petición del
+     master: «los usuarios que tengan activo Cocina Montada 3, lo que se va a
+     llamar ahora Presupuestador, que vean precios para poder presupuestar»).
+     No contradice lo de arriba: lo que se protege es lo que le CUESTA a la
+     casa. El PVP es lo que se le dice al cliente, y sin él un presupuestador no
+     presupuesta.
+     - **DOS PUERTAS, y no una ampliada.** `_ve_precios_mv` = master, para todo
+       lo demás (la relación del Estudio 3D, entre otros).
+       `_precios_para_presupuestar` = master o quien tenga el Presupuestador
+       activo, y SOLO en los tres endpoints de esa pantalla. Ampliar de más un
+       permiso de dinero «ya que estamos» es justo lo que no se hace: el master
+       abrió el Presupuestador y no dijo nada del resto.
+     - Sigue siendo del master: Rentabilidad MV entera (coste, mano de obra,
+       margen, €/m²), `mv/detectar-pdf`, las proformas del proveedor y el PDF de
+       las 126 páginas.
+     - **Y arreglaba algo peor que la falta de precios:** `mv/tarifa` es el
+       ÚNICO endpoint que devuelve las FAMILIAS, así que con el corte anterior
+       la pantalla no se quedaba sin euros, se quedaba MUERTA — sin catálogo y
+       sin un mueble que añadir. El corte «en el precio, no en el código» estaba
+       escrito y no era verdad.
    - Candado: `test_calculo_tarifa_mv_solo_master.py`, que LLAMA a los endpoints
      con un usuario que no es master. Comprueba las dos mitades: que no se ve el
      dinero **y** que sí se siguen viendo los códigos.
@@ -660,6 +680,43 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - Candado: `test_pantalla_no_traducir.py`. Su reconocedor **ignora los
      comentarios**, porque el propio fichero explica el fallo citando un
      `lang="en"` de ejemplo que si no lo engañaría.
+
+25. **EL USUARIO DEL SERVIDOR SALE DE SU FICHA, NO DEL TOKEN** (29/08). Era la
+   raíz de tres fallos que parecían no tener nada que ver, y del apagón del
+   28/08. `get_current_user` RECONSTRUÍA el usuario a partir del token con trece
+   campos escritos a mano en 2025: todo permiso añadido después no existía para
+   el backend, por muy marcado que estuviera en la ficha.
+   - `esCooperativistaMontador` no llegaba → «Mi área» le contestaba «esta área
+     es de los cooperativistas» AL COOPERATIVISTA. El área entera no funcionó
+     nunca con un socio de verdad, y las pruebas estaban en verde porque le
+     pasaban la ficha completa a mano.
+   - `canUseCascos` no llegaba → el cierre del Presupuestador en el servidor
+     veía a todo el mundo sin permiso de Cocina Desmontada.
+   - `isPrimaryAdmin` e `isMaster` no llegaban → `es_master` solo podía mirar
+     `isAdmin`. **Por eso** quitarlo dejó al master fuera de su propia tarifa, y
+     por eso estrechar `FLAGS_MASTER` con la ficha ya marcada habría dejado a la
+     casa entera sin ver un euro.
+   - La ficha manda en los PERMISOS; el token manda en la IDENTIDAD (`id`,
+     `username`): si el id saliera del documento, bastaría con que una ficha
+     trajera otro dentro para suplantar a alguien. Si Mongo no responde se sigue
+     con lo del token — un fallo de base de datos no puede echar a todos a la
+     vez.
+   - De propina: **quitar un permiso surte efecto YA**, no cuando la persona
+     vuelva a entrar. Antes el master marcaba una casilla, comprobaba, no pasaba
+     nada, y no había forma de saber si estaba mal o solo tardaba.
+   - Candado: `test_calculo_usuario_del_token.py`. Carga el módulo REAL del
+     disco porque otra prueba mete un doble de `services.jwt_service` en
+     `sys.modules` y lo deja ahí: un import normal pasaba en solitario y fallaba
+     en la suite entera, según el orden de los ficheros.
+
+26. **UNA SECCIÓN, UN PERMISO** (29/08). El menú lateral enseñaba
+   «Planificación» con `canAccessFabrica` y la bienvenida con
+   `canAccessPlanificacion`: el master lo desactivó y le siguió saliendo en el
+   menú. Dos permisos para una sección son uno que se aprieta y otro que se
+   queda abierto. Y **el permiso se llama como la sección**: la casilla de
+   «Cocinas por módulos» ponía «Estudio 3D», así que se buscó para quitarla y no
+   se encontró — un permiso que no se puede encontrar es un permiso que no se
+   puede quitar.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
