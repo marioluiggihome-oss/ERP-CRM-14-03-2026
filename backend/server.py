@@ -2509,6 +2509,34 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Siembra de fábricas por defecto omitida: {e}")
 
+    # ¿QUEDA ALGUIEN QUE PUEDA VER EL DINERO? Se cuenta al arrancar.
+    #
+    # El 29/08 se quitó `isAdmin` de la lista del master. Lo mismo se intentó el
+    # 28 y hubo que revertirlo con un despliegue: el master se quedó fuera de su
+    # propia tarifa y TODA la relación salió a 0,00 € — sin dar un solo error,
+    # que es lo peor que puede pasar aquí.
+    #
+    # Si no queda NI UNA cuenta marcada, `services/master.py` vuelve solo a la
+    # lista ancha y lo dice aquí. Un candado que deja la casa sin dueño no es un
+    # candado, es una avería; y el recuento queda en el log de Railway para
+    # poder mirarlo sin tocar la base de datos.
+    try:
+        from services import master as _master
+        _cuenta = await _master.comprobar_que_hay_master(db)
+        if _cuenta.get("rescate"):
+            logger.error(
+                "MASTER: NO HAY NINGUNA CUENTA con isPrimaryAdmin ni isMaster (%s). "
+                "Se sigue con la lista ANCHA para no dejar el ERP sin dueño: "
+                "márcale «Admin principal» a tu cuenta en el panel Master y "
+                "reinicia. Detalle: %s", _cuenta.get("error", "recuento a cero"), _cuenta)
+        else:
+            logger.info(
+                "MASTER: %s cuenta(s) ven el dinero; %s se han quedado fuera al "
+                "quitar `isAdmin` de la lista.",
+                _cuenta.get("conMarca"), _cuenta.get("soloAdmin"))
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"MASTER: no se pudo comprobar quién entra al dinero: {e}")
+
     # =============================================
     # ÍNDICES DE BASE DE DATOS - Fortalecer integridad
     # =============================================

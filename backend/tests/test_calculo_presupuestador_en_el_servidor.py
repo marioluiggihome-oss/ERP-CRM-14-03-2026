@@ -132,9 +132,16 @@ def test_los_PERMISOS_siguen_siendo_los_de_siempre():
         "una tienda no ve Cocina Desmontada ni con el permiso puesto")
     assert not P.puede_montada(None) and not P.puede_desmontada(None)
 
-    for flag in ("isMaster", "isPrimaryAdmin", "isAdmin"):
+    for flag in ("isMaster", "isPrimaryAdmin"):
         assert P.puede_montada({flag: True}) and P.puede_desmontada({flag: True}), (
             f"el master ({flag}) se ha quedado fuera de su propio presupuestador")
+    # `isAdmin` YA NO ES MASTER (29/08). Sigue entrando en Cocina Montada —el
+    # permiso de ahí es «no estar desactivado»— pero Cocina Desmontada le pide
+    # su permiso explícito como a cualquiera.
+    assert P.puede_montada({"isAdmin": True})
+    assert not P.puede_desmontada({"isAdmin": True}), (
+        "un administrador sin `canUseCascos` sigue entrando en Cocina "
+        "Desmontada: `isAdmin` ha vuelto a colarse como master")
 
 
 def test_QUIEN_SOLO_TIENE_MONTADA_PUEDE_PASAR_A_PEDIDO():

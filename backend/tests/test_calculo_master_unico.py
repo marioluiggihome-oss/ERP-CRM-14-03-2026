@@ -3,26 +3,33 @@
 # Prohibida su copia, distribución, modificación o uso sin autorización
 # escrita del titular.
 """
-QUIÉN ES EL MASTER: UNA SOLA LISTA, Y HOY CON `isAdmin` DENTRO.
+QUIÉN ES EL MASTER: UNA SOLA LISTA, Y YA SIN `isAdmin`.
 
 Por esta puerta pasan la tarifa MV, el coste, el margen, la rentabilidad, las
 comisiones de los cooperativistas y el cierre del mes.
 
 DOS COSAS QUE VIGILA ESTE CANDADO.
 
-1. QUE `isAdmin` SIGA DENTRO — hoy, y esto sorprende, porque la intención es la
-   contraria. Se quitó el 28/08 con buen criterio (administrar el ERP y ver lo
-   que le cuesta a la casa cada mueble no son el mismo permiso) y hubo que
-   devolverlo el mismo día: la cuenta con la que trabaja el master es `isAdmin`
-   y Cocina Montada 3 salió entera a 0,00 €. El candado lo sujeta AHÍ para que
-   nadie lo vuelva a apretar sin marcar antes `isPrimaryAdmin` a quien tiene que
-   entrar. `FLAGS_ESTRECHOS` guarda a dónde se va cuando eso esté hecho.
+1. QUE `isAdmin` SIGA FUERA (master, 29/08). Administrar el ERP y ver lo que le
+   cuesta a la casa cada mueble no son el mismo permiso, y el día que se le dé
+   admin a quien lleve carpinter.io o Studio3K la diferencia se nota en euros.
 
-2. QUE LAS COPIAS NO SE SEPAREN. La misma tupla vive en tres ficheros de rutas
-   —porque hay pruebas que ejecutan trozos sueltos de esos ficheros y un import
-   no llegaría—, y tres copias de una regla de permisos son una que se aprieta y
-   dos que se quedan abiertas. Aquí se comparan con `services/master.py`.
+   ESTO MISMO SE INTENTÓ EL 28/08 Y HUBO QUE REVERTIRLO EL MISMO DÍA, con toda
+   la relación de Cocina Montada 3 saliendo a 0,00 €. Y no fue por la idea: fue
+   porque `isPrimaryAdmin` NO LLEGABA AL SERVIDOR —el usuario se reconstruía con
+   trece campos del token y ese no estaba—, así que apretar era imposible por
+   definición. Eso se arregló el 29 (regla 25) y por eso ahora sí se puede.
+
+2. QUE LA VÁLVULA SIGA AHÍ. Si no queda NI UNA cuenta marcada, el ERP vuelve
+   solo a la lista ancha y lo grita en el log. Un candado que deja la casa sin
+   dueño no es un candado, es una avería — y aquí «sin dueño» significa que
+   nadie puede presupuestar.
+
+3. QUE NADIE VUELVA A COPIAR LA LISTA. Vivía copiada en cuatro ficheros mientras
+   `services/master.py` decía ser la única fuente sin serlo: cambiarla allí no
+   cambiaba nada en las rutas. Ahora se le pregunta.
 """
+import asyncio
 import ast
 import os
 import sys
@@ -55,27 +62,20 @@ def _tupla(ruta, nombre):
     raise AssertionError(f"no está «{nombre}» en {ruta}")
 
 
-def test_el_ADMIN_entra_y_por_ahora_tiene_que_seguir_entrando():
-    """REVERTIDO el 28/08, el mismo día, y conviene que quede escrito por qué.
+def test_un_ADMIN_A_SECAS_ya_no_ve_el_dinero():
+    """El cambio del 29/08, y el que costó un apagón la primera vez.
 
-    Se quitó `isAdmin` de esta lista con buen criterio: administrar el ERP y ver
-    lo que le cuesta a la casa cada mueble no son el mismo permiso. Pero la
-    cuenta con la que trabaja el master ES `isAdmin`, así que al apretarlo se
-    quedó fuera de su propia tarifa: Cocina Montada 3 no pudo leer los precios
-    MV y TODA la relación salió a 0,00 €.
-
-    Un presupuesto a cero es lo peor que puede pasar aquí: no da error, se
-    imprime igual y se puede enviar a un cliente.
-
-    El orden correcto es al revés — primero marcar `isPrimaryAdmin` o `isMaster`
-    a quien tenga que entrar, comprobar que entra, y después estrechar la lista.
+    Administrar el ERP y ver lo que le cuesta a la casa cada mueble no son el
+    mismo permiso. Lo que hacía imposible este cambio era otra cosa —que
+    `isPrimaryAdmin` no llegara al servidor (regla 25)— y ya está arreglado.
     """
-    assert M.es_master({"isAdmin": True}), (
-        "`isAdmin` ha vuelto a salir de la lista del master. Antes de hacer eso "
-        "hay que marcar `isPrimaryAdmin` a las cuentas que trabajan, o se "
-        "quedan sin ver los precios y los presupuestos salen a cero.")
-    assert set(M.FLAGS_ESTRECHOS) < set(M.FLAGS_MASTER), (
-        "`FLAGS_ESTRECHOS` es a dónde se quiere ir: tiene que ser más estrecha")
+    M.desactivar_rescate()
+    assert not M.es_master({"isAdmin": True}), (
+        "`isAdmin` ha vuelto a la lista del master: cualquier administrador ve "
+        "la tarifa del proveedor, el margen y la nómina de los cooperativistas")
+    assert "isAdmin" not in M.FLAGS_MASTER
+    assert set(M.FLAGS_MASTER) < set(M.FLAGS_ANCHOS)
+    assert M.FLAGS_QUE_SE_QUITAN == ("isAdmin",)
 
 
 def test_quien_NO_es_master_sigue_fuera():
@@ -100,28 +100,115 @@ def test_el_master_de_verdad_SI_entra():
     que hay en la base de datos, y antes de estrechar un permiso hay que MIRAR
     quién queda dentro.
     """
+    M.desactivar_rescate()
     assert M.es_master({"isPrimaryAdmin": True})
     assert M.es_master({"isMaster": True})
-    assert M.es_master({"isAdmin": True})
     assert set(M.FLAGS_MASTER), "la lista se ha quedado vacía: nadie sería master"
 
 
-def test_las_TRES_COPIAS_dicen_lo_mismo():
+def test_YA_NO_HAY_COPIAS_de_la_lista():
+    """`services/master.py` decía ser la única fuente y no lo era.
+
+    La misma tupla vivía copiada en tres ficheros de rutas, así que cambiarla
+    aquí no cambiaba nada allí — y el módulo entero era código muerto con un
+    docstring que prometía lo contrario. Ahora las rutas preguntan.
+    """
     for ruta, nombre in COPIAS:
-        assert _tupla(ruta, nombre) == tuple(M.FLAGS_MASTER), (
-            f"«{nombre}» de {ruta} se ha separado de `services/master.py`. Una "
-            "regla de permisos copiada es una que se aprieta y las demás que se "
-            "quedan abiertas.")
+        with open(os.path.join(RAIZ, ruta), "r", encoding="utf-8") as f:
+            cuerpo = f.read()
+        assert nombre not in cuerpo, (
+            f"ha vuelto a aparecer «{nombre}» en {ruta}. Una regla de permisos "
+            "copiada es una que se aprieta y las demás que se quedan abiertas: "
+            "se le pregunta a `services.master.es_master`.")
+        assert "from services.master import es_master" in cuerpo, (
+            f"{ruta} ya no le pregunta a `services/master.py` quién es master")
 
 
-def test_queda_ESCRITO_hacia_donde_se_quiere_ir():
-    """Para que dentro de seis meses se sepa que esto está a medias, y por qué
-    se revirtió — y no se vuelva a intentar en el mismo orden."""
-    assert "isAdmin" not in M.FLAGS_ESTRECHOS
-    assert "0,00" in open(M.__file__, encoding="utf-8").read() or \
-        "cero" in open(M.__file__, encoding="utf-8").read(), (
-        "se ha borrado la explicación de por qué se revirtió: sin ella alguien "
-        "lo vuelve a apretar y los presupuestos vuelven a salir a cero")
+def test_queda_ESCRITO_lo_que_costo_la_primera_vez():
+    """Para que dentro de seis meses nadie repita el intento del 28/08."""
+    cuerpo = open(M.__file__, encoding="utf-8").read()
+    assert "0,00" in cuerpo or "cero" in cuerpo, (
+        "se ha borrado la explicación de lo que pasó al apretar esto la primera "
+        "vez: sin ella, alguien quita la válvula «porque no hace falta»")
+
+
+# ─── LA VÁLVULA ─────────────────────────────────────────────────────────────
+
+def test_SIN_NINGUNA_CUENTA_MARCADA_el_ERP_no_se_queda_sin_dueno():
+    """Un candado que cierra de más deja la casa sin dueño.
+
+    Y aquí «sin dueño» no es una molestia: es que NADIE puede leer la tarifa MV,
+    o sea que la relación entera sale a 0,00 € y eso no da ningún error — se
+    imprime igual y se puede enviar a un cliente. Por eso, si no queda ni una
+    cuenta marcada, se vuelve solo a la lista ancha.
+    """
+    M.activar_rescate("prueba")
+    try:
+        assert M.hay_rescate()
+        assert M.es_master({"isAdmin": True}), (
+            "con el rescate abierto, un administrador tiene que poder seguir "
+            "entrando: si no, no hay rescate que valga")
+        assert M.flags_en_vigor() == M.FLAGS_ANCHOS
+    finally:
+        M.desactivar_rescate()
+    assert not M.es_master({"isAdmin": True})
+    assert M.flags_en_vigor() == M.FLAGS_MASTER
+
+
+def test_LA_VALVULA_NO_ABRE_LA_PUERTA_A_NADIE_MAS():
+    """Ni siquiera abierta del todo entra un gerente. El rescate devuelve la
+    lista de ayer, no una barra libre."""
+    M.activar_rescate("prueba")
+    try:
+        for flag in ("isGerente", "isDirectorComercial", "isController",
+                     "isRepresentative", "isMontador", "isTienda"):
+            assert not M.es_master({flag: True}), f"{flag} entra con el rescate"
+    finally:
+        M.desactivar_rescate()
+
+
+def test_EL_ARRANQUE_CUENTA_Y_DECIDE():
+    """Se cuenta al arrancar: si hay alguien marcado se aprieta, si no, no."""
+    class _Users:
+        def __init__(self, con_marca, solo_admin):
+            self.con_marca, self.solo_admin = con_marca, solo_admin
+        async def count_documents(self, filtro):
+            return self.con_marca if "$or" in filtro else self.solo_admin
+
+    class _Db:
+        def __init__(self, u): self.users = u
+
+    r = asyncio.run(M.comprobar_que_hay_master(_Db(_Users(2, 1))))
+    assert r == {"conMarca": 2, "soloAdmin": 1, "rescate": False}
+    assert not M.hay_rescate()
+
+    r = asyncio.run(M.comprobar_que_hay_master(_Db(_Users(0, 3))))
+    assert r["rescate"] is True and M.hay_rescate(), (
+        "sin ninguna cuenta marcada el ERP se aprieta igual y se queda sin dueño")
+    M.desactivar_rescate()
+
+
+def test_SI_NO_SE_PUEDE_CONTAR_tampoco_se_apreta():
+    """Un Mongo lento al arrancar no puede dejar a la casa sin presupuestar."""
+    class _Roto:
+        async def count_documents(self, filtro):
+            raise RuntimeError("mongo no responde")
+
+    class _Db:
+        users = _Roto()
+
+    r = asyncio.run(M.comprobar_que_hay_master(_Db()))
+    assert r["rescate"] is True and M.hay_rescate()
+    M.desactivar_rescate()
+
+
+def test_el_ARRANQUE_DEL_SERVIDOR_hace_esa_comprobacion():
+    """El recuento no sirve de nada si no lo llama nadie."""
+    with open(os.path.join(RAIZ, "server.py"), "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    assert "comprobar_que_hay_master(db)" in cuerpo, (
+        "el arranque ya no comprueba si queda alguien que pueda ver el dinero: "
+        "la válvula está escrita y no la abre nadie")
 
 
 # ─── LA LLAVE SE TIENE QUE PODER REPARTIR ───────────────────────────────────

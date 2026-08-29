@@ -60,12 +60,22 @@ def es_master():
 # ── 1. Solo el master entra ──────────────────────────────────────────────────
 
 @pytest.mark.parametrize("ficha", [
-    {"isAdmin": True},
     {"isPrimaryAdmin": True},
     {"isMaster": True},
 ])
 def test_el_master_entra_en_rentabilidad(es_master, ficha):
     assert es_master(ficha) is True
+
+
+def test_un_ADMIN_a_secas_ya_NO_entra():
+    """29/08: `isAdmin` sale de la lista del master.
+
+    Administrar el ERP y ver lo que le cuesta a la casa cada mueble no son el
+    mismo permiso, y el día que se le dé admin a quien lleve carpinter.io o
+    Studio3K la diferencia se nota en euros.
+    """
+    from services.master import es_master as _em
+    assert _em({"isAdmin": True}) is False
 
 
 @pytest.mark.parametrize("ficha", [

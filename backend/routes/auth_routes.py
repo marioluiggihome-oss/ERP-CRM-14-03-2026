@@ -329,13 +329,23 @@ async def get_current_user_info(
 # `services/master.py`; aquí va el valor porque hay pruebas que ejecutan trozos
 # de este fichero sueltos, y `test_calculo_master_unico.py` comprueba que las
 # copias no se separan.
-_FLAGS_MASTER = ("isAdmin", "isPrimaryAdmin", "isMaster")
+# QUIÉN ES EL MASTER: SE PREGUNTA, NO SE COPIA.
+#
+# Aquí vivía una copia de la lista de flags. Eran cuatro copias en cuatro
+# ficheros, y `services/master.py` decía ser la única fuente sin serlo: cambiar
+# la lista allí no cambiaba nada aquí. Una regla de permisos copiada es una que
+# se aprieta y tres que se quedan abiertas.
+#
+# Ahora se delega. La llamada va DENTRO de la función y no en un import de
+# arriba a propósito: hay pruebas que ejecutan trozos sueltos de este fichero, y
+# así no arrastran el módulo entero.
 
 
 def _exigir_master(user: Optional[dict]) -> dict:
     """Echar a la gente del ERP es cosa del master. La guarda va AQUÍ, en el
     endpoint: esconder el botón no cierra ninguna puerta."""
-    if not user or not any(user.get(f) for f in _FLAGS_MASTER):
+    from services.master import es_master
+    if not es_master(user):
         raise HTTPException(status_code=403, detail="Solo el master puede cerrar sesiones.")
     return user
 

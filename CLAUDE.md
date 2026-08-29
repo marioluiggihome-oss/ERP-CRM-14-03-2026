@@ -198,8 +198,25 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      comentario que nadie iba a leer en el momento de decidir.
    - **EL ORDEN NO SE NEGOCIA:** marcar «Admin principal» a quien tenga que
      seguir entrando → comprobar que sigue viendo los precios → y SOLO entonces
-     cambiar `FLAGS_MASTER` por `FLAGS_ESTRECHOS`. Al revés se echa a la calle
-     al dueño y los presupuestos salen a 0,00 € sin dar ni un error.
+     estrechar la lista. Al revés se echa a la calle al dueño y los presupuestos
+     salen a 0,00 € sin dar ni un error.
+   - **YA ESTÁ APRETADO** (29/08, a petición del master): `FLAGS_MASTER` es
+     `("isPrimaryAdmin", "isMaster")` y `isAdmin` ya no abre la puerta del
+     dinero. Se pudo hacer porque antes se arregló lo de la regla 25 — hasta ese
+     día `isPrimaryAdmin` ni siquiera llegaba al servidor, así que el intento
+     del 28/08 estaba condenado por definición.
+   - **Y LLEVA VÁLVULA, porque no se pudo comprobar la base de datos.** Al
+     arrancar se CUENTA cuántas cuentas llevan la marca. Si no hay ninguna, el
+     ERP vuelve solo a la lista ancha y lo grita en el log de Railway, en vez de
+     dejarse sin dueño — que aquí no es una molestia: es que nadie puede leer la
+     tarifa y toda la relación sale a 0,00 €, sin dar un error, imprimible y
+     enviable. El rescate devuelve la lista de ayer, NO una barra libre: ni
+     gerente ni director comercial entran ni con la válvula abierta. Si Mongo no
+     responde al arrancar, tampoco se aprieta: en la duda, ancha.
+   - **La lista ya no se copia:** `routes/cascos.py`, `routes/plan_negocio.py` y
+     `routes/auth_routes.py` le preguntan a `services/master.py`. Vivía copiada
+     en cuatro sitios mientras ese módulo decía ser la única fuente sin serlo —
+     cambiarla allí no cambiaba nada en las rutas.
    - Candado: `test_calculo_master_unico.py`.
 
 9. **El candado de Rentabilidad OCULTA IMPORTES, no bloquea la edición**

@@ -49,7 +49,10 @@ def _lee(ruta):
 # juntar las dos pantallas.
 USUARIOS = [
     ("master", {"isMaster": True}, True, True),
-    ("admin", {"isAdmin": True}, True, True),
+    # `isAdmin` YA NO ES MASTER (29/08). Entra en Cocina Montada porque ahí el
+    # permiso es «no estar desactivado», y NO en Desmontada, que pide el suyo.
+    ("admin sin marca de master", {"isAdmin": True}, True, False),
+    ("admin principal", {"isPrimaryAdmin": True}, True, True),
     ("comercial con las dos", {"canUsePresupuestador3": True, "canUseCascos": True}, True, True),
     ("comercial solo montada", {"canUseCascos": False}, True, False),
     ("comercial sin permiso de montada", {"canUsePresupuestador3": False, "canUseCascos": True}, False, True),

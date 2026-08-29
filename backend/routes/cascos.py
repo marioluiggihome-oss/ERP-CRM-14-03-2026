@@ -322,11 +322,19 @@ async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depen
 # `services/master.py`; aquí va el valor porque hay pruebas que ejecutan trozos
 # de este fichero sueltos, y `test_calculo_master_unico.py` comprueba que las
 # copias no se separan.
-_MASTER_FLAGS = ("isAdmin", "isPrimaryAdmin", "isMaster")
-
-
+# QUIÉN ES EL MASTER: SE PREGUNTA, NO SE COPIA.
+#
+# Aquí vivía una copia de la lista de flags. Eran cuatro copias en cuatro
+# ficheros, y `services/master.py` decía ser la única fuente sin serlo: cambiar
+# la lista allí no cambiaba nada aquí. Una regla de permisos copiada es una que
+# se aprieta y tres que se quedan abiertas.
+#
+# Ahora se delega. La llamada va DENTRO de la función y no en un import de
+# arriba a propósito: hay pruebas que ejecutan trozos sueltos de este fichero, y
+# así no arrastran el módulo entero.
 def _es_master(user: Optional[dict]) -> bool:
-    return bool(user and any(user.get(f) for f in _MASTER_FLAGS))
+    from services.master import es_master
+    return es_master(user)
 
 
 _TAREAS_PROFORMA = set()

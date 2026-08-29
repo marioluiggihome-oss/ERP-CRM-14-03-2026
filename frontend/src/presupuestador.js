@@ -29,8 +29,12 @@ export const NOMBRES = {
   [DESMONTADA]: 'Cocina Desmontada',
 };
 
+// Sin `isAdmin` desde el 29/08, igual que `FLAGS_MASTER` en el servidor:
+// administrar el ERP y ver lo que le cuesta a la casa cada mueble no son el
+// mismo permiso. El candado ejecuta este fichero y lo compara con Python
+// usuario a usuario, así que si una mitad se mueve y la otra no, salta.
 const esMaster = (u) =>
-  !!(u && (u.isMaster || u.isPrimaryAdmin || u.isAdmin));
+  !!(u && (u.isMaster || u.isPrimaryAdmin));
 
 /** Cocina Montada 3: el permiso es «no estar desactivado» (así estaba). */
 export const puedeMontada = (u) =>

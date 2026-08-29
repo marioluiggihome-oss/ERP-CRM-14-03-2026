@@ -100,8 +100,13 @@ def modulo():
 
 def test_solo_el_master_pasa(modulo):
     """CANDADO PRINCIPAL."""
-    for flag in ("isAdmin", "isPrimaryAdmin", "isMaster"):
+    for flag in ("isPrimaryAdmin", "isMaster"):
         assert modulo._es_master({flag: True}) is True, f"{flag} deberia entrar"
+    # `isAdmin` YA NO ENTRA (master, 29/08). Administrar el ERP y ver el coste
+    # de compra y el margen no son el mismo permiso.
+    assert modulo._es_master({"isAdmin": True}) is False, (
+        "`isAdmin` ha vuelto a abrir el plan de negocio: por ahí pasa el coste "
+        "de compra de los cascos y el margen de la casa")
 
 
 def test_un_gerente_NO_pasa(modulo):
@@ -126,10 +131,14 @@ def test_no_se_usa_la_lista_ancha_de_roles(modulo):
     assert "ADMIN_ROLE_FLAGS" not in src, (
         "el plan de negocio ha pasado a usar la lista ancha de roles: entrarian "
         "gerente y director comercial")
-    assert modulo._MASTER_FLAGS == ("isAdmin", "isPrimaryAdmin", "isMaster"), (
-        "la lista del master ha cambiado. Si es a proposito, hay que tocarla "
-        "tambien en `services/master.py` y en las otras copias — eso lo vigila "
-        "`test_calculo_master_unico.py`")
+    # LA LISTA YA NO SE COPIA AQUÍ: se le pregunta a `services/master.py`, que
+    # es donde vive. Cuatro copias de una regla de permisos eran una que se
+    # aprieta y tres que se quedan abiertas.
+    assert "_MASTER_FLAGS" not in src, (
+        "ha vuelto a aparecer una copia de la lista del master en este fichero: "
+        "se pregunta a `services.master.es_master`, no se copia")
+    assert "from services.master import es_master" in src, (
+        "este fichero ya no le pregunta a `services/master.py` quién es master")
 
 
 # ─── 2. La guarda esta en TODOS los endpoints ───────────────────────────────

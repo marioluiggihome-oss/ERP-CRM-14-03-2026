@@ -35,7 +35,10 @@ from routes.ai_engine import MOTOR_DE_PRODUCCION, motor_permitido  # noqa: E402
 from services.ai_usage import coste_de_motor  # noqa: E402
 
 MASTER = {"id": "u-1", "username": "master", "isMaster": True}
-ADMIN = {"id": "u-2", "username": "jefe", "isAdmin": True}
+# `isAdmin` YA NO ES MASTER (29/08): administrar el ERP y ver lo que le cuesta a
+# la casa cada mueble no son el mismo permiso. Los motores de pruebas cuestan
+# hasta 3,3x por render, así que van con la puerta estrecha.
+ADMIN = {"id": "u-2", "username": "admin", "isPrimaryAdmin": True}
 # OJO CON ESTE: gerente y director comercial NO son master. Si el candado se
 # escribiera con `ADMIN_ROLE_FLAGS` en vez de con `_es_master`, este usuario
 # pasaría — y los motores de pruebas son del master, no de la dirección.
