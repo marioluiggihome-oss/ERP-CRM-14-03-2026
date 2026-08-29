@@ -122,3 +122,76 @@ def test_queda_ESCRITO_hacia_donde_se_quiere_ir():
         "cero" in open(M.__file__, encoding="utf-8").read(), (
         "se ha borrado la explicación de por qué se revirtió: sin ella alguien "
         "lo vuelve a apretar y los presupuestos vuelven a salir a cero")
+
+
+# ─── LA LLAVE SE TIENE QUE PODER REPARTIR ───────────────────────────────────
+
+# RAIZ es la carpeta `backend`; el repo está un escalón por encima.
+PANEL = os.path.join(os.path.dirname(RAIZ), "frontend", "src", "components",
+                     "SettingsModal.jsx")
+
+
+def _panel():
+    with open(PANEL, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def test_el_PANEL_MASTER_deja_MARCAR_isPrimaryAdmin():
+    """Lo que hacía IMPOSIBLE arreglar el apagón del 28/08 desde el ERP.
+
+    `isPrimaryAdmin` se leía en cinco sitios y no se podía poner desde ninguna
+    pantalla: solo lo escribía un script suelto contra la base de datos. Así que
+    al quitar `isAdmin` de la lista del master, el master se quedó fuera de su
+    propia tarifa y no había forma de devolverse el permiso sin un despliegue.
+
+    Mientras esa casilla no exista, estrechar `FLAGS_MASTER` no se puede hacer.
+    """
+    cuerpo = _panel()
+    assert 'data-testid="primary-admin-checkbox"' in cuerpo, (
+        "el panel Master ya no deja marcar «Admin principal». Sin eso, "
+        "`isPrimaryAdmin` solo se puede poner tocando la base de datos a mano, y "
+        "estrechar la lista del master vuelve a ser un viaje sin billete de "
+        "vuelta.")
+    assert "userForm.isPrimaryAdmin" in cuerpo, (
+        "la casilla no está atada al formulario del usuario: no guardaría nada")
+
+
+def test_la_CASILLA_la_ve_QUIEN_YA_VE_EL_DINERO_no_solo_el_primary():
+    """La pescadilla que se muerde la cola, y por la que casi vuelve a pasar.
+
+    Si la casilla se enseñara solo a `isPrimaryAdmin`, quedaría invisible justo
+    para quien tiene que marcarla: la cuenta con la que trabaja el master es
+    `isAdmin`. Se enseña a quien YA ve el dinero —la misma puerta que
+    `FLAGS_MASTER`—, que además es lo correcto: la llave la reparte quien la
+    tiene, no un gerente marcándosela a sí mismo.
+    """
+    cuerpo = _panel()
+    i = cuerpo.index("const veElDineroDeLaCasa")
+    puerta = cuerpo[i:cuerpo.index("\n\n", i)]
+    for flag in M.FLAGS_MASTER:
+        assert flag in puerta, (
+            f"«{flag}» abre la tarifa MV en el servidor pero no ve la casilla de "
+            "«Admin principal» en pantalla. Con eso, quien tiene que repartir la "
+            "llave no la encuentra.")
+    for prohibido in ("isGerente", "isDirectorComercial", "isController"):
+        assert prohibido not in puerta, (
+            f"«{prohibido}» puede marcarse a sí mismo la llave del dinero: "
+            "entraría al coste y al margen por la puerta de atrás")
+    assert 'data-testid="primary-admin-checkbox"' in cuerpo
+
+
+def test_la_PANTALLA_CUENTA_a_quien_dejaria_fuera_apretar_la_lista():
+    """La comprobación que faltó, puesta donde se toma la decisión.
+
+    «Primero se mira a quién afecta, después se cierra» estaba escrito en
+    `services/master.py` y en ningún sitio donde alguien lo fuera a leer. Ahora
+    el panel cuenta, con los usuarios que ya tiene en pantalla, cuántas cuentas
+    entran al dinero y cuántas lo hacen SOLO por ser administrador — que son
+    exactamente las que se quedarían fuera.
+    """
+    cuerpo = _panel()
+    i = cuerpo.index("Quién ve el dinero de la casa")
+    trozo = cuerpo[max(0, i - 1500):i + 1500]
+    assert "!u.isPrimaryAdmin && !u.isMaster" in trozo, (
+        "el aviso ya no distingue quién entra SOLO por `isAdmin`, que son "
+        "justo los que perderían el acceso al estrechar la lista")

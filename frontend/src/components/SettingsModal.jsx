@@ -90,6 +90,23 @@ const PROVINCIAS_ESPANA = [
   { codigo: 'ML', nombre: 'Melilla' }
 ].sort((a, b) => a.nombre.localeCompare(b.nombre));
 
+/**
+ * QUIÉN PUEDE REPARTIR LA LLAVE DEL DINERO.
+ *
+ * Es la misma puerta que abre la tarifa MV en el servidor (`FLAGS_MASTER` de
+ * `backend/services/master.py`): quien ya ve el dinero de la casa es quien puede
+ * dárselo a otro. Ni gerente ni director comercial — por ahí entrarían al coste
+ * y al margen por la puerta de atrás, marcándose la casilla a sí mismos.
+ *
+ * Y NO PUEDE SER SOLO `isPrimaryAdmin`, aunque sea a donde se quiere llegar: la
+ * cuenta con la que trabaja el master es `isAdmin`, así que gatear esto a
+ * `isPrimaryAdmin` dejaría la casilla invisible justo para quien tiene que
+ * marcarla. Pescadilla que se muerde la cola, y es exactamente por lo que el
+ * apagón del 28/08 no se pudo arreglar desde el ERP.
+ */
+const veElDineroDeLaCasa = (u) =>
+  !!(u && (u.isAdmin || u.isPrimaryAdmin || u.isMaster));
+
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [activeTab, setActiveTab] = useState('users');
   const [colorInput, setColorInput] = useState(state.brandColor || '#c0795f');
@@ -1579,6 +1596,44 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </button>
                   </div>
 
+                  {/* QUIÉN ENTRA HOY AL DINERO, Y QUIÉN SE QUEDARÍA FUERA.
+
+                      Esta cuenta es la comprobación que faltó el 28/08. Se
+                      quitó `isAdmin` de la lista del master con buen criterio y
+                      sin mirar antes a quién dejaba fuera; el master trabaja con
+                      una cuenta `isAdmin`, se quedó sin sus propios precios y
+                      Cocina Montada 3 salió entera a 0,00 €. Un presupuesto a
+                      cero no da error: se imprime igual y se puede enviar.
+
+                      No hace falta llamar a nadie: los usuarios ya están en
+                      pantalla. La cuenta se hace aquí. */}
+                  {veElDineroDeLaCasa(state.currentUser) && (() => {
+                    const entran = (state.users || []).filter(veElDineroDeLaCasa);
+                    const soloPorAdmin = entran.filter(
+                      (u) => !u.isPrimaryAdmin && !u.isMaster);
+                    return (
+                      <div className="mb-4 p-3 rounded-xl border-2 border-master-200 bg-master-50">
+                        <p className="text-xs font-black uppercase tracking-widest text-master-800 mb-1">
+                          Quién ve el dinero de la casa
+                        </p>
+                        <p className="text-[11px] text-slate-600">
+                          Entran <strong>{entran.length}</strong> cuenta{entran.length === 1 ? '' : 's'} a
+                          la tarifa MV, el coste, el margen y la nómina de los cooperativistas.
+                          De ellas, <strong>{soloPorAdmin.length}</strong> entra{soloPorAdmin.length === 1 ? '' : 'n'} solo
+                          por ser <em>administrador</em>.
+                        </p>
+                        {soloPorAdmin.length > 0 && (
+                          <p className="text-[11px] text-aviso-700 font-bold mt-1">
+                            Administrar el ERP y ver lo que le cuesta a la casa cada mueble no son el
+                            mismo permiso. Antes de cerrar esa puerta hay que marcar «Admin principal»
+                            a quien tenga que seguir entrando —{soloPorAdmin.map(u => u.clientName || u.username).join(', ')}—
+                            y comprobar que sigue viendo los precios. En ese orden.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Filtro por rol - Deslizable */}
                   <div className="flex items-center gap-2 overflow-x-auto pb-2">
                     <span className="text-xs font-black text-slate-500 uppercase whitespace-nowrap">Filtrar por rol:</span>
@@ -1936,6 +1991,42 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
                         <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
                         <div className="space-y-3">
+                          {/* LA LLAVE DEL DINERO. Va la primera y va explicada.
+
+                              `isPrimaryAdmin` decide quién ve la tarifa MV, el
+                              coste, el margen, la rentabilidad, las comisiones y
+                              el cierre del mes. Se leía en cinco sitios y NO SE
+                              PODÍA PONER DESDE NINGUNA PANTALLA: por eso el
+                              28/08, al quitar `isAdmin` de esa lista, el master
+                              se quedó fuera de su propia tarifa y Cocina Montada
+                              3 salió entera a 0,00 €. No había forma de
+                              arreglarlo desde el ERP.
+
+                              Hoy `isAdmin` TAMBIÉN abre esa puerta, que es lo
+                              que se quiere dejar de hacer: administrar el ERP y
+                              ver lo que le cuesta a la casa cada mueble no son
+                              el mismo permiso. El aviso de abajo cuenta a quién
+                              afectaría, porque esa comprobación es justo la que
+                              faltó. */}
+                          {veElDineroDeLaCasa(state.currentUser) && (
+                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-master-50 rounded-xl border-2 border-master-300">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.isPrimaryAdmin}
+                                onChange={(e) => setUserForm({...userForm, isPrimaryAdmin: e.target.checked})}
+                                className="w-5 h-5 rounded border-2 border-master-400"
+                                data-testid="primary-admin-checkbox"
+                              />
+                              <div>
+                                <span title="La llave del dinero: tarifa MV, coste, margen, rentabilidad, comisiones y cierre del mes." className="text-sm font-black text-slate-900">Admin principal (master)</span>
+                                <p className="text-xs text-slate-500">
+                                  Ve la tarifa del proveedor, el coste, el margen y la nómina de los
+                                  cooperativistas, y cierra el mes. Marcarlo es dar acceso al dinero
+                                  de la casa.
+                                </p>
+                              </div>
+                            </label>
+                          )}
                           {/* GERENTE - Primero */}
                           <label className="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 rounded-xl border border-blue-200">
                             <input

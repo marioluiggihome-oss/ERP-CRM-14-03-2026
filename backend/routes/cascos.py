@@ -10,6 +10,7 @@ guarda los pedidos de cascos por usuario. El catálogo vive en el frontend
 from fastapi import APIRouter, HTTPException, Depends
 from services import area_cooperativista as _AC
 from services import origen_pedidos as _OP
+from services import presupuestador as _PRE
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import logging
@@ -80,6 +81,11 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "createdAt": (existing or {}).get("createdAt") or now,
             "updatedAt": now,
         }
+        # Y AHORA, EL PERMISO DE LA SECCIÓN (regla 22). Va aquí y no antes
+        # porque hasta tener el `origen` definitivo —el de la petición o, si no
+        # viene, el que ya tenía el pedido— no se sabe de qué pestaña es.
+        _exigir_permiso_de_la_seccion(current_user, doc["origen"])
+
         # QUIEN GRABA EL PEDIDO SE LO LLEVA, SI ES SOCIO (master, 28/08: «dependiendo
         # del usuario que grabe el pedido, así comisionará, si son usuarios
         # cooperativistas»). Le ahorra al master asignar a mano el caso normal:
@@ -107,6 +113,26 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
     except Exception as e:
         logger.error(f"Create casco order error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _exigir_permiso_de_la_seccion(user, origen):
+    """La escritura de un pedido pide el permiso de SU sección. Regla 22.
+
+    El corte estaba solo en pantalla —esconder una pestaña no cierra nada—, así
+    que cualquiera con sesión podía crear, cambiar o borrar pedidos de Cocina
+    Desmontada llamando a la API a mano.
+
+    EL PERMISO SALE DEL ORIGEN, no del endpoint. Los dos presupuestadores
+    guardan aquí desde el 28/08, así que pedir «¿puede usar Cocina Desmontada?»
+    a secas dejaría sin poder pedir a quien solo tiene Montada — que es el mismo
+    error de apretar sin mirar a quién afecta.
+    """
+    if _PRE.puede_con_el_pedido(user, origen):
+        return
+    seccion = _PRE.NOMBRES[_PRE.seccion_de_origen(origen)]
+    raise HTTPException(
+        status_code=403,
+        detail=f"No tienes activo el presupuestador de {seccion}.")
 
 
 def _origen_valido(v) -> str:
@@ -149,12 +175,22 @@ async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = 
 # dos estaría desactualizado—: se TRADUCE al vuelo y los motores de siempre
 # hacen el resto. Ver `services/expediente_origen.py`.
 
-async def _pedido_o_404(order_id: str, current_user: Optional[dict]) -> dict:
+async def _pedido_o_404(order_id: str, current_user: Optional[dict],
+                        para_escribir: bool = False) -> dict:
+    """El pedido, comprobando que esa persona puede verlo.
+
+    `para_escribir` añade el permiso de la SECCIÓN (regla 22): ser el dueño de un
+    pedido no basta para modificarlo si te han quitado ese presupuestador. Leer
+    no lo pide, a propósito: de estos pedidos leen también Rentabilidad, el
+    Expediente y Almacén, cada uno con su propia puerta.
+    """
     doc = await _get_db().cascos_orders.find_one({"id": order_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Ese pedido de cascos no existe.")
     if not _can_access(doc, current_user):
         raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
+    if para_escribir:
+        _exigir_permiso_de_la_seccion(current_user, doc.get("origen"))
     return doc
 
 
@@ -190,7 +226,7 @@ async def guardar_medidas_de_pedido(order_id: str, payload: dict,
     trabajo de la pantalla de Cocina Desmontada no las pisa al volver a
     guardar, ni ellas pisan lo suyo.
     """
-    await _pedido_o_404(order_id, current_user)
+    await _pedido_o_404(order_id, current_user, para_escribir=True)
     medidas = payload.get("medidas")
     if not isinstance(medidas, list):
         raise HTTPException(status_code=422, detail="Hace falta una lista de medidas.")
@@ -207,7 +243,7 @@ async def _nivel_de_medida(order_id: str, clave: str, payload: dict,
                            current_user: Optional[dict], accion: str):
     """Tomar o confirmar. Es la misma operación con distinto nombre, y por eso
     está escrita una vez."""
-    pedido = await _pedido_o_404(order_id, current_user)
+    pedido = await _pedido_o_404(order_id, current_user, para_escribir=True)
     medidas = list(pedido.get("medidas") or [])
     idx = next((i for i, m in enumerate(medidas)
                 if str((m or {}).get("clave") or "").strip() == clave), None)
@@ -260,9 +296,14 @@ async def get_casco_order(order_id: str, current_user: Optional[dict] = Depends(
 
 @router.delete("/cascos/orders/{order_id}")
 async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    o = await _get_db().cascos_orders.find_one({"id": order_id}, {"_id": 0, "userId": 1})
+    o = await _get_db().cascos_orders.find_one(
+        {"id": order_id}, {"_id": 0, "userId": 1, "origen": 1})
     if o and not _can_access(o, current_user):
         raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
+    if o:
+        # Borrar es la escritura más definitiva que hay: pide el permiso de la
+        # sección del pedido, igual que crearlo (regla 22).
+        _exigir_permiso_de_la_seccion(current_user, o.get("origen"))
     await _get_db().cascos_orders.delete_one({"id": order_id})
     return {"success": True}
 

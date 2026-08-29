@@ -162,6 +162,26 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      con un usuario que no es master. Comprueba las dos mitades: que no se ve el
      dinero **y** que sí se siguen viendo los códigos.
 
+8c. **LA LLAVE DEL DINERO SE REPARTE DESDE EL PANEL MASTER** (29/08).
+   `isPrimaryAdmin` se leía en cinco sitios y NO SE PODÍA PONER desde ninguna
+   pantalla: solo la escribía un script suelto contra la base de datos. Por eso
+   el apagón del 28/08 —quitar `isAdmin` de la lista del master— no se pudo
+   arreglar desde el ERP y hubo que revertir con un despliegue.
+   - La casilla la ve **quien YA ve el dinero** (`isAdmin`, `isPrimaryAdmin` o
+     `isMaster`), no solo `isPrimaryAdmin`: la cuenta con la que trabaja el
+     master es `isAdmin`, así que gatearlo al de llegada la dejaría invisible
+     justo para quien tiene que marcarla. Ni gerente ni director comercial —
+     esos se la marcarían a sí mismos.
+   - Al lado, la pantalla **cuenta a quién dejaría fuera apretar la lista**:
+     cuántas cuentas entran al dinero y cuántas entran SOLO por ser
+     administrador. Esa comprobación es la que faltó, y estaba escrita en un
+     comentario que nadie iba a leer en el momento de decidir.
+   - **EL ORDEN NO SE NEGOCIA:** marcar «Admin principal» a quien tenga que
+     seguir entrando → comprobar que sigue viendo los precios → y SOLO entonces
+     cambiar `FLAGS_MASTER` por `FLAGS_ESTRECHOS`. Al revés se echa a la calle
+     al dueño y los presupuestos salen a 0,00 € sin dar ni un error.
+   - Candado: `test_calculo_master_unico.py`.
+
 9. **El candado de Rentabilidad OCULTA IMPORTES, no bloquea la edición**
    (05/08, a petición del master). Echado: se van precios, tarifas, coste,
    mano de obra, margen, precio de venta y €/m². Se quedan códigos,
@@ -581,12 +601,27 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - **La pestaña que no se ve NO se desmonta**, se oculta: si se desmontara,
      cambiar de pestaña vaciaría una relación a medio hacer — y en Cocina
      Montada 3 eso puede ser una cocina entera tecleada a mano.
-   - El corte por permiso está SOLO en pantalla, a propósito y de momento: la
-     regla 8 pide cerrarlo también en el servidor, pero eso es apretar un
-     candado y el 28/08 apretar uno dejó al master sin sus propios precios (ver
-     `services/master.py`). Se hará con el orden correcto: primero comprobar a
-     quién afecta, después cerrar.
-   - Candado: `test_pantalla_presupuestador.py`.
+   - **YA ESTÁ CERRADO TAMBIÉN EN EL SERVIDOR** (29/08), que era lo que
+     quedaba a medias. Se cierran las ESCRITURAS —crear, cambiar medidas y
+     borrar—; las LECTURAS de `/cascos/orders` NO, y eso es una decisión: de esa
+     lista comen Rentabilidad, el Expediente y Almacén, cada una con su puerta,
+     así que cerrarla aquí les quitaría datos a pantallas que no son el
+     Presupuestador —el error del 28/08 calcado— y además ya va recortada por
+     dueño.
+   - **EL PERMISO SALE DEL ORIGEN DEL PEDIDO, NO DEL ENDPOINT.** Los dos
+     presupuestadores guardan en `cascos_orders`, así que si `POST
+     /cascos/orders` preguntara «¿puedes usar Cocina Desmontada?», quien solo
+     tiene Montada dejaría de poder pasar a pedido — y con él caerían su
+     comisión y la del montador, porque un presupuesto no cuenta. Un origen que
+     no se reconozca pide el permiso de Desmontada, que es el EXPLÍCITO de los
+     dos: en la duda, el más estricto.
+   - **`is None`, no `if not user`.** Un usuario sin permisos es un `{}`, que en
+     Python es falso y en JavaScript verdadero: con `if not user` el servidor le
+     cerraba Montada a quien la pantalla se la abría. Lo cazó el candado que
+     EJECUTA el JS y lo compara con Python usuario a usuario; leyendo los dos
+     ficheros en paralelo no se ve, porque están escritos igual.
+   - Candados: `test_pantalla_presupuestador.py` y
+     `test_calculo_presupuestador_en_el_servidor.py`.
 
 23. **NINGÚN HOOK POR DEBAJO DE UN `return`: eso deja el ERP EN NEGRO** (29/08).
    El master: «cuando entro en máster sale este error», con la pantalla
