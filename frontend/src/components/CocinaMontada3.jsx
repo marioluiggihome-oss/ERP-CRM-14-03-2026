@@ -60,6 +60,16 @@ const pvpDeItem = (val, pv) => {
   return null;
 };
 
+/** Los herrajes de una línea: lo que `despiece` mete en el coste bajo ese
+ *  nombre. Se suma AQUÍ y no en la plantilla para que el desglose de pantalla
+ *  no pueda separarse de lo que suma el cálculo — que es justo lo que hacía
+ *  que el total no cuadrara con lo que se veía. */
+export const herrajesDe = (m) => {
+  const d = (m || {}).despiece || {};
+  return ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes']
+    .reduce((t, k) => t + (Number(d[k]) || 0), 0);
+};
+
 const costeDetalladoDe = (m, p, tarifa, pvVal, acabadoCasco) => {
   return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal, acabadoCasco);
 };
@@ -1978,8 +1988,27 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                     {/* Coste y margen: solo con el candado abierto */}
                     {verCoste && (
                       <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[10px] font-mono border-t border-slate-100 pt-2">
+                        {/* EL DESGLOSE TIENE QUE SUMAR EL TOTAL (master, 30/08:
+                            «ojo, el coste no lo veo bien»). Se enseñaban dos de
+                            los CUATRO sumandos —casco y puertas— y el total
+                            llevaba además los herrajes y la mano de obra. En un
+                            B90 eso eran 61,15 + 53,28 = 114,43 frente a un coste
+                            de 145,55: 31,12 € que aparecían de la nada. Un
+                            desglose que no cuadra no es un desglose, es una
+                            sospecha. */}
                         <span className="text-dato-700 font-bold">{`Casco ${eur(m.despiece?.casco)}`}</span>
                         <span className="text-dato-700 font-bold">{`Puertas ${eur(m.despiece?.puerta)}`}</span>
+                        <span className="text-dato-700 font-bold"
+                          title={`Bisagras ${eur(m.despiece?.bisagras)} · Patas ${eur(m.despiece?.patas)} · Colgadores ${eur(m.despiece?.colg)} · Cajones ${eur(m.despiece?.caj)} · Gavetas ${eur(m.despiece?.gav)} · Soportes ${eur(m.despiece?.soportes)}`}>
+                          {`Herrajes ${eur(herrajesDe(m))}`}
+                        </span>
+                        {/* La mano de obra por mueble ES la comisión del
+                            montador (CLAUDE.md, regla 16). Va dentro del coste
+                            de fábrica, así que tiene que verse. */}
+                        <span className="text-dato-700 font-bold"
+                          title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">
+                          {`M. obra ${eur(m.despiece?.mo)}`}
+                        </span>
                         <span className="text-dato-900 font-black">{`Coste ${eur(m.coste)}`}</span>
                         <span className="text-dato-600 font-bold">
                           {`Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}%)`}
