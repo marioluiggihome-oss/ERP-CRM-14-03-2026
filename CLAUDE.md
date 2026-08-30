@@ -726,7 +726,7 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      `sys.modules` y lo deja ahí: un import normal pasaba en solitario y fallaba
      en la suite entera, según el orden de los ficheros.
 
-26. **UNA SECCIÓN, UN PERMISO** (29/08). El menú lateral enseñaba
+26. **UNA SECCIÓN, UN PERMISO — Y CADA AJUSTE COLGANDO DEL SUYO** (29–30/08). El menú lateral enseñaba
    «Planificación» con `canAccessFabrica` y la bienvenida con
    `canAccessPlanificacion`: el master lo desactivó y le siguió saliendo en el
    menú. Dos permisos para una sección son uno que se aprieta y otro que se
@@ -734,6 +734,23 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    «Cocinas por módulos» ponía «Estudio 3D», así que se buscó para quitarla y no
    se encontró — un permiso que no se puede encontrar es un permiso que no se
    puede quitar.
+
+   - **Y AL REVÉS TAMBIÉN CUENTA** (30/08). El master: «cocina por módulos aquí
+     en permisos de usuario, apartado red distribución, es Estudio 3D». Tenía
+     razón, y el fallo no era el nombre: el panel de «tipos permitidos» colgaba
+     de la casilla EQUIVOCADA. `estudio3dTipos` lo lee `AIRenderStudio.jsx` —la
+     pantalla «Estudio 3D», que se abre con `canUseAIAnalysis`— pero solo
+     aparecía al marcar `canUseKitchenDesigner`, que es «Cocinas por módulos»:
+     se configuraba una pantalla desde la casilla de otra.
+   - **Un permiso que abre DOS secciones las nombra las dos.**
+     `canUseAIAnalysis` abre «IA Lab» y «Estudio 3D», y la casilla solo decía
+     «IA Lab»: quitarle el Estudio 3D a alguien era imposible de encontrar, el
+     mismo problema que con «Cocinas por módulos». Mientras compartan permiso,
+     el rótulo los nombra a los dos.
+   - Candado: `test_pantalla_permisos_de_diseno.py`. Su primera versión miraba
+     900 caracteres a bulto y ahí caían el `title=` y el comentario de encima,
+     que también dicen «Estudio 3D»: pasaba con el rótulo cambiado. Ahora saca
+     el texto VISIBLE del `<span>`.
 
 27. **PLATAFORMAS: LOS TRES NEGOCIOS, EN LA PUERTA DE ENTRADA** (30/08). El
    master: «cada una aporta un negocio distinto y quiero estructurarlo como

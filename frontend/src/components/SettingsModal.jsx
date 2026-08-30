@@ -2712,7 +2712,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseAIAnalysis: e.target.checked})}
                                 className="w-4 h-4 rounded accent-purple-600"
                               />
-                              <span title="Herramientas de IA (análisis y laboratorio)." className="text-xs font-bold text-slate-700">IA Lab</span>
+                              {/* DICE LAS DOS SECCIONES QUE ABRE. `canUseAIAnalysis`
+                                  abre «IA Lab» Y «Estudio 3D» (el de los
+                                  renders), y la casilla solo nombraba la
+                                  primera: quitar el Estudio 3D a alguien era
+                                  imposible de encontrar. */}
+                              <span title="Abre «IA Lab» (análisis y laboratorio) y «Estudio 3D» (renders con IA)." className="text-xs font-bold text-slate-700">IA Lab y Estudio 3D</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
                               <input
@@ -2727,12 +2732,21 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   desactivarla y no la encontró. Un permiso que
                                   no se puede encontrar es un permiso que no se
                                   puede quitar. */}
-                              <span title="Abre «Cocinas por módulos» (diseño por módulos y chequeo de fabricabilidad) y el acceso a Estudio 3D." className="text-xs font-black text-amber-800">Cocinas por módulos</span>
+                              <span title="Abre «Cocinas por módulos»: diseño por módulos y chequeo de fabricabilidad." className="text-xs font-black text-amber-800">Cocinas por módulos</span>
                             </label>
-                            {/* Tipos permitidos dentro de Estudio 3D (por partidas). Vacío = todos. */}
-                            {!!userForm.canUseKitchenDesigner && (
-                              <div className="col-span-2 sm:col-span-3 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2">
-                                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wide mb-1.5">Cocinas por módulos · tipos permitidos <span className="text-emerald-500 font-bold normal-case">(vacío = todos)</span></p>
+                            {/* LOS TIPOS SON DEL ESTUDIO 3D, Y COLGABAN DE LA
+                                CASILLA EQUIVOCADA.
+                                `estudio3dTipos` lo lee `AIRenderStudio.jsx`, o
+                                sea la pantalla de «Estudio 3D», que se abre con
+                                `canUseAIAnalysis`. Pero este panel solo aparecía
+                                al marcar «Cocinas por módulos», que es otra
+                                sección y otro permiso: se configuraba una
+                                pantalla desde la casilla de otra, y por eso
+                                parecía que la casilla estaba mal nombrada.
+                                Ahora cuelga de la suya. */}
+                            {!!userForm.canUseAIAnalysis && (
+                              <div className="col-span-2 sm:col-span-3 bg-purple-50 border border-purple-200 rounded-lg px-2.5 py-2">
+                                <p className="text-[10px] font-black text-purple-700 uppercase tracking-wide mb-1.5">Estudio 3D · tipos permitidos <span className="text-purple-500 font-bold normal-case">(vacío = todos)</span></p>
                                 <div className="flex flex-wrap gap-1.5">
                                   {ESTUDIO_3D_TIPOS.map(tp => {
                                     const sel = Array.isArray(userForm.estudio3dTipos) ? userForm.estudio3dTipos : [];
