@@ -162,6 +162,48 @@ def _entero(v) -> int:
         return 0
 
 
+# CÓMO SE LLAMA «SERVIDO» Y «COBRADO» EN ESTE ERP, Y SOLO AQUÍ.
+#
+# `deliveredAt` y `paidAt` son los nombres que el ERP ya usa para lo mismo:
+# `projects.py` estampa el primero al pasar a «entregado» y `invoices.py` el
+# segundo al pasar a «paid». Se aceptan como alternativa para que un pedido que
+# ya trae la fecha buena no se quede en «en progreso» para siempre esperando a
+# un campo que no le pone nadie. No se inventa ningún cruce entre colecciones:
+# si el documento trae la fecha, se usa; si no, no hay entrega.
+#
+# ESTABA ESCRITO SOLO AQUÍ DENTRO, Y POR ESO NO SERVÍA DE NADA (30/08). La
+# alternativa vivía en el cuerpo de `normaliza`, pero a este módulo NUNCA le
+# llega el pedido crudo: las tres rutas del área pasan antes por
+# `area_cooperativista.normaliza_pedido`, que copiaba `servidoAt` y `cobradoAt`
+# y tiraba `deliveredAt` y `paidAt` por el camino. Así que cuando esta línea se
+# ejecutaba, los campos que buscaba ya no existían: un pedido entregado y
+# cobrado de verdad se quedaba EN PROGRESO para siempre y no lo cobraba nadie.
+# Sin error, sin aviso, y con el candado en verde porque probaba este módulo
+# suelto, con diccionarios que sí traían las claves.
+#
+# Ahora se pregunta aquí, y la capa de arriba pregunta también aquí.
+ALIAS_SERVIDO = ("servidoAt", "deliveredAt")
+ALIAS_COBRADO = ("cobradoAt", "paidAt")
+
+
+def _primera(p: dict, claves) -> Optional[str]:
+    for k in claves:
+        v = (p or {}).get(k)
+        if v:
+            return v
+    return None
+
+
+def servido_de(pedido: dict):
+    """La fecha en que salió la mercancía, se llame como se llame el campo."""
+    return _primera(pedido, ALIAS_SERVIDO)
+
+
+def cobrado_de(pedido: dict):
+    """La fecha en que entró el dinero, se llame como se llame el campo."""
+    return _primera(pedido, ALIAS_COBRADO)
+
+
 def normaliza(pedido: dict) -> dict:
     """Deja un pedido en los pocos datos de los que depende una comisión.
 
@@ -177,14 +219,8 @@ def normaliza(pedido: dict) -> dict:
     silencio — y en silencio, aquí, significa que alguien cobra de menos.
     """
     p = pedido or {}
-    # `deliveredAt` y `paidAt` son los nombres que el ERP ya usa para lo mismo
-    # (`projects.py` los estampa al pasar a «entregado», `invoices.py` al pasar a
-    # «paid»). Se aceptan como alternativa para que un pedido que ya trae la
-    # fecha buena no se quede en «en progreso» para siempre esperando a un campo
-    # que no le pone nadie. No se inventa ningún cruce entre colecciones: si el
-    # documento trae la fecha, se usa; si no, no hay entrega.
-    servido = _fecha(p.get("servidoAt") or p.get("deliveredAt"))
-    cobrado = _fecha(p.get("cobradoAt") or p.get("paidAt"))
+    servido = _fecha(servido_de(p))
+    cobrado = _fecha(cobrado_de(p))
     return {
         "id": p.get("id") or p.get("_id") or "",
         "aceptadoAt": _fecha(p.get("aceptadoAt") or p.get("acceptedAt")),

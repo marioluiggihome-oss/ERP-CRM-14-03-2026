@@ -29,6 +29,7 @@ from __future__ import annotations
 from typing import Optional
 
 from services import comisiones as C
+from services import liquidaciones as L
 
 # El `status` de `fabrica_orders` → el estado que se enseña. La tabla es la que
 # ya usaba `routes/orders.py`; se ha traído aquí para que no haya dos.
@@ -104,8 +105,8 @@ def linea(pedido: dict, ficha_de_fabrica: Optional[dict] = None) -> dict:
         # El final del proceso, que ya sabe el ERP por el albarán y la factura
         # (`services/enlace_documentos.py`). Sin esto la pestaña se queda a
         # medias: «Entregado» en fábrica no quiere decir cobrado.
-        "servido": bool(p.get("servidoAt") or p.get("deliveredAt")),
-        "cobrado": bool(p.get("cobradoAt") or p.get("paidAt")),
+        "servido": bool(L.servido_de(p)),
+        "cobrado": bool(L.cobrado_de(p)),
     }
 
 

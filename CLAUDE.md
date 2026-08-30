@@ -433,6 +433,24 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      campo que no le pone nadie. No se inventa ningún cruce entre colecciones:
      si el documento trae la fecha, se usa. Candado:
      `test_calculo_congelar_comision.py`.
+     - **Y ESTABA ESCRITO EN LA CAPA QUE NO ERA, así que no servía de nada**
+       (30/08, al comprobar que el master puede ser socio comercial). La
+       alternativa vivía dentro de `liquidaciones.normaliza`, pero a ese módulo
+       NUNCA le llega el pedido crudo: las tres rutas del área pasan antes por
+       `area_cooperativista.normaliza_pedido`, que copiaba `servidoAt` y
+       `cobradoAt` y TIRABA `deliveredAt` y `paidAt`. Cuando la línea buena se
+       ejecutaba, los campos que buscaba ya no existían. O sea que **ningún
+       pedido entregado por el camino normal del ERP consolidó nunca**: se
+       quedaban todos EN PROGRESO, sin error y sin aviso, y no los cobraba
+       nadie. El candado estaba en verde porque probaba `liquidaciones` suelto,
+       con diccionarios que sí traían las claves — un candado escrito contra
+       datos preparados a mano no protege nada.
+       Ahora los alias viven en UN sitio (`L.ALIAS_SERVIDO` / `L.ALIAS_COBRADO`
+       con `servido_de` y `cobrado_de`), los pregunta también
+       `estado_fabricacion`, y el candado recorre la CADENA ENTERA —normalizar y
+       después decidir el estado—, que es la única forma de que un candado de
+       nómina signifique algo. El propio del pedido sigue mandando sobre el del
+       documento, y sin ninguna de las dos fechas NO se inventa una entrega.
    - Un pedido anulado o sin aceptar devuelve `None`, no cero euros: una línea a
      cero en el panel del comercial es recordarle lo que no va a cobrar. Y el
      panel NO da un total que sume los tres montones — son promesas de distinto

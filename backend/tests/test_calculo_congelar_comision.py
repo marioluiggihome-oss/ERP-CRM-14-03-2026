@@ -26,7 +26,8 @@ import sys
 
 import pytest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BACKEND)
 os.environ.setdefault("JWT_SECRET", "secreto-de-pruebas-largo-y-aleatorio-0123456789")
 
 from services import liquidaciones as L  # noqa: E402
@@ -192,3 +193,87 @@ def test_la_ruta_de_liquidar_NO_PAGA_DOS_VECES_y_es_del_master():
         "total del mes saldría duplicado")
     assert "L.congelar" in trozo, (
         "liquidar no congela: al mes siguiente el importe volvería a calcularse")
+
+
+# ── LA CADENA COMPLETA, QUE ES DONDE SE ROMPÍA ──────────────────────────────
+#
+# Este fichero probaba `liquidaciones` SUELTO, con diccionarios que ya traían
+# `servidoAt` y `cobradoAt` puestos a mano. Por eso pasaba en verde mientras el
+# ERP de verdad no consolidaba NI UN PEDIDO: a `liquidaciones` no le llega nunca
+# el documento crudo —las tres rutas del área pasan antes por
+# `area_cooperativista.normaliza_pedido`—, y esa capa copiaba solo `servidoAt` y
+# `cobradoAt`, tirando por el camino `deliveredAt` y `paidAt`, que son los
+# nombres que el ERP ESTAMPA de verdad (`projects.py` al entregar, `invoices.py`
+# al cobrar).
+#
+# Resultado: un pedido servido y cobrado se quedaba EN PROGRESO para siempre.
+# Sin error y sin aviso — simplemente no se pagaba a nadie, nunca.
+#
+# Así que estas pruebas recorren la cadena ENTERA, que es la única forma de que
+# un candado de nómina signifique algo.
+
+from services import area_cooperativista as _AC   # noqa: E402
+
+_PEDIDO_ENTREGADO = {
+    "id": "cadena-1",
+    "comercialUserId": "u1",
+    "confirmedAt": "2026-08-01",
+    "items": [{"code": "B60D", "familia": "BAJO", "quantity": 10, "price": 7000.0}],
+    # LOS NOMBRES QUE EL ERP USA DE VERDAD. Un pedido que ha pasado por
+    # «entregado» y por una factura «paid» llega exactamente así.
+    "deliveredAt": "2026-08-20",
+    "paidAt": "2026-08-21",
+    "pendienteCobro": 0,
+}
+
+
+def test_UN_PEDIDO_ENTREGADO_Y_COBRADO_CONSOLIDA_POR_LA_CADENA_REAL():
+    n = _AC.normaliza_pedido(_PEDIDO_ENTREGADO)
+    assert n["servidoAt"], (
+        "`deliveredAt` se ha vuelto a perder al normalizar: el pedido llegará a "
+        "la liquidación como si no se hubiera entregado nunca")
+    assert n["cobradoAt"], "`paidAt` se ha vuelto a perder al normalizar"
+    assert L.estado_de(n, _AC.COMERCIAL) == L.CONSOLIDADA, (
+        "un pedido servido y cobrado NO consolida: no lo cobra nadie, y no da "
+        "ningún error")
+    assert L.periodo_de_consolidacion(n) == "2026-08", (
+        "el mes es el de la ENTREGA (master): «si se sirven en agosto se "
+        "liquidan en agosto»")
+
+
+def test_LOS_NOMBRES_PROPIOS_SIGUEN_MANDANDO():
+    """`servidoAt` escrito en el pedido gana al `deliveredAt` del documento."""
+    n = _AC.normaliza_pedido(dict(_PEDIDO_ENTREGADO,
+                                  servidoAt="2026-07-02", cobradoAt="2026-07-03"))
+    assert n["servidoAt"] == "2026-07-02" and n["cobradoAt"] == "2026-07-03"
+    assert L.periodo_de_consolidacion(n) == "2026-07"
+
+
+def test_SIN_NINGUNA_DE_LAS_DOS_FECHAS_NO_SE_INVENTA_UNA_ENTREGA():
+    """No consolidar es lo correcto aquí: no hay dato de que saliera nada."""
+    sin = {k: v for k, v in _PEDIDO_ENTREGADO.items()
+           if k not in ("deliveredAt", "paidAt")}
+    n = _AC.normaliza_pedido(sin)
+    assert n["servidoAt"] is None and n["cobradoAt"] is None
+    assert L.estado_de(n, _AC.COMERCIAL) == L.EN_PROGRESO
+
+
+def test_SERVIDO_SIN_COBRAR_NO_PAGA():
+    """Las dos condiciones son una «Y»: servido sin cobrar es pagar con dinero
+    que no ha entrado."""
+    solo = {k: v for k, v in _PEDIDO_ENTREGADO.items() if k != "paidAt"}
+    n = _AC.normaliza_pedido(solo)
+    assert L.estado_de(n, _AC.COMERCIAL) == L.EN_PROGRESO
+
+
+def test_LOS_ALIAS_VIVEN_EN_UN_SOLO_SITIO():
+    """Si vuelven a escribirse a mano en otra capa, se separan otra vez."""
+    assert L.ALIAS_SERVIDO[0] == "servidoAt" and "deliveredAt" in L.ALIAS_SERVIDO
+    assert L.ALIAS_COBRADO[0] == "cobradoAt" and "paidAt" in L.ALIAS_COBRADO
+    for mod in ("area_cooperativista.py", "estado_fabricacion.py"):
+        cuerpo = open(os.path.join(BACKEND, "services", mod), encoding="utf-8").read()
+        assert 'get("deliveredAt")' not in cuerpo, (
+            f"`{mod}` ha vuelto a leer «deliveredAt» a mano en vez de "
+            "preguntárselo a liquidaciones")
+        assert 'get("paidAt")' not in cuerpo, (
+            f"`{mod}` ha vuelto a leer «paidAt» a mano")

@@ -141,8 +141,14 @@ def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0,
         "baseImponible": base,
         "sinDesglose": sin_desglose,
         "aceptadoAt": o.get("aceptadoAt") or o.get("confirmedAt"),
-        "servidoAt": o.get("servidoAt"),
-        "cobradoAt": o.get("cobradoAt"),
+        # NO SE LEEN A MANO. `deliveredAt` y `paidAt` son los nombres que el
+        # ERP ya usa para lo mismo, y aquí se copiaban SOLO `servidoAt` y
+        # `cobradoAt`: un pedido entregado y cobrado de verdad llegaba a
+        # `liquidaciones` con las dos fechas vacías y se quedaba EN PROGRESO
+        # para siempre. La alternativa estaba escrita allí, pero allí ya no
+        # quedaba nada que leer — la habíamos tirado en esta línea.
+        "servidoAt": L.servido_de(o),
+        "cobradoAt": L.cobrado_de(o),
         "pendienteCobro": o.get("pendienteCobro") or 0,
         "anulado": bool(o.get("anulado") or o.get("status") == "cancelled"),
         "manoPorMueble": mano_por_mueble,
