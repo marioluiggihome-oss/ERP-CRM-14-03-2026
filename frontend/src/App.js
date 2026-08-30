@@ -1944,8 +1944,30 @@ const App = () => {
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} initialTab={(state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined} focusEvent={state.crmFocusEvent} />}
 
+            {/* carpinter.io — LA ADMINISTRACIÓN DE ESA PLATAFORMA, SOLO MASTER.
+                (master, 30/08: «la puerta de carpinter y studio3k, sólo la veo
+                yo»). Este panel ya existía y solo se abría solo, para el admin
+                de la división; el master no tenía por dónde entrar. Se le pone
+                puerta desde «Plataformas», sin tocar su contenido.
+
+                El permiso se comprueba AQUÍ además de en el menú: esconder un
+                botón no cierra ninguna puerta (regla 8). */}
+            {state.currentTab === 'carpinter'
+              && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin) && (
+              <ErrorBoundary>
+                <div className="h-full overflow-y-auto">
+                  <CarpinterPanel
+                    isOpen
+                    onClose={() => setState(p => ({ ...p, currentTab: 'welcome' }))}
+                    currentUser={state.currentUser}
+                  />
+                </div>
+              </ErrorBoundary>
+            )}
+
             {/* Landing Comercial Studio3K */}
-            {state.currentTab === 'landingStudio' && (
+            {state.currentTab === 'landingStudio'
+              && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin) && (
               <ErrorBoundary>
                 <div className="h-full overflow-y-auto">
                   <LandingStudio3K onOpenApp={() => setState(p => ({ ...p, currentTab: 'estudioCocinas' }))} />

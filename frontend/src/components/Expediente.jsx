@@ -33,7 +33,7 @@ import {
   ClipboardList, Search, RefreshCw, Loader, AlertTriangle, CheckCircle2,
   ChevronLeft, Factory, Euro, User, ArrowRight, ShieldCheck, XCircle, Ruler,
 } from 'lucide-react';
-import { projectsAPI, proformaAPI, expedienteAPI, medidasAPI } from '../services/api';
+import { projectsAPI, proformaAPI, expedienteAPI, medidasAPI, misObrasAPI } from '../services/api';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 // Cómo se lee cada importe. `margen` y `descuento` son porcentajes; el resto,
@@ -493,11 +493,17 @@ export default function Expediente({ state }) {
     setCargandoLista(true);
     setErrorLista('');
     try {
-      const [proj, casco] = await Promise.all([
+      const [proj, casco, mias] = await Promise.all([
         projectsAPI.getAll(usuarioId).catch(() => []),
         // Los pedidos de casco pueden estar cerrados para este usuario; si no
         // llegan, la lista sigue con lo demás en vez de quedarse vacía.
         proformaAPI.listarPedidos(usuarioId).then(d => d?.orders || []).catch(() => []),
+        // LAS QUE LE HAN ASIGNADO. Las dos de arriba traen lo que este usuario
+        // ha CREADO, y un montador no crea nada: monta lo que le asignan, así
+        // que su Expediente salía siempre vacío. Quién es lo decide el
+        // servidor a partir del token; aquí no se manda ningún identificador.
+        // Si no es socio, contesta lista vacía y no pasa nada.
+        misObrasAPI.listar().catch(() => []),
       ]);
       const proyectos = (Array.isArray(proj) ? proj : (proj?.projects || []))
         .map(p => ({ ...p, _origen: 'proj', _de: 'Cocina Montada' }));
@@ -510,7 +516,22 @@ export default function Expediente({ state }) {
         internalReference: o.ref || '',
         status: o.kind === 'presupuesto' ? 'borrador' : 'aceptado',
       }));
-      setProyectos([...proyectos, ...pedidos]);
+      const asignadas = mias.map(o => ({
+        id: o.id,
+        _origen: 'casco',
+        _de: o.origen || 'Asignada a mí',
+        _asignada: true,
+        budgetNumber: o.referencia,
+        customerName: o.cliente,
+        internalReference: o.referencia,
+        confirmedAt: o.fecha,
+        status: o.kind === 'presupuesto' ? 'borrador' : 'aceptado',
+      }));
+      // Sin repetir: una obra puede llegar por las dos vías (la creó él y
+      // además se la asignaron). Manda la que ya venía, que trae más datos.
+      const vistas = new Set([...proyectos, ...pedidos].map(o => o.id));
+      setProyectos([...proyectos, ...pedidos,
+                    ...asignadas.filter(o => o.id && !vistas.has(o.id))]);
     } catch (e) {
       setErrorLista(e.message || 'No se pudo cargar la lista de obras.');
     } finally {

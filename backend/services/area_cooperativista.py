@@ -242,6 +242,39 @@ def socios_de(usuarios: Iterable[dict]) -> dict:
     }
 
 
+# Lo único que sale de un pedido hacia la lista de obras del cooperativista.
+# Lista BLANCA, igual que todo lo demás de este módulo: dentro del pedido hay
+# líneas, precios, descuentos y totales, y para saber QUÉ COCINA hay que montar
+# no hace falta nada de eso.
+CAMPOS_DE_LA_OBRA = ("id", "referencia", "cliente", "fecha", "origen", "kind")
+
+
+def obra_publica(order: dict) -> dict:
+    """Una obra en la lista del cooperativista: la justa para reconocerla.
+
+    NO LLEVA UN EURO. El Expediente ya recorta importes por su cuenta
+    (`services/expediente.py`), pero esta lista es una ruta nueva y el dinero no
+    viaja por rutas nuevas «por si acaso»: se decide aquí que no viaja.
+    """
+    o = order or {}
+    return {
+        "id": o.get("id") or "",
+        "referencia": (o.get("budgetNumber") or o.get("projectReference")
+                       or o.get("ref") or o.get("id") or ""),
+        "cliente": (o.get("customerName") or o.get("cliente") or "").strip(),
+        "fecha": o.get("confirmedAt") or o.get("createdAt") or "",
+        "origen": o.get("origenNombre") or o.get("origen") or "",
+        "kind": o.get("kind") or "pedido",
+    }
+
+
+def obras_de(pedidos: Iterable[dict]) -> list:
+    """Las obras de ese cooperativista, la más reciente primero."""
+    fuera = [obra_publica(p) for p in (pedidos or [])]
+    fuera.sort(key=lambda o: str(o.get("fecha") or ""), reverse=True)
+    return fuera
+
+
 def pedido_para_asignar(order: dict, nombres: Optional[dict] = None,
                         familia_por_codigo: Optional[dict] = None) -> dict:
     """Una línea de la pantalla de asignación del master.

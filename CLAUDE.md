@@ -735,6 +735,39 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    se encontró — un permiso que no se puede encontrar es un permiso que no se
    puede quitar.
 
+27. **PLATAFORMAS: LOS TRES NEGOCIOS, EN LA PUERTA DE ENTRADA** (30/08). El
+   master: «cada una aporta un negocio distinto y quiero estructurarlo como
+   tal», y sobre el nombre, «PLATAFORMAS».
+   - **No se llama «Proyectos»**, que fue la primera idea: aquí un proyecto es
+     una OBRA —la colección `projects`, el Expediente, «Referencia / Obra»—, así
+     que esa palabra ya significa otra cosa. El grupo se llama igual que el
+     código (`services/plataformas.py`).
+   - **Juntas en el mapa, SEPARADAS en la puerta** (master: «no deben compartir
+     puerta»). COOP la abre también un administrador, que es la gestión de la
+     red de siempre; **carpinter.io y Studio3K son SOLO DEL MASTER** («la puerta
+     de carpinter y studio3k, sólo la veo yo»). Mover secciones de sitio no
+     puede cambiar quién entra.
+   - El cierre va también en el ENRUTADO. `landingStudio` no comprobaba NADA: se
+     pintaba con solo llegar a esa pestaña. Y `carpinter` no existía en el
+     enrutado —el panel solo se abría solo, para el admin de la división—, así
+     que el botón se habría quedado en blanco.
+   - Candado: `test_pantalla_plataformas_en_inicio.py`.
+
+28. **EL EXPEDIENTE DE OBRA, PARA QUIEN VA A LA OBRA** (30/08). El master: que
+   el cooperativista lo vea. No lo veía porque la lista se arma con lo que cada
+   uno ha CREADO, y un montador no crea nada: monta lo que le asignan — le salía
+   siempre «no hay obras que coincidan». Y una de las tareas del propio
+   expediente, «medidas de obra», lleva escrito «Montador» como responsable
+   desde el primer día.
+   - `GET /api/cooperativistas/mis-obras` trae las suyas, con el **filtro sacado
+     del TOKEN** (regla 20) y por lista BLANCA de campos: **ni un euro**. Para
+     saber qué cocina hay que montar no hace falta saber lo que vale.
+   - Y `_can_access` deja entrar al **asignado**, no solo al dueño: sin eso la
+     lista se le llenaba y cada obra daba 403 al pulsarla. Abre la OBRA, no el
+     margen — los importes siguen yendo por `expediente.FLAGS_CON_IMPORTES`, que
+     no lleva al montador y que los QUITA en vez de ponerlos a cero.
+   - Candado: `test_calculo_obras_del_cooperativista.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

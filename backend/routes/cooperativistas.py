@@ -5,9 +5,10 @@
 """
 EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
 
-Siete rutas y ni una más:
+Ocho rutas y ni una más:
 
   GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
+  GET  /api/cooperativistas/mis-obras      las cocinas que le tocan, para el Expediente
   GET  /api/cooperativistas/socios         quién es socio, para elegirlo (master)
   GET  /api/cooperativistas/pedidos        pedidos y su asignación de hoy (master)
   POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
@@ -163,6 +164,36 @@ async def mi_area(current_user: Optional[dict] = Depends(get_current_user)):
     return {"success": True,
             "area": AC.panel_de(current_user, pedidos, mano,
                                 await _familia_por_codigo())}
+
+
+@router.get("/mis-obras")
+async def mis_obras(current_user: Optional[dict] = Depends(get_current_user)):
+    """Las obras que ese cooperativista tiene asignadas. Para el Expediente.
+
+    POR QUÉ EXISTE. El Expediente de Obra arma su lista con lo que cada usuario
+    ha CREADO, y un montador no crea nada: monta lo que le asignan. Así que la
+    pantalla le salía SIEMPRE vacía —«no hay obras que coincidan»— aunque
+    tuviera media docena de cocinas encima. Y una de las tareas del expediente,
+    «medidas de obra», es literalmente suya.
+
+    EL FILTRO SALE DEL TOKEN, como todo en este módulo: quién es se decide en el
+    servidor. Si viajara en la petición, cualquiera cambiaría el número y vería
+    las obras del compañero.
+
+    NO LLEVA IMPORTES (`obra_publica`). Es la lista de «qué cocinas me tocan»,
+    no la de cuánto valen.
+    """
+    filtro = AC.filtro_de(current_user)
+    if filtro is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Esta lista es de los cooperativistas: montadores y comerciales.")
+    try:
+        pedidos = await _pedidos_de_la_cooperativa(filtro)
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"mis-obras: no se pudieron leer los pedidos: {e}")
+        raise HTTPException(status_code=500, detail="No se pudieron leer tus obras.")
+    return {"success": True, "obras": AC.obras_de(pedidos)}
 
 
 @router.get("/socios")

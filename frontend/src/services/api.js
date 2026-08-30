@@ -810,6 +810,23 @@ const _baseDeObra = (origen, id) => (origen === 'casco'
   ? `${API_URL}/api/cascos/orders/${encodeURIComponent(id)}`
   : `${API_URL}/api/projects/${encodeURIComponent(id)}`);
 
+// LAS OBRAS QUE LE TOCAN A UN COOPERATIVISTA.
+//
+// El Expediente arma su lista con lo que cada uno ha CREADO, y un montador no
+// crea nada: monta lo que le asignan. Sin esto su pantalla salía siempre vacía.
+// Quién es se decide en el SERVIDOR a partir del token — aquí no se manda
+// ningún identificador, justamente para que no se pueda pedir el de otro.
+export const misObrasAPI = {
+  listar: async () => {
+    const r = await fetch(`${API_URL}/api/cooperativistas/mis-obras`, {
+      headers: authHeaders(),
+    });
+    if (!r.ok) return [];          // no es socio, o no hay nada: lista vacía
+    const d = await r.json().catch(() => ({}));
+    return Array.isArray(d.obras) ? d.obras : [];
+  },
+};
+
 export const expedienteAPI = {
   _h: () => {
     const token = getToken();

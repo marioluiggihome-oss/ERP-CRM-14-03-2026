@@ -46,6 +46,18 @@ const toEmbedUrl = (url) => {
 // secciones y su acento de color, para que sea más fácil localizar cada
 // pantalla por bloque temático en vez de una rejilla plana sin criterio.
 const GROUPS = [
+  // PLATAFORMAS: LOS TRES NEGOCIOS QUE COMPARTEN ESTE ERP (master, 30/08).
+  //
+  // No es un cajón para lo que no encaja: es el mapa. La red de distribución
+  // (COOP) vende cocinas y reparte comisiones; carpinter.io y Studio3K venden
+  // SUSCRIPCIONES y —master, 27/08— «no tienen nada que ver con el negocio de
+  // los cooperativistas». Son los mismos tres de `services/plataformas.py`, y
+  // el menú se llama igual que el código a propósito.
+  //
+  // JUNTAS EN EL MAPA, SEPARADAS EN LA PUERTA. Estar en el mismo grupo no da el
+  // permiso de al lado: cada una conserva el suyo, y por eso el `can` de cada
+  // botón es distinto.
+  { id: 'plataformas', label: 'Plataformas', icon: Building2, accent: 'border-violet-200', dot: 'bg-master-500' },
   { id: 'ventas',    label: 'Ventas y Presupuestos', icon: Briefcase, accent: 'border-indigo-200', dot: 'bg-indigo-500' },
   { id: 'diseno',    label: 'Diseño y Visualización', icon: Palette,   accent: 'border-purple-200', dot: 'bg-purple-500' },
   { id: 'produccion',label: 'Producción',             icon: Hammer,    accent: 'border-emerald-200', dot: 'bg-emerald-500' },
@@ -91,7 +103,12 @@ const MODULES = [
   // carpinter.io y Studio3K son plataformas de suscripción (plataformas.js).
   { tab: 'miArea',          label: 'Mi área',         desc: 'Lo que llevas ganado y lo que falta para el siguiente tramo', icon: Wallet, color: 'bg-ok-600', group: 'admin', can: (u) => esCooperativista(u) },
 
-  { tab: 'coop',            label: 'COOP',            desc: 'Socios cooperativistas, asignación de pedidos y liquidación del mes', icon: Users, color: 'bg-master-600', group: 'admin', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
+  { tab: 'coop',            label: 'COOP',            desc: 'Red de distribución: socios, asignación de pedidos y liquidación del mes', icon: Users, color: 'bg-master-600', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
+  // carpinter.io y Studio3K: SOLO EL MASTER (30/08, sus palabras: «la puerta de
+  // carpinter y studio3k, sólo la veo yo»). Son negocios de suscripción, y por
+  // ahí se entra a su administración y a su landing comercial.
+  { tab: 'carpinter',       label: 'carpinter.io',    desc: 'Plataforma de suscripción para carpinteros', icon: Hammer, color: 'bg-amber-700', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin },
+  { tab: 'landingStudio',   label: 'Studio3K',        desc: 'Plataforma de suscripción de render con IA', icon: Sparkles, color: 'bg-violet-700', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin },
 
   // Administración
   { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },

@@ -276,12 +276,33 @@ async def confirmar_medida_de_pedido(order_id: str, clave: str, payload: dict,
 
 
 def _can_access(order: dict, current_user: Optional[dict]) -> bool:
-    """Admin/elevado ve todo; el resto solo sus propios pedidos."""
+    """Quién puede abrir un pedido: quien lo hizo, quien lo vende y quien lo monta.
+
+    Admin/elevado ve todo. El resto, SUS pedidos — y desde el 30/08 «suyo»
+    incluye el pedido que le han asignado: el montador que tiene que ir a esa
+    cocina y el comercial que la vendió.
+
+    POR QUÉ HACÍA FALTA. El Expediente de Obra —la ficha con las etapas, lo que
+    falta en cada una y quién lo resuelve— arma su lista con lo que cada uno ha
+    CREADO. Un montador no crea nada: monta lo que le asignan, así que la
+    pantalla le salía vacía siempre. Y una de las tareas del expediente,
+    «medidas de obra», es literalmente suya (`services/expediente.py`).
+
+    EL DINERO NO SE ABRE CON ESTO. Los importes del expediente van por
+    `expediente.FLAGS_CON_IMPORTES`, que es otra lista y no lleva al montador:
+    los campos de dinero NO se le mandan —no se ponen a cero, se quitan—. Esto
+    abre la OBRA, no el margen.
+    """
     if not current_user or not current_user.get("id"):
         return False  # sin usuario autenticado no hay acceso
     if any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         return True
-    return order.get("userId") == current_user["id"]
+    uid = current_user["id"]
+    if order.get("userId") == uid:
+        return True
+    # Asignado por el master en COOP. Se compara con lo que hay EN EL PEDIDO:
+    # nada de esto viaja en la petición (regla 20).
+    return uid in (order.get("comercialUserId"), order.get("montadorUserId"))
 
 
 @router.get("/cascos/orders/{order_id}")
