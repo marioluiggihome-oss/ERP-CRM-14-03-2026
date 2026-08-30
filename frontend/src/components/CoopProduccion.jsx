@@ -318,10 +318,24 @@ function Contenido({ d }) {
           <Package size={12} /> {d.lineas.length} línea{d.lineas.length === 1 ? '' : 's'}
         </span>
         <span className="text-dato-600">{d.unidades} unidades</span>
-        <span className={d.sinDesglose ? 'text-aviso-700 font-bold' : 'text-dato-600'}>
-          {d.sinDesglose ? '? muebles' : `${d.muebles} muebles`}
-        </span>
+        {/* Un pedido de cascos no cuenta muebles: no comisiona, y decir «0»
+            o «?» ahí sería contestar a una pregunta que no se hace. */}
+        {!d.soloCascos && (
+          <span className={d.sinDesglose ? 'text-aviso-700 font-bold' : 'text-dato-600'}>
+            {d.sinDesglose ? '? muebles' : `${d.muebles} muebles`}
+          </span>
+        )}
       </div>
+      {/* CASCOS: no comisiona, y así tiene que ser. En gris, no en ámbar: es
+          un dato, no una incidencia. Un aviso que sale en todos los pedidos de
+          una sección acaba sin leerse, y con él los que sí importan. */}
+      {d.soloCascos && (
+        <p className="text-[11px] text-dato-500 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 mb-2">
+          Pedido de cascos: sirve para separar cascos cuando el cliente se lleva
+          la cocina desmontada. <b>No reparte comisión</b>, y no es que falte
+          ningún dato.
+        </p>
+      )}
       {d.sinDesglose && (
         <p className="text-[11px] text-aviso-800 bg-aviso-50 border border-aviso-200 rounded-lg px-2 py-1.5 mb-2">
           Ninguna línea trae familia del catálogo, así que no se puede saber
@@ -361,7 +375,7 @@ function Contenido({ d }) {
                   {l.familia || '—'}
                   {/* Lo que NO cuenta para la comisión, dicho: es la misma
                       función que la de la nómina, no una copia. */}
-                  {!l.esMueble && (
+                  {!l.esMueble && !d.soloCascos && (
                     <span className="ml-1 text-[10px] text-dato-400">(no cuenta)</span>
                   )}
                 </td>

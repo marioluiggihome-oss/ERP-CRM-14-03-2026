@@ -37,6 +37,7 @@ from typing import Iterable, Optional
 
 from services import comisiones as C
 from services import liquidaciones as L
+from services import origen_pedidos as OP
 from services import plataformas as P
 
 COMERCIAL = L.COMERCIAL
@@ -46,7 +47,7 @@ MONTADOR = L.MONTADOR
 # lista BLANCA a propósito: con una lista negra, cualquier campo nuevo del
 # pedido —un coste, un margen— saldría solo el día que alguien lo añada.
 CAMPOS_VISIBLES = ("pedidoId", "estado", "euros", "muebles", "periodo",
-                   "porMueble", "tramo", "anomalia")
+                   "porMueble", "tramo", "anomalia", "sinDesglose", "soloCascos")
 
 
 def rol_de(user: Optional[dict]) -> Optional[str]:
@@ -113,6 +114,33 @@ def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0,
     se reclama. Que aparezca marcado es justo lo que hace falta para arreglarlo.
     """
     o = order or {}
+    # LOS CASCOS NO PAGAN COMISIÓN (master, 30/08: «los pedidos de cascos solo
+    # son para separar cascos, cuando un cliente se lleva la cocina
+    # desmontada»). Cocina Desmontada CUENTA para la cooperativa —entra en COOP,
+    # se le asigna montador, se sigue en producción— pero no reparte nada.
+    #
+    # Se sale ANTES de contar, y no es lo mismo que `sinDesglose`: aquel dice
+    # «no se sabe lo que lleva» y hay que ir a arreglarlo; este dice «no
+    # comisiona, y así tiene que ser». Marcar un pedido de cascos como dato roto
+    # es mandar a alguien a buscar un fallo que no existe.
+    if OP.es_solo_cascos(o):
+        return {
+            "id": o.get("id") or "",
+            "muebles": 0,
+            "baseImponible": 0.0,
+            "sinDesglose": False,
+            "soloCascos": True,
+            "aceptadoAt": o.get("aceptadoAt") or o.get("confirmedAt"),
+            "servidoAt": L.servido_de(o),
+            "cobradoAt": L.cobrado_de(o),
+            "pendienteCobro": o.get("pendienteCobro") or 0,
+            "anulado": bool(o.get("anulado") or o.get("status") == "cancelled"),
+            "manoPorMueble": mano_por_mueble,
+            L.LIQUIDADO_LEGADO: o.get(L.LIQUIDADO_LEGADO),
+            L.CONGELADA: o.get(L.CONGELADA),
+            **{k: o.get(k) for k in L.LIQUIDADO_POR_ROL.values()},
+            **{k: o.get(k) for k in L.CONGELADA_POR_ROL.values()},
+        }
     lineas = o.get("items") or o.get("lineas") or []
     # LOS PEDIDOS DE VERDAD NO GUARDAN LA FAMILIA en la línea: guardan el código
     # (`B60D/I`) y la familia vive en el catálogo, en `category`. Quien llama
@@ -140,6 +168,7 @@ def normaliza_pedido(order: dict, mano_por_mueble: float = 0.0,
         "muebles": muebles,
         "baseImponible": base,
         "sinDesglose": sin_desglose,
+        "soloCascos": False,
         "aceptadoAt": o.get("aceptadoAt") or o.get("confirmedAt"),
         # NO SE LEEN A MANO. `deliveredAt` y `paidAt` son los nombres que el
         # ERP ya usa para lo mismo, y aquí se copiaban SOLO `servidoAt` y
@@ -308,6 +337,9 @@ def pedido_para_asignar(order: dict, nombres: Optional[dict] = None,
         "fecha": o.get("confirmedAt") or "",
         "muebles": n["muebles"],
         "sinDesglose": n["sinDesglose"],
+        # «No comisiona» no es «falta un dato»: un pedido de cascos sale así a
+        # propósito y no hay nada que ir a arreglar.
+        "soloCascos": n.get("soloCascos", False),
         "comercialUserId": com,
         "montadorUserId": mon,
         "comercial": quien.get(com, ""),

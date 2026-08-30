@@ -31,6 +31,7 @@ from typing import Optional
 from services import comisiones as C
 from services import hitos_cobro as HC
 from services import liquidaciones as L
+from services import origen_pedidos as OP
 
 # EL `status` DEL TALLER → el estado que se enseña.
 #
@@ -298,8 +299,15 @@ def contenido_de(pedido: dict, familias: Optional[dict] = None) -> dict:
     # no traen familia, la pantalla decía «0 muebles» mientras la liquidación
     # decía «no consta». El mismo pedido, dos respuestas, y ninguna parecía un
     # error.
+    # LOS CASCOS NO COMISIONAN, y eso NO es «falta un dato» (master, 30/08).
+    # Un pedido de Cocina Desmontada sale con cero muebles a propósito: solo
+    # sirve para separar cascos cuando el cliente se lleva la cocina desmontada.
+    # Rotularlo «?» mandaría a buscar un fallo que no existe, y un aviso que
+    # sale siempre acaba sin leerse — que es como se pierden los que sí importan.
+    solo_cascos = bool(crudas) and OP.es_solo_cascos(p)
     b = C.base_de_comision([dict(l, familia=l["familia"]) for l in lineas])
-    sin_desglose = (not lineas) or (b["sinClasificar"] >= b["lineas"] > 0)
+    sin_desglose = (not solo_cascos) and (
+        (not lineas) or (b["sinClasificar"] >= b["lineas"] > 0))
     return {
         "pedidoId": p.get("id") or "",
         "referencia": (p.get("budgetNumber") or p.get("ref") or ""),
@@ -309,4 +317,5 @@ def contenido_de(pedido: dict, familias: Optional[dict] = None) -> dict:
         "unidades": sum(l["unidades"] for l in lineas),
         "muebles": sum(l["unidades"] for l in lineas if l["esMueble"]),
         "sinDesglose": sin_desglose,
+        "soloCascos": solo_cascos,
     }

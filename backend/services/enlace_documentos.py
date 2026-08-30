@@ -37,9 +37,44 @@ from typing import Iterable, Optional
 ALBARAN = "albaran"
 FACTURA = "factura"
 
-# La factura solo libera el dinero cuando está pagada del todo. `partial` es un
-# cobro a cuenta y no libera nada (CLAUDE.md, regla 17).
+# La factura solo libera el dinero cuando está pagada del todo. Un cobro a
+# cuenta NO libera nada (CLAUDE.md, regla 17).
 PAGADA = "paid"
+
+# CÓMO LLAMA CADA PANTALLA A «COBRADO A MEDIAS», Y CUÁNTO LLEVA DENTRO.
+#
+# Esto salió el 30/08 y explica por qué en COOP salía «Falta la señal» en TODOS
+# los pedidos aunque la señal estuviera cobrada y con su comprobante adjunto.
+#
+# Gestión Comercial ya implementaba la regla 50/50 del master —botón de señal
+# con importe, fecha, método y comprobante— pero con su propio vocabulario:
+# escribe `status: "partially_paid"` y el importe en `senialImporte`. Aquí se
+# leía `cobrado` o `paidAmount`, que NO los escribe nadie. Dos módulos hablando
+# del mismo dinero con palabras distintas: la señal se registraba y la
+# cooperativa no se enteraba nunca.
+#
+# Se aceptan todas las formas, y en un solo sitio. Reconocer de más aquí no
+# cuesta nada; reconocer de menos deja un cobro sin ver.
+A_MEDIAS = ("partially_paid", "partial")
+
+# De dónde sale lo que YA se ha cobrado de una factura que no está pagada del
+# todo. `senialImporte` es el de Gestión Comercial; los otros dos, los del
+# endpoint de estado.
+IMPORTE_COBRADO = ("cobrado", "paidAmount", "senialImporte")
+
+
+def cobrado_de_la_factura(f: dict) -> float:
+    """Cuánto lleva cobrado esa factura, se llame como se llame el campo."""
+    d = f or {}
+    if (d.get("status") or "") == PAGADA:
+        return _num(d.get("total"))
+    for clave in IMPORTE_COBRADO:
+        if d.get(clave) not in (None, ""):
+            return _num(d[clave])
+    # Marcada a medias y sin importe: se sabe que algo entró, pero no cuánto.
+    # NO se inventa la mitad (regla 7): se devuelve 0 y el pedido sigue
+    # apareciendo como pendiente, que es la lectura conservadora.
+    return 0.0
 
 
 def _ref(doc: dict) -> tuple:
@@ -126,7 +161,7 @@ def enriquecer(pedido: dict, indice: dict) -> dict:
         # Lo que falta por cobrar, para que un cobro a cuenta no libere nada.
         if "pendienteCobro" not in p:
             p["pendienteCobro"] = round(
-                sum(_num(f.get("total")) - _num(f.get("cobrado") or f.get("paidAmount"))
+                sum(max(0.0, _num(f.get("total")) - cobrado_de_la_factura(f))
                     for f in facturas if (f.get("status") or "") != PAGADA), 2)
     return p
 

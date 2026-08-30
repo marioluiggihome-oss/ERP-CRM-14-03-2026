@@ -154,3 +154,66 @@ def test_las_familias_sin_comision_SALEN_DE_LOS_DATOS_del_ERP():
         assert esperada in f, f"falta «{esperada}» entre las que no comisionan"
     for mueble in ("BAJO", "ALTO", "COLUMNA_DESPENSERO", "ALTO_VITRINA"):
         assert mueble not in f, f"«{mueble}» ha dejado de comisionar y es un mueble"
+
+
+# ── LOS CASCOS NO PAGAN COMISIÓN ───────────────────────────────────────────
+#
+# El master, 30/08: «los cascos no pagan comisión; los pedidos de cascos solo
+# son para separar cascos, cuando un cliente se lleva la cocina desmontada».
+#
+# Cocina Desmontada CUENTA para la cooperativa —entra en COOP, se le asigna
+# montador, se sigue en producción— pero no reparte nada. Son dos preguntas
+# distintas y hasta ahora solo estaba escrita la primera.
+#
+# POR QUÉ HACÍA FALTA ESCRIBIRLO si ya pagaban cero: pagaban cero POR ACCIDENTE.
+# Las líneas de un casco no traen familia del catálogo, y sin familia no cuentan
+# como mueble. El día que alguien empareje esas líneas con el catálogo —una
+# mejora razonable— Desmontada empezaría a repartir comisiones sin que nadie lo
+# hubiera decidido y sin que saltara ningún error. Un cero que sale solo no es
+# una regla.
+
+def test_UN_PEDIDO_DE_CASCOS_NO_PAGA_COMISION():
+    from services import origen_pedidos as _OP
+    p = {"id": "c", "origen": "cocina_desmontada", "confirmedAt": "2026-08-01",
+         "items": [{"code": "B60D", "familia": "BAJO", "quantity": 10,
+                    "price": 7000.0}]}
+    assert _OP.es_solo_cascos(p) is True
+    n = AC.normaliza_pedido(p)
+    assert n["muebles"] == 0 and n["baseImponible"] == 0.0, (
+        "un pedido de cascos está pagando comisión")
+    assert n["soloCascos"] is True
+
+
+def test_NO_COMISIONA_NO_ES_LO_MISMO_QUE_FALTA_UN_DATO():
+    """`sinDesglose` manda a alguien a buscar un fallo. Un pedido de cascos no
+    tiene ningún fallo que buscar: es que no comisiona, y así tiene que ser."""
+    n = AC.normaliza_pedido({"id": "c", "origen": "cocina_desmontada",
+                             "items": [{"tipo": "Alto Con Balda", "qty": 3}]})
+    assert n["soloCascos"] is True
+    assert n["sinDesglose"] is False, (
+        "un pedido de cascos se marca como dato roto: es mandar a alguien a "
+        "buscar un fallo que no existe")
+
+
+def test_SIN_ORIGEN_MARCADO_NO_SE_DEJA_DE_PAGAR_EN_SILENCIO():
+    """La primera versión preguntaba «¿comisiona?» contra una lista blanca, y un
+    pedido sin origen marcado dejaba de pagar SIN avisar. Rompió 19 candados de
+    golpe; en producción habría sido peor —no un error, sino comisiones que no
+    llegan—. Se excluye solo cuando CONSTA que es Desmontada."""
+    from services import origen_pedidos as _OP
+    assert _OP.es_solo_cascos({"id": "s"}) is False
+    n = AC.normaliza_pedido({"id": "s", "confirmedAt": "2026-08-01",
+                             "items": [{"code": "B60D", "familia": "BAJO",
+                                        "quantity": 10, "price": 7000.0}]})
+    assert n["muebles"] == 10, (
+        "un pedido sin origen marcado ha dejado de contar muebles: eso no lo ve "
+        "nadie hasta que alguien reclama su nómina")
+
+
+def test_MONTADA_SIGUE_COMISIONANDO():
+    from services import origen_pedidos as _OP
+    assert _OP.es_solo_cascos({"origen": "cocina_montada_3"}) is False
+    n = AC.normaliza_pedido({"id": "m", "origen": "cocina_montada_3",
+                             "items": [{"code": "B60D", "familia": "BAJO",
+                                        "quantity": 10, "price": 7000.0}]})
+    assert n["muebles"] == 10

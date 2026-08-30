@@ -55,6 +55,42 @@ NOMBRES = {
 KIND_PEDIDO = "pedido"
 
 
+# QUÉ ORÍGENES PAGAN COMISIÓN, Y CUÁL NO.
+#
+# El master, 30/08: «los cascos no pagan comisión; los pedidos de cascos solo
+# son para separar cascos, cuando un cliente se lleva la cocina desmontada».
+#
+# O sea que Cocina Desmontada CUENTA para la cooperativa —es un pedido de la
+# casa, entra en COOP, se le asigna montador y se sigue en producción— pero NO
+# reparte comisión. Son dos preguntas distintas y hasta ahora solo estaba
+# escrita la primera.
+#
+# POR QUÉ HAY QUE ESCRIBIRLO, si hoy ya pagan cero: pagan cero POR ACCIDENTE.
+# Las líneas de un casco no traen familia del catálogo, y sin familia el cálculo
+# no las cuenta como mueble. El día que alguien le ponga familia a esas líneas
+# —o las empareje con el catálogo, que es una mejora razonable— Cocina
+# Desmontada empezaría a repartir comisiones sin que nadie lo hubiera decidido,
+# y sin que saltara ningún error. Un cero que sale solo no es una regla.
+ORIGENES_SIN_COMISION = (DESMONTADA,)
+
+
+def es_solo_cascos(pedido: Optional[dict]) -> bool:
+    """¿Es un pedido de cascos, de los que NO reparten comisión?
+
+    SE PREGUNTA EN POSITIVO, y eso importa. La primera versión hacía lo
+    contrario —«comisiona solo si el origen está en la lista blanca»— y con eso
+    un pedido al que nadie le hubiera marcado el origen dejaba de pagar EN
+    SILENCIO. Rompió 19 candados de golpe, y en producción habría sido peor: no
+    un error, sino comisiones que no llegan.
+
+    Así que se excluye únicamente cuando CONSTA que es Cocina Desmontada. En la
+    duda se sigue contando por familias, como siempre — que un mueble no cuente
+    se ve en la nómina y se reclama; que deje de contar todo un origen no lo ve
+    nadie.
+    """
+    return origen_de(pedido) == DESMONTADA
+
+
 def origen_de(pedido: Optional[dict]) -> str:
     """De qué sección salió, o cadena vacía si no se reconoce.
 
