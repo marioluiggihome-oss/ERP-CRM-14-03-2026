@@ -47,6 +47,17 @@ const AgendaMontajes = lazy(() => import('./AgendaMontajes'));
  * Los permisos de cada herramienta NO cambian por mudarse (regla 22): la
  * facturación sigue pidiendo lo que pedía, y la agenda también.
  */
+// La misma lista del servidor (`services/master.py`): sin `isAdmin` desde el
+// 29/08. Aquí decide QUÉ PESTAÑAS se ven; quien cierra de verdad es la API.
+//
+// VA ANTES DE `PESTANAS`, Y NO ES UN CAPRICHO DE ORDEN. La lista de abajo
+// referencia esta función DIRECTAMENTE (`ve: esMaster`), no dentro de otra
+// función, así que se lee al evaluar el módulo. Declarada después, un `const`
+// está en su zona muerta temporal y el navegador lanza «Cannot access 'esMaster'
+// before initialization» —minificado, «Cannot access 'z'»— y la pantalla entera
+// no carga. Pasó el 30/08: tumbó COOP y con él «Mi área».
+const esMaster = (u) => !!(u && (u.isMaster || u.isPrimaryAdmin));
+
 const PESTANAS = [
   // Lo del socio va PRIMERO: es quien más veces entra, y entra a una sola cosa.
   { id: 'miarea', label: 'Mi área', icono: PiggyBank,
@@ -64,10 +75,6 @@ const PESTANAS = [
     ve: (u) => esMaster(u) || u?.canAccessInvoices !== false },
   { id: 'liquidar', label: 'Liquidar el mes', icono: Wallet, ve: esMaster },
 ];
-
-// La misma lista del servidor (`services/master.py`): sin `isAdmin` desde el
-// 29/08. Aquí decide QUÉ PESTAÑAS se ven; quien cierra de verdad es la API.
-const esMaster = (u) => !!(u && (u.isMaster || u.isPrimaryAdmin));
 
 export default function CoopPanel({ currentUser, state, setState, pestanaInicial }) {
   const visibles = PESTANAS.filter(p => { try { return !!p.ve(currentUser); } catch { return false; } });
