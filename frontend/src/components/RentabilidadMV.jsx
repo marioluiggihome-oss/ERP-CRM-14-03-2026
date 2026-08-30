@@ -143,6 +143,23 @@ export const RULES = {
   MEDIACOLUMNA_VITRINA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', vitrina: true },
   MEDIACOL_VITRINA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1, vitrina: true },
 };
+// LAS FAMILIAS QUE EL DESPIECE SABE DESGLOSAR DE VERDAD.
+//
+// Se exporta para que NADIE tenga que adivinarlo: la importación de proformas
+// necesita saber si el tipo que trae el PDF se va a poder costear, y la pantalla
+// necesita saber si el número que enseña es real o es el genérico.
+//
+// POR QUÉ HACE FALTA (30/08). `RULES[familia] || RULE_GENERICA` no devuelve «no
+// se sabe» cuando la familia no existe: devuelve el coste de un «Bajo Con
+// Balda» de 800 mm con una puerta y una pata. O sea que un PANEL de 150×400 se
+// costeaba como un bajo estándar, y el número salía en pantalla con la misma
+// pinta que uno de verdad. Rentabilidad lo marcaba con un «aprox» diminuto; el
+// Presupuestador no lo marcaba en absoluto.
+export const FAMILIAS_CON_DESPIECE = new Set(Object.keys(RULES));
+
+export const tieneDespieceReal = (familia) =>
+  FAMILIAS_CON_DESPIECE.has(String(familia || '').toUpperCase());
+
 export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
 
 // La mano de obra por mueble montado. Se exporta para que el candado la

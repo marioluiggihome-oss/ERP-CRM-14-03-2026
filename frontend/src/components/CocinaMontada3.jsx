@@ -33,7 +33,7 @@ import autoTable from 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
-import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada } from './RentabilidadMV';
+import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal } from './RentabilidadMV';
 import RelacionReview from './RelacionReview';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -332,22 +332,38 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           else tipo = 'BAJO';
         }
 
-        if (!/^[A-Z]{1,5}\d{2,3}(D\/I|D|I)?$/i.test(codMv) && widthCm) {
+        // UN PANEL NO ES UN BAJO, Y NO SE LE PONE NOMBRE DE BAJO (30/08).
+        //
+        // Esto fabricaba un código para CUALQUIER línea que no lo trajera, y el
+        // último `else` la bautizaba `B<ancho>D/I`. Con una proforma que trae
+        // paneles salía `B150D/I` —un bajo de 150 cm, que no existe: el ancho
+        // estándar más grande es 120— y con un alto de 400 cm. Un código
+        // inventado se arrastra al pedido y al taller.
+        //
+        // Solo se deduce el código cuando el tipo es una familia que el
+        // despiece SABE desglosar. Lo demás conserva lo que venga del PDF.
+        const conocida = tieneDespieceReal(tipo);
+        if (!/^[A-Z]{1,5}\d{2,3}(D\/I|D|I)?$/i.test(codMv) && widthCm && conocida) {
           if (tipo === 'BAJO_FREGADERO') codMv = `BF${widthCm}D/I`;
           else if (tipo === 'BAJO_RINCON_CIEGO') codMv = `BR${widthCm}D/I`;
-          else if (tipo === 'COLUMNA_HORNO_MICRO') codMv = `CHMG${widthCm}D/I`;
           else if (tipo === 'ALTO') codMv = `A${widthCm}D/I`;
-          else codMv = `B${widthCm}D/I`;
+          else if (tipo === 'BAJO') codMv = `B${widthCm}D/I`;
         }
 
         return {
           _k: `alvic-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
-          cod: codMv || `B${widthCm || 60}D/I`,
+          // Sin código y sin familia reconocida NO se inventa uno: se deja la
+          // referencia del PDF, o vacío. Un `B60D/I` puesto por defecto es un
+          // mueble que nadie ha pedido (regla 7).
+          cod: codMv || (conocida && widthCm ? `B${widthCm}D/I` : ''),
           descripcion: it.descripcion || `${tipo} ${widthCm || ''}x${heightCm || ''}`.trim(),
           qty,
           ancho: widthCm,
           alto: heightCm,
           familia: tipo,
+          // Se marca aquí, al entrar, para que la pantalla pueda decirlo sin
+          // volver a adivinarlo.
+          costeAproximado: !conocida,
           pvp: pvpUnit,
           encontrado: true,
           mano: '',
@@ -2143,6 +2159,17 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       {verCoste && (
                         <td className="py-3 px-3 text-right font-mono text-dato-900 font-black">
                           {eur(m.coste)}
+                          {/* SI EL COSTE ES EL GENÉRICO, SE DICE. El despiece no
+                              conoce esa familia y ha usado un «Bajo Con Balda»
+                              de 800 con una puerta: el número tiene la misma
+                              pinta que uno real y no lo es. Rentabilidad ya lo
+                              marcaba; aquí no se marcaba nada. */}
+                          {m.despiece?.generica && (
+                            <span className="ml-1 text-[9px] font-black text-aviso-600"
+                              title={`El despiece no conoce la familia «${m.familia || '?'}», así que este coste sale de un mueble genérico. No es el de esta pieza.`}>
+                              aprox
+                            </span>
+                          )}
                         </td>
                       )}
                       {verCoste && (
@@ -2176,6 +2203,27 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             </>
           )}
         </div>
+
+        {/* CUÁNTO DEL MARGEN ES INVENTADO.
+            Marcar la fila no basta: con veinte líneas, quien mira el margen de
+            abajo no va a ir contando cuáles llevan «aprox». Si una parte del
+            coste sale de un mueble genérico, el margen total tampoco es real, y
+            eso hay que saberlo ANTES de fijar un precio. */}
+        {verCoste && (() => {
+          const aprox = filas.filter(m => m.despiece?.generica);
+          if (!aprox.length) return null;
+          const familias = [...new Set(aprox.map(m => m.familia || '?'))];
+          return (
+            <div className="px-6 py-3 bg-aviso-50 border-t border-aviso-200 text-[12px] text-aviso-900">
+              <b>{aprox.length} línea{aprox.length === 1 ? '' : 's'} con coste
+              aproximado.</b> El despiece no conoce {familias.length === 1 ? 'la familia' : 'las familias'}{' '}
+              <span className="font-mono font-bold">{familias.join(', ')}</span>, así que
+              para {aprox.length === 1 ? 'esa línea' : 'esas líneas'} ha usado un mueble
+              genérico (bajo de 80 con una puerta). <b>El margen de abajo incluye
+              ese coste inventado</b>: revísalas antes de fijar precio.
+            </div>
+          );
+        })()}
 
         {/* Resumen Final de Importes */}
         <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-6 flex-wrap">
