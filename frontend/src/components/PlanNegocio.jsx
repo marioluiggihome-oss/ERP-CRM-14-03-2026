@@ -283,22 +283,40 @@ export default function PlanNegocio({ state }) {
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1">
               <Factory size={12} /> La fábrica
             </p>
+            {/* LA MANO DE OBRA SE TECLEA POR MUEBLE (master, 30/08: «el coste
+                no es por hora, es por mueble»). Ya no se piden personas ni
+                €/hora: eso era para repartir la hora de fábrica entre los
+                muebles, y ese reparto ya no se hace.
+
+                Lo que SÍ se queda son muebles/hora y las horas, porque no son
+                coste: son CAPACIDAD —los muebles/año y el punto de equilibrio
+                salen de ahí—, y quitarlos dejaría la pantalla sin su techo. */}
             <div className="flex flex-wrap items-end gap-4">
-              {[['personas', 'Personas', '1'], ['mueblesHora', 'Muebles/hora (equipo)', '0.1'],
+              {[['mueblesHora', 'Muebles/hora (equipo)', '0.1'],
                 ['horasDia', 'Horas/día', '0.5'], ['diasSemana', 'Días/semana', '1'],
-                ['horasAno', 'Horas productivas/año', '10'], ['costeHoraPersona', 'Coste €/hora por persona', '0.01']].map(([k, l, paso]) => (
+                ['horasAno', 'Horas productivas/año', '10'],
+                ['manoObraPorMueble', 'Mano de obra € / mueble', '0.01']].map(([k, l, paso]) => (
                 <div key={k}>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">{l}</label>
                   <Casilla valor={datos?.capacidad?.[k]} paso={paso}
                     onChange={(v) => tocar(prev => ({ ...prev, capacidad: { ...prev.capacidad, [k]: v } }))} />
                 </div>
               ))}
-              <Dato label="Hora de fábrica" valor={eur(cap.costeEquipoHora)} nota="el equipo entero" />
-              <Dato label="Mano de obra / mueble" valor={eur(cap.manoObraPorMueble)} nota="media, si no se mide el tiempo" />
+              <Dato label="Mano de obra / mueble" valor={eur(cap.manoObraPorMueble)}
+                nota={cap.fuenteManoObra === 'por_horas'
+                  ? 'viene del cálculo viejo por horas'
+                  : 'la que has puesto'} />
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
-              Las horas son del EQUIPO, ya sin vacaciones ni festivos. La capacidad da por hecho que las dos personas están las mismas horas.
-              La <b className="text-slate-500">hora de fábrica</b> ({eur(cap.costeEquipoHora) || '…'}) es lo que se reparte según los minutos que lleve cada mueble.
+              Las horas son del EQUIPO, ya sin vacaciones ni festivos, y sirven
+              para la <b className="text-slate-500">capacidad</b>, no para el coste.
+              La mano de obra va <b className="text-slate-500">por mueble</b>: se
+              teclea, no se reparte.
+              {cap.fuenteManoObra === 'por_horas' && (
+                <> Este plan todavía la trae del cálculo antiguo por horas
+                ({eur(cap.manoObraPorMueble) || '…'}); en cuanto escribas la cifra
+                por mueble, manda esa.</>
+              )}
             </p>
 
             {res?.avisoTiempos && (

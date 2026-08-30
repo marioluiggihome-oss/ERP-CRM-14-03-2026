@@ -96,8 +96,8 @@ def _r(v, dec=2):
 def capacidad(datos):
     """De las personas a los muebles al año, y al coste de la mano de obra.
 
-    `datos`: {personas, mueblesHora, horasDia, diasSemana, horasAno,
-              costeHoraPersona}
+    `datos`: {mueblesHora, horasDia, diasSemana, horasAno, manoObraPorMueble}
+              (+ personas y costeHoraPersona, solo para planes viejos)
 
     OJO CON LAS HORAS: `horasAno` son las horas productivas DEL EQUIPO, ya
     descontadas vacaciones, festivos y paradas. La capacidad da por hecho que
@@ -113,10 +113,26 @@ def capacidad(datos):
 
     anual = _r(mh * horas, 0) if (mh is not None and horas is not None) else None
 
-    # Coste del equipo por hora y, de ahí, lo que lleva de mano de obra un
-    # mueble: lo que cuesta la hora del equipo entre los muebles de esa hora.
+    # LA MANO DE OBRA ES POR MUEBLE, NO POR HORA (master, 30/08: «el coste no es
+    # por hora, es por mueble»). Se teclea y punto.
+    #
+    # ES LA MISMA REGLA QUE CON EL MATERIAL, tres funciones más abajo: si hay
+    # número por mueble, MANDA ÉL. Y por lo mismo — mezclar en silencio dos
+    # fuentes que no cuadran es peor que no tener ninguna, así que se devuelve
+    # de dónde sale para que la pantalla lo diga.
+    #
+    # EL CÁLCULO POR HORAS SE QUEDA DE RESPALDO, y eso no es desobedecer: es que
+    # los planes ya guardados traen personas y €/hora y NO traen la cifra por
+    # mueble. Sin respaldo, al abrirlos la mano de obra saldría vacía y con ella
+    # el coste, el margen y el punto de equilibrio — un plan que se queda en
+    # blanco al abrirlo parece que se ha perdido. En pantalla ya no se pide.
+    directo = _precio(d.get("manoObraPorMueble"))
     equipo_hora = _r(personas * coste_hora) if (personas is not None and coste_hora is not None) else None
-    mo_mueble = _r(equipo_hora / mh) if (equipo_hora is not None and mh is not None) else None
+    if directo is not None:
+        mo_mueble, fuente_mo = directo, "por_mueble"
+    else:
+        mo_mueble = _r(equipo_hora / mh) if (equipo_hora is not None and mh is not None) else None
+        fuente_mo = "por_horas" if mo_mueble is not None else None
 
     horas_dia = _positivo(d.get("horasDia"))
     dias = _positivo(d.get("diasSemana"))
@@ -130,6 +146,7 @@ def capacidad(datos):
         "capacidadSemanal": semanal,
         "costeEquipoHora": equipo_hora,
         "manoObraPorMueble": mo_mueble,
+        "fuenteManoObra": fuente_mo,
     }
 
 
@@ -154,9 +171,15 @@ def mano_obra_de(ref, coste_equipo_hora, media_por_mueble):
     viene con `fuente`.
     """
     minutos = _positivo((ref or {}).get("minutosPorMueble"))
+    # LOS MINUTOS YA NO MANDAN (master, 30/08: «el coste no es por hora, es por
+    # mueble»). Se siguen leyendo porque hay planes guardados que los traen y
+    # son un dato útil de fábrica —cuánto se tarda—, pero el COSTE es la cifra
+    # por mueble. Solo se calcula desde el tiempo si no hay cifra que aplicar.
+    if media_por_mueble is not None:
+        return media_por_mueble, "por_mueble", minutos
     if minutos is not None and coste_equipo_hora is not None:
         return _r(coste_equipo_hora * minutos / 60), "medido", minutos
-    return media_por_mueble, "media", minutos
+    return None, None, minutos
 
 
 def coste_referencia(ref, mano_obra):
@@ -591,7 +614,7 @@ def _que_falta(cap, refs, b2c, reparto, estructura, entrada):
     falta = []
     if cap["manoObraPorMueble"] is None:
         falta.append({"que": "Coste por hora de una persona (coste empresa)",
-                      "donde": "capacidad.costeHoraPersona",
+                      "donde": "capacidad.manoObraPorMueble",
                       "porque": "Sin él no hay mano de obra por mueble, y sin ella no hay coste."})
     sin_coste = [r["nombre"] for r in refs if r["materiales"] is None]
     if sin_coste:

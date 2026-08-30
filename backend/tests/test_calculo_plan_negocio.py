@@ -105,14 +105,43 @@ def test_sin_ninguna_de_las_dos_formas_se_pide_UNA_cosa_no_ocho(pn):
     assert r["faltan"] == ["costeMaterialesMueble"]
 
 
-# ─── 0 bis. La mano de obra se mide EN TIEMPO ───────────────────────────────
+# ─── 0 bis. La mano de obra es POR MUEBLE ───────────────────────────────────
+#
+# EL MASTER CAMBIÓ ESTA REGLA el 30/08: «el coste no es por hora, es por
+# mueble». Antes la mano de obra salía del tiempo —hora de fábrica repartida
+# entre los minutos de cada referencia— y estos candados protegían aquello.
+#
+# No se han borrado: se han reescrito a la regla nueva. Un candado que sobrevive
+# a un cambio de regla sin tocarse es un candado que ya no vigila lo que pasa.
+# Lo que se conserva es lo que sigue valiendo: que un cero no sea un mueble que
+# se monta solo, que los minutos de equipo no se cuenten por persona, y que sin
+# datos no se invente un coste.
 
-def test_los_minutos_medidos_dan_la_mano_de_obra(pn):
-    """CANDADO. Un coste por mueble se estima; el TIEMPO se mide con un
-    cronometro. 2 personas a 18 €/h son 36 €/h de equipo: 30 min son 18 €."""
+def test_LA_CIFRA_POR_MUEBLE_MANDA_SOBRE_LOS_MINUTOS(pn):
+    """Se teclea y punto. Los minutos siguen guardándose —cuánto se tarda es un
+    dato útil de fábrica— pero ya no deciden el COSTE."""
     mo, fuente, minutos = pn.mano_obra_de({"minutosPorMueble": 30},
-                                          coste_equipo_hora=36, media_por_mueble=12)
-    assert mo == 18 and fuente == "medido" and minutos == 30
+                                          coste_equipo_hora=36, media_por_mueble=17)
+    assert mo == 17, "los minutos siguen mandando sobre la cifra por mueble"
+    assert fuente == "por_mueble"
+    assert minutos == 30, "se ha dejado de guardar el tiempo, que sí interesa"
+
+
+def test_LA_CAPACIDAD_LEE_LA_CIFRA_QUE_SE_TECLEA(pn):
+    c = pn.capacidad({"mueblesHora": 3, "horasAno": 1600, "manoObraPorMueble": 17})
+    assert c["manoObraPorMueble"] == 17 and c["fuenteManoObra"] == "por_mueble"
+
+
+def test_UN_PLAN_VIEJO_SIGUE_ABRIENDO(pn):
+    """Los planes ya guardados traen personas y €/hora y NO traen la cifra por
+    mueble. Sin respaldo, al abrirlos se quedarían sin mano de obra —y con ella
+    sin coste, sin margen y sin punto de equilibrio—: un plan en blanco parece
+    un plan perdido."""
+    c = pn.capacidad({"personas": 2, "mueblesHora": 3, "horasAno": 1600,
+                      "costeHoraPersona": 18})
+    assert c["manoObraPorMueble"] == 12 and c["fuenteManoObra"] == "por_horas", (
+        "un plan guardado con el modelo viejo se abre sin mano de obra")
+    assert c["capacidadAnual"] == 4800, "la capacidad no es coste y no se toca"
 
 
 def test_los_minutos_son_de_EQUIPO_no_de_persona(pn):
@@ -123,32 +152,42 @@ def test_los_minutos_son_de_EQUIPO_no_de_persona(pn):
     assert mo == 12, "20 min de equipo a 36 €/h son 12 €, no 24"
 
 
-def test_cada_referencia_puede_llevar_su_tiempo(pn):
-    """Un bajo de 90 con cajones no lleva lo mismo que un alto de 45. Darles la
-    misma mano de obra reparte mal el coste y luego el margen."""
+def test_TODAS_LAS_REFERENCIAS_LLEVAN_LA_MISMA_MANO_DE_OBRA(pn):
+    """Es lo que el master pidió, y conviene tenerlo escrito.
+
+    Se pierde poder decir que un bajo de 90 con cajones cuesta más de montar que
+    un alto de 45. Es una decisión suya, tomada viendo que NINGUNA referencia
+    tenía minutos medidos: la media se estaba aplicando igual a todas de todos
+    modos, así que el reparto por tiempo era teórico.
+    """
     r = pn.calcular({
-        "capacidad": CAPACIDAD,
+        "capacidad": {**CAPACIDAD, "manoObraPorMueble": 17},
         "referencias": [_ref("Alto 45", minutosPorMueble=12),
                         _ref("Bajo 90", minutosPorMueble=32)],
     })
     alto, bajo = r["referencias"]
-    assert alto["manoObra"] == 7.2 and bajo["manoObra"] == 19.2
-    assert bajo["costeDirecto"] > alto["costeDirecto"]
+    assert alto["manoObra"] == 17 and bajo["manoObra"] == 17
+    assert alto["fuenteManoObra"] == "por_mueble"
 
 
-def test_sin_medir_se_usa_la_media_y_SE_DICE(pn):
-    """Una media reparte igual lo caro y lo barato. Es un dato peor, y hay que
-    poder distinguirlo de uno medido."""
+def test_SE_DICE_DE_DONDE_SALE_LA_MANO_DE_OBRA(pn):
+    """Mezclar en silencio dos fuentes que no cuadran es peor que no tener
+    ninguna. La pantalla lo dice, y por eso el cálculo lo devuelve."""
     r = pn.calcular({"capacidad": CAPACIDAD, "referencias": [_ref()]})
     assert r["referencias"][0]["manoObra"] == 12
-    assert r["referencias"][0]["fuenteManoObra"] == "media"
+    assert r["referencias"][0]["fuenteManoObra"] == "por_mueble", (
+        "no se distingue la cifra tecleada del respaldo por horas")
 
 
 def test_un_tiempo_de_cero_no_es_un_mueble_que_se_monta_solo(pn):
-    """La regla del cero, tambien aqui."""
+    """La regla del cero, que sigue valiendo en el camino de respaldo."""
     mo, fuente, _ = pn.mano_obra_de({"minutosPorMueble": 0}, coste_equipo_hora=36,
                                     media_por_mueble=12)
-    assert fuente == "media" and mo == 12
+    assert mo == 12 and fuente == "por_mueble"
+    # Y sin cifra por mueble, un cero tampoco vale como tiempo medido.
+    mo2, fuente2, _ = pn.mano_obra_de({"minutosPorMueble": 0},
+                                      coste_equipo_hora=36, media_por_mueble=None)
+    assert mo2 is None, "un mueble que se monta en cero minutos no existe"
 
 
 def test_sin_coste_por_hora_el_tiempo_medido_no_sirve_de_nada(pn):
