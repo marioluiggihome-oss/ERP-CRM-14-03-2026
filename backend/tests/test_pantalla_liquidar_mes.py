@@ -104,13 +104,21 @@ def test_la_pantalla_SE_ABRE_desde_COOP_y_solo_para_el_master():
     assert ">COOP<" in cuerpo, (
         "el botón ya no dice COOP en mayúsculas, que es como lo pidió el master")
 
-    # Se busca el sitio que PINTA la pantalla, no el que colorea el botón: la
-    # primera aparición de `currentTab === 'coop'` es la del `className`, y
-    # comprobar esa dejaría pasar una pestaña abierta de par en par.
-    m = re.search(r"\{state\.currentTab === 'coop' &&([^\n]*)", cuerpo)
-    assert m, "no se pinta el panel COOP en ninguna parte"
-    assert "isMaster" in m.group(1), (
-        f"el panel COOP no está cerrado al master: {m.group(1)[:120]}")
+    # DÓNDE SE PINTA, no dónde se colorea el botón. Desde el 30/08 la puerta la
+    # abre también el SOCIO —«Mi área» se mudó dentro de COOP y si la puerta
+    # siguiera siendo solo del master, el cooperativista se quedaría sin ella—,
+    # así que lo que se comprueba ya no es la puerta sino LA PESTAÑA: liquidar
+    # sigue siendo del master y de nadie más.
+    i = cuerpo.index("['coop', 'miArea']")
+    trozo = cuerpo[i:i + 500]
+    assert "isMaster" in trozo, (
+        f"el panel COOP ya no comprueba nada: {trozo[:120]}")
+
+    panel_ = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopPanel.jsx"))
+    j = panel_.index("id: 'liquidar'")
+    assert "ve: esMaster" in panel_[j:j + 220], (
+        "la pestaña de liquidar se le está enseñando a quien no es master: por "
+        "ahí se cierra el mes y se congelan las comisiones")
 
     panel = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopPanel.jsx"))
     assert "LiquidarMes" in panel and "SociosCooperativistas" in panel, (

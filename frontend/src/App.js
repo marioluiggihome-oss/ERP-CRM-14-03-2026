@@ -56,7 +56,7 @@ const Almacen = lazy(() => import('./components/Almacen')); // Existencias, rese
 const PlanNegocio = lazy(() => import('./components/PlanNegocio')); // Plan de negocio de la fábrica (SOLO MASTER)
 const LandingStudio3K = lazy(() => import('./components/LandingStudio3K')); // Landing comercial pública de Studio3K / RenderIA
 const PlanificacionProduccion = lazy(() => import('./components/PlanificacionProduccion')); // Planificación y Capacidad de Producción de Fábrica
-const AreaCooperativista = lazy(() => import('./components/AreaCooperativista')); // Mi área: la nómina del cooperativista
+// «Mi área» ya no se pinta aquí: vive dentro de COOP, en su pestaña (30/08).
 const CoopPanel = lazy(() => import('./components/CoopPanel')); // COOP: socios, pedidos y liquidación (master)
 const PresupuestadorPanel = lazy(() => import('./components/PresupuestadorPanel')); // Presupuestador: Cocina Montada + Desmontada
 
@@ -1645,17 +1645,10 @@ const App = () => {
                         la cooperativa — carpinter.io y Studio3K son plataformas de
                         suscripción y ahí no hay comisiones (services/plataformas.py).
                         El menú solo decide si se ENSEÑA; quien cierra es el servidor. */}
-                    {esCooperativista(state.currentUser) && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'miArea'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'miArea' ? 'bg-ok-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="mi-area-nav-btn"
-                        title="Mi área: lo que llevas en progreso, lo que está a cobrar y lo ya cobrado"
-                      >
-                        <Wallet size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Mi área</span>
-                      </button>
-                    )}
+                    {/* «Mi área» ya NO tiene botón propio: está dentro de COOP
+                        (master, 30/08: «todas esas herramientas de gestión que
+                        cuelguen dentro del área de COOP, no fuera»). El botón de
+                        COOP se lo abre al socio, y allí es su primera pestaña. */}
 
                     {/* COOP: la gestión de la cooperativa —socios, asignación de
                         pedidos y liquidación del mes— en un solo sitio. SOLO master:
@@ -1894,9 +1887,7 @@ const App = () => {
             {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
             )}
-            {state.currentTab === 'miArea' && esCooperativista(state.currentUser) && (
-              <AreaCooperativista />
-            )}
+
             {/* CON ErrorBoundary, que era el único panel sin él: un error de
                 render aquí dentro no puede llevarse el ERP entero (regla 23).
                 OJO con la lista de esta línea: abre COOP a `isAdmin`, pero las
@@ -1905,8 +1896,23 @@ const App = () => {
                 pestaña. No se ensancha la puerta del servidor, que por ahí pasa
                 la nómina: se marca «Admin principal» en la ficha, y el 403 ya
                 dice dónde está esa casilla. */}
-            {state.currentTab === 'coop' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
-              <ErrorBoundary><CoopPanel /></ErrorBoundary>
+            {/* LA PUERTA DE COOP LA ABRE TAMBIÉN EL SOCIO (master, 30/08:
+                «Mi área debería estar dentro de COOP»). Si COOP siguiera siendo
+                solo del master, meter «Mi área» dentro se la quitaría al
+                cooperativista — el apagón del 28/08 otra vez. Entrar no da
+                acceso a nada: cada PESTAÑA dice quién la ve, y las rutas del
+                servidor siguen pidiendo lo que pedían.
+
+                `miArea` sigue abriendo aquí, en su pestaña, para que los
+                enlaces y el estado de navegador que ya existen no se pierdan
+                (regla 22: los caminos viejos siguen vivos). */}
+            {['coop', 'miArea'].includes(state.currentTab)
+              && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin
+                  || state.currentUser?.isAdmin || esCooperativista(state.currentUser)) && (
+              <ErrorBoundary>
+                <CoopPanel currentUser={state.currentUser} state={state} setState={setState}
+                  pestanaInicial={state.currentTab === 'miArea' ? 'miarea' : undefined} />
+              </ErrorBoundary>
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
               <PrescriptorAgenda

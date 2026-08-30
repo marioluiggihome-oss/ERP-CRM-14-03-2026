@@ -360,11 +360,17 @@ def test_COOP_ABRE_POR_PRODUCCION():
     lista no dice nada de cuál se abre.
     """
     jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopPanel.jsx"))
-    m = re.search(r"useState\(\s*'([a-z]+)'\s*\)", jsx)
-    assert m, "no se ha podido leer qué pestaña abre COOP"
-    assert m.group(1) == "produccion", (
-        f"COOP abre por «{m.group(1)}» y el master pidió que abriera por producción")
-    assert "'produccion'" in jsx and "<CoopProduccion" in jsx, (
+    # Desde el 30/08 COOP tiene pestañas por usuario, así que la de arranque ya
+    # no es una constante: se elige Producción SI la puede ver, y si no la
+    # primera que pueda —un socio que solo tiene «Mi área» abriría en un 403—.
+    i = jsx.index("const [pestana, setPestana]")
+    trozo = jsx[i:i + 500]
+    assert "'produccion'" in trozo, (
+        "COOP ya no abre por producción, que es lo que pidió el master")
+    assert "visibles" in trozo, (
+        "la pestaña de arranque no mira lo que ese usuario puede ver: a un "
+        "socio le abriría una pestaña que no tiene")
+    assert "<CoopProduccion" in jsx, (
         "la pestaña de producción no está montada: abriría en blanco")
 
 
@@ -590,9 +596,9 @@ def test_COOP_VA_CON_ERRORBOUNDARY():
     app = _lee(os.path.join(RAIZ, "frontend", "src", "App.js"))
     # DONDE SE PINTA, no donde se resalta el botón del menú: la primera
     # aparición de esa cadena es la clase CSS de la pestaña activa.
-    i = app.index("<CoopPanel />")
+    i = app.index("<CoopPanel")
     trozo = app[max(0, i - 300):i + 60]
-    assert "<ErrorBoundary><CoopPanel" in trozo, (
+    assert "<ErrorBoundary>" in trozo, (
         "COOP se pinta sin ErrorBoundary: un fallo dentro tumba la aplicación")
 
 

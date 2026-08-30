@@ -144,14 +144,28 @@ def _lee_ruta(ruta):
         return f.read()
 
 
-def test_el_AREA_SE_ABRE_desde_la_barra_de_menu():
+def test_el_AREA_SE_ABRE_DESDE_COOP():
+    """SE MUDÓ, PERO SIGUE TENIENDO PUERTA (master, 30/08: «Mi área debería
+    estar dentro de COOP»; «que cuelguen dentro del área de COOP, no fuera»).
+
+    Este candado nació porque `AreaCooperativista.jsx` estuvo escrita, con sus
+    rutas y sus pruebas, y sin UN SOLO SITIO desde el que abrirla. Eso es lo que
+    sigue vigilando; lo que ha cambiado es dónde está la puerta: antes un botón
+    en la barra, ahora la primera pestaña de COOP.
+    """
+    panel = _lee_ruta(os.path.join(RAIZ, "frontend", "src", "components",
+                                   "CoopPanel.jsx"))
+    assert "AreaCooperativista" in panel, (
+        "la pantalla del cooperativista no se monta en COOP: está escrita y no "
+        "hay forma de abrirla")
+    assert "id: 'miarea'" in panel, "no hay pestaña de «Mi área» en COOP"
+
     cuerpo = _lee_ruta(APP)
-    assert "AreaCooperativista" in cuerpo, (
-        "la pantalla del cooperativista no se importa en App.js: está escrita y "
-        "no hay forma de abrirla")
-    assert "mi-area-nav-btn" in cuerpo, "no hay botón de «Mi área» en la barra"
-    assert "currentTab === 'miArea'" in cuerpo, (
-        "el botón no lleva a ninguna parte: falta pintar la pestaña")
+    assert "'miArea'" in cuerpo, (
+        "se ha perdido el camino viejo: los enlaces que ya existen llevarían a "
+        "una pantalla en blanco (regla 22)")
+    assert "esCooperativista(state.currentUser)" in cuerpo, (
+        "la puerta de COOP no se abre al socio: acaba de perder su área")
 
 
 def test_el_AREA_esta_tambien_en_la_pantalla_de_BIENVENIDA():
