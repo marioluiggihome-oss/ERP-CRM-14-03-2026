@@ -29,6 +29,7 @@ from __future__ import annotations
 from typing import Optional
 
 from services import comisiones as C
+from services import hitos_cobro as HC
 from services import liquidaciones as L
 
 # EL `status` DEL TALLER → el estado que se enseña.
@@ -119,6 +120,13 @@ def progreso_de(ficha_de_fabrica: Optional[dict]) -> int:
 CAMPOS_DE_LA_LINEA = (
     "pedidoId", "referencia", "cliente", "origen", "fecha",
     "estado", "estadoNombre", "progreso", "servido", "cobrado",
+    # LOS DOS HITOS DE COBRO (master, 30/08: «50% al confirmar pedido,
+    # siempre»). Sale si la señal ha entrado y si queda algo pendiente, más los
+    # avisos de lo que no cuadra. Ojo: `senal` y `pendiente` SÍ son euros, y van
+    # a propósito — sin la cifra, «falta la señal» no dice cuánto hay que
+    # reclamar y la pantalla obliga a ir a buscarlo a Rentabilidad, que es justo
+    # lo que el montador no puede abrir. Esta pestaña ya es SOLO del master.
+    "senal", "senalCubierta", "pendiente", "cobradoDelTodo", "avisos",
 )
 
 
@@ -141,6 +149,27 @@ def linea(pedido: dict, ficha_de_fabrica: Optional[dict] = None) -> dict:
         # medias: «Entregado» en fábrica no quiere decir cobrado.
         "servido": bool(L.servido_de(p)),
         "cobrado": bool(L.cobrado_de(p)),
+        **_hitos(p),
+    }
+
+
+def _hitos(p: dict) -> dict:
+    """La señal y el resto, y lo que no cuadra con el orden que pidió el master.
+
+    Los avisos NO bloquean nada: en una obra pasan cosas, y un ERP que impide lo
+    que la realidad ya ha hecho se acaba esquivando por fuera. Se marcan, que es
+    lo que permite arreglarlo.
+    """
+    e = HC.estado_de_cobro(p)
+    return {
+        "senal": e["senal"],
+        "senalCubierta": e["senalCubierta"],
+        "pendiente": e["pendiente"],
+        "cobradoDelTodo": e["cobradoDelTodo"],
+        "avisos": HC.avisos_de(
+            p,
+            servido=bool(L.servido_de(p)),
+            montador=(p.get("montadorUserId") or None)),
     }
 
 

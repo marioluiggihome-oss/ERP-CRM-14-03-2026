@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Loader, Package, RefreshCw, Search, Trash2, Truck, Wallet } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CircleDollarSign, Loader, Package, RefreshCw, Search, Trash2, Truck, Wallet } from 'lucide-react';
 import { authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -228,7 +228,38 @@ function Fila({ p, alBorrar }) {
           <span className={`flex items-center gap-1 ${p.cobrado ? 'text-ok-700 font-bold' : 'text-dato-400'}`}>
             <Wallet size={12} /> {p.cobrado ? 'Cobrado' : 'Sin cobrar'}
           </span>
+          {/* LA SEÑAL DEL 50 % (master, 30/08: «50% al confirmar pedido,
+              siempre»). Se enseña el importe porque «falta la señal» sin la
+              cifra obliga a ir a buscarla a Rentabilidad. */}
+          {!!p.senal && (
+            <span className={`flex items-center gap-1 ${
+              p.senalCubierta ? 'text-ok-700 font-bold' : 'text-aviso-700 font-bold'}`}>
+              <CircleDollarSign size={12} />
+              {p.senalCubierta
+                ? 'Señal cobrada'
+                : `Falta la señal (${p.senal.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €)`}
+            </span>
+          )}
+          {!p.cobradoDelTodo && p.pendiente > 0 && (
+            <span className="flex items-center gap-1 text-dato-500">
+              Pendiente {p.pendiente.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+            </span>
+          )}
         </div>
+
+        {/* LO QUE NO CUADRA CON EL ORDEN QUE PIDIÓ EL MASTER. Avisa, no bloquea:
+            en una obra pasan cosas, y un ERP que impide lo que la realidad ya ha
+            hecho se acaba esquivando por fuera. */}
+        {!!p.avisos?.length && (
+          <div className="mt-2 flex flex-col gap-1">
+            {p.avisos.map(a => (
+              <span key={a.clave}
+                className="flex items-start gap-1.5 text-[11px] font-bold text-aviso-800 bg-aviso-50 border border-aviso-200 rounded-lg px-2 py-1">
+                <AlertTriangle size={12} className="shrink-0 mt-0.5" /> {a.texto}
+              </span>
+            ))}
+          </div>
+        )}
       </button>
 
       {abierto && (

@@ -869,6 +869,40 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - Candado: `test_calculo_produccion_coop.py` (y el orden, en
      `test_pantalla_plataformas_en_inicio.py`).
 
+30. **LOS DOS COBROS DE UN PEDIDO: LA SEÑAL Y EL RESTO** (30/08). El master:
+   «50% al confirmar pedido, siempre», el otro 50% antes de entregar, y sobre
+   cómo se factura, «una factura que pasa de parcial a paid».
+   - **NO HAY DOS FACTURAS.** Hay UNA por el total y lo que cambia es cuánto se
+     ha cobrado de ella. Por eso los hitos NO se guardan a mano: se DEDUCEN del
+     importe cobrado. Un dato que hay que teclear dos veces acaba cuadrado en un
+     sitio y no en el otro.
+   - **`partial` era un estado SIN IMPORTE.** Se podía decir «cobrada a medias»
+     y no había dónde apuntar cuánto, así que un pedido con la mitad dentro era
+     indistinguible de uno sin cobrar un euro. Ahora la factura lleva `cobrado`
+     (el ACUMULADO, no lo que entra hoy: sumar aquí obligaría a no repetir nunca
+     una llamada), y pasar a `paid` da por cobrado el total.
+   - **El 50% es FIJO** porque el master dijo «siempre». No se hace
+     configurable: un porcentaje que se puede cambiar es uno que alguien cambia
+     sin querer, y aquí decide si una cocina entra en el taller.
+   - **ESTO NO TOCA LA COMISIÓN, y es lo más importante.** Se sigue liberando
+     con servido del todo Y cobrado del todo. Si un día la liberación mirara la
+     señal, se pagaría con media obra por entregar y por cobrar. Candado:
+     `liquidaciones` y `comisiones` NO pueden importar `hitos_cobro`.
+   - **AVISA, NO BLOQUEA.** Montador asignado sin señal, y servido sin cobrar el
+     resto, se MARCAN. En una obra pasan cosas, y un ERP que impide lo que la
+     realidad ya ha hecho se acaba esquivando por fuera — que es peor que verlo
+     marcado. `hitos_cobro.py` no puede lanzar ni una excepción.
+   - **No se inventa un cobro:** sin dato de pendiente no ha entrado nada, y sin
+     importe no hay señal que comprobar ni aviso que dar (regla 7). Lo que el
+     pedido afirma (`cobradoAt`) manda sobre la deducción.
+   - **Y AQUÍ SÍ SALEN EUROS**, afinando la regla 29: la pestaña Producción es
+     solo del master, y «falta la señal» sin la cifra obliga a ir a buscarla a
+     Rentabilidad. Lo que sigue cerrado es el desglose de una LÍNEA —`price`,
+     `pvp`, coste y descuento del proveedor—, que es lo que de verdad se
+     protege. Un total que el master ya ve en su presupuestador no es el
+     escandallo.
+   - Candado: `test_calculo_hitos_de_cobro.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

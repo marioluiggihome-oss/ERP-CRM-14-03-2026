@@ -320,14 +320,34 @@ def test_SOLO_SE_ABREN_PEDIDOS_DE_LA_COOPERATIVA():
     assert "404" in trozo, "un pedido que no es de la cooperativa tiene que dar 404"
 
 
-def test_LA_PANTALLA_PIDE_EL_DETALLE_AL_ABRIR_Y_NO_PINTA_EUROS():
-    """La pantalla del detalle no puede tener su propia columna de importes."""
+def test_LA_PANTALLA_PIDE_EL_DETALLE_AL_ABRIR_Y_NO_PINTA_EUROS_DE_LINEA():
+    """El DETALLE del pedido no puede tener columna de importes.
+
+    OJO, LA REGLA SE AFINÓ EL 30/08 y conviene entender qué cambió y qué no.
+    Antes esta prueba decía «en esta pantalla no hay ni un €». Con los hitos de
+    cobro (master: «50% al confirmar pedido, siempre») sí los hay, y a
+    propósito: «falta la señal» sin la cifra obliga a ir a buscarla a
+    Rentabilidad, y esta pestaña ya es SOLO del master.
+
+    Lo que NO cambia, que es lo que de verdad se protege: el desglose de una
+    LÍNEA. Ahí viven `price`, `pvp`, el coste y el descuento del proveedor, y
+    eso es lo que está cerrado en Rentabilidad. Un total de pedido que el master
+    ya ve en su propio presupuestador no es lo mismo que el escandallo.
+    """
     jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopProduccion.jsx"))
     assert "/api/cooperativistas/produccion/" in jsx, (
         "la pantalla no llama a la ruta del detalle: el pedido no se abre")
-    for prohibido in ("l.price", "l.pvp", "l.coste", "l.importe", "€"):
+    for prohibido in ("l.price", "l.pvp", "l.coste", "l.importe", "l.puntos",
+                      "l.descuento"):
         assert prohibido not in jsx, (
-            f"la pantalla de producción pinta «{prohibido}»: aquí no va dinero")
+            f"la pantalla de producción pinta «{prohibido}»: el desglose de una "
+            "línea no sale por aquí")
+    # Y los euros que SÍ salen son exactamente los dos hitos, ninguno más.
+    import re as _re
+    with_euro = [l.strip() for l in jsx.split("\n") if "€" in l and "//" not in l]
+    for linea in with_euro:
+        assert _re.search(r"p\.(senal|pendiente)", linea), (
+            f"un importe que no es un hito de cobro: {linea[:90]}")
 
 
 def test_COOP_ABRE_POR_PRODUCCION():

@@ -88,6 +88,7 @@ class InvoiceUpdate(BaseModel):
     irpfRate: Optional[float] = None
     status: Optional[str] = None
     paidAt: Optional[str] = None
+    cobrado: Optional[float] = None
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
@@ -652,16 +653,48 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
 
 @router.patch("/{invoice_id}/status")
 async def change_invoice_status(invoice_id: str, body: dict):
-    """Cambiar estado de la factura"""
+    """Cambiar estado de la factura, y CUÁNTO se ha cobrado de ella.
+
+    `partial` era un estado sin importe: se podía decir «cobrada a medias» y no
+    había dónde apuntar cuánto. Y hace falta, porque de ahí sale el hito de la
+    señal (master, 30/08: «50% al confirmar pedido, siempre», con «una factura
+    que pasa de parcial a paid»). Sin el importe, un pedido con la mitad dentro
+    era indistinguible de uno sin cobrar un euro.
+
+    `cobrado` es el ACUMULADO, no lo que entra hoy: es lo que lleva pagado la
+    factura en total. Sumar entregas aquí obligaría a no repetir nunca una
+    llamada, y una llamada repetida es cosa de todos los días.
+
+    Al pasar a `paid` se da por cobrado el total, que es lo que significa.
+    """
     valid = ["draft", "issued", "paid", "overdue", "cancelled", "partial"]
     new_status = body.get("status")
     if new_status not in valid:
         raise HTTPException(400, f"Estado inválido. Válidos: {valid}")
 
+    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+
     now = datetime.now(timezone.utc).isoformat()
     update = {"status": new_status, "updatedAt": now}
     if new_status == "paid":
         update["paidAt"] = body.get("paidAt", now)
+        # Pagada es pagada del todo: el cobrado es el total de la factura.
+        update["cobrado"] = float(inv.get("total") or 0)
+    elif body.get("cobrado") is not None:
+        try:
+            cobrado = float(body["cobrado"])
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Importe cobrado inválido.")
+        if cobrado < 0:
+            raise HTTPException(400, "El importe cobrado no puede ser negativo.")
+        total = float(inv.get("total") or 0)
+        if total and cobrado > total + 0.005:
+            raise HTTPException(
+                400, f"Cobrado ({cobrado:.2f} €) mayor que el total de la "
+                     f"factura ({total:.2f} €).")
+        update["cobrado"] = cobrado
 
     await _get_db().invoices.update_one({"id": invoice_id}, {"$set": update})
     return await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
