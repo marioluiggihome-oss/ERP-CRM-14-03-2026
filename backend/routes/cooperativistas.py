@@ -293,15 +293,25 @@ async def produccion(current_user: Optional[dict] = Depends(get_current_user)):
     # Las fichas del taller, por referencia. Si la fábrica no responde, la
     # pestaña sale igual con todo en «Confirmado» en vez de quedarse en blanco:
     # saber qué pedidos hay ya es la mitad de la pregunta.
+    # LAS DOS COLECCIONES DEL TALLER, y en este orden (30/08). Todas las
+    # pantallas leían `fabrica_orders`… y a esa no le escribe NADIE: se buscó
+    # quién hacía un insert o un update sobre ella en todo el backend y no había
+    # ni uno. Quien escribe de verdad es el Portal Fábrica, en
+    # `manufacturing_orders`. Por eso aquí salía «Confirmado» siempre.
+    #
+    # Se leen las dos y manda la primera que tenga ficha de ese pedido: lo que
+    # hubiera guardado antes en la vieja no se pierde.
     fichas = {}
-    try:
-        for f in await _db().fabrica_orders.find(
-                {}, {"_id": 0, "budgetNumber": 1, "status": 1, "progress": 1}).to_list(5000):
-            ref = str((f or {}).get("budgetNumber") or "").strip()
-            if ref:
-                fichas[ref] = f
-    except Exception as e:                                   # noqa: BLE001
-        logger.error(f"produccion: no se pudo leer la fábrica: {e}")
+    for coleccion in reversed(EF.COLECCIONES_DEL_TALLER):
+        try:
+            for f in await _db()[coleccion].find(
+                    {}, {"_id": 0, "budgetNumber": 1, "status": 1,
+                         "progress": 1}).to_list(5000):
+                ref = str((f or {}).get("budgetNumber") or "").strip()
+                if ref:
+                    fichas[ref] = f
+        except Exception as e:                               # noqa: BLE001
+            logger.error(f"produccion: no se pudo leer {coleccion}: {e}")
 
     filas = EF.lineas(pedidos, fichas)
     return {"success": True, "pedidos": filas, "resumen": EF.resumen(filas),

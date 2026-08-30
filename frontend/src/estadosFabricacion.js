@@ -8,8 +8,8 @@
  * POR DÓNDE VA UN PEDIDO EN FÁBRICA — LOS RÓTULOS, EN UN SOLO SITIO.
  *
  * Gemelo de `backend/services/estado_fabricacion.py`. Las CLAVES las manda el
- * servidor (salen de `fabrica_orders`); aquí solo está cómo se leen y de qué
- * color se pintan.
+ * servidor (salen del taller: `manufacturing_orders`); aquí solo está cómo se
+ * leen y de qué color se pintan.
  *
  * POR QUÉ NO ESTÁ COPIADO EN CADA PANTALLA. Vivía dentro de `MisPedidos.jsx`, y
  * desde el 30/08 lo necesita también la pestaña de producción de COOP. Dos
@@ -17,7 +17,7 @@
  * una pantalla y «Confirmado» en otra— y ninguna de las dos parece un error.
  * El candado compara estas claves con las del servidor.
  */
-import { CheckCircle, Timer, Factory, PackageCheck, Truck } from 'lucide-react';
+import { CheckCircle, Timer, Factory, PackageCheck, Truck, Ban } from 'lucide-react';
 
 // EN ORDEN DE PROCESO. El orden es el del taller y se usa para ordenar: lo que
 // está más atrás sale primero, que es lo que hay que empujar.
@@ -28,6 +28,9 @@ export const ESTADOS_FABRICACION = {
   ready: { label: 'Listo para envío', color: 'bg-ok-100 text-ok-700', icon: PackageCheck },
   shipped: { label: 'Enviado', color: 'bg-dato-200 text-dato-700', icon: Truck },
   delivered: { label: 'Entregado', color: 'bg-ok-100 text-ok-800', icon: CheckCircle },
+  // No es una etapa: es el final. Sin ella una orden anulada se leía
+  // «Confirmado», o sea como si estuviera esperando al taller.
+  cancelled: { label: 'Anulada', color: 'bg-error-100 text-error-700', icon: Ban },
 };
 
 // Un pedido del que la fábrica no sabe nada no está «pendiente»: está vendido y

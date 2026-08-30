@@ -189,6 +189,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [aviso, setAviso] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [savedId, setSavedId] = useState(null);
+  // EL PEDIDO YA CREADO DESDE ESTA RELACIÓN. Sin esto, cada pulsación de «Crear
+  // pedido» generaba un id nuevo con la hora y creaba OTRO pedido: los dos
+  // entraban en COOP y los dos pagaban comisión. Una cocina vendida una vez,
+  // pagada dos.
+  const [pedidoId, setPedidoId] = useState(null);
   
   const [verCoste, setVerCoste] = useState(false);
   const [pistaCandado, setPistaCandado] = useState('');
@@ -984,14 +989,52 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         muebles: muebles.map(m => ({ cod: m.cod, qty: m.qty, ancho: m.ancho, alto: m.alto, mano: m.mano, obs: m.obs })),
       };
 
-      // Persistir orden en el almacén de producción
+      // AL SERVIDOR, QUE ES DONDE TIENE QUE ESTAR. Hasta el 30/08 esto solo
+      // se guardaba en `localStorage`: la orden vivía en ESE navegador y en
+      // ningún sitio más, así que `fabrica_orders` —la colección de la que sale
+      // el estado de producción en COOP, en el dashboard y en Mis Pedidos— no
+      // la escribía nadie y todos los pedidos salían «Confirmado» para siempre.
+      //
+      // Se manda con `budgetNumber`, que es por donde `estado_fabricacion` cruza
+      // la orden con su pedido. Sin referencia la orden se guarda igual —el
+      // taller la necesita— pero no aparecerá en COOP, y eso se dice.
+      const r = await fetch(`${API_URL}/api/fabrica/orders`, {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({
+          // EL CUERPO QUE ESPERA EL PORTAL FÁBRICA, que es el módulo del taller
+          // que ya existe. La orden vivía solo en `localStorage`, o sea en ESE
+          // navegador: no la veía nadie más y COOP no se enteraba nunca.
+          budgetNumber: ref || '',           // el cruce con el pedido
+          customerName: cliente || 'Cliente General',
+          requestedDeliveryDate: payload.fechaEntrega,
+          priority: 'normal',
+          factoryType: esInterno ? 'internal' : 'external',
+          internalNotes: `${payload.tipo} · ${payload.tarifa}`,
+          productionNotes: payload.observaciones,
+          items: muebles.map(m => ({
+            code: m.cod, qty: Number(m.qty) || 1,
+            width: m.ancho, height: m.alto, hand: m.mano, notes: m.obs || '',
+          })),
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || 'No se pudo lanzar la orden.');
+
+      // Y TAMBIÉN EN LOCAL, porque la pantalla de Planificación sigue leyendo de
+      // ahí. Quitarlo ahora dejaría esa pantalla vacía; se migra aparte.
       try {
         const guardadas = JSON.parse(localStorage.getItem('ordenes_fabricacion_taller') || '[]');
         const actualizadas = [payload, ...guardadas.filter(x => x.id !== payload.id)];
         localStorage.setItem('ordenes_fabricacion_taller', JSON.stringify(actualizadas));
       } catch (e) { console.error('Error guardando OF:', e); }
 
-      alert(`✓ Orden de Fabricación ${payload.id} [${tagOrigen}] lanzada con éxito.`);
+      alert(`✓ Orden de Fabricación ${d.order?.orderNumber || payload.id} `
+        + `[${tagOrigen}] lanzada.\n\n`
+        + (ref
+            ? 'Ya se ve en COOP → Producción como «Pendiente».'
+            : 'AVISO: sin referencia no se puede cruzar con su pedido, así que '
+              + 'no aparecerá en el seguimiento de COOP. Ponle una referencia y '
+              + 'vuelve a lanzarla.'));
       if (setState) {
         setState(prev => ({ ...prev, currentTab: 'planificacionProduccion' }));
       }
@@ -1019,17 +1062,42 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
    */
   const pasarAPedido = async () => {
     if (!muebles.length) { setAviso('Añade al menos un mueble para pedir.'); return; }
+
+    // ¿YA HAY UN PEDIDO DE ESTA COCINA? Se pregunta al servidor, no solo a la
+    // memoria de la pantalla: si se recuperó un presupuesto en otra sesión, el
+    // id de aquí está vacío y se volvería a duplicar.
+    let destino = pedidoId;
+    if (!destino && ref) {
+      try {
+        const q = await fetch(`${API_URL}/api/cascos/orders?kind=pedido`, { headers: authHeaders() });
+        const dq = await q.json().catch(() => ({}));
+        const ya = (dq.orders || []).find(
+          o => (o.ref || '') === ref && (o.origen || '') === 'cocina_montada_3');
+        if (ya) {
+          // NO SE DECIDE POR ÉL. Duplicar paga dos comisiones y fusionar pisa un
+          // pedido que quizá ya está en el taller: lo elige el master.
+          // eslint-disable-next-line no-alert
+          if (!window.confirm(
+            `Ya existe un pedido con la referencia «${ref}»`
+            + `${ya.createdAt ? ` (${String(ya.createdAt).slice(0, 10)})` : ''}.\n\n`
+            + 'ACEPTAR: actualizar ESE pedido con lo que hay ahora en pantalla.\n'
+            + 'CANCELAR: no hacer nada (cambia la referencia si quieres uno nuevo).')) return;
+          destino = ya.id;
+        }
+      } catch { /* si no se puede comprobar, se sigue como pedido nuevo */ }
+    }
+
     // Se avisa porque un pedido SÍ cuenta: entra en la cooperativa y genera
     // comisión. Un presupuesto no.
     // eslint-disable-next-line no-alert
     if (!window.confirm(
-      `Vas a crear un PEDIDO de ${totalUds} mueble${totalUds === 1 ? '' : 's'} `
-      + `para ${cliente || 'Cliente General'}.\n\n`
+      `Vas a ${destino ? 'ACTUALIZAR el' : 'crear un'} PEDIDO de ${totalUds} `
+      + `mueble${totalUds === 1 ? '' : 's'} para ${cliente || 'Cliente General'}.\n\n`
       + 'Un pedido cuenta para la cooperativa y genera comisión; un presupuesto no.\n\n¿Seguimos?')) return;
     setGuardando(true); setAviso('');
     try {
       const payload = {
-        id: `cm3-ped-${Date.now()}`,
+        id: destino || `cm3-ped-${Date.now()}`,
         kind: 'pedido',
         origen: 'cocina_montada_3',
         cliente: cliente || 'Cliente General',
@@ -1056,7 +1124,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.detail || 'Error al crear el pedido');
       setAviso('');
-      alert('✓ Pedido creado. Ya aparece en COOP para asignarle comercial y montador.');
+      // SE RECUERDA EL PEDIDO: volver a pulsar ACTUALIZA este, no crea otro.
+      setPedidoId(d.order?.id || payload.id);
+      alert(destino
+        ? '✓ Pedido actualizado.'
+        : '✓ Pedido creado. Ya aparece en COOP para asignarle comercial y montador.');
     } catch (e) {
       setAviso(`No se pudo crear el pedido: ${e.message}`);
     } finally {
@@ -1162,6 +1234,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     if (c.acabadoCasco) setAcabadoCasco(c.acabadoCasco);
     setObservacionesGenerales(c.observaciones || '');
     setSavedId(o.id);            // volver a guardar ACTUALIZA, no duplica
+    setPedidoId(null);           // es un presupuesto: su pedido se busca por referencia
     setGuardados(null);
     setAviso('');
   };

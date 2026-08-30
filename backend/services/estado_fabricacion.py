@@ -31,16 +31,45 @@ from typing import Optional
 from services import comisiones as C
 from services import liquidaciones as L
 
-# El `status` de `fabrica_orders` → el estado que se enseña. La tabla es la que
-# ya usaba `routes/orders.py`; se ha traído aquí para que no haya dos.
+# EL `status` DEL TALLER → el estado que se enseña.
+#
+# ESTA TABLA ESTABA ESCRITA PARA UN ESQUEMA QUE NO EXISTE (30/08, auditando).
+# El taller de verdad —`routes/fabrica.py`, el Portal Fábrica— escribe
+# `draft · confirmed · in_production · ready · delivered · cancelled`. Aquí solo
+# se reconocían `in_progress`, `completed` y `shipped`, que NO son valores que
+# escriba nadie: son los nombres de SALIDA de esta misma tabla. O sea que una
+# orden real en producción no encajaba en ninguna clave y caía en el valor por
+# defecto: «Confirmado». Un pedido en el taller que en pantalla pone
+# «Confirmado» no parece un fallo, parece un pedido parado.
+#
+# Se aceptan LAS DOS FAMILIAS: las que escribe el Portal Fábrica y las que
+# esperaba la tabla vieja, por si algún documento antiguo las trae. Reconocer de
+# más aquí no cuesta nada; reconocer de menos deja el pedido mudo.
 DE_FABRICA = {
     "draft": "pending",
     "confirmed": "confirmed",
+    # Lo que escribe el Portal Fábrica hoy
+    "in_production": "in_production",
+    "ready": "ready",
+    "cancelled": "cancelled",
+    # Nombres que esperaba la tabla vieja
     "in_progress": "in_production",
     "completed": "ready",
     "shipped": "shipped",
     "delivered": "delivered",
 }
+
+# LAS COLECCIONES DEL TALLER, en orden de preferencia.
+#
+# `manufacturing_orders` es donde escribe el Portal Fábrica de verdad.
+# `fabrica_orders` es la que leían todas las pantallas… y no la escribía NADIE:
+# se buscó quién hacía un `insert` o un `update` sobre ella en todo el backend y
+# no había ni uno. Los índices se creaban al arrancar y la tabla se quedaba
+# vacía, así que en COOP todos los pedidos salían «Confirmado» para siempre.
+#
+# Se leen las dos, y manda la primera que tenga ficha de ese pedido: si hay
+# datos viejos en `fabrica_orders` no se pierden, y los nuevos se ven.
+COLECCIONES_DEL_TALLER = ("manufacturing_orders", "fabrica_orders")
 
 # Cuando la fábrica no tiene ficha de ese pedido. No es un error ni un hueco:
 # es un pedido vendido que aún no ha entrado en el taller.
@@ -56,6 +85,11 @@ ESTADOS = (
     ("ready", "Listo para envío"),
     ("shipped", "Enviado"),
     ("delivered", "Entregado"),
+    # ANULADA VA LA ÚLTIMA y no es una etapa del proceso: es su final. Va aquí
+    # para que se pueda DECIR — sin ella, una orden anulada caía en «Confirmado»
+    # y el pedido salía como si estuviera esperando al taller. Y al ir la última
+    # no se cuela entre lo que hay que empujar al ordenar por lo más atrasado.
+    ("cancelled", "Anulada"),
 )
 
 ORDEN = {clave: i for i, (clave, _) in enumerate(ESTADOS)}

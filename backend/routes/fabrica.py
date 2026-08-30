@@ -112,6 +112,11 @@ class ManufacturingOrder(BaseModel):
 
 
 class ManufacturingOrderCreate(BaseModel):
+    # LA REFERENCIA DEL PEDIDO, que es por donde se ata la orden a su venta.
+    # Faltaba, y sin ella una orden de fabricación no se podía cruzar con nada:
+    # el pedido nunca llegaba a saber que estaba en el taller y en COOP salía
+    # «Confirmado» para siempre (auditoría del 30/08).
+    budgetNumber: str = ""
     customerName: str = ""
     customerCode: str = ""
     contactPhone: str = ""
@@ -228,6 +233,9 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
             "estimatedDeliveryDate": None,
             "actualDeliveryDate": None,
             "status": "draft",
+            # Se guarda tal cual: `services/estado_fabricacion.py` cruza la
+            # orden con su pedido por este campo, y solo por este.
+            "budgetNumber": (order.budgetNumber or "").strip(),
             "priority": order.priority,
             "items": items_with_ids,
             "totalPieces": total_pieces,
