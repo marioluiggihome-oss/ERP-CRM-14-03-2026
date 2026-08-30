@@ -399,6 +399,16 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   };
 
   // Descuentos comerciales de compra en fábrica de puertas (Descuento 1 + Descuento 2 en cascada)
+  // EL DESCUENTO DE COMPRA DE CASCOS ACB. Se teclea a mano porque la tarifa del
+  // proveedor se negocia. Por defecto 0: sin tocarlo, el coste sale igual que
+  // siempre (ver `despiece` en RentabilidadMV).
+  const [dtoCascos, setDtoCascos] = useState(() => {
+    try { return Number(localStorage.getItem('dto_cascos_acb')) || 0; } catch { return 0; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('dto_cascos_acb', String(dtoCascos)); } catch { /* noop */ }
+  }, [dtoCascos]);
+
   const [dtoPuertas1, setDtoPuertas1] = useState(() => {
     try { return parseFloat(localStorage.getItem('dto_puertas_1') || localStorage.getItem('dto_puertas') || '50'); } catch { return 50; }
   });
@@ -425,9 +435,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
   const paramsCostes = useMemo(() => ({
     ...p,
+    dtoCascos,
     dtoPuertas1,
     dtoPuertas2,
-  }), [p, dtoPuertas1, dtoPuertas2]);
+  }), [p, dtoCascos, dtoPuertas1, dtoPuertas2]);
 
   const [familias, setFamilias] = useState(null);
   const [pv, setPv] = useState(3.33);
@@ -1996,7 +2007,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             de 145,55: 31,12 € que aparecían de la nada. Un
                             desglose que no cuadra no es un desglose, es una
                             sospecha. */}
-                        <span className="text-dato-700 font-bold">{`Casco ${eur(m.despiece?.casco)}`}</span>
+                        {/* SI HAY DESCUENTO DE COMPRA, SE DICE AQUI. Sin esto el
+                            casco baja de 61,15 a 44,03 y no hay en pantalla
+                            nada que lo explique: el desglose seguiria sumando
+                            pero el numero pareceria mal leido. */}
+                        <span className="text-dato-700 font-bold"
+                          title={m.despiece?.dtoCascos > 0
+                            ? `Tarifa ACB ${eur(m.despiece?.cascoTarifa)} − ${m.despiece?.dtoCascos}% de descuento de compra = ${eur(m.despiece?.casco)}`
+                            : 'Coste neto del casco, tarifa ACB. Sin descuento de compra aplicado.'}>
+                          {`Casco ${eur(m.despiece?.casco)}`}
+                          {m.despiece?.dtoCascos > 0 && (
+                            <span className="ml-1 text-[9px] font-black text-master-600">{`−${m.despiece.dtoCascos}%`}</span>
+                          )}
+                        </span>
                         <span className="text-dato-700 font-bold">{`Puertas ${eur(m.despiece?.puerta)}`}</span>
                         <span className="text-dato-700 font-bold"
                           title={`Bisagras ${eur(m.despiece?.bisagras)} · Patas ${eur(m.despiece?.patas)} · Colgadores ${eur(m.despiece?.colg)} · Cajones ${eur(m.despiece?.caj)} · Gavetas ${eur(m.despiece?.gav)} · Soportes ${eur(m.despiece?.soportes)}`}>
@@ -2187,8 +2210,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                       {/* Coste y Margen (candado) */}
                       {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-dato-700 font-bold" title={`Neto ACB: ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
+                        <td className="py-3 px-3 text-right font-mono text-dato-700 font-bold" title={`Tarifa ACB: ${eur(m.despiece?.cascoTarifa)}${m.despiece?.dtoCascos > 0 ? ` − ${m.despiece.dtoCascos}% dto. compra` : ' (sin descuento)'} = ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
                           {eur(m.despiece?.casco)}
+                          {m.despiece?.dtoCascos > 0 && (
+                            <span className="ml-1 text-[9px] font-black text-master-600">{`−${m.despiece.dtoCascos}%`}</span>
+                          )}
                         </td>
                       )}
                       {verCoste && (
@@ -2293,11 +2319,34 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             </button>
             {pistaCandado && <span className="text-xs text-amber-600 font-bold animate-fade-in">{pistaCandado}</span>}
             
+            {/* LA PUERTA DEL MODAL DE DESCUENTOS (master, 30/08: «falta el
+                descuento de ACB que metía a mano»).
+
+                El modal estaba escrito ENTERO —cabecera, campos, multiplicador
+                neto y botón de aplicar— y `setShowModalDtos(true)` NO APARECIA
+                EN NINGUN SITIO: no había forma de abrirlo. Es el mismo fallo
+                que ya tuvo `AreaCooperativista`, y no da ningún error: la
+                pantalla compila, el modal existe y simplemente no se abre nunca.
+
+                Va DENTRO de `verCoste` a propósito: un descuento de compra es
+                lo que le cuesta a la casa, y con el candado echado esta pantalla
+                se enseña con un cliente delante (CLAUDE.md, reglas 5 y 9). */}
             {verCoste && (
-              <div className="flex items-center gap-4 text-xs">
-                <div>Coste Fábrica: <b className="font-mono text-slate-800">{eur(totalCoste)}</b></div>
-                <div>Margen Bruto: <b className="font-mono text-dato-700">{eur(totalMargen)} ({totalMargenPct.toFixed(1)}%)</b></div>
-              </div>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowModalDtos(true)}
+                  data-testid="cm3-abrir-descuentos"
+                  className="p-2.5 rounded-2xl border bg-white text-slate-500 border-slate-200 hover:text-master-700 hover:border-master-300 transition-all"
+                  title="Descuentos de compra: cascos ACB y puertas MV. Es lo que la casa negocia con cada proveedor, no lo que ve el cliente."
+                >
+                  <Percent size={18} />
+                </button>
+                <div className="flex items-center gap-4 text-xs">
+                  <div>Coste Fábrica: <b className="font-mono text-slate-800">{eur(totalCoste)}</b></div>
+                  <div>Margen Bruto: <b className="font-mono text-dato-700">{eur(totalMargen)} ({totalMargenPct.toFixed(1)}%)</b></div>
+                </div>
+              </>
             )}
           </div>
 
@@ -2370,8 +2419,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <Percent size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Descuentos de Compra en Puertas</h3>
-                  <p className="text-[11px] text-slate-500">Ajusta el descuento comercial sobre la tarifa oficial MV</p>
+                  <h3 className="text-base font-black text-slate-900">Descuentos de Compra</h3>
+                  <p className="text-[11px] text-slate-500">Lo que la casa negocia con cada proveedor: cascos ACB y puertas MV</p>
                 </div>
               </div>
               <button onClick={() => setShowModalDtos(false)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400">
@@ -2379,7 +2428,41 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               </button>
             </div>
 
+            {/* EL DESCUENTO DE CASCOS ACB, QUE SE METIA A MANO (master, 30/08).
+                Va SEPARADO de los de puertas y no en cascada con ellos: son dos
+                proveedores distintos y dos tarifas distintas. Juntarlos haria
+                que negociar con uno moviera el coste de lo que compra el otro. */}
+            <div className="space-y-2 bg-master-50 p-4 rounded-2xl border border-master-200 text-xs">
+              <div className="flex items-center gap-2 text-[11px] font-black text-master-800 uppercase tracking-wide">
+                <Package size={13} /> Cascos ACB
+              </div>
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Descuento de compra sobre tarifa ACB (%):
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={dtoCascos}
+                  onChange={e => setDtoCascos(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="cm3-dto-cascos"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800 bg-white focus:border-master-500 outline-none"
+                  placeholder="0"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Se aplica al COSTE del casco. El PVP de Cocina Desmontada no se
+                  toca: lo que se negocia es lo que paga la casa, no lo que paga
+                  el cliente.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+              <div className="flex items-center gap-2 text-[11px] font-black text-slate-700 uppercase tracking-wide">
+                <Layers size={13} /> Puertas MV
+              </div>
               <div>
                 <label className="block text-slate-700 font-bold mb-1">
                   Descuento Principal 1 (%):

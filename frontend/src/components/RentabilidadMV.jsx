@@ -181,6 +181,7 @@ export const MV_COSTES_DEFAULT = {
   mano: MANO_DE_OBRA_POR_DEFECTO,
   cajon: 41.34,     // € por cajón
   gaveta: 54.37,    // € por gaveta
+  dtoCascos: 0,     // % descuento de compra sobre la tarifa ACB de cascos
   dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
   dtoPuertas2: 0,   // % descuento 2 (acumulado sobre el resultado del 1)
   dtoPuertas: 0,    // alias legado (compatibilidad)
@@ -902,7 +903,22 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   const wCasco = w < 300 ? 300 : w;
   const altoMm = R.altoSel ? (altura === '90' ? 900 : 700) : (R.altoCol ? (altura === '220' ? 2200 : 2000) : (altura === '70' ? 700 : (R.alto || 800)));
   const factorDesmontada = getFactorDesmontada();
-  const cc = cascoACB(R.casco, wCasco, altoMm, factorDesmontada, acabadoCasco);
+  const ccBruto = cascoACB(R.casco, wCasco, altoMm, factorDesmontada, acabadoCasco);
+  // EL DESCUENTO DE ACB, QUE SE METE A MANO (master, 30/08: «falta el descuento
+  // de ACB que metía a mano»). La tarifa del proveedor se negocia y cambia; el
+  // catálogo trae el precio de tarifa y el descuento va aparte.
+  //
+  // POR DEFECTO ES 0, y eso importa: sin tocarlo, el coste sale EXACTAMENTE
+  // igual que antes. Un descuento que apareciera con un valor puesto movería
+  // todos los márgenes ya calculados sin que nadie lo hubiera decidido.
+  //
+  // Se aplica aquí y no dentro de `cascoACB` para no cambiarle la forma a una
+  // función que devuelve también el PVP de Desmontada: el descuento es de
+  // COMPRA, y el PVP no se toca.
+  const dtoCascos = Math.min(100, Math.max(0, Number((p && p.dtoCascos) || 0)));
+  const cc = dtoCascos > 0
+    ? { ...ccBruto, coste: Math.round(ccBruto.coste * (1 - dtoCascos / 100) * 100) / 100 }
+    : ccBruto;
   
   // Desglose técnico preciso de puertas y frentes
   const desgloseFrentes = getDesglosePuertasDetallado(cod, familia, w, altura, altoMm, R, tariff);
@@ -936,6 +952,8 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   return {
     fam: familia, med: cc.med, inc: w < 300 ? 'inc. corte' : '',
     casco: cc.coste,
+    cascoTarifa: ccBruto.coste,   // antes del descuento de compra
+    dtoCascos,
     cascoPvp: cc.pvpDesmontada,
     puerta: costePuertas,
     puertaPvp: pvpPuertas,

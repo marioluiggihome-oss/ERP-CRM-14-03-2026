@@ -82,12 +82,35 @@ def test_LOS_HERRAJES_SE_SUMAN_IGUAL_QUE_EN_EL_CALCULO():
 
 
 def test_LA_FICHA_ENSEÑA_LOS_CUATRO():
+    # EL BLOQUE ENTERO, CONTANDO LLAVES, no una ventana de N caracteres. La
+    # primera versión cogía 2600 caracteres a bulto y el día que se añadió al
+    # casco su texto de ayuda del descuento de ACB, la ventana dejó de llegar
+    # hasta «Coste» y esta prueba se puso roja SIN QUE NADIE HUBIERA ROTO NADA.
+    # Una ventana fija miente en las dos direcciones: se queda corta cuando el
+    # código crece, y se pasa de largo cazando lo que hay debajo.
     cm3 = _lee(CM3)
     i = cm3.index("Coste y margen: solo con el candado abierto")
-    ficha = cm3[i:i + 2600]
-    for etiqueta in ("Casco ", "Puertas ", "Herrajes ", "M. obra ", "Coste "):
-        assert etiqueta in ficha, (
-            f"la ficha no enseña «{etiqueta.strip()}»: el desglose no suma el "
+    inicio = cm3.index("{verCoste && (", i)
+    profundidad = 0
+    for k in range(inicio, len(cm3)):
+        if cm3[k] == "{":
+            profundidad += 1
+        elif cm3[k] == "}":
+            profundidad -= 1
+            if profundidad == 0:
+                break
+    else:
+        raise AssertionError("el bloque de la ficha no se cierra")
+    ficha = cm3[inicio:k]
+    # LO QUE SE PINTA, no la palabra suelta. Buscar «Coste » a secas ya se
+    # salvó solo: el texto de ayuda del casco dice «Coste neto del casco», así
+    # que borrar el total de la ficha —el fallo entero de esta prueba— pasaba
+    # en verde. Se busca la expresión que de verdad sale por pantalla.
+    for etiqueta, expr in (("Casco", "`Casco ${"), ("Puertas", "`Puertas ${"),
+                           ("Herrajes", "`Herrajes ${"), ("M. obra", "`M. obra ${"),
+                           ("Coste", "`Coste ${")):
+        assert expr in ficha, (
+            f"la ficha no enseña «{etiqueta}»: el desglose no suma el "
             "total y quien lo mire no sabrá de dónde sale la diferencia")
 
 
