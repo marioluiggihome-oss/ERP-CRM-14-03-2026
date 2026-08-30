@@ -12,9 +12,13 @@ on:
       - "herramientas/**"
       - ".github/workflows/backend-check.yml"
   push:
+    # SOLO `main`. Antes también en `claude/**`, y eso duplicaba cada
+    # comprobación: la rama se fusiona a `main` con fast-forward segundos
+    # después, así que las dos ejecuciones probaban EXACTAMENTE el mismo código.
+    # Lo de antes de fusionar ya lo cubre el disparador de `pull_request` de
+    # arriba, que sigue igual.
     branches:
       - main
-      - "claude/**"
     paths:
       - "backend/**"
       - "frontend/src/**"

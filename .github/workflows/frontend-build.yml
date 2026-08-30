@@ -71,8 +71,36 @@ jobs:
       # sobre el servidor de desarrollo. Todo el backend va simulado: ninguna
       # prueba de pantalla puede depender de que haya un Mongo levantado, o no
       # se ejecutaria aqui — y una prueba que no se ejecuta no protege nada.
+      # EL NAVEGADOR SE GUARDA EN CACHÉ, QUE SI NO ERA LA MITAD DEL CI.
+      #
+      # `playwright install` se baja ~150 MB de Chromium y sus dependencias de
+      # sistema EN CADA EJECUCIÓN. Con casi mil ejecuciones al mes, eso solo se
+      # comía la mayor parte de los 2.000 minutos que trae GitHub Free — y
+      # cuando se acaban, los trabajos no fallan: mueren en dos segundos sin un
+      # log, que es lo que llevaba días pasando y parecía una avería.
+      #
+      # La caché va por versión de Playwright: si se actualiza, la clave cambia
+      # y se vuelve a bajar sola. No se comprueba nada de menos.
+      - name: Versión de Playwright (para la clave de la caché)
+        id: pw
+        run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Caché del navegador
+        id: cache-pw
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.v }}
+
+      # Con caché, solo el navegador (segundos). Sin ella, también las
+      # dependencias de sistema, que es lo que de verdad tarda.
       - name: Instalar Chromium para las pruebas de pantalla
-        run: npx playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.cache-pw.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Pruebas de pantalla (Playwright)
         run: yarn test:e2e
