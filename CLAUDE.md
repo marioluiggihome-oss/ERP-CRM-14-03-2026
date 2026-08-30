@@ -819,6 +819,38 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      servido y cobrado salen aparte.
    - Candado: `test_calculo_produccion_coop.py`.
 
+29. **COOP ABRE POR PRODUCCIÓN, Y SE ENTRA EN CADA PEDIDO** (30/08). El master:
+   «al entrar en COOP que entre en producción primero siempre, y que podamos
+   entrar en los pedidos, si no no sabemos lo que hay en cada uno de ellos». La
+   pestaña decía por dónde va cada cocina; no decía QUÉ cocina es.
+   - **EL DETALLE ES DONDE ESTABA EL RIESGO.** Para enseñar el contenido hay que
+     tocar las LÍNEAS del pedido, y dentro de una línea viajan `price`, `pvp`,
+     el coste y el descuento del proveedor. Sale por lista BLANCA
+     (`CAMPOS_DE_LA_LINEA_DEL_PEDIDO`): código, descripción, familia, unidades y
+     si cuenta como mueble. Volcar la línea entera habría abierto por una ruta
+     nueva justo lo que está cerrado en Rentabilidad (reglas 8b y 20) — y un
+     candado que se rodea por otra puerta no es un candado.
+   - **LAS UNIDADES Y LA FAMILIA NO SE LEEN A MANO**: se las pide a
+     `services/comisiones.py`. Escribirlas otra vez es el fallo del 28/08 —las
+     pruebas leían `qty`/`familia` y los pedidos de verdad guardan
+     `quantity`/`code`, así que COOP enseñaba «0 muebles» en TODOS los pedidos y
+     la comisión salía a cero para todo el mundo—. Por eso `esMueble` sale de la
+     MISMA función que decide la comisión: si se separaran, la pantalla
+     explicaría una cosa y la nómina pagaría otra.
+   - **`unidades` y `muebles` son dos números distintos a propósito**: fábrica
+     monta todo, la comisión solo paga los muebles (regla 16). Los dos salen, y
+     se marca «no cuenta» en las líneas que no incentivan: quien ve «14 muebles»
+     en un pedido de 20 líneas tiene que poder ver cuáles son las otras seis o
+     pensará que le están quitando.
+   - Un pedido sin líneas NO lleva «0 muebles»: es que no consta (regla 7). Y el
+     detalle se busca entre los pedidos que CUENTAN (regla 21), no en la
+     colección a pelo: por aquí no se mira el contenido de un pedido de fábrica.
+   - **Las Plataformas van ABAJO DEL TODO** (master, 30/08). Es el mapa de los
+     negocios, no el trabajo del día. El candado mira el ORDEN de `GROUPS`, no
+     que el grupo exista.
+   - Candado: `test_calculo_produccion_coop.py` (y el orden, en
+     `test_pantalla_plataformas_en_inicio.py`).
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
