@@ -491,20 +491,14 @@ async def get_user_orders(limit: int = 100, current_user: Optional[dict] = Depen
                 {"budgetNumber": order.get("budgetNumber")}, 
                 {"_id": 0, "status": 1, "progress": 1}
             )
-            if fab_order:
-                fab_status_map = {
-                    "draft": "pending",
-                    "confirmed": "confirmed",
-                    "in_progress": "in_production",
-                    "completed": "ready",
-                    "shipped": "shipped",
-                    "delivered": "delivered"
-                }
-                order["fabricationStatus"] = fab_status_map.get(fab_order.get("status"), "confirmed")
-                order["fabricationProgress"] = fab_order.get("progress", 0)
-            else:
-                order["fabricationStatus"] = "confirmed"
-                order["fabricationProgress"] = 0
+            # LA TABLA DE ESTADOS VIVE EN UN SOLO SITIO. Estaba escrita aquí
+            # dentro, y desde el 30/08 la usa también la pestaña de producción
+            # de COOP: dos copias acabarían diciendo cosas distintas del mismo
+            # pedido —«En producción» en una pantalla y «Confirmado» en otra—
+            # sin que ninguna pareciera un error.
+            from services import estado_fabricacion as _EF
+            order["fabricationStatus"] = _EF.estado_de(fab_order)
+            order["fabricationProgress"] = _EF.progreso_de(fab_order)
         
         return orders
     except Exception as e:

@@ -5,11 +5,12 @@
  * escrita del titular.
  */
 import React, { lazy, Suspense, useState } from 'react';
-import { Users, Wallet, Loader, UserCog } from 'lucide-react';
+import { Users, Wallet, Loader, UserCog, Factory } from 'lucide-react';
 
 const SociosCooperativistas = lazy(() => import('./SociosCooperativistas'));
 const LiquidarMes = lazy(() => import('./LiquidarMes'));
 const CoopUsuarios = lazy(() => import('./CoopUsuarios'));
+const CoopProduccion = lazy(() => import('./CoopProduccion'));
 
 /**
  * COOP: LA GESTIÓN DE LA COOPERATIVA, EN UN SOLO SITIO.
@@ -25,6 +26,10 @@ const CoopUsuarios = lazy(() => import('./CoopUsuarios'));
 const PESTANAS = [
   { id: 'usuarios', label: 'Usuarios', icono: UserCog },
   { id: 'socios', label: 'Socios y pedidos', icono: Users },
+  // PRODUCCIÓN va ANTES de liquidar, y el orden sigue sin ser casual: se
+  // asigna quién montó, se mira por dónde va en fábrica, y solo cuando está
+  // servido y cobrado se liquida. Es el mismo camino que recorre el dinero.
+  { id: 'produccion', label: 'Producción', icono: Factory },
   { id: 'liquidar', label: 'Liquidar el mes', icono: Wallet },
 ];
 
@@ -60,6 +65,7 @@ export default function CoopPanel() {
         )}>
           {pestana === 'usuarios' && <CoopUsuarios />}
           {pestana === 'socios' && <SociosCooperativistas />}
+          {pestana === 'produccion' && <CoopProduccion />}
           {pestana === 'liquidar' && <LiquidarMes />}
         </Suspense>
       </div>

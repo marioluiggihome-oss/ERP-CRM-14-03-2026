@@ -5,12 +5,13 @@
 """
 EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
 
-Ocho rutas y ni una más:
+Nueve rutas y ni una más:
 
   GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
   GET  /api/cooperativistas/mis-obras      las cocinas que le tocan, para el Expediente
   GET  /api/cooperativistas/socios         quién es socio, para elegirlo (master)
   GET  /api/cooperativistas/pedidos        pedidos y su asignación de hoy (master)
+  GET  /api/cooperativistas/produccion     por dónde va cada pedido en fábrica (master)
   POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
   GET  /api/cooperativistas/liquidacion    lo que hay que pagar este mes (master)
   POST /api/cooperativistas/aplicar-sugerencias  el montador que dice la agenda
@@ -34,6 +35,7 @@ from services import area_cooperativista as AC
 from services import comisiones as C
 from services import enlace_documentos as ED
 from services import enlace_montador as EM
+from services import estado_fabricacion as EF
 from services import origen_pedidos as OP
 from services import liquidaciones as L
 from services.jwt_service import get_current_user
@@ -256,6 +258,54 @@ async def pedidos_para_asignar(current_user: Optional[dict] = Depends(get_curren
     return {"success": True, "pedidos": lista, "socios": socios,
             "sinAsignar": sum(1 for p in lista if p["sinAsignar"]),
             "sugerencias": sum(1 for p in lista if p.get("sugerencia"))}
+
+
+@router.get("/produccion")
+async def produccion(current_user: Optional[dict] = Depends(get_current_user)):
+    """Por dónde va cada pedido en fábrica. SOLO master.
+
+    El master, 30/08: «los pedidos y el estado de los mismos en fábrica, vamos
+    los procesos de producción y su estado».
+
+    EL ESTADO NO SE INVENTA: sale de `fabrica_orders`, la colección que ya lleva
+    el taller, atada al pedido por `budgetNumber`. Un pedido del que la fábrica
+    no sabe nada sale como «Confirmado», que es lo que es —vendido y aún sin
+    entrar en el taller—, no «pendiente».
+
+    Y el final del proceso lo pone el albarán y la factura, que es lo que el ERP
+    ya sabe: «Entregado» en fábrica no quiere decir cobrado.
+
+    NO LLEVA IMPORTES (`CAMPOS_DE_LA_LINEA`). Aquí se mira por dónde va una
+    cocina, no lo que vale: para eso está Rentabilidad, con su puerta.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="La producción de la cooperativa es del master.")
+    try:
+        pedidos = ED.enriquecer_todos(
+            await _pedidos_de_la_cooperativa(), await _documentos())
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"produccion: no se pudieron leer los pedidos: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo leer la producción.")
+
+    # Las fichas del taller, por referencia. Si la fábrica no responde, la
+    # pestaña sale igual con todo en «Confirmado» en vez de quedarse en blanco:
+    # saber qué pedidos hay ya es la mitad de la pregunta.
+    fichas = {}
+    try:
+        for f in await _db().fabrica_orders.find(
+                {}, {"_id": 0, "budgetNumber": 1, "status": 1, "progress": 1}).to_list(5000):
+            ref = str((f or {}).get("budgetNumber") or "").strip()
+            if ref:
+                fichas[ref] = f
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"produccion: no se pudo leer la fábrica: {e}")
+
+    filas = EF.lineas(pedidos, fichas)
+    return {"success": True, "pedidos": filas, "resumen": EF.resumen(filas),
+            "sinFichaEnFabrica": sum(1 for p in pedidos
+                                     if str(p.get("budgetNumber") or "").strip() not in fichas)}
 
 
 @router.post("/asignar")

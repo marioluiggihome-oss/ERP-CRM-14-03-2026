@@ -5,6 +5,7 @@
  * escrita del titular.
  */
 import React, { useState, useEffect } from 'react';
+import { ESTADOS_FABRICACION } from '../estadosFabricacion';
 import {
   Package, Search, Calendar, Euro, Mail, CheckCircle,
   AlertTriangle, Eye, FileText, ChevronDown, ChevronUp,
@@ -17,14 +18,11 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const _authH = () => ({ 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) });
 
 // Estados de fabricación con colores
-const FABRICATION_STATES = {
-  'confirmed': { label: 'Confirmado', color: 'bg-blue-100 text-blue-700', icon: CheckCircle },
-  'pending': { label: 'Pendiente', color: 'bg-amber-100 text-amber-700', icon: Timer },
-  'in_production': { label: 'En Producción', color: 'bg-purple-100 text-purple-700', icon: Factory },
-  'ready': { label: 'Listo para Envío', color: 'bg-green-100 text-green-700', icon: PackageCheck },
-  'shipped': { label: 'Enviado', color: 'bg-teal-100 text-teal-700', icon: Truck },
-  'delivered': { label: 'Entregado', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle }
-};
+// LOS RÓTULOS DE FÁBRICA VIVEN EN UN SOLO SITIO (`estadosFabricacion.js`).
+// Estaban aquí dentro, y desde el 30/08 los necesita también la pestaña de
+// producción de COOP: dos copias acabarían diciendo cosas distintas del mismo
+// pedido, y ninguna parecería un error.
+const FABRICATION_STATES = ESTADOS_FABRICACION;
 
 const MisPedidos = ({ currentUser }) => {
   const [orders, setOrders] = useState([]);

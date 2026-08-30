@@ -768,6 +768,29 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      no lleva al montador y que los QUITA en vez de ponerlos a cero.
    - Candado: `test_calculo_obras_del_cooperativista.py`.
 
+29. **PRODUCCIÓN EN COOP: POR DÓNDE VA CADA PEDIDO** (30/08). El master: «los
+   pedidos y el estado de los mismos en fábrica, vamos los procesos de
+   producción y su estado». Pestaña nueva, entre «Socios y pedidos» y
+   «Liquidar»: es el orden que recorre el dinero —se asigna quién montó, se mira
+   por dónde va, y solo cuando está servido y cobrado se liquida—.
+   - **El estado NO se inventa:** sale de `fabrica_orders`, la colección que ya
+     lleva el taller, atada por `budgetNumber`. Un pedido del que la fábrica no
+     sabe nada sale «Confirmado» —vendido y sin entrar al taller—, no
+     «pendiente»: eso sería adivinar en una pantalla que se mira para decidir
+     qué empujar.
+   - **La tabla de estados vive en UN sitio** (`services/estado_fabricacion.py`
+     y su gemelo `frontend/src/estadosFabricacion.js`). Estaba escrita a mano
+     dentro de `routes/orders.py`; con dos copias, una pantalla diría «En
+     producción» y otra «Confirmado» del MISMO pedido y ninguna parecería un
+     error. El candado EJECUTA el JS y compara clave a clave.
+   - **Lo más atrasado, primero**, que es lo que hay que empujar; por fecha
+     saldría lo último que entró, que es lo que menos corre prisa.
+   - **Ni un euro** (lista blanca `CAMPOS_DE_LA_LINEA`): aquí se mira por dónde
+     va una cocina, no lo que vale. Y «Entregado» en fábrica NO es cobrado —esa
+     diferencia es la que decide si una comisión se libera (regla 17)—, así que
+     servido y cobrado salen aparte.
+   - Candado: `test_calculo_produccion_coop.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que
