@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader, RefreshCw, Search, Truck, Wallet } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader, Package, RefreshCw, Search, Truck, Wallet } from 'lucide-react';
 import { authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -25,7 +25,8 @@ import { ESTADOS_FABRICACION, estadoDe } from '../estadosFabricacion';
  * enseña lo último que entró, que es lo que menos corre prisa.
  *
  * SIN IMPORTES, a propósito. Aquí se mira por dónde va una cocina, no lo que
- * vale: para eso está Rentabilidad, con su puerta.
+ * vale: para eso está Rentabilidad, con su puerta. Vale igual para el detalle:
+ * al abrir un pedido salen sus códigos y sus unidades, y ni un euro.
  */
 export default function CoopProduccion() {
   const [datos, setDatos] = useState(null);
@@ -153,42 +154,156 @@ function Contador({ nombre, n, activo, onClick, clave }) {
 function Fila({ p }) {
   const info = estadoDe(p.estado);
   const Icono = info.icon;
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-black text-dato-900 text-sm truncate">
-              {p.cliente || 'Sin cliente'}
-            </span>
-            {!!p.referencia && (
-              <span className="text-xs text-dato-500">· {p.referencia}</span>
-            )}
-          </div>
-          <p className="text-[11px] text-dato-400 mt-0.5">{p.origen}</p>
-        </div>
-        <span className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black flex items-center gap-1.5 ${info.color}`}>
-          <Icono size={13} /> {p.estadoNombre}
-        </span>
-      </div>
+  // ABIERTO / CERRADO, y el contenido SE PIDE AL ABRIR, no antes: con cien
+  // pedidos en la lista, traerse las líneas de todos de golpe es una llamada
+  // enorme para mirar uno.
+  const [abierto, setAbierto] = useState(false);
+  const [detalle, setDetalle] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [fallo, setFallo] = useState('');
 
-      {/* El progreso solo si la fábrica lo da. Una barra a 0 en un pedido que
-          ni ha entrado al taller parece que va mal, y no va de ninguna manera. */}
-      {p.progreso > 0 && (
-        <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full bg-master-500 rounded-full" style={{ width: `${p.progreso}%` }} />
+  const abrir = async () => {
+    const va = !abierto;
+    setAbierto(va);
+    if (!va || detalle || cargando) return;
+    setCargando(true); setFallo('');
+    try {
+      const r = await fetch(
+        `${API_URL}/api/cooperativistas/produccion/${encodeURIComponent(p.pedidoId)}`,
+        { headers: authHeaders() });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || 'No se pudo leer el pedido.');
+      setDetalle(d.pedido || null);
+    } catch (e) {
+      setFallo(e.message);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200">
+      <button
+        onClick={abrir}
+        className="w-full text-left p-3 sm:p-4 hover:bg-slate-50 rounded-2xl transition-colors"
+        data-testid={`produccion-pedido-${p.pedidoId}`}
+        aria-expanded={abierto}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 flex items-start gap-2">
+            <span className="shrink-0 mt-0.5 text-dato-400">
+              {abierto ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-black text-dato-900 text-sm truncate">
+                  {p.cliente || 'Sin cliente'}
+                </span>
+                {!!p.referencia && (
+                  <span className="text-xs text-dato-500">· {p.referencia}</span>
+                )}
+              </div>
+              <p className="text-[11px] text-dato-400 mt-0.5">{p.origen}</p>
+            </div>
+          </div>
+          <span className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black flex items-center gap-1.5 ${info.color}`}>
+            <Icono size={13} /> {p.estadoNombre}
+          </span>
+        </div>
+
+        {/* El progreso solo si la fábrica lo da. Una barra a 0 en un pedido que
+            ni ha entrado al taller parece que va mal, y no va de ninguna manera. */}
+        {p.progreso > 0 && (
+          <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-full bg-master-500 rounded-full" style={{ width: `${p.progreso}%` }} />
+          </div>
+        )}
+
+        {/* EL FINAL DEL PROCESO. «Entregado» en fábrica no quiere decir cobrado, y
+            esa diferencia es justo la que decide si una comisión se libera. */}
+        <div className="flex flex-wrap gap-3 mt-2 text-[11px]">
+          <span className={`flex items-center gap-1 ${p.servido ? 'text-ok-700 font-bold' : 'text-dato-400'}`}>
+            <Truck size={12} /> {p.servido ? 'Servido' : 'Sin servir'}
+          </span>
+          <span className={`flex items-center gap-1 ${p.cobrado ? 'text-ok-700 font-bold' : 'text-dato-400'}`}>
+            <Wallet size={12} /> {p.cobrado ? 'Cobrado' : 'Sin cobrar'}
+          </span>
+        </div>
+      </button>
+
+      {abierto && (
+        <div className="border-t border-slate-100 px-3 sm:px-4 py-3">
+          {cargando && (
+            <p className="text-xs text-dato-500 flex items-center gap-2">
+              <Loader className="animate-spin" size={14} /> Leyendo el pedido…
+            </p>
+          )}
+          {!!fallo && <p className="text-xs font-bold text-error-700">{fallo}</p>}
+          {!cargando && !fallo && detalle && <Contenido d={detalle} />}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* EL FINAL DEL PROCESO. «Entregado» en fábrica no quiere decir cobrado, y
-          esa diferencia es justo la que decide si una comisión se libera. */}
-      <div className="flex flex-wrap gap-3 mt-2 text-[11px]">
-        <span className={`flex items-center gap-1 ${p.servido ? 'text-ok-700 font-bold' : 'text-dato-400'}`}>
-          <Truck size={12} /> {p.servido ? 'Servido' : 'Sin servir'}
+/**
+ * QUÉ LLEVA EL PEDIDO. Códigos, descripción y unidades — sin un solo euro, igual
+ * que la lista: aquí se mira qué cocina hay que fabricar, no lo que vale.
+ *
+ * Los MUEBLES se cuentan aparte de las UNIDADES a propósito: son dos números
+ * distintos y los dos hacen falta. Fábrica monta todas las unidades; la comisión
+ * solo paga los muebles (master, 25/08: puertas, costados y líneas manuales de
+ * servicios no llevan compensación). Ver «14 muebles» en un pedido de 20 líneas
+ * sin poder ver por qué es lo que hace pensar que a uno le están quitando.
+ */
+function Contenido({ d }) {
+  if (d.sinDesglose) {
+    return (
+      <p className="text-xs text-dato-500">
+        Este pedido no guarda sus líneas, así que no se sabe qué lleva. No es
+        «cero muebles»: es que no consta.
+      </p>
+    );
+  }
+  return (
+    <div>
+      <div className="flex flex-wrap gap-3 text-[11px] mb-2">
+        <span className="flex items-center gap-1 font-black text-dato-700">
+          <Package size={12} /> {d.lineas.length} línea{d.lineas.length === 1 ? '' : 's'}
         </span>
-        <span className={`flex items-center gap-1 ${p.cobrado ? 'text-ok-700 font-bold' : 'text-dato-400'}`}>
-          <Wallet size={12} /> {p.cobrado ? 'Cobrado' : 'Sin cobrar'}
-        </span>
+        <span className="text-dato-600">{d.unidades} unidades</span>
+        <span className="text-dato-600">{d.muebles} muebles</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="text-left text-dato-400 uppercase text-[10px] tracking-widest">
+              <th className="py-1 pr-3 font-black">Código</th>
+              <th className="py-1 pr-3 font-black">Descripción</th>
+              <th className="py-1 pr-3 font-black">Familia</th>
+              <th className="py-1 text-right font-black">Uds.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.lineas.map((l, i) => (
+              <tr key={`${l.codigo}-${i}`} className="border-t border-slate-100">
+                <td className="py-1 pr-3 font-bold text-dato-800 whitespace-nowrap">
+                  {l.codigo || '—'}
+                </td>
+                <td className="py-1 pr-3 text-dato-600">{l.descripcion || '—'}</td>
+                <td className="py-1 pr-3 text-dato-500">
+                  {l.familia || '—'}
+                  {/* Lo que NO cuenta para la comisión, dicho: es la misma
+                      función que la de la nómina, no una copia. */}
+                  {!l.esMueble && (
+                    <span className="ml-1 text-[10px] text-dato-400">(no cuenta)</span>
+                  )}
+                </td>
+                <td className="py-1 text-right font-black text-dato-800">{l.unidades}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

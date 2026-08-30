@@ -1133,6 +1133,25 @@ export default function AIRenderStudio({ state, setState }) {
   }, []);
   useEffect(() => { fetchCredits(); }, [fetchCredits]);
 
+  // EL CONTADOR SE VUELVE A LEER AL TERMINAR CADA RENDER O CADA CAMBIO.
+  //
+  // Se leía UNA sola vez, al abrir la pantalla, y no se volvía a leer nunca. Los
+  // créditos SÍ se gastaban —cada «Aplicar cambio» pasa por `/api/ai-engine/
+  // render`, que los consume— pero la pastilla de arriba seguía diciendo el
+  // número de cuando entraste. El master, mirándola: «los cambios no restan
+  // créditos?». Sí restaban; lo que no se movía era el número, y eso es peor
+  // que no enseñarlo: da por bueno un saldo que ya no existe.
+  //
+  // Se mira la TRANSICIÓN de «trabajando» a «parado», así que vale para todos
+  // los caminos —render, edición, 360º, 4K— sin tener que acordarse de llamarlo
+  // en cada uno. Que es justo como se olvidó la primera vez.
+  const trabajando = isGenerating || editing;
+  const trabajabaAntes = useRef(false);
+  useEffect(() => {
+    if (trabajabaAntes.current && !trabajando) fetchCredits();
+    trabajabaAntes.current = trabajando;
+  }, [trabajando, fetchCredits]);
+
   // Recarga de la bolsa del mes (solo master, desde el propio contador). Pone a
   // cero lo gastado ESTE MES; no toca el saldo comprado, que es dinero pagado.
   const [reiniciandoBolsa, setReiniciandoBolsa] = useState(false);
@@ -2313,9 +2332,26 @@ export default function AIRenderStudio({ state, setState }) {
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
-      const cambio = allLines.length
-        ? allLines.join('. ')
-        : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : '');
+      // VARIAS ÓRDENES VAN COMO LISTA NUMERADA, NO PEGADAS CON PUNTOS.
+      //
+      // Se mandaban con `join('. ')`, o sea un párrafo corrido: «campana
+      // inclinada negra. horno compacto negro. lavadora integrable con puerta.
+      // …». Se manda todo, sí, pero un modelo de imagen lee eso como una
+      // descripción y aplica lo que más pesa visualmente — el master pasó ocho
+      // instrucciones y volvieron cinco: la lavadora y el lavavajillas seguían
+      // a la vista, sin su puerta de integración.
+      //
+      // Numeradas y con el recuento delante, el encargo deja de ser una frase y
+      // pasa a ser una lista de comprobación. No es magia y no garantiza las
+      // ocho, pero es la diferencia entre pedirlo y mencionarlo.
+      const cambio = allLines.length > 1
+        ? (`Aplica EXACTAMENTE estos ${allLines.length} cambios, TODOS, `
+           + `sin dejarte ninguno:\n`
+           + allLines.map((l, i) => `${i + 1}. ${l}`).join('\n')
+           + `\nRepasa la lista antes de terminar: los ${allLines.length} tienen que verse en la imagen.`)
+        : (allLines.length === 1
+           ? allLines[0]
+           : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : ''));
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({

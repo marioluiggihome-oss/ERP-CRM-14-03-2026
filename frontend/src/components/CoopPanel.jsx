@@ -34,7 +34,10 @@ const PESTANAS = [
 ];
 
 export default function CoopPanel() {
-  const [pestana, setPestana] = useState('usuarios');
+  // ABRE POR PRODUCCIÓN (master, 30/08: «al entrar en COOP que entre en
+  // producción primero siempre»). Es lo que se mira a diario —por dónde va cada
+  // cocina—; los socios se marcan una vez y la liquidación es de fin de mes.
+  const [pestana, setPestana] = useState('produccion');
   return (
     <div className="h-full flex flex-col bg-slate-50">
       {/* `hueco-logo` deja sitio al logo flotante del ERP, que si no se come la

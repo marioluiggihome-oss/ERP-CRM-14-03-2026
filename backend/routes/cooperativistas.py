@@ -5,13 +5,14 @@
 """
 EL ÁREA DEL COOPERATIVISTA, Y LA ASIGNACIÓN DE PEDIDOS.
 
-Nueve rutas y ni una más:
+Diez rutas y ni una más:
 
   GET  /api/cooperativistas/mi-area        lo que ve un montador o un comercial
   GET  /api/cooperativistas/mis-obras      las cocinas que le tocan, para el Expediente
   GET  /api/cooperativistas/socios         quién es socio, para elegirlo (master)
   GET  /api/cooperativistas/pedidos        pedidos y su asignación de hoy (master)
   GET  /api/cooperativistas/produccion     por dónde va cada pedido en fábrica (master)
+  GET  /api/cooperativistas/produccion/{id} qué lleva ese pedido, sin euros (master)
   POST /api/cooperativistas/asignar        el master pone quién vendió y quién montó
   GET  /api/cooperativistas/liquidacion    lo que hay que pagar este mes (master)
   POST /api/cooperativistas/aplicar-sugerencias  el montador que dice la agenda
@@ -306,6 +307,42 @@ async def produccion(current_user: Optional[dict] = Depends(get_current_user)):
     return {"success": True, "pedidos": filas, "resumen": EF.resumen(filas),
             "sinFichaEnFabrica": sum(1 for p in pedidos
                                      if str(p.get("budgetNumber") or "").strip() not in fichas)}
+
+
+@router.get("/produccion/{pedido_id}")
+async def contenido_del_pedido(pedido_id: str,
+                               current_user: Optional[dict] = Depends(get_current_user)):
+    """Qué lleva un pedido: sus líneas, sus unidades y sus muebles. SOLO master.
+
+    El master, 30/08: «que podamos entrar en los pedidos, si no no sabemos lo
+    que hay en cada uno de ellos». La lista de producción dice por dónde va cada
+    cocina; sin esto no dice QUÉ cocina es.
+
+    NO LLEVA UN SOLO EURO (`EF.CAMPOS_DE_LA_LINEA_DEL_PEDIDO`). Dentro de una
+    línea de pedido viajan `price`, `pvp` y el descuento, así que volcarla
+    entera sería abrir por una ruta nueva justo lo que el ERP tiene cerrado en
+    Rentabilidad. Un candado que se rodea por otra puerta no es un candado
+    (CLAUDE.md, reglas 8b y 20).
+
+    Y SE BUSCA ENTRE LOS PEDIDOS QUE CUENTAN, no en la colección a pelo: si se
+    leyera `orders` directamente, por aquí se podría mirar el contenido de un
+    pedido de la primera sección de fábrica, que no es de este negocio.
+    """
+    if not _es_master(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="La producción de la cooperativa es del master.")
+    try:
+        pedidos = await _pedidos_de_la_cooperativa()
+        familias = await _familia_por_codigo()
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"produccion/{pedido_id}: no se pudo leer: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo leer el pedido.")
+
+    for p in pedidos:
+        if str(p.get("id") or "") == str(pedido_id):
+            return {"success": True, "pedido": EF.contenido_de(p, familias)}
+    raise HTTPException(status_code=404, detail="Ese pedido no es de la cooperativa.")
 
 
 @router.post("/asignar")

@@ -46,7 +46,15 @@ const toEmbedUrl = (url) => {
 // secciones y su acento de color, para que sea más fácil localizar cada
 // pantalla por bloque temático en vez de una rejilla plana sin criterio.
 const GROUPS = [
+  { id: 'ventas',    label: 'Ventas y Presupuestos', icon: Briefcase, accent: 'border-indigo-200', dot: 'bg-indigo-500' },
+  { id: 'diseno',    label: 'Diseño y Visualización', icon: Palette,   accent: 'border-purple-200', dot: 'bg-purple-500' },
+  { id: 'produccion',label: 'Producción',             icon: Hammer,    accent: 'border-emerald-200', dot: 'bg-emerald-500' },
+  { id: 'admin',     label: 'Administración',         icon: Settings2, accent: 'border-slate-300', dot: 'bg-slate-500' },
   // PLATAFORMAS: LOS TRES NEGOCIOS QUE COMPARTEN ESTE ERP (master, 30/08).
+  //
+  // VA LA ÚLTIMA (master, 30/08: «las plataformas ponlas abajo del todo»). Es
+  // el mapa de los negocios, no el trabajo del día: quien entra a currar busca
+  // el Presupuestador, no la puerta de carpinter.io.
   //
   // No es un cajón para lo que no encaja: es el mapa. La red de distribución
   // (COOP) vende cocinas y reparte comisiones; carpinter.io y Studio3K venden
@@ -58,10 +66,6 @@ const GROUPS = [
   // permiso de al lado: cada una conserva el suyo, y por eso el `can` de cada
   // botón es distinto.
   { id: 'plataformas', label: 'Plataformas', icon: Building2, accent: 'border-violet-200', dot: 'bg-master-500' },
-  { id: 'ventas',    label: 'Ventas y Presupuestos', icon: Briefcase, accent: 'border-indigo-200', dot: 'bg-indigo-500' },
-  { id: 'diseno',    label: 'Diseño y Visualización', icon: Palette,   accent: 'border-purple-200', dot: 'bg-purple-500' },
-  { id: 'produccion',label: 'Producción',             icon: Hammer,    accent: 'border-emerald-200', dot: 'bg-emerald-500' },
-  { id: 'admin',     label: 'Administración',         icon: Settings2, accent: 'border-slate-300', dot: 'bg-slate-500' },
 ];
 
 const MODULES = [

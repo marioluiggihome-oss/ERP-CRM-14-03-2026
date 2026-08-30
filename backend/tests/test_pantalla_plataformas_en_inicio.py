@@ -118,3 +118,23 @@ def test_LA_PUERTA_DE_CARPINTER_LLEVA_A_ALGUN_SITIO():
     i = cuerpo.index("state.currentTab === 'carpinter'")
     assert "<CarpinterPanel" in cuerpo[i:i + 700], (
         "el botón de carpinter.io no pinta nada")
+
+
+def test_LAS_PLATAFORMAS_VAN_LAS_ULTIMAS():
+    """El master, 30/08: «las plataformas ponlas abajo del todo».
+
+    No es un capricho de colocación: es el mapa de los tres negocios, no el
+    trabajo del día. Quien entra a currar busca el Presupuestador, y tenerlo
+    debajo de tres puertas que casi nadie abre es un clic de más cada mañana.
+
+    Se comprueba el ORDEN DE `GROUPS`, que es lo que decide en qué orden se
+    pintan los bloques. Mirar solo que el grupo exista no habría notado nada
+    cuando estaba el primero.
+    """
+    cuerpo = _lee(INICIO)
+    i = cuerpo.index("const GROUPS = [")
+    bloque = cuerpo[i:cuerpo.index("];", i)]
+    ids = re.findall(r"\{\s*id:\s*'([a-zA-Z0-9]+)'", bloque)
+    assert ids, "no se han podido leer los grupos de la pantalla de inicio"
+    assert ids[-1] == "plataformas", (
+        f"«plataformas» ya no va la última: el orden es {ids}")

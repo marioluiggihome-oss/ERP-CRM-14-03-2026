@@ -189,3 +189,160 @@ def test_LA_PRODUCCION_DE_LA_COOPERATIVA_ES_DEL_MASTER():
     assert "_es_master(current_user)" in trozo and "403" in trozo, (
         "la pestaña de producción no está cerrada al master")
     assert "EF.lineas" in trozo, "la lista no pasa por la lista blanca de campos"
+
+
+# ── 5. ENTRAR EN UN PEDIDO: qué lleva, y sin un euro ────────────────────────
+#
+# El master, 30/08: «que podamos entrar en los pedidos, si no no sabemos lo que
+# hay en cada uno de ellos». La lista dice POR DÓNDE VA; esto dice QUÉ ES.
+#
+# Aquí está el riesgo de verdad de esta pantalla. Para enseñar el contenido hay
+# que tocar las LÍNEAS del pedido, y dentro de una línea viajan `price`, `pvp` y
+# el descuento. Volcarlas tal cual abriría por una ruta nueva justo lo que el
+# ERP tiene cerrado en Rentabilidad — y un candado que se rodea por otra puerta
+# no es un candado.
+
+PEDIDO_CON_LINEAS = {
+    "id": "ped-9",
+    "budgetNumber": "MV-9",
+    "customerName": " Luis ",
+    "origenNombre": "Presupuestador · Montada",
+    "items": [
+        # Un mueble de verdad, con los nombres que usa el ERP de verdad
+        # (`quantity`, `price`), no los de las pruebas.
+        {"code": "B60D", "name": "Bajo 60 1 puerta", "quantity": 2,
+         "price": 600.0, "pvp": 300.0, "coste": 111.0, "descuento": 28},
+        # Un frente: NO cuenta para la comisión (master, 25/08).
+        {"code": "PT60", "name": "Puerta 60", "quantity": 4,
+         "familia": "PUERTAS", "price": 400.0},
+    ],
+}
+
+
+def test_AL_ABRIR_UN_PEDIDO_NO_SALE_NI_UN_EURO():
+    """Lo que más importa de esta ruta: son las líneas del pedido en crudo.
+
+    Si se volcara la línea entera saldrían `price`, `pvp`, `coste` y el
+    descuento del proveedor — el dinero que el ERP tiene cerrado al master en
+    Rentabilidad, servido por una ruta nueva y sin que nadie lo note.
+    """
+    d = EF.contenido_de(PEDIDO_CON_LINEAS)
+    for l in d["lineas"]:
+        assert set(l) <= set(EF.CAMPOS_DE_LA_LINEA_DEL_PEDIDO), (
+            f"campos de más en la línea: {set(l) - set(EF.CAMPOS_DE_LA_LINEA_DEL_PEDIDO)}")
+        for prohibido in ("price", "pvp", "coste", "descuento", "importe",
+                          "total", "margen", "puntos"):
+            assert prohibido not in l, f"«{prohibido}» viaja al abrir un pedido"
+    texto = json.dumps(d)
+    for euro in ("600.0", "300.0", "111.0", "400.0"):
+        assert euro not in texto, f"el importe {euro} se ha colado en el detalle"
+
+
+def test_LAS_UNIDADES_SE_LEEN_COMO_LAS_LEE_LA_NOMINA():
+    """`quantity` es el nombre que usan los pedidos de VERDAD.
+
+    Esto ya falló en producción el 28/08: las pruebas leían `qty`/`familia` y el
+    ERP guarda `quantity`/`code`, así que COOP enseñaba «0 muebles» en todos los
+    pedidos y la comisión salía a cero para todo el mundo. Por eso las unidades
+    no se leen aquí a mano: se las pide a `comisiones`, que es donde ya está
+    escrito qué nombre usa cada pantalla.
+    """
+    d = EF.contenido_de(PEDIDO_CON_LINEAS)
+    assert [l["unidades"] for l in d["lineas"]] == [2, 4]
+    assert d["unidades"] == 6, "fábrica monta TODAS las unidades"
+
+
+def test_MUEBLES_Y_UNIDADES_SON_DOS_NUMEROS_DISTINTOS():
+    """Fábrica monta todo; la comisión solo paga los muebles (master, 25/08).
+
+    Y el corte lo hace la MISMA función que la nómina, no una copia: si se
+    separaran, esta pantalla explicaría una cosa y la liquidación pagaría otra.
+    """
+    # Con el catálogo delante, que es como llega de la ruta: `B60D` → «BAJO».
+    d = EF.contenido_de(PEDIDO_CON_LINEAS, {"B60D": "BAJO"})
+    assert d["muebles"] == 2, "las puertas no incentivan y están contando"
+    assert d["unidades"] == 6
+    porcodigo = {l["codigo"]: l["esMueble"] for l in d["lineas"]}
+    assert porcodigo["B60D"] is True
+    assert porcodigo["PT60"] is False, (
+        "una puerta se está marcando como mueble: el comercial vería una "
+        "comisión que no le van a pagar")
+
+
+def test_LA_FAMILIA_SE_RESUELVE_POR_CODIGO_COMO_EN_LA_LIQUIDACION():
+    """Los pedidos de verdad guardan el CÓDIGO; la familia vive en el catálogo."""
+    d = EF.contenido_de({"id": "x", "items": [{"code": "b60d", "quantity": 1}]},
+                        {"B60D": "BAJO"})
+    assert d["lineas"][0]["familia"] == "BAJO"
+    assert d["lineas"][0]["esMueble"] is True
+    # Y sin el catálogo no se inventa una familia: se queda sin clasificar, que
+    # es la decisión conservadora de siempre (pagar de menos se reclama).
+    sin = EF.contenido_de({"id": "x", "items": [{"code": "b60d", "quantity": 1}]})
+    assert sin["lineas"][0]["familia"] == ""
+    assert sin["lineas"][0]["esMueble"] is False
+
+
+def test_UN_PEDIDO_SIN_LINEAS_NO_LLEVA_CERO_MUEBLES_SINO_QUE_NO_CONSTA():
+    """Regla 7: un 0 parece un dato. «No se sabe» se dice, no se rellena."""
+    d = EF.contenido_de({"id": "vacio", "items": []})
+    assert d["sinDesglose"] is True
+    assert d["muebles"] == 0 and d["lineas"] == []
+
+
+def test_ENTRAR_EN_UN_PEDIDO_ES_DEL_MASTER():
+    cuerpo = _lee(COOP)
+    i = cuerpo.index('@router.get("/produccion/{pedido_id}")')
+    j = cuerpo.index("@router", i + 10)
+    trozo = cuerpo[i:j]
+    assert "_es_master(current_user)" in trozo and "403" in trozo, (
+        "se puede abrir el contenido de un pedido sin ser master")
+    assert "EF.contenido_de" in trozo, (
+        "el detalle no pasa por la lista blanca de campos: estaría volcando la "
+        "línea del pedido entera, con sus euros dentro")
+
+
+def test_SOLO_SE_ABREN_PEDIDOS_DE_LA_COOPERATIVA():
+    """No se lee la colección a pelo: por aquí no se mira un pedido de fábrica.
+
+    `_pedidos_de_la_cooperativa` es la lista BLANCA (Montada 3 y Desmontada, y
+    ni una más). Buscar por `id` directamente en `orders` dejaría ver el
+    contenido de cualquier pedido del ERP desde una pantalla de la cooperativa.
+    """
+    cuerpo = _lee(COOP)
+    i = cuerpo.index('@router.get("/produccion/{pedido_id}")')
+    j = cuerpo.index("@router", i + 10)
+    trozo = cuerpo[i:j]
+    assert "_pedidos_de_la_cooperativa()" in trozo, (
+        "el detalle no sale de la lista blanca de orígenes")
+    assert "find_one" not in trozo, (
+        "se está leyendo la colección directamente: se colaría un pedido que no "
+        "es de este negocio")
+    assert "404" in trozo, "un pedido que no es de la cooperativa tiene que dar 404"
+
+
+def test_LA_PANTALLA_PIDE_EL_DETALLE_AL_ABRIR_Y_NO_PINTA_EUROS():
+    """La pantalla del detalle no puede tener su propia columna de importes."""
+    jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopProduccion.jsx"))
+    assert "/api/cooperativistas/produccion/" in jsx, (
+        "la pantalla no llama a la ruta del detalle: el pedido no se abre")
+    for prohibido in ("l.price", "l.pvp", "l.coste", "l.importe", "€"):
+        assert prohibido not in jsx, (
+            f"la pantalla de producción pinta «{prohibido}»: aquí no va dinero")
+
+
+def test_COOP_ABRE_POR_PRODUCCION():
+    """El master, 30/08: «al entrar en COOP que entre en producción primero
+    siempre».
+
+    Es lo que se mira a diario —por dónde va cada cocina—; los socios se marcan
+    una vez y la liquidación es de fin de mes. Se comprueba el `useState`, que
+    es lo que de verdad decide qué pestaña sale: que la pestaña exista en la
+    lista no dice nada de cuál se abre.
+    """
+    jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopPanel.jsx"))
+    m = re.search(r"useState\(\s*'([a-z]+)'\s*\)", jsx)
+    assert m, "no se ha podido leer qué pestaña abre COOP"
+    assert m.group(1) == "produccion", (
+        f"COOP abre por «{m.group(1)}» y el master pidió que abriera por producción")
+    assert "'produccion'" in jsx and "<CoopProduccion" in jsx, (
+        "la pestaña de producción no está montada: abriría en blanco")

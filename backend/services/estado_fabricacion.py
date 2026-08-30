@@ -28,6 +28,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+from services import comisiones as C
+
 # El `status` de `fabrica_orders` → el estado que se enseña. La tabla es la que
 # ya usaba `routes/orders.py`; se ha traído aquí para que no haya dos.
 DE_FABRICA = {
@@ -127,3 +129,73 @@ def resumen(filas) -> dict:
     return {"total": len(filas or []),
             "porEstado": [{"estado": c, "nombre": n, "pedidos": cuenta[c]}
                           for c, n in ESTADOS]}
+
+
+# ─── QUÉ LLEVA UN PEDIDO ────────────────────────────────────────────────────
+#
+# El master, 30/08: «que podamos entrar en los pedidos, si no no sabemos lo que
+# hay en cada uno de ellos». La lista dice POR DÓNDE VA; esto dice QUÉ ES.
+#
+# SIN IMPORTES, igual que la lista. Para saber qué cocina hay que fabricar hacen
+# falta los códigos y las unidades, no los euros: para eso está Rentabilidad,
+# con su puerta. Lista BLANCA otra vez, porque dentro de una línea de pedido
+# viajan `price`, `pvp` y los descuentos.
+CAMPOS_DE_LA_LINEA_DEL_PEDIDO = ("codigo", "descripcion", "unidades", "familia",
+                                 "esMueble")
+
+
+def linea_de_pedido(l: dict, familias: Optional[dict] = None) -> dict:
+    """Una línea del pedido, con lo justo para saber qué es.
+
+    LAS UNIDADES Y LA FAMILIA NO SE LEEN AQUÍ A MANO. Se las pide a
+    `services/comisiones.py`, que es donde ya está escrito qué nombre usa cada
+    pantalla del ERP (`qty`, `cant`, `quantity`, `unidades`) y qué es la familia
+    de una línea. Escribirlo otra vez es exactamente el fallo del 28/08: las
+    pruebas leían `qty`/`familia` y los pedidos de verdad guardan
+    `quantity`/`code`, así que COOP enseñaba «0 muebles» en todos los pedidos.
+    Si un día cambia el nombre, cambia en un sitio.
+    """
+    d = dict(l or {})
+    if familias:
+        d.setdefault("_familiaResuelta",
+                     C.familia_de(d)
+                     or familias.get(str(d.get("code") or "").strip().upper(), ""))
+    return {
+        "codigo": str(d.get("code") or d.get("cod") or "").strip(),
+        "descripcion": str(d.get("name") or d.get("desc")
+                           or d.get("etiqueta") or "").strip(),
+        "unidades": C.unidades_de(d),
+        "familia": C.familia_de(d),
+        # POR QUÉ SE MARCA. El panel del cooperativista enseña «14 muebles» en un
+        # pedido de 20 líneas, y quien lo mira tiene que poder ver cuáles son las
+        # otras seis o pensará que le están quitando. Es la MISMA función que
+        # decide la comisión, no una copia: si se separaran, esta pantalla
+        # explicaría una cosa y la nómina pagaría otra.
+        "esMueble": C.es_mueble(d),
+    }
+
+
+def contenido_de(pedido: dict, familias: Optional[dict] = None) -> dict:
+    """Lo que lleva un pedido: sus líneas y cuántos muebles suman.
+
+    `muebles` cuenta con el mismo criterio que la comisión (solo muebles: ni
+    puertas, ni costados, ni líneas manuales de servicios), y `unidades` cuenta
+    todo lo que hay que fabricar y montar. Son dos números distintos a
+    propósito, y por eso salen los dos: el de fábrica y el de la nómina.
+
+    UN PEDIDO SIN LÍNEAS NO LLEVA «0 MUEBLES»: es que no se sabe lo que lleva
+    (`sinDesglose`), y eso se rotula «?». Un 0 parece un dato (regla 7).
+    """
+    p = pedido or {}
+    crudas = p.get("items") or p.get("lines") or p.get("lineas") or []
+    lineas = [linea_de_pedido(l, familias) for l in crudas]
+    return {
+        "pedidoId": p.get("id") or "",
+        "referencia": (p.get("budgetNumber") or p.get("ref") or ""),
+        "cliente": (p.get("customerName") or p.get("cliente") or "").strip(),
+        "origen": p.get("origenNombre") or p.get("origen") or "",
+        "lineas": lineas,
+        "unidades": sum(l["unidades"] for l in lineas),
+        "muebles": sum(l["unidades"] for l in lineas if l["esMueble"]),
+        "sinDesglose": not lineas,
+    }
