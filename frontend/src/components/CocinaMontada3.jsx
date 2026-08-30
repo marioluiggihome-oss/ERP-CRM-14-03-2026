@@ -1256,12 +1256,23 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   };
 
 
+  // EL CANDADO DEL COSTE. Estaba MUERTO: no abría de ninguna manera, ni con
+  // pulsación larga ni con Shift+clic (30/08). Tres fallos a la vez:
+  //
+  //  1. Se esparcía `{...handlersCandado}` en el botón, y el hook NO devuelve
+  //     handlers: devuelve `{ props, consumir }`. O sea que al `<button>` le
+  //     llegaban dos atributos llamados `props` y `consumir` —que React ni
+  //     entiende— y NINGÚN gesto. Hay que esparcir `.props`, como hace
+  //     Rentabilidad, que es donde sí funciona.
+  //  2. No había `onClick`, así que Shift+clic tampoco hacía nada.
+  //  3. El segundo argumento era una función y el hook espera `{ ms }`: esa
+  //     pista nunca se llegó a enseñar.
+  //
+  // Resultado: se tocaba el candado y no pasaba nada, en tablet y en ordenador.
+  // Y no saltaba ningún error — el botón se veía perfectamente.
   const handlersCandado = usePulsacionLarga(() => {
     setVerCoste(v => !v);
     setPistaCandado('');
-  }, () => {
-    setPistaCandado(AYUDA_CANDADO);
-    setTimeout(() => setPistaCandado(''), 4000);
   });
 
   return (
@@ -2230,7 +2241,18 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <div className="flex items-center gap-4">
             <button
               type="button"
-              {...handlersCandado}
+              {...handlersCandado.props}
+              onClick={(e) => {
+                // La pulsación larga ya ha hecho lo suyo: el clic que manda el
+                // navegador al soltar no puede deshacerlo en el mismo gesto.
+                if (handlersCandado.consumir()) return;
+                if (e.shiftKey) { setVerCoste(v => !v); setPistaCandado(''); return; }
+                // Un toque corto no abre —para eso está el candado— pero SÍ
+                // dice cómo se abre: un botón que no hace nada parece roto.
+                setPistaCandado(AYUDA_CANDADO);
+                setTimeout(() => setPistaCandado(''), 4000);
+              }}
+              data-testid="cm3-candado-coste"
               className={`p-2.5 rounded-2xl border transition-all ${verCoste ? 'bg-master-100 text-master-800 border-master-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
               /* EL TÍTULO DECÍA SOLO «Shift + Clic», y en una tablet no hay
                  tecla Shift: el master lo preguntó porque parecía que el botón
