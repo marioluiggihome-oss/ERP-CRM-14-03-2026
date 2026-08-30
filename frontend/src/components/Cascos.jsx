@@ -1216,7 +1216,7 @@ const Cascos = ({ state, setState }) => {
           <div className="grid grid-cols-1 gap-2 mt-3">
             <button onClick={guardarPresupuesto} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-accion-600 text-white rounded-xl font-bold text-sm hover:bg-accion-700 disabled:opacity-50">{saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Guardar presupuesto</button>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-accion-600 text-white rounded-xl font-bold text-sm hover:bg-accion-700 disabled:opacity-50"><ClipboardList size={16} /> Pedido</button>
+              <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-ok-600 text-white rounded-xl font-black text-sm hover:bg-ok-700 disabled:opacity-50" title="Crear un PEDIDO: cuenta para la cooperativa y genera comisión" data-testid="cascos-crear-pedido"><ClipboardList size={16} /> Crear pedido</button>
               <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-accion-600 text-white rounded-xl font-bold text-sm hover:bg-accion-700 disabled:opacity-50"><Download size={16} /> PDF</button>
             </div>
             <button onClick={pedidoProveedor} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900 disabled:opacity-50"><ClipboardList size={16} /> Pedido a proveedor</button>

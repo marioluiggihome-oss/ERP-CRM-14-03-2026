@@ -4,6 +4,7 @@
  * Prohibida su copia, distribución, modificación o uso sin autorización
  * escrita del titular.
  */
+import { puedeDesmontada } from '@/presupuestador';
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers, Download, FileText } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
@@ -181,9 +182,10 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     };
   }, []);
 
-  // Master: es quien puede volcar a Cocina Desmontada (de momento solo el).
-  const esMaster = !!(state?.currentUser?.isAdmin || state?.currentUser?.isPrimaryAdmin
-    || state?.currentUser?.isMaster);
+  // (Aquí vivía una copia de la lista del master, hecha a mano y con `isAdmin`
+  // dentro — la lista que el 29/08 dejó de abrir la puerta del dinero. Ya no
+  // hace falta: quién puede volcar a Desmontada lo dice `presupuestador.js`,
+  // que es la única fuente y la que el candado compara con el servidor.)
 
   // Push de bajo nivel a P1 (Presupuestador 2 / ZC, budgetItemsMontada). Sin routing.
   const pushToP1 = (furniture) => {
@@ -257,27 +259,38 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   };
 
   // Decide a qué presupuestador volcar: el recordado, el único activo, o pregunta.
+  //
+  // LA PUERTA CUENTA TODOS LOS DESTINOS QUE EXISTEN, no solo los dos viejos.
+  // Aquí estaba el fallo (30/08): se miraba `canUsePresupuestador1` y
+  // `canUsePresupuestador2` —los DOS presupuestadores VIEJOS— y con los dos
+  // apagados se cortaba con «no tienes ningún presupuestador activo». Cocina
+  // Desmontada ya era un destino de verdad, con su código escrito y funcionando
+  // tres líneas más abajo, y no se llegaba a mirar nunca: el master, que tiene
+  // el Presupuestador de hoy abierto y los dos viejos apagados, veía un ERP que
+  // le decía que no tenía presupuestador. No daba ningún error: solo se negaba.
+  //
+  // El permiso de Desmontada NO se escribe aquí a mano: se le pregunta a
+  // `presupuestador.js`, que es la única fuente y la que compara el candado con
+  // el servidor usuario a usuario. Escribirlo otra vez es como se separan las
+  // dos mitades.
   const resolveAndDump = (productos, opts = {}) => {
-    const canP1 = state?.currentUser?.canUsePresupuestador1 !== false; // Presupuestador 2 (ZC)
-    const canP2 = state?.currentUser?.canUsePresupuestador2 !== false; // Presupuestador principal (MV)
-    if (!canP1 && !canP2) {
+    const u = state?.currentUser;
+    const canP1 = u?.canUsePresupuestador1 !== false;   // Presupuestador 2 (ZC)
+    const canP2 = u?.canUsePresupuestador2 !== false;   // Presupuestador principal (MV)
+    const canDes = puedeDesmontada(u);                  // Presupuestador · Desmontada
+    const destinos = [canP2 && 'p2', canP1 && 'p1', canDes && 'desmontada'].filter(Boolean);
+    if (destinos.length === 0) {
       alert('No tienes ningún presupuestador activo para volcar los muebles.');
       return;
     }
-    if (dumpTarget === 'desmontada' && esMaster) {
-      doDump(productos, 'desmontada', opts);
-      return;
-    }
-    if (esMaster) { setDumpChoice({ productos, opts }); return; }
-    if (dumpTarget && ((dumpTarget === 'p1' && canP1) || (dumpTarget === 'p2' && canP2))) {
+    // La elección recordada, si ese destino le sigue valiendo.
+    if (dumpTarget && destinos.includes(dumpTarget)) {
       doDump(productos, dumpTarget, opts);
       return;
     }
-    if (canP1 && canP2) {
-      setDumpChoice({ productos, opts });  // abre el diálogo de elección
-      return;
-    }
-    doDump(productos, canP2 ? 'p2' : 'p1', opts);
+    // Con más de uno se pregunta; con uno solo no hay nada que elegir.
+    if (destinos.length > 1) { setDumpChoice({ productos, opts }); return; }
+    doDump(productos, destinos[0], opts);
   };
 
   // Añadir UN mueble (botón ✓ de cada fila): silencioso, sin cambiar de pestaña.
@@ -797,22 +810,26 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setDumpChoice(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-black text-slate-900 mb-1">¿A qué presupuestador?</h3>
-            <p className="text-sm text-slate-500 mb-4">Tienes los dos activos. Elige dónde volcar los {dumpChoice.productos.reduce((s, f) => s + (Number(f.cantidad) || 1), 0)} muebles detectados.</p>
+            <p className="text-sm text-slate-500 mb-4">Elige dónde volcar los {dumpChoice.productos.reduce((s, f) => s + (Number(f.cantidad) || 1), 0)} muebles detectados.</p>
             <div className="grid grid-cols-1 gap-2">
-              <button onClick={() => doDump(dumpChoice.productos, 'p2', dumpChoice.opts)}
-                className="w-full px-4 py-3 rounded-xl bg-orange-600 text-white font-black uppercase text-sm hover:bg-orange-700 transition-colors">
-                Presupuestador (principal · MV)
-              </button>
-              <button onClick={() => doDump(dumpChoice.productos, 'p1', dumpChoice.opts)}
-                className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-black uppercase text-sm hover:bg-indigo-700 transition-colors">
-                Presupuestador 2 (ZC)
-              </button>
-              {/* Cocina Desmontada: de momento solo el master, mientras se
-                  afina el emparejamiento con el catálogo de cascos. */}
-              {esMaster && (
+              {/* SOLO los destinos que ese usuario tiene. Un botón que lleva a
+                  una pantalla que no puede abrir es peor que no tenerlo. */}
+              {state?.currentUser?.canUsePresupuestador2 !== false && (
+                <button onClick={() => doDump(dumpChoice.productos, 'p2', dumpChoice.opts)}
+                  className="w-full px-4 py-3 rounded-xl bg-orange-600 text-white font-black uppercase text-sm hover:bg-orange-700 transition-colors">
+                  Presupuestador (principal · MV)
+                </button>
+              )}
+              {state?.currentUser?.canUsePresupuestador1 !== false && (
+                <button onClick={() => doDump(dumpChoice.productos, 'p1', dumpChoice.opts)}
+                  className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-black uppercase text-sm hover:bg-indigo-700 transition-colors">
+                  Presupuestador 2 (ZC)
+                </button>
+              )}
+              {puedeDesmontada(state?.currentUser) && (
                 <button onClick={() => doDump(dumpChoice.productos, 'desmontada', dumpChoice.opts)}
                   className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white font-black uppercase text-sm hover:bg-slate-900 transition-colors">
-                  Cocina Desmontada · cascos
+                  Presupuestador · Desmontada
                 </button>
               )}
               <button onClick={() => setDumpChoice(null)}

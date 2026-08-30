@@ -1251,14 +1251,21 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           >
             <Factory size={12} /> Fabricar
           </button>
+          {/* CREAR PEDIDO ES LA ACCIÓN PRINCIPAL DE ESTA PANTALLA, y hasta el
+              30/08 era un botón de 10 px idéntico a «Fabricar» y a
+              «Presupuesto». Es la ÚNICA de las tres que crea algo que cuenta:
+              entra en la cooperativa, se le asigna comercial y montador, y de
+              ahí sale una comisión. Un presupuesto no se ha vendido. Que la
+              acción que mueve dinero pareciera un control terciario es la razón
+              de que hubiera que preguntar dónde estaba. */}
           <button
             onClick={pasarAPedido}
             disabled={!muebles.length || guardando}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ok-600 hover:bg-ok-700 text-white text-[10px] font-black shadow-sm transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-ok-600 hover:bg-ok-700 text-white text-[11px] font-black shadow-md ring-1 ring-ok-300/50 transition-all disabled:opacity-40"
             title="Crear un PEDIDO con esta relación: cuenta para la cooperativa y genera comisión"
             data-testid="cm3-pasar-a-pedido"
           >
-            {guardando ? <Loader size={12} className="animate-spin" /> : <ShoppingCart size={12} />} Pedido
+            {guardando ? <Loader size={13} className="animate-spin" /> : <ShoppingCart size={13} />} Crear pedido
           </button>
           <button
             onClick={guardarPresupuesto}
