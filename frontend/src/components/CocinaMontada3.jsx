@@ -1064,39 +1064,108 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     }
   };
 
+  /**
+   * GUARDAR EL PRESUPUESTO — Y QUE SE PUEDA RECUPERAR.
+   *
+   * ESTO NO GUARDABA NADA (arreglado el 30/08). Se mandaba a
+   * `POST /api/presupuestos`, que es el endpoint DEL DIGITALIZADOR y espera
+   * otro cuerpo entero: sus campos tienen todos valor por defecto, así que
+   * FastAPI aceptaba el payload de esta pantalla sin quejarse, ignoraba todo lo
+   * que no reconocía —`muebles`, `cliente`, `referencia`, `total`— y grababa un
+   * proyecto VACÍO: cero muebles, sin cliente, sin referencia, total 0 y
+   * `userId: "anonymous"`. Y devolvía 200, así que aquí salía «✓ Presupuesto
+   * guardado con éxito». Cada presupuesto guardado desde esta pantalla era un
+   * registro fantasma, y el trabajo se perdía sin un solo error.
+   *
+   * Ahora va por el MISMO camino que un pedido (`POST /api/cascos/orders`), que
+   * es el que ya funciona: guarda las líneas de verdad, pasa por el permiso de
+   * la sección (regla 22) y se puede volver a listar. Cambia solo el `kind`, y
+   * eso es lo que importa: un `presupuesto` NO cuenta para la cooperativa ni
+   * paga comisión — solo `kind: "pedido"` entra en COOP (regla 21).
+   */
   const guardarPresupuesto = async () => {
     if (!muebles.length) { setAviso('Añade al menos un mueble para guardar.'); return; }
     setGuardando(true); setAviso('');
     try {
       const payload = {
-        id: savedId || `cm3-${Date.now()}`,
+        id: savedId || `cm3-pre-${Date.now()}`,
+        kind: 'presupuesto',
+        origen: 'cocina_montada_3',
         cliente: cliente || 'Cliente General',
-        referencia: ref || 'Proyecto Cocina Montada 3',
-        telefono,
-        tarifa,
-        acabadoPuerta,
-        acabadoCasco,
-        observaciones: observacionesGenerales,
-        descuento: Number(descuento) || 0,
+        ref: ref || '',
+        expediente: ref || '',
         ivaRate: Number(ivaRate) || 21,
-        subtotal: subtotalBruto,
+        descuento: Number(descuento) || 0,
         total: totalPvp,
-        muebles,
-        tipo: 'cocina_montada_3',
-        fecha: new Date().toISOString(),
+        lines: filas.map(m => ({
+          code: m.cod || '',
+          name: m.etiqueta || m.desc || m.cod || '',
+          familia: m.familia || '',
+          quantity: Number(m.qty) || 1,
+          price: (Number(m.pvp) || 0) * (Number(m.qty) || 1),
+          anchoReal: m.anchoReal ?? null,
+          altoReal: m.altoReal ?? null,
+        })),
+        // LO QUE HACE FALTA PARA REABRIRLO TAL CUAL. Las líneas de arriba son
+        // para el resto del ERP; esto es el estado de ESTA pantalla, que si no
+        // habría que reconstruir a ojo — y a ojo se pierden las manos D/I, los
+        // acabados y la tarifa con la que se valoró.
+        cm3: { muebles, telefono, tarifa, acabadoPuerta, acabadoCasco,
+               observaciones: observacionesGenerales },
       };
-      const r = await fetch(`${API_URL}/api/presupuestos`, {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify(payload),
+      const r = await fetch(`${API_URL}/api/cascos/orders`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify(payload),
       });
-      const d = await r.json();
+      const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.detail || 'Error al guardar');
-      setSavedId(d.id || d._id || payload.id);
-      alert('✓ Presupuesto guardado con éxito en el sistema.');
+      setSavedId(d.order?.id || payload.id);
+      alert('✓ Presupuesto guardado. Se recupera con el botón «Presupuestos».');
     } catch (e) {
       setAviso(`No se pudo guardar: ${e.message}`);
     } finally { setGuardando(false); }
   };
+
+  // ─── RECUPERAR UN PRESUPUESTO GUARDADO ───────────────────────────────────
+  const [guardados, setGuardados] = useState(null);   // null = panel cerrado
+  const [cargandoGuardados, setCargandoGuardados] = useState(false);
+
+  const abrirGuardados = async () => {
+    setGuardados([]); setCargandoGuardados(true);
+    try {
+      const r = await fetch(
+        `${API_URL}/api/cascos/orders?kind=presupuesto&userId=${encodeURIComponent(currentUser?.id || '')}`,
+        { headers: authHeaders() });
+      const d = await r.json().catch(() => ([]));
+      if (!r.ok) throw new Error(d.detail || 'No se pudieron leer los presupuestos.');
+      // Solo los de ESTA pantalla: los de Cocina Desmontada se recuperan en la
+      // suya, y sus líneas son cascos, no muebles de tarifa MV.
+      setGuardados((Array.isArray(d) ? d : (d.orders || []))
+        .filter(o => (o.origen || '') === 'cocina_montada_3' || o.cm3));
+    } catch (e) {
+      setAviso(e.message);
+      setGuardados(null);
+    } finally { setCargandoGuardados(false); }
+  };
+
+  const recuperar = (o) => {
+    const c = o.cm3 || {};
+    if (muebles.length && !window.confirm(
+      'Vas a sustituir la relación que tienes ahora en pantalla. ¿Seguimos?')) return;
+    setMuebles(Array.isArray(c.muebles) ? c.muebles : []);
+    setCliente(o.cliente || '');
+    setRef(o.ref || o.expediente || '');
+    setTelefono(c.telefono || '');
+    setDescuento(Number(o.descuento) || 0);
+    setIvaRate(Number(o.ivaRate) || 21);
+    if (c.tarifa) setTarifa(c.tarifa);
+    if (c.acabadoPuerta) setAcabadoPuerta(c.acabadoPuerta);
+    if (c.acabadoCasco) setAcabadoCasco(c.acabadoCasco);
+    setObservacionesGenerales(c.observaciones || '');
+    setSavedId(o.id);            // volver a guardar ACTUALIZA, no duplica
+    setGuardados(null);
+    setAviso('');
+  };
+
 
   const handlersCandado = usePulsacionLarga(() => {
     setVerCoste(v => !v);
@@ -1238,6 +1307,17 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             title="Exportar PDF oficial del presupuesto"
           >
             <Download size={12} /> PDF
+          </button>
+          {/* RECUPERAR LO GUARDADO. Esta pantalla guardaba presupuestos y no
+              tenía por dónde volver a abrirlos: guardar sin poder recuperar es
+              no guardar. */}
+          <button
+            onClick={abrirGuardados}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[10px] font-bold transition-all text-white"
+            title="Abrir un presupuesto guardado"
+            data-testid="cm3-abrir-presupuestos"
+          >
+            <FolderOpen size={12} /> Presupuestos
           </button>
         </div>
 
@@ -2181,6 +2261,54 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       )}
 
       {/* Modal de revisión de muebles parseados desde PDF de Relación o Alvic */}
+      {guardados !== null && (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4"
+             onClick={() => setGuardados(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
+               onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h3 className="text-base font-black text-slate-900">Presupuestos guardados</h3>
+              <p className="text-xs text-dato-500 mt-0.5">
+                Se abre tal como se guardó: muebles, acabados y tarifa.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
+              {cargandoGuardados ? (
+                <p className="text-sm text-dato-500 flex items-center gap-2 p-4">
+                  <Loader size={15} className="animate-spin" /> Cargando…
+                </p>
+              ) : guardados.length === 0 ? (
+                <p className="text-sm text-dato-500 p-4 text-center">
+                  Todavía no hay ninguno guardado.
+                </p>
+              ) : guardados.map(o => (
+                <button
+                  key={o.id}
+                  onClick={() => recuperar(o)}
+                  className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 border border-slate-100 mb-2"
+                >
+                  <span className="block font-black text-sm text-slate-800">
+                    {o.cliente || 'Sin cliente'}
+                  </span>
+                  <span className="block text-xs text-dato-500">
+                    {o.ref || 'sin referencia'}
+                    {' · '}
+                    {(o.cm3?.muebles?.length || o.lines?.length || 0)} línea(s)
+                    {o.createdAt ? ` · ${String(o.createdAt).slice(0, 10)}` : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-slate-200 flex justify-end">
+              <button onClick={() => setGuardados(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {relacionRevisar && (
         <RelacionReview
           muebles={relacionRevisar}

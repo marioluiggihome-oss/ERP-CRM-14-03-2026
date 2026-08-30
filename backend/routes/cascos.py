@@ -48,7 +48,7 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
         now = datetime.now(timezone.utc).isoformat()
         existing = await _get_db().cascos_orders.find_one(
             {"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1, "origen": 1,
-                          "comercialUserId": 1, "montadorUserId": 1})
+                          "comercialUserId": 1, "montadorUserId": 1, "cm3": 1})
         # Al re-guardar por id, comprobar propiedad (evita pisar el pedido de otro).
         if existing and not _can_access(existing, current_user):
             raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
@@ -82,6 +82,23 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "createdAt": (existing or {}).get("createdAt") or now,
             "updatedAt": now,
         }
+        # EL ESTADO DE COCINA MONTADA 3, para poder REABRIR su presupuesto tal
+        # como se guardó: los muebles con sus manos D/I, los acabados y la
+        # tarifa con la que se valoró. Las `lines` de arriba son lo que el resto
+        # del ERP entiende; esto es lo que necesita ESA pantalla, y sin ello
+        # recuperar un presupuesto sería reconstruirlo a ojo.
+        #
+        # SE RESPALDA, como el origen y por lo mismo (regla 12): esto se escribe
+        # con un `$set` del documento entero, así que un guardado que no lo
+        # traiga —otra pantalla tocando el mismo id— lo borraría, y el
+        # presupuesto se quedaría sin poder abrirse.
+        #
+        # NO SALE POR NINGUNA RUTA NUEVA: COOP lee `lines` y las recorta por
+        # lista blanca (`CAMPOS_DE_LA_LINEA_DEL_PEDIDO`), así que esto solo lo
+        # ve quien ya puede abrir el pedido entero.
+        _cm3 = payload.get("cm3")
+        if isinstance(_cm3, dict) or (existing or {}).get("cm3"):
+            doc["cm3"] = _cm3 if isinstance(_cm3, dict) else (existing or {}).get("cm3")
         # Y AHORA, EL PERMISO DE LA SECCIÓN (regla 22). Va aquí y no antes
         # porque hasta tener el `origen` definitivo —el de la petición o, si no
         # viene, el que ya tenía el pedido— no se sabe de qué pestaña es.

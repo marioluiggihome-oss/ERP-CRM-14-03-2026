@@ -447,3 +447,76 @@ def test_LA_PANTALLA_NO_DA_POR_BORRADO_LO_QUE_EL_SERVIDOR_RECHAZA():
             "base de datos y de la pantalla desaparece igual")
         assert "catch {}" not in trozo.replace(" ", ""), (
             f"`{fichero}` se traga el error del borrado en silencio")
+
+
+# ── 7. GUARDAR UN PRESUPUESTO DE MONTADA, Y PODER RECUPERARLO ───────────────
+#
+# El master, 30/08: «¿cómo recupero los presupuestos guardados?». No se podían:
+# no había por dónde. Y al mirarlo salió algo peor — no se estaban guardando.
+#
+# «Guardar presupuesto» de Cocina Montada 3 mandaba a `POST /api/presupuestos`,
+# que es el endpoint DEL DIGITALIZADOR. Sus campos tienen todos valor por
+# defecto, así que FastAPI aceptaba el payload sin quejarse, ignoraba todo lo
+# que no reconocía —`muebles`, `cliente`, `referencia`, `total`— y grababa un
+# proyecto VACÍO con `userId: "anonymous"`. Devolvía 200, y la pantalla decía
+# «✓ Presupuesto guardado con éxito». Cada presupuesto guardado desde esa
+# pantalla era un registro fantasma y el trabajo se perdía sin un solo error.
+
+def test_MONTADA_GUARDA_POR_EL_CAMINO_QUE_SI_GUARDA():
+    """Por `/api/cascos/orders`, el mismo que ya funciona para los pedidos."""
+    jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CocinaMontada3.jsx"))
+    i = jsx.index("const guardarPresupuesto")
+    trozo = jsx[i:jsx.index("\n  };", i)]
+    assert "/api/presupuestos" not in trozo, (
+        "«Guardar presupuesto» ha vuelto al endpoint del Digitalizador: acepta "
+        "el payload, tira los muebles y responde 200")
+    assert "/api/cascos/orders" in trozo, "no guarda por el camino que sí guarda"
+    assert "kind: 'presupuesto'" in trozo, (
+        "se está guardando como PEDIDO: contaría para la cooperativa y pagaría "
+        "comisión por algo que todavía no se ha vendido (regla 21)")
+    assert "lines:" in trozo, "no manda las líneas: se guardaría vacío otra vez"
+
+
+def test_UN_PRESUPUESTO_NO_CUENTA_PARA_LA_COOPERATIVA():
+    """Solo `kind: "pedido"` entra en la nómina. Un presupuesto no se ha vendido."""
+    import services.origen_pedidos as _OP
+    assert _OP.KIND_PEDIDO == "pedido"
+    coop = _lee(COOP)
+    assert "OP.KIND_PEDIDO" in coop, (
+        "COOP ha dejado de filtrar por `kind`: los presupuestos entrarían en la "
+        "liquidación y pagarían comisión por algo no vendido")
+
+
+def test_EL_ESTADO_DE_LA_PANTALLA_SE_GUARDA_Y_SE_RESPALDA():
+    """Sin `cm3` no se puede reabrir: habría que reconstruirlo a ojo.
+
+    Y va respaldado por lo mismo que el origen y las medidas (regla 12): se
+    escribe con un `$set` del documento entero, así que un guardado que no lo
+    traiga lo borraría y el presupuesto se quedaría sin poder abrirse.
+    """
+    cuerpo = _lee(os.path.join(BACKEND, "routes", "cascos.py"))
+    i = cuerpo.index('@router.post("/cascos/orders")')
+    j = cuerpo.index("@router", i + 10)
+    trozo = cuerpo[i:j]
+    assert 'doc["cm3"]' in trozo, (
+        "el estado de Cocina Montada 3 no se guarda: el presupuesto no se "
+        "podría volver a abrir")
+    assert '(existing or {}).get("cm3")' in trozo, (
+        "no se respalda: un re-guardado que no lo traiga lo borraría")
+    assert '"cm3": 1' in trozo, (
+        "no se lee lo que ya había, así que el respaldo daría siempre vacío")
+
+
+def test_SE_PUEDE_RECUPERAR_DESDE_LA_PANTALLA():
+    """Guardar sin poder recuperar es no guardar."""
+    jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CocinaMontada3.jsx"))
+    assert "cm3-abrir-presupuestos" in jsx, (
+        "no hay botón para abrir un presupuesto guardado")
+    assert "kind=presupuesto" in jsx, "el listado no pide los presupuestos"
+    assert "const recuperar" in jsx and "setMuebles(" in jsx, (
+        "no se restauran los muebles al recuperar")
+    i = jsx.index("const recuperar")
+    trozo = jsx[i:jsx.index("\n  };", i)]
+    assert "setSavedId(o.id)" in trozo, (
+        "al recuperar no se conserva el id: volver a guardar crearía un "
+        "duplicado en vez de actualizar el mismo presupuesto")
