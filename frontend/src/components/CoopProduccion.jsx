@@ -297,23 +297,38 @@ function Fila({ p, alBorrar }) {
  * sin poder ver por qué es lo que hace pensar que a uno le están quitando.
  */
 function Contenido({ d }) {
-  if (d.sinDesglose) {
-    return (
-      <p className="text-xs text-dato-500">
-        Este pedido no guarda sus líneas, así que no se sabe qué lleva. No es
-        «cero muebles»: es que no consta.
-      </p>
-    );
-  }
+  // NO SE SABE NO ES CERO (regla 7). Son dos casos distintos y los dos acaban
+  // aquí: un pedido sin líneas, y uno cuyas líneas no se han podido clasificar
+  // —los cascos de Cocina Desmontada no traen familia del catálogo—. En los dos
+  // la comisión no cuenta nada, y decir «0 muebles» haría pensar que la
+  // comisión es cero de verdad en vez de que falta el dato.
+  const sinLineas = !d.lineas?.length;
   return (
     <div>
+      {sinLineas && (
+        <p className="text-xs text-dato-500">
+          Este pedido no guarda sus líneas, así que no se sabe qué lleva. No es
+          «cero muebles»: es que no consta.
+        </p>
+      )}
+      {!sinLineas && (
+      <>
       <div className="flex flex-wrap gap-3 text-[11px] mb-2">
         <span className="flex items-center gap-1 font-black text-dato-700">
           <Package size={12} /> {d.lineas.length} línea{d.lineas.length === 1 ? '' : 's'}
         </span>
         <span className="text-dato-600">{d.unidades} unidades</span>
-        <span className="text-dato-600">{d.muebles} muebles</span>
+        <span className={d.sinDesglose ? 'text-aviso-700 font-bold' : 'text-dato-600'}>
+          {d.sinDesglose ? '? muebles' : `${d.muebles} muebles`}
+        </span>
       </div>
+      {d.sinDesglose && (
+        <p className="text-[11px] text-aviso-800 bg-aviso-50 border border-aviso-200 rounded-lg px-2 py-1.5 mb-2">
+          Ninguna línea trae familia del catálogo, así que no se puede saber
+          cuáles cuentan como mueble. <b>Este pedido no paga comisión</b> hasta
+          que se sepa — no es que sea cero, es que falta el dato.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-[12px]">
           <thead>
@@ -356,6 +371,8 @@ function Contenido({ d }) {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }

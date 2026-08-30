@@ -285,6 +285,21 @@ def contenido_de(pedido: dict, familias: Optional[dict] = None) -> dict:
     p = pedido or {}
     crudas = p.get("items") or p.get("lines") or p.get("lineas") or []
     lineas = [linea_de_pedido(l, familias) for l in crudas]
+
+    # «NO SE SABE» NO ES «CERO», Y EL CRITERIO NO SE ESCRIBE AQUÍ.
+    #
+    # Si NINGUNA línea se ha podido clasificar, este pedido no lleva «0
+    # muebles»: es que no se sabe lo que lleva, y eso se rotula «?» (regla 7).
+    # Un 0 parece un dato y hace pensar que la comisión es cero de verdad.
+    #
+    # Se lo pregunta a `comisiones`, que es quien lo decide para la nómina. La
+    # primera versión de esto usaba su propio criterio —«sin desglose» solo si
+    # no había NI UNA línea— y con un pedido de Cocina Desmontada, cuyas líneas
+    # no traen familia, la pantalla decía «0 muebles» mientras la liquidación
+    # decía «no consta». El mismo pedido, dos respuestas, y ninguna parecía un
+    # error.
+    b = C.base_de_comision([dict(l, familia=l["familia"]) for l in lineas])
+    sin_desglose = (not lineas) or (b["sinClasificar"] >= b["lineas"] > 0)
     return {
         "pedidoId": p.get("id") or "",
         "referencia": (p.get("budgetNumber") or p.get("ref") or ""),
@@ -293,5 +308,5 @@ def contenido_de(pedido: dict, familias: Optional[dict] = None) -> dict:
         "lineas": lineas,
         "unidades": sum(l["unidades"] for l in lineas),
         "muebles": sum(l["unidades"] for l in lineas if l["esMueble"]),
-        "sinDesglose": not lineas,
+        "sinDesglose": sin_desglose,
     }

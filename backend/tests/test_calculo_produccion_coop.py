@@ -594,3 +594,67 @@ def test_COOP_VA_CON_ERRORBOUNDARY():
     trozo = app[max(0, i - 300):i + 60]
     assert "<ErrorBoundary><CoopPanel" in trozo, (
         "COOP se pinta sin ErrorBoundary: un fallo dentro tumba la aplicación")
+
+
+# ── 9. «NO SE SABE» NO ES «CERO», Y LO DICEN LOS DOS IGUAL ─────────────────
+#
+# El master, 30/08, viendo un pedido de Cocina Desmontada: «¿qué es la familia?».
+# Las cinco líneas salían «— (no cuenta)» y el pedido «0 muebles» — 9 cascos de
+# verdad que no pagan comisión.
+#
+# Y ahí se vio un fallo mío: la PANTALLA decía «0 muebles» y el cálculo de la
+# comisión decía «no consta». El mismo pedido, dos respuestas, y ninguna parecía
+# un error. La pantalla usaba su propio criterio de «sin desglose» —solo si no
+# había NI UNA línea— en vez del que decide la nómina.
+
+_SIN_FAMILIA = [
+    {"tipo": "Alto Con Balda", "ancho": 600, "alto": 900, "fondo": 330, "qty": 3},
+    {"tipo": "Bajo Fregadero", "ancho": 600, "alto": 800, "fondo": 580, "qty": 1},
+]
+
+
+def test_UN_PEDIDO_QUE_NO_SE_PUEDE_CLASIFICAR_NO_LLEVA_CERO_MUEBLES():
+    """Un 0 parece un dato: haría pensar que la comisión es cero de verdad,
+    cuando lo que pasa es que falta la familia."""
+    d = EF.contenido_de({"id": "b", "items": _SIN_FAMILIA})
+    assert d["sinDesglose"] is True, (
+        "un pedido cuyas líneas no se pueden clasificar sale como «0 muebles» "
+        "en vez de «?»")
+    assert d["unidades"] == 4, "las unidades SÍ se saben: son 4 cascos"
+
+
+def test_LA_PANTALLA_Y_LA_NOMINA_DICEN_LO_MISMO():
+    """Es el candado de verdad de este apartado: el criterio vive en UN sitio.
+
+    Si se separan, la pantalla explica una cosa y la liquidación paga otra —y
+    quien mira COOP para decidir a quién pagar se fía de la pantalla.
+    """
+    from services import area_cooperativista as _AC
+    for pedido in ({"id": "a", "items": _SIN_FAMILIA},
+                   {"id": "b", "items": []},
+                   {"id": "c", "items": [{"code": "B60D", "familia": "BAJO",
+                                          "quantity": 2}]},
+                   {"id": "d", "items": [{"code": "B60D", "familia": "BAJO",
+                                          "quantity": 2}] + _SIN_FAMILIA}):
+        pantalla = EF.contenido_de(pedido)["sinDesglose"]
+        nomina = _AC.normaliza_pedido(pedido)["sinDesglose"]
+        assert pantalla == nomina, (
+            f"pedido {pedido['id']}: la pantalla dice sinDesglose={pantalla} y "
+            f"la nómina {nomina}. El mismo pedido, dos respuestas")
+
+
+def test_SI_ALGO_SE_SABE_NO_ES_SIN_DESGLOSE():
+    """Con una línea clasificada y otra no, sí se puede contar: se cuenta lo que
+    se sabe y se marca lo que no, en vez de tirar el pedido entero a «?»."""
+    d = EF.contenido_de({"id": "m", "items": [
+        {"code": "B60D", "familia": "BAJO", "quantity": 2}] + _SIN_FAMILIA})
+    assert d["sinDesglose"] is False and d["muebles"] == 2
+
+
+def test_LA_PANTALLA_ROTULA_LA_INTERROGACION_Y_DICE_POR_QUE():
+    jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopProduccion.jsx"))
+    assert "'? muebles'" in jsx, (
+        "la pantalla sigue pintando un 0 donde no se sabe")
+    assert "no paga comisión" in jsx, (
+        "no se dice la consecuencia: quien lo mira tiene que saber que ese "
+        "pedido no le paga a nadie hasta que se sepa la familia")
