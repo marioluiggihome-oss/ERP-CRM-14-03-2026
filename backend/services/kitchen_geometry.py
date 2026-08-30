@@ -99,6 +99,47 @@ def es_alto(elem_id: str, label: str = "") -> bool:
 ANCHO_FIJO = {
     "lavavajillas": 60, "horno": 60, "microondas": 60, "columna_hornos": 60,
     "frigorifico": 60, "congelador": 60, "vinoteca": 60, "placa": 60, "campana": 60,
+    # LA LAVADORA FALTABA, y una lavadora mide 60 como la que más. Al no estar
+    # aquí se trataba como un mueble FLEXIBLE, o sea que se estiraba y se
+    # encogía para cuadrar la pared: en la cocina del 30/08 salió dibujada de
+    # 50. Un electrodoméstico no cambia de tamaño porque falte sitio.
+    "lavadora": 60, "secadora": 60, "lavasecadora": 60,
+}
+
+# QUÉ ANCHOS EXISTEN DE VERDAD PARA CADA APARATO.
+#
+# `ANCHO_FIJO` dice lo que mide uno CUANDO NADIE HA DICHO NADA. Esta tabla dice
+# algo distinto y hacía falta: cuáles de los anchos que puede traer un diseño son
+# medidas REALES de ese aparato.
+#
+# Sin ella había que elegir entre dos males, y los dos se han visto:
+#   · Hacer caso siempre al diseño → una placa «de 80» (que no existe: son 60 o
+#     90) se dibujaba y se pedía.
+#   · No hacerle caso nunca → la placa de 90 del master salía de 60, y los 30 cm
+#     sobrantes estiraban el mueble de al lado.
+#
+# Con la tabla: si el ancho del diseño es uno de los que existen, MANDA EL
+# DISEÑO; si no, se cae al de catálogo y SE DICE en los avisos. Son medidas de
+# fabricación, no una preferencia.
+# SOLO LOS ANCHOS QUE NO ADMITEN DUDA. La lista es corta a propósito: cada
+# entrada de más es un ancho que se acepta del diseño sin comprobarlo, y una
+# estimación floja de la IA («placa de 70») se colaría como si fuera un dato.
+# Con la lista corta, esa cae al de catálogo y se avisa; la placa de 90 —que
+# existe y es corriente— se respeta. Añadir un ancho aquí es una decisión de
+# fabricación: se consulta antes.
+ANCHOS_APARATO = {
+    "placa": (30, 45, 60, 90),         # domino, la de siempre y la de 90
+    "campana": (60, 90, 120),
+    "lavavajillas": (45, 60),          # el de 45 es el estrecho de toda la vida
+    "lavadora": (60,),
+    "secadora": (60,),
+    "lavasecadora": (60,),
+    "horno": (60,),
+    "microondas": (60,),
+    "columna_hornos": (60,),
+    "frigorifico": (60, 90, 120),      # el de 120 es el side by side
+    "congelador": (60,),
+    "vinoteca": (15, 30, 60),
 }
 
 
@@ -442,7 +483,43 @@ def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
             # DICHO NADA. En cuanto alguien lo dice, manda quien lo dijo.
             e["anchoFijo"] = True
         elif e["id"] in ANCHO_FIJO:
-            e["ancho"] = ANCHO_FIJO[e["id"]]
+            # `ANCHO_FIJO` es lo que mide un electrodoméstico CUANDO NADIE HA
+            # DICHO NADA. Eso estaba escrito aquí arriba... y no era lo que
+            # hacía el código: pisaba el ancho AUNQUE VINIERA EN LA
+            # DISTRIBUCIÓN, y solo respetaba el que traía la marca
+            # `medida_escrita` (una cota leída del plano).
+            #
+            # Un ancho que llega en el elemento YA ES ALGUIEN DICIÉNDOLO: lo ha
+            # leído el detector del diseño del master, o lo ha tecleado él en el
+            # panel. Pisarlo hacía que el alzado no fuera su cocina, y por dos
+            # sitios a la vez: la placa de 90 salía de 60, y esos 30 cm
+            # sobrantes ESTIRABAN el mueble de al lado —una cajonera de 90 se
+            # dibujaba de 120—. Dos módulos mal por cada aparato.
+            #
+            # Ahora el catálogo solo entra cuando de verdad no hay dato. Y si lo
+            # que viene no es una medida de catálogo, se DICE en los avisos en
+            # vez de corregirlo por detrás: una placa de 90 existe, y si alguien
+            # ha escrito 47 hay que enterarse, no taparlo.
+            _reales = ANCHOS_APARATO.get(e["id"], ())
+            if e.get("ancho_desconocido"):
+                e["ancho"] = ANCHO_FIJO[e["id"]]
+            elif _reales and e["ancho"] not in _reales:
+                # Ese ancho no existe en ese aparato: casi seguro es una lectura
+                # floja del diseño. Se cae al de catálogo Y SE DICE — corregir
+                # por detrás es como se cuela una medida inventada en un plano
+                # que va a fábrica.
+                avisos.append(
+                    f"«{e['label']}»: {e['ancho']:g} cm no es un ancho real de ese "
+                    f"aparato (los hay de {', '.join(str(a) for a in _reales)}). "
+                    f"Se dibuja con {ANCHO_FIJO[e['id']]} cm; confírmalo antes de pedir.")
+                e["ancho"] = ANCHO_FIJO[e["id"]]
+            elif e["ancho"] != ANCHO_FIJO[e["id"]]:
+                # Existe, pero no es el corriente (una placa de 90, un side by
+                # side de 120). Manda el diseño y se deja constancia.
+                avisos.append(
+                    f"«{e['label']}»: se dibuja con los {e['ancho']:g} cm del "
+                    f"diseño (el más corriente de ese aparato es "
+                    f"{ANCHO_FIJO[e['id']]} cm). Confírmalo antes de pedir.")
             e["anchoFijo"] = True
     fijos = [e for e in grupo if e.get("anchoFijo")]
     flex = [e for e in grupo if not e.get("anchoFijo")]

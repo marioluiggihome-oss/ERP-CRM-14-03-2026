@@ -1577,6 +1577,18 @@ async def generar_alzado(payload: ProyectoBase):
         HOB = {"placa", "cocina", "vitroceramica", "vitro", "induccion", "placa_induccion", "coccion", "vitroceramicamica"}
         DRAWERS = {"cajonera", "cajones", "gavetas", "cajon", "gaveta", "cacerolero", "cubertero"}
         SINK = {"fregadero", "seno", "lavabo"}
+        # ELECTRODOMÉSTICOS. Van en HUECO, SIN CASCO (CLAUDE.md, regla 6), así
+        # que no son muebles: no llevan puerta nuestra, ni bisagras, ni tirador.
+        # Se dibujaban como un bajo cualquiera, con su aspa de puerta y contando
+        # herraje — o sea que el plano enseñaba una cocina que no es la del
+        # diseño, y además pedía bisagras para una lavadora.
+        ELECTRO = {"lavadora", "secadora", "lavasecadora", "horno", "microondas_bajo",
+                   "congelador_bajo", "frigorifico_bajo", "vinoteca"}
+        # EL LAVAVAJILLAS ES CASO APARTE, y lo dice la regla 6: es
+        # electrodoméstico —va en hueco, sin casco— PERO su puerta de
+        # integración es MATERIAL NUESTRO. Así que se dibuja como aparato y su
+        # frente sí cuenta como puerta.
+        LAVAVAJILLAS = {"lavavajillas", "lavaplatos", "lavavajilla"}
 
         def _frentes_gavetas(body_h, label_tipo):
             """Alturas (cm) de los frentes de una cajonera, de arriba abajo.
@@ -1764,7 +1776,7 @@ async def generar_alzado(payload: ProyectoBase):
                 _texto_vertical(ax, x + w / 2, cy, txt, ENC_Y - ZOC_Y)
             # Por debajo de 22 cm no cabe ni girado: lo dice la cota, no la etiqueta.
 
-        herr = {"puertas": 0, "cajones": 0}  # recuento de herraje para el resumen
+        herr = {"puertas": 0, "cajones": 0, "electro": 0}  # recuento para el resumen
         propuestos = 0   # altos DERIVADOS: se dibujan, pero no se piden
         for idx, (ax, pared) in enumerate(zip(axes, paredes)):
             ancho = int(pared.get("ancho") or 400)
@@ -1875,11 +1887,50 @@ async def generar_alzado(payload: ProyectoBase):
                     # menos. `_texto_modulo` ya decide gira/no gira por el ancho.
                     _texto_modulo(ax, x, w, (ZOC_Y + ENC_Y) / 2, label)
                 else:
-                    wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
+                    wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
+                    _es_electro = tipo in ELECTRO or tipo in LAVAVAJILLAS
+                    # EL ASPA ES UNA PUERTA. No se pinta sobre lo que no la
+                    # tiene: ni sobre la placa —que va apoyada en la encimera— ni
+                    # sobre un electrodoméstico, que va en hueco. Un aparato con
+                    # aspa de puerta es lo que hacía que el alzado no se
+                    # pareciera a la cocina.
+                    if tipo not in HOB and not _es_electro:
+                        puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
+                    elif _es_electro:
+                        # El aparato: su frente, con el hueco marcado alrededor.
+                        _m = min(4, w * 0.08)
+                        ax.add_patch(patches.Rectangle(
+                            (x + _m, ZOC_Y + 3), w - 2 * _m, (ENC_Y - ZOC_Y) - 8,
+                            fill=False, edgecolor=C_LINE, linewidth=0.9, zorder=3))
+                        # el mando/tirador del propio aparato, que es suyo y no
+                        # se pide al proveedor de muebles
+                        ax.plot([x + _m + 3, x + w - _m - 3],
+                                [ENC_Y - 9, ENC_Y - 9], color=C_LINE, lw=1.2, zorder=3)
                     _txt = f"{label}\n{w}×{ENC_Y - ZOC_Y}" if _con_cotas else label
                     _texto_modulo(ax, x, w, (ZOC_Y + ENC_Y) / 2, _txt)
-                    # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción).
-                    if tipo not in HOB:
+                    # EL FREGADERO SE DIBUJA. `SINK` llevaba definido desde el
+                    # principio y no lo usaba nadie: el mueble del fregadero
+                    # salía como un armario cualquiera, sin seno ni grifo. En un
+                    # alzado de cocina eso es lo primero que se echa en falta.
+                    if tipo in SINK or "fregader" in label.lower():
+                        _sw = min(w - 12, 56)
+                        _sx = x + (w - _sw) / 2
+                        ax.add_patch(patches.Rectangle((_sx, ENC_TOP - 1), _sw, 7,
+                                                       fill=False, edgecolor=C_LINE,
+                                                       linewidth=1.1, zorder=5))
+                        ax.plot([_sx + _sw / 2, _sx + _sw / 2], [ENC_TOP + 6, ENC_TOP + 20],
+                                color=C_LINE, lw=1.3, zorder=5)          # caño del grifo
+                        ax.plot([_sx + _sw / 2, _sx + _sw / 2 + 9], [ENC_TOP + 20, ENC_TOP + 20],
+                                color=C_LINE, lw=1.3, zorder=5)
+                    # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción
+                    # y salvo electrodoméstico, que trae el suyo puesto).
+                    if tipo in ELECTRO:
+                        # Va en hueco y trae su propio frente: no se le pide
+                        # herraje al proveedor de muebles. Se cuenta aparte para
+                        # decirlo en el pie del plano, que es lo que evita la
+                        # sorpresa: «¿y la puerta de la lavadora?».
+                        herr["electro"] += 1
+                    if tipo not in HOB and tipo not in ELECTRO:
                         # Igual que en los altos: las hojas las manda el ancho.
                         _hojas = hojas_de(w)
                         for _i in range(_hojas):
@@ -2039,6 +2090,13 @@ async def generar_alzado(payload: ProyectoBase):
         if propuestos:
             resumen += (f"   |   + {propuestos} alto(s) PROPUESTO(S) sin confirmar "
                         f"(no incluidos en el herraje)")
+        # LOS ELECTRODOMÉSTICOS NO LLEVAN HERRAJE NUESTRO (regla 6: van en hueco,
+        # sin casco). Se dicen para que se vea que están contados como aparatos y
+        # no olvidados — el lavavajillas SÍ suma, porque su puerta de integración
+        # es material nuestro, y esa es justo la excepción que se olvida.
+        if herr["electro"]:
+            resumen += (f"   |   {herr['electro']} electrodoméstico(s) en hueco "
+                        f"(sin herraje de mueble)")
         fig.text(0.5, 0.005, resumen, ha="center", va="bottom", fontsize=8.5,
                  color=C_HERRAJE, fontweight="bold",
                  bbox=dict(boxstyle="round,pad=0.4", fc="#F3F1EC", ec=C_HERRAJE, lw=0.8))

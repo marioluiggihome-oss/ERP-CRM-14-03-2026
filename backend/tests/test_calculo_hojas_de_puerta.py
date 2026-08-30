@@ -133,3 +133,78 @@ def test_LA_COLUMNA_SIGUE_CONTANDO_SUS_DOS_PUERTAS():
         cuerpo = f.read()
     assert 'herr["puertas"] += 2' in cuerpo, (
         "la columna ha dejado de contar sus dos puertas")
+
+
+# ─── EL DIBUJO TIENE QUE SER LA COCINA ──────────────────────────────────────
+#
+# El master, 30/08: «lo de poner medidas me refiero al dibujo que hace, que no
+# cuadra con el diseño». Y no cuadraba, por tres sitios: la placa y los
+# electrodomésticos salían dibujados como armarios con su aspa de puerta, y el
+# fregadero salía sin fregadero.
+
+def _fuente():
+    with open(RUTA, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def _cuerpo_de(nombre_conjunto):
+    """El conjunto de tipos, leído del fichero."""
+    import re
+    m = re.search(rf"^\s+{nombre_conjunto} = \{{(.+?)\}}", _fuente(), re.S | re.M)
+    assert m, f"ya no existe el conjunto {nombre_conjunto}"
+    return {t.strip().strip('"\'') for t in m.group(1).split(",")
+            if t.strip() and not t.strip().startswith("#")}
+
+
+def test_LOS_ELECTRODOMESTICOS_NO_SON_MUEBLES():
+    """Regla 6: van en HUECO, SIN CASCO. Se dibujaban como un bajo cualquiera,
+    con aspa de puerta, y encima pedían bisagras para una lavadora."""
+    electro = _cuerpo_de("ELECTRO")
+    for aparato in ("lavadora", "secadora", "horno"):
+        assert aparato in electro, f"«{aparato}» sigue tratándose como un mueble"
+    fuente = _fuente()
+    assert "tipo not in HOB and tipo not in ELECTRO" in fuente, (
+        "los electrodomésticos vuelven a contar puerta y tirador de mueble")
+
+
+def test_EL_LAVAVAJILLAS_ES_LA_EXCEPCION_DE_LA_REGLA_6():
+    """«Lavavajillas = electrodoméstico. Su puerta de integración = material
+    nuestro» (CLAUDE.md, regla 6). Se dibuja como aparato, pero su frente SÍ
+    cuenta: es la excepción que más fácil se olvida."""
+    lv = _cuerpo_de("LAVAVAJILLAS")
+    assert "lavavajillas" in lv
+    assert "lavavajillas" not in _cuerpo_de("ELECTRO"), (
+        "el lavavajillas ha caído en la lista de los que NO llevan puerta "
+        "nuestra: su puerta de integración es material de la casa y se dejaría "
+        "de pedir")
+
+
+def test_EL_ASPA_DE_PUERTA_NO_SE_PINTA_SOBRE_LO_QUE_NO_LA_TIENE():
+    """Una placa va apoyada en la encimera y un aparato va en hueco: ninguno
+    tiene puerta. El aspa encima es lo que hacía que el alzado no se pareciera
+    a la cocina."""
+    fuente = _fuente()
+    assert "if tipo not in HOB and not _es_electro:" in fuente, (
+        "el aspa de puerta se vuelve a pintar sobre la placa o sobre un "
+        "electrodoméstico")
+
+
+def test_EL_FREGADERO_SE_DIBUJA():
+    """`SINK` estaba definido desde el principio y NO LO USABA NADIE: el mueble
+    del fregadero salía como un armario, sin seno ni grifo. En un alzado de
+    cocina es lo primero que se echa en falta."""
+    fuente = _fuente()
+    assert "SINK = {" in fuente, "ha desaparecido la lista de tipos de fregadero"
+    assert "tipo in SINK" in fuente, (
+        "`SINK` vuelve a estar definido y sin usar: el fregadero se dibuja como "
+        "un armario cualquiera")
+
+
+def test_EL_PIE_DEL_PLANO_DICE_LO_QUE_NO_HA_CONTADO():
+    """Lo mismo que ya se hacía con los altos propuestos: si algo queda fuera
+    del herraje, se dice — o alguien pregunta en la obra por la puerta de la
+    lavadora."""
+    fuente = _fuente()
+    assert 'herr["electro"] += 1' in fuente
+    assert "sin herraje de mueble" in fuente, (
+        "el pie del plano ya no avisa de los electrodomésticos que van en hueco")
