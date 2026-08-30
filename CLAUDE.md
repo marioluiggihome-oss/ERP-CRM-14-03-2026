@@ -55,6 +55,17 @@ Muebles (catálogo MV / cascos ACB de este proyecto):
 | Fondo bajos | ~580 |
 | Anchos estándar (cm) | 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120 |
 
+**UN MUEBLE ANCHO LLEVA DOS PUERTAS, Y DE AHÍ SALE EL HERRAJE.** El corte no se
+inventa: en la tarifa MV los códigos con sufijo `D/I` —una puerta, derecha o
+izquierda— llegan hasta **60**; de 60 en adelante van SIN `D/I`, que es como MV
+escribe los de dos. En el 60 clavado existen los dos y manda el de una hoja.
+Importa porque de ese recuento salen las BISAGRAS (2 por puerta) y los TIRADORES
+que se piden al proveedor: hasta el 30/08 el alzado contaba una puerta por
+mueble fuera del ancho que fuera, así que un frente de 100 pedía la mitad del
+herraje — en la cocina que lo destapó, 4 bisagras y 2 tiradores de menos. Un
+herraje corto no da ningún error: se ve con el montador ya en la obra. Candado:
+`test_calculo_hojas_de_puerta.py`.
+
 **EL ESCALÓN DE LA TARIFA NO ES LA MEDIDA.** En costados, laterales y regletas,
 el «hasta 70 / hasta 90» de la tarifa MV decide lo que CUESTA la pieza; el ancho
 y el alto reales son lo que se fabrica, se escriben aparte y viajan con el

@@ -1635,9 +1635,43 @@ async def generar_alzado(payload: ProyectoBase):
             ax.add_patch(patches.Rectangle((x, y), w, h, fill=False, edgecolor=C_LINE,
                                            linewidth=lw, linestyle="--" if dash else "-", zorder=3))
 
+        def hojas_de(w):
+            """Cuántas PUERTAS lleva un mueble de ese ancho. Sale de la tarifa MV.
+
+            No es una regla inventada: en `mv_tarifas_oficiales.json`, los códigos
+            con sufijo `D/I` —los de UNA puerta, derecha o izquierda— llegan
+            hasta 60 en BAJO, ALTO, BAJO_FREGADERO, BAJO_PUERTA_CAJON,
+            ALTO_VITRINA y COLUMNA_DESPENSERO. De 60 en adelante los códigos van
+            SIN `D/I`, que es como MV escribe los de DOS puertas (CLAUDE.md,
+            «Nomenclatura MV»). En el 60 clavado existen los dos, y se toma el de
+            una hoja, que es el corriente.
+
+            POR QUÉ IMPORTA, Y NO ES UN DETALLE DE DIBUJO: de este recuento salen
+            las BISAGRAS y los TIRADORES que se piden al proveedor. Contando una
+            puerta por mueble, un frente de 100 pedía la mitad del herraje — y un
+            herraje corto no se ve hasta que el montador está en la obra.
+            """
+            try:
+                return 2 if float(w or 0) > 60 else 1
+            except (TypeError, ValueError):
+                return 1
+
         def puerta_x(ax, x, y, w, h):
-            ax.plot([x, x + w], [y, y + h], color=C_LINE, lw=0.5, ls=":", zorder=3)
-            ax.plot([x, x + w], [y + h, y], color=C_LINE, lw=0.5, ls=":", zorder=3)
+            """El aspa de una puerta. Un mueble ancho lleva DOS hojas, no una.
+
+            Se dibujaba un aspa sola de lado a lado, así que un bajo fregadero de
+            100 salía como una puerta de un metro. Eso no existe: se ve mal a
+            primera vista y es justo lo que hacía dudar del plano entero.
+            """
+            hojas = hojas_de(w)
+            wh = w / hojas
+            for i in range(hojas):
+                x0 = x + i * wh
+                ax.plot([x0, x0 + wh], [y, y + h], color=C_LINE, lw=0.5, ls=":", zorder=3)
+                ax.plot([x0, x0 + wh], [y + h, y], color=C_LINE, lw=0.5, ls=":", zorder=3)
+            if hojas > 1:
+                # El montante entre hojas, que es lo que se ve en el mueble real.
+                ax.plot([x + wh, x + wh], [y, y + h], color=C_LINE, lw=0.7, zorder=3)
 
         # Tiradores (herraje visible por FUERA del mueble).
         def tirador_h(ax, cx, y, length=13):   # tirador horizontal (frentes de cajón)
@@ -1807,8 +1841,14 @@ async def generar_alzado(payload: ProyectoBase):
                     wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
                     _ta = f"{label}\n{cota_w}×{ALTOS_Y1 - ALTOS_Y0}" if _con_cotas else label
                     _texto_modulo(ax, x, w, (ALTOS_Y0 + ALTOS_Y1) / 2, _ta)
-                    tirador_v(ax, x + w - 5, ALTOS_Y0 + 12, length=16)
-                    herr["puertas"] += 1
+                    # Un alto ancho lleva DOS hojas: dos tiradores, al centro,
+                    # y dos puertas en el herraje.
+                    _hojas = hojas_de(w)
+                    for _i in range(_hojas):
+                        _cx = x + (w / _hojas) * (_i + 1) - 5 if _hojas == 1 else (
+                            x + w / 2 - 3 if _i == 0 else x + w / 2 + 3)
+                        tirador_v(ax, _cx, ALTOS_Y0 + 12, length=16)
+                    herr["puertas"] += _hojas
                     altos_xy.append((x, w))
                 elif tipo in DRAWERS:
                     body_h_cm = ENC_Y - ZOC_Y  # altura útil del cuerpo (cm de dibujo)
@@ -1840,8 +1880,13 @@ async def generar_alzado(payload: ProyectoBase):
                     _texto_modulo(ax, x, w, (ZOC_Y + ENC_Y) / 2, _txt)
                     # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción).
                     if tipo not in HOB:
-                        tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)
-                        herr["puertas"] += 1
+                        # Igual que en los altos: las hojas las manda el ancho.
+                        _hojas = hojas_de(w)
+                        for _i in range(_hojas):
+                            _cx = (x + w - 5) if _hojas == 1 else (
+                                x + w / 2 - 3 if _i == 0 else x + w / 2 + 3)
+                            tirador_v(ax, _cx, ENC_Y - 14, length=16)
+                        herr["puertas"] += _hojas
                     if tipo in HOB:
                         hob_zones.append((x, w))
                         # marca de zona de cocción sobre la encimera
