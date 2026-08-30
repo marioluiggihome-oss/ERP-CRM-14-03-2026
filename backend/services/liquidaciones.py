@@ -274,6 +274,29 @@ def liquidado_en(pedido: dict, rol: str) -> Optional[str]:
     return _pagado_por_rol(pedido or {})[LIQUIDADO_POR_ROL[rol]]
 
 
+def ya_se_pago_algo(pedido: dict) -> Optional[str]:
+    """El periodo en que se pagó ese pedido a ALGUIEN, o None si no se pagó nada.
+
+    PARA QUÉ: para saber si un pedido se puede BORRAR. Un pedido liquidado no es
+    un registro cualquiera — lleva dentro lo que se pagó por él
+    (`comisionCongelada*`), y eso ES el justificante de la nómina de ese mes:
+    «una comisión pagada se lee, no se calcula» (CLAUDE.md, regla 17). Si el
+    pedido desaparece, el mes que ya se pagó deja de cuadrar y no queda ni
+    rastro de por qué.
+
+    Mira los DOS roles y también la clave vieja: del mismo pedido cobran dos
+    personas, y basta con que a una se le haya pagado para que no se pueda
+    tirar. En la duda, NO se borra: un pedido de más se vuelve a borrar; un
+    justificante de nómina no se recupera.
+    """
+    p = pedido or {}
+    pagado = _pagado_por_rol(p)
+    for clave in LIQUIDADO_POR_ROL.values():
+        if pagado.get(clave):
+            return pagado[clave]
+    return p.get(LIQUIDADO_LEGADO) or None
+
+
 def congelada_de(pedido: dict, rol: str) -> Optional[dict]:
     """La comisión ya pagada de ese rol, tal como se congeló el día que se pagó."""
     if rol not in CONGELADA_POR_ROL:

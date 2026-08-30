@@ -346,3 +346,104 @@ def test_COOP_ABRE_POR_PRODUCCION():
         f"COOP abre por «{m.group(1)}» y el master pidió que abriera por producción")
     assert "'produccion'" in jsx and "<CoopProduccion" in jsx, (
         "la pestaña de producción no está montada: abriría en blanco")
+
+
+# ── 6. BORRAR, Y LAS LÍNEAS DE UN CASCO ─────────────────────────────────────
+
+_LINEA_DE_CASCO = {"key": "k", "sig": "s", "tipo": "Bajo", "grosor": 16,
+                   "fondo": 580, "alto": 800, "ancho": 600,
+                   "color": "blanco", "colorLabel": "Blanco Ártico",
+                   "qty": 3, "precio": 41.2, "precioBase": 20.6}
+
+
+def test_UN_CASCO_SE_VE_AUNQUE_NO_TENGA_CODIGO_MV():
+    """Cocina Desmontada guarda `{tipo, ancho, alto, fondo, qty}` y NADA más.
+
+    Sin `code` ni `name`: un casco se identifica por lo que ES y lo que MIDE.
+    Leyendo solo los nombres de Montada, un pedido entero de Desmontada salía
+    como una tabla de guiones — las líneas estaban y no se veía ni una.
+    """
+    d = EF.contenido_de({"id": "c1", "items": [_LINEA_DE_CASCO]})
+    l = d["lineas"][0]
+    assert l["descripcion"] == "Bajo", "un casco sigue saliendo sin descripción"
+    assert l["medidas"] == "600 × 800 × 580", f"medidas mal: {l['medidas']!r}"
+    assert l["acabado"] == "Blanco Ártico"
+    assert l["unidades"] == 3, "`qty` es el nombre que usa Cocina Desmontada"
+
+
+def test_LAS_MEDIDAS_NO_SE_INVENTAN():
+    """Regla 7: lo que no consta va vacío, nunca con un número plausible."""
+    assert EF.contenido_de({"id": "x", "items": [{"tipo": "Bajo", "qty": 1}]}
+                           )["lineas"][0]["medidas"] == "", (
+        "se está pintando una medida de un mueble que no la trae")
+    # Con ancho y alto pero sin fondo: se enseña lo que hay, no se rellena.
+    assert EF.contenido_de({"id": "x", "items": [{"ancho": 60, "alto": 80}]}
+                           )["lineas"][0]["medidas"] == "60 × 80"
+
+
+def test_LAS_MEDIDAS_TAMPOCO_TRAEN_EUROS():
+    """La línea de un casco lleva `precio` y `precioBase` pegados al lado."""
+    d = EF.contenido_de({"id": "c1", "items": [_LINEA_DE_CASCO]})
+    texto = json.dumps(d)
+    for euro in ("41.2", "20.6"):
+        assert euro not in texto, f"el importe {euro} se ha colado al abrir el pedido"
+    assert set(d["lineas"][0]) <= set(EF.CAMPOS_DE_LA_LINEA_DEL_PEDIDO)
+
+
+def test_UN_PEDIDO_YA_LIQUIDADO_NO_SE_PUEDE_BORRAR():
+    """Lleva DENTRO lo que se pagó por él, y eso es el justificante de la nómina.
+
+    El master, 30/08: «déjame borrar pedidos». Se puede, salvo este caso: si el
+    pedido desaparece, el mes que ya se pagó deja de cuadrar y no queda ni
+    rastro de por qué — sin un error y sin una línea en ningún sitio.
+    """
+    from services import liquidaciones as _L
+    assert _L.ya_se_pago_algo({"id": "p"}) is None, "un pedido sin liquidar se borra"
+    # Basta con que haya cobrado UNO de los dos: del mismo pedido cobran dos.
+    assert _L.ya_se_pago_algo({"liquidadoEnComercial": "2026-08"}) == "2026-08"
+    assert _L.ya_se_pago_algo({"liquidadoEnMontador": "2026-07"}) == "2026-07"
+    # Y los pedidos cerrados antes del reparto por rol, por su clave vieja.
+    assert _L.ya_se_pago_algo({"liquidadoEn": "2026-06"}) == "2026-06"
+
+    cuerpo = _lee(os.path.join(BACKEND, "routes", "cascos.py"))
+    i = cuerpo.index('@router.delete("/cascos/orders/{order_id}")')
+    j = cuerpo.index("@router", i + 10)
+    trozo = cuerpo[i:j]
+    assert "ya_se_pago_algo" in trozo and "409" in trozo, (
+        "se puede borrar un pedido ya liquidado: se llevaría por delante el "
+        "justificante de esa nómina")
+
+
+def _funcion_que_borra(jsx: str) -> str:
+    """El cuerpo de la función que hace el DELETE, y SOLO ese.
+
+    Se saca la función entera —desde su `const … = async` hasta el `};` que la
+    cierra— en vez de mirar N caracteres alrededor. Una ventana a bulto es
+    exactamente cómo esta prueba pasó en verde con el fallo puesto: 700
+    caracteres antes del DELETE alcanzaban el `r.ok` de OTRA petición del mismo
+    fichero, así que el candado aprobaba código que borraba a ciegas. Ya pasó
+    con los extractores de 400 y 900 caracteres; no se repite.
+    """
+    i = jsx.index("method: 'DELETE'")
+    # hacia atrás, hasta el arranque de la función que lo contiene
+    ini = jsx.rindex("const ", 0, i)
+    # hacia delante, hasta el cierre de esa función en su misma indentación
+    fin = jsx.index("\n  };", i)
+    return jsx[ini:fin]
+
+
+def test_LA_PANTALLA_NO_DA_POR_BORRADO_LO_QUE_EL_SERVIDOR_RECHAZA():
+    """Un `catch {}` vacío quitaba la fila pasara lo que pasara.
+
+    Con un 403 —o con el 409 de un pedido ya liquidado— el pedido seguía en la
+    base de datos y de la pantalla desaparecía igual: se creía borrado y volvía
+    en cuanto alguien recargaba.
+    """
+    for fichero in ("Cascos.jsx", "CoopProduccion.jsx"):
+        jsx = _lee(os.path.join(RAIZ, "frontend", "src", "components", fichero))
+        trozo = _funcion_que_borra(jsx)
+        assert "r.ok" in trozo, (
+            f"`{fichero}` borra sin mirar la respuesta: el pedido se queda en la "
+            "base de datos y de la pantalla desaparece igual")
+        assert "catch {}" not in trozo.replace(" ", ""), (
+            f"`{fichero}` se traga el error del borrado en silencio")

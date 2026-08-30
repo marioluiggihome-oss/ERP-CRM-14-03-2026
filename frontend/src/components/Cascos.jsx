@@ -820,9 +820,24 @@ const Cascos = ({ state, setState }) => {
       loadOrder(target);
     } catch { alert('No se pudo cargar el documento vinculado.'); }
   };
+  // BORRAR MIRA LA RESPUESTA. Antes se quitaba la fila de la lista pasara lo
+  // que pasara: un `catch {}` vacío y ningún `r.ok`. Con un 403 —o con el 409
+  // de un pedido ya liquidado, que NO se puede borrar porque lleva dentro lo
+  // que se pagó por él— el pedido seguía en la base de datos y de la pantalla
+  // desaparecía igual. Se creía borrado y volvía en cuanto alguien recargaba.
   const deleteOrder = async (id) => {
-    if (!window.confirm('¿Eliminar?')) return;
-    try { await fetch(`${API_URL}/api/cascos/orders/${id}`, { method: 'DELETE', headers: auth() }); setOrders(prev => (prev || []).filter(x => x.id !== id)); } catch {}
+    if (!window.confirm('¿Eliminar este documento? No se puede deshacer.')) return;
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/orders/${id}`, { method: 'DELETE', headers: auth() });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        alert(d.detail || 'No se ha podido eliminar.');
+        return;
+      }
+      setOrders(prev => (prev || []).filter(x => x.id !== id));
+    } catch {
+      alert('No se ha podido eliminar: no hay conexión con el servidor.');
+    }
   };
 
   return (

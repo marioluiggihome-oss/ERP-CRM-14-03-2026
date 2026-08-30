@@ -142,7 +142,31 @@ def resumen(filas) -> dict:
 # con su puerta. Lista BLANCA otra vez, porque dentro de una línea de pedido
 # viajan `price`, `pvp` y los descuentos.
 CAMPOS_DE_LA_LINEA_DEL_PEDIDO = ("codigo", "descripcion", "unidades", "familia",
-                                 "esMueble")
+                                 "medidas", "acabado", "esMueble")
+
+
+def _medidas_de(d: dict) -> str:
+    """`ancho × alto × fondo` de una línea, con lo que traiga y nada más.
+
+    NO SE INVENTA NINGUNA COTA (regla 7): lo que no está no se rellena, y si no
+    hay ni una medida se devuelve cadena vacía en vez de un «0 × 0 × 0» que
+    parece un dato. Se admiten los nombres de las dos pantallas: Montada guarda
+    las medidas DEFINITIVAS (`anchoReal`/`altoReal`) y Desmontada el ancho, alto
+    y fondo del casco.
+    """
+    partes = []
+    for claves in (("ancho", "anchoReal"), ("alto", "altoReal"), ("fondo", "fondoReal")):
+        v = None
+        for k in claves:
+            if (d or {}).get(k) not in (None, ""):
+                v = d[k]
+                break
+        partes.append(str(v) if v is not None else None)
+    while partes and partes[-1] is None:
+        partes.pop()
+    if not partes or all(p is None for p in partes):
+        return ""
+    return " × ".join(p if p is not None else "?" for p in partes)
 
 
 def linea_de_pedido(l: dict, familias: Optional[dict] = None) -> dict:
@@ -161,10 +185,18 @@ def linea_de_pedido(l: dict, familias: Optional[dict] = None) -> dict:
         d.setdefault("_familiaResuelta",
                      C.familia_de(d)
                      or familias.get(str(d.get("code") or "").strip().upper(), ""))
+    # UN CASCO NO TIENE CÓDIGO MV, Y ESO NO ES UN HUECO. Cocina Desmontada
+    # guarda `{tipo, ancho, alto, fondo, color, qty}` — sin `code` ni `name`—,
+    # porque un casco se identifica por lo que ES y lo que MIDE. Leyendo solo
+    # los nombres de Montada, un pedido entero de Desmontada salía como una
+    # tabla de guiones: las líneas estaban, pero no se veía ni una.
     return {
         "codigo": str(d.get("code") or d.get("cod") or "").strip(),
-        "descripcion": str(d.get("name") or d.get("desc")
-                           or d.get("etiqueta") or "").strip(),
+        "descripcion": str(d.get("name") or d.get("desc") or d.get("etiqueta")
+                           or d.get("tipo") or "").strip(),
+        # Lo que se fabrica. Sale de la línea; nunca se estima.
+        "medidas": _medidas_de(d),
+        "acabado": str(d.get("colorLabel") or d.get("color") or "").strip(),
         "unidades": C.unidades_de(d),
         "familia": C.familia_de(d),
         # POR QUÉ SE MARCA. El panel del cooperativista enseña «14 muebles» en un

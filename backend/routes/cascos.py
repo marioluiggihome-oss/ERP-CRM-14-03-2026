@@ -9,6 +9,7 @@ guarda los pedidos de cascos por usuario. El catálogo vive en el frontend
 """
 from fastapi import APIRouter, HTTPException, Depends
 from services import area_cooperativista as _AC
+from services import liquidaciones as _LIQ
 from services import origen_pedidos as _OP
 from services import presupuestador as _PRE
 from datetime import datetime, timedelta, timezone
@@ -317,14 +318,33 @@ async def get_casco_order(order_id: str, current_user: Optional[dict] = Depends(
 
 @router.delete("/cascos/orders/{order_id}")
 async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    o = await _get_db().cascos_orders.find_one(
-        {"id": order_id}, {"_id": 0, "userId": 1, "origen": 1})
+    """Borra un pedido — salvo que ya se haya pagado por él.
+
+    UN PEDIDO LIQUIDADO NO SE BORRA. Al cerrar el mes, `POST /liquidar` escribe
+    DENTRO del pedido lo que se ha pagado por él (`comisionCongelada*`), y eso
+    es el justificante de esa nómina: «una comisión pagada se lee, no se
+    calcula» (CLAUDE.md, regla 17). Si el pedido desaparece, el mes que ya se
+    pagó deja de cuadrar y no queda ni rastro de por qué — ni un error, ni una
+    línea en ningún sitio. Se mira si se le pagó a CUALQUIERA de los dos roles:
+    basta con que una persona haya cobrado.
+
+    Lo demás se borra como siempre: un presupuesto, un pedido recién hecho o uno
+    de prueba no tienen nada que proteger.
+    """
+    o = await _get_db().cascos_orders.find_one({"id": order_id}, {"_id": 0})
     if o and not _can_access(o, current_user):
         raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
     if o:
         # Borrar es la escritura más definitiva que hay: pide el permiso de la
         # sección del pedido, igual que crearlo (regla 22).
         _exigir_permiso_de_la_seccion(current_user, o.get("origen"))
+        periodo = _LIQ.ya_se_pago_algo(o)
+        if periodo:
+            raise HTTPException(
+                status_code=409,
+                detail=(f"Este pedido ya se liquidó en {periodo}: lleva dentro "
+                        "lo que se pagó por él y es el justificante de esa "
+                        "nómina. No se puede borrar."))
     await _get_db().cascos_orders.delete_one({"id": order_id})
     return {"success": True}
 

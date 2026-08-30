@@ -5,7 +5,7 @@
  * escrita del titular.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Loader, Package, RefreshCw, Search, Truck, Wallet } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader, Package, RefreshCw, Search, Trash2, Truck, Wallet } from 'lucide-react';
 import { authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -129,7 +129,7 @@ export default function CoopProduccion() {
           </p>
         ) : (
           <div className="space-y-2">
-            {filas.map(p => <Fila key={p.pedidoId} p={p} />)}
+            {filas.map(p => <Fila key={p.pedidoId} p={p} alBorrar={cargar} />)}
           </div>
         )}
       </div>
@@ -151,7 +151,7 @@ function Contador({ nombre, n, activo, onClick, clave }) {
   );
 }
 
-function Fila({ p }) {
+function Fila({ p, alBorrar }) {
   const info = estadoDe(p.estado);
   const Icono = info.icon;
   // ABIERTO / CERRADO, y el contenido SE PIDE AL ABRIR, no antes: con cien
@@ -240,6 +240,15 @@ function Fila({ p }) {
           )}
           {!!fallo && <p className="text-xs font-bold text-error-700">{fallo}</p>}
           {!cargando && !fallo && detalle && <Contenido d={detalle} />}
+          {/* BORRAR VA AQUÍ DENTRO, no en la fila. Hay que abrir el pedido y
+              ver lo que lleva antes de poder tirarlo: un botón de borrar en la
+              lista se pulsa sin querer, y estos pedidos son los que pagan. */}
+          {!cargando && !fallo && detalle && (
+            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
+              <Borrar pedidoId={p.pedidoId} referencia={p.referencia}
+                cliente={p.cliente} alBorrar={alBorrar} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -280,6 +289,7 @@ function Contenido({ d }) {
             <tr className="text-left text-dato-400 uppercase text-[10px] tracking-widest">
               <th className="py-1 pr-3 font-black">Código</th>
               <th className="py-1 pr-3 font-black">Descripción</th>
+              <th className="py-1 pr-3 font-black">Medidas</th>
               <th className="py-1 pr-3 font-black">Familia</th>
               <th className="py-1 text-right font-black">Uds.</th>
             </tr>
@@ -290,7 +300,17 @@ function Contenido({ d }) {
                 <td className="py-1 pr-3 font-bold text-dato-800 whitespace-nowrap">
                   {l.codigo || '—'}
                 </td>
-                <td className="py-1 pr-3 text-dato-600">{l.descripcion || '—'}</td>
+                <td className="py-1 pr-3 text-dato-600">
+                  {l.descripcion || '—'}
+                  {!!l.acabado && (
+                    <span className="block text-[10px] text-dato-400">{l.acabado}</span>
+                  )}
+                </td>
+                {/* Lo que se fabrica. Vacío es vacío: una cota que no consta no
+                    se rellena con un número plausible. */}
+                <td className="py-1 pr-3 text-dato-600 whitespace-nowrap tabular-nums">
+                  {l.medidas || '—'}
+                </td>
                 <td className="py-1 pr-3 text-dato-500">
                   {l.familia || '—'}
                   {/* Lo que NO cuenta para la comisión, dicho: es la misma
@@ -305,6 +325,62 @@ function Contenido({ d }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * BORRAR UN PEDIDO.
+ *
+ * El master, 30/08: «déjame borrar pedidos». Hace falta de verdad —probando se
+ * crean pedidos que luego sobran—, pero no todos se pueden tirar.
+ *
+ * UN PEDIDO YA LIQUIDADO NO SE BORRA, y eso lo decide el SERVIDOR, no esta
+ * pantalla: al cerrar el mes se guarda DENTRO del pedido lo que se pagó por él,
+ * y ese dato es el justificante de esa nómina. Si el pedido desaparece, el mes
+ * que ya se pagó deja de cuadrar y no queda ni rastro de por qué. Aquí solo se
+ * enseña el motivo que devuelve el servidor: esconder el botón sería un cierre
+ * de adorno, porque la API se puede llamar a mano (regla 8).
+ */
+function Borrar({ pedidoId, referencia, cliente, alBorrar }) {
+  const [borrando, setBorrando] = useState(false);
+  const [fallo, setFallo] = useState('');
+
+  const borrar = async () => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(
+      `Vas a BORRAR el pedido de ${cliente || 'sin cliente'}`
+      + `${referencia ? ` (${referencia})` : ''}.\n\n`
+      + 'No se puede deshacer.\n\n¿Seguimos?')) return;
+    setBorrando(true); setFallo('');
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/orders/${encodeURIComponent(pedidoId)}`,
+        { method: 'DELETE', headers: authHeaders() });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.detail || 'No se ha podido borrar el pedido.');
+      }
+      alBorrar?.();
+    } catch (e) {
+      setFallo(e.message);
+      setBorrando(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-1.5">
+      {!!fallo && (
+        <p className="text-[11px] font-bold text-error-700 text-right max-w-md">{fallo}</p>
+      )}
+      <button
+        onClick={borrar}
+        disabled={borrando}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-error-200 text-error-700 hover:bg-error-50 text-[11px] font-black transition-colors disabled:opacity-40"
+        data-testid={`produccion-borrar-${pedidoId}`}
+      >
+        {borrando ? <Loader size={12} className="animate-spin" /> : <Trash2 size={12} />}
+        Borrar pedido
+      </button>
     </div>
   );
 }
