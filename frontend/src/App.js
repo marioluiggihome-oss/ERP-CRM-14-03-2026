@@ -1897,8 +1897,16 @@ const App = () => {
             {state.currentTab === 'miArea' && esCooperativista(state.currentUser) && (
               <AreaCooperativista />
             )}
+            {/* CON ErrorBoundary, que era el único panel sin él: un error de
+                render aquí dentro no puede llevarse el ERP entero (regla 23).
+                OJO con la lista de esta línea: abre COOP a `isAdmin`, pero las
+                RUTAS piden `_es_master`, que desde el 29/08 ya no lo incluye —
+                así que esa cuenta ve el botón y se lleva un 403 en cada
+                pestaña. No se ensancha la puerta del servidor, que por ahí pasa
+                la nómina: se marca «Admin principal» en la ficha, y el 403 ya
+                dice dónde está esa casilla. */}
             {state.currentTab === 'coop' && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
-              <CoopPanel />
+              <ErrorBoundary><CoopPanel /></ErrorBoundary>
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
               <PrescriptorAgenda

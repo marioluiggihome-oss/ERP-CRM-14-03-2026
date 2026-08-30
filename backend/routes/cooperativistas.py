@@ -41,6 +41,22 @@ from services import origen_pedidos as OP
 from services import liquidaciones as L
 from services.jwt_service import get_current_user
 
+# QUÉ SE LE DICE A QUIEN NO PUEDE ENTRAR.
+#
+# El menú abre COOP a `isAdmin` y estas rutas piden `_es_master`, que desde el
+# 29/08 es solo `isPrimaryAdmin` o `isMaster` (CLAUDE.md, regla 8c). O sea que
+# una cuenta que solo tenga `isAdmin` VE el botón, entra, y se lleva un 403 en
+# cada pestaña. Eso no se arregla ensanchando la puerta —por ahí pasa la
+# nómina— sino marcando la casilla en la ficha; pero el error tiene que DECIRLO,
+# porque «es del master» a secas no le dice a nadie dónde está el interruptor.
+#
+# La lista de quién entra NO se decide aquí: la manda `services/master.py`.
+NO_ERES_MASTER = (
+    "La gestión de la cooperativa es del master. Tu cuenta entra en el ERP, "
+    "pero no lleva la marca «Admin principal (master)», que es la que abre "
+    "COOP. Se activa en el panel Master → Usuarios, en la ficha de la persona."
+)
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cooperativistas", tags=["cooperativistas"])
 
@@ -208,7 +224,7 @@ async def socios(current_user: Optional[dict] = Depends(get_current_user)):
     entero — dentro del documento hay contraseña, descuentos y permisos.
     """
     if not _es_master(current_user):
-        raise HTTPException(status_code=403, detail="La lista de socios es del master.")
+        raise HTTPException(status_code=403, detail=NO_ERES_MASTER)
     try:
         usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
     except Exception as e:                                   # noqa: BLE001
@@ -229,7 +245,7 @@ async def pedidos_para_asignar(current_user: Optional[dict] = Depends(get_curren
     if not _es_master(current_user):
         raise HTTPException(
             status_code=403,
-            detail="Asignar comercial o montador es del master: decide quién cobra.")
+            detail=NO_ERES_MASTER)
     try:
         crudos = await _pedidos_de_la_cooperativa()
         crudos.sort(key=lambda o: str(o.get("confirmedAt") or ""), reverse=True)
@@ -282,7 +298,7 @@ async def produccion(current_user: Optional[dict] = Depends(get_current_user)):
     if not _es_master(current_user):
         raise HTTPException(
             status_code=403,
-            detail="La producción de la cooperativa es del master.")
+            detail=NO_ERES_MASTER)
     try:
         pedidos = ED.enriquecer_todos(
             await _pedidos_de_la_cooperativa(), await _documentos())
@@ -341,7 +357,7 @@ async def contenido_del_pedido(pedido_id: str,
     if not _es_master(current_user):
         raise HTTPException(
             status_code=403,
-            detail="La producción de la cooperativa es del master.")
+            detail=NO_ERES_MASTER)
     try:
         pedidos = await _pedidos_de_la_cooperativa()
         familias = await _familia_por_codigo()
@@ -365,7 +381,7 @@ async def asignar(payload: dict, current_user: Optional[dict] = Depends(get_curr
     if not _es_master(current_user):
         raise HTTPException(
             status_code=403,
-            detail="Asignar comercial o montador es del master: decide quién cobra.")
+            detail=NO_ERES_MASTER)
 
     pedido_id = (payload or {}).get("pedidoId")
     if not pedido_id:
@@ -411,7 +427,7 @@ async def liquidar(payload: dict, current_user: Optional[dict] = Depends(get_cur
     para siempre: aquí se saltaba, y en su panel la línea ponía «liquidada».
     """
     if not _es_master(current_user):
-        raise HTTPException(status_code=403, detail="Liquidar es del master.")
+        raise HTTPException(status_code=403, detail=NO_ERES_MASTER)
 
     usuario = str(payload.get("usuario") or "").strip()
     periodo = str(payload.get("periodo") or "").strip()
@@ -489,7 +505,7 @@ async def aplicar_sugerencias(current_user: Optional[dict] = Depends(get_current
     if not _es_master(current_user):
         raise HTTPException(
             status_code=403,
-            detail="Asignar comercial o montador es del master: decide quién cobra.")
+            detail=NO_ERES_MASTER)
     try:
         pedidos = await _pedidos_de_la_cooperativa()
         usuarios = await _db().users.find({}, {"_id": 0}).to_list(2000)
@@ -524,7 +540,7 @@ async def liquidacion(periodo: str, usuario: str,
     la vista de quien paga, no la de quien cobra.
     """
     if not _es_master(current_user):
-        raise HTTPException(status_code=403, detail="La liquidación es del master.")
+        raise HTTPException(status_code=403, detail=NO_ERES_MASTER)
     if not periodo or not usuario:
         raise HTTPException(status_code=400, detail="Faltan el periodo o el usuario.")
 

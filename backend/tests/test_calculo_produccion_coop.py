@@ -540,3 +540,57 @@ def test_SE_PUEDE_RECUPERAR_DESDE_LA_PANTALLA():
     assert "setSavedId(o.id)" in trozo, (
         "al recuperar no se conserva el id: volver a guardar crearía un "
         "duplicado en vez de actualizar el mismo presupuesto")
+
+
+# ── 8. QUIEN NO PUEDE ENTRAR, QUE SEPA POR QUÉ ─────────────────────────────
+#
+# El master, 30/08: «da error al entrar en COOP». El menú abre COOP a `isAdmin`
+# y las rutas piden `_es_master`, que desde el 29/08 es solo `isPrimaryAdmin` o
+# `isMaster`: esa cuenta VE el botón y se lleva un 403 en cada pestaña. Y desde
+# que COOP abre por Producción, se lo lleva nada más entrar.
+#
+# La puerta del servidor NO se ensancha —por ahí pasa la nómina—, pero el error
+# tiene que decir dónde está el interruptor.
+
+def test_EL_403_DE_COOP_DICE_DONDE_ESTA_LA_CASILLA():
+    cuerpo = _lee(COOP)
+    assert "NO_ERES_MASTER" in cuerpo, (
+        "el motivo de COOP se ha vuelto a escribir a mano en cada ruta: cinco "
+        "copias se quedan viejas el día que cambie")
+    # Hasta el cierre DE LA ASIGNACIÓN, no hasta el primer `)` — que está
+    # dentro de «(master)» y dejaba el texto cortado a la mitad.
+    i = cuerpo.index("NO_ERES_MASTER = (")
+    texto = cuerpo[i:cuerpo.index("\n)", i)]
+    assert "Admin principal" in texto and "Master" in texto, (
+        "el error no dice qué casilla hay que marcar ni dónde: «es del master» "
+        "a secas no le dice a nadie dónde está el interruptor")
+    # Y lo usan TODAS las rutas cerradas, no solo una.
+    assert cuerpo.count("detail=NO_ERES_MASTER") >= 5, (
+        "hay rutas de COOP que siguen dando un motivo mudo")
+
+
+def test_LA_PUERTA_DEL_SERVIDOR_NO_SE_HA_ENSANCHADO():
+    """El arreglo es explicar, no dejar entrar. Por COOP pasa la nómina."""
+    from services import master as M
+    assert M.FLAGS_MASTER == ("isPrimaryAdmin", "isMaster"), (
+        "se ha ensanchado la lista del master para tapar el 403 de COOP: por "
+        "ahí entran gerente y director comercial a la nómina")
+    # SIN LOS COMENTARIOS: este fichero EXPLICA el problema citando `isAdmin`,
+    # y eso engañaba al reconocedor. Es la misma trampa que en el candado de
+    # «no traducir», que también tuvo que aprender a ignorar comentarios.
+    codigo = "\n".join(l for l in _lee(COOP).split("\n")
+                       if not l.lstrip().startswith("#"))
+    assert "isAdmin" not in codigo, (
+        "COOP ha empezado a mirar `isAdmin` por su cuenta")
+
+
+def test_COOP_VA_CON_ERRORBOUNDARY():
+    """Era el único panel sin él: un error de render se llevaba el ERP entero
+    (regla 23), y COOP abre por una pestaña que llama al servidor al entrar."""
+    app = _lee(os.path.join(RAIZ, "frontend", "src", "App.js"))
+    # DONDE SE PINTA, no donde se resalta el botón del menú: la primera
+    # aparición de esa cadena es la clase CSS de la pestaña activa.
+    i = app.index("<CoopPanel />")
+    trozo = app[max(0, i - 300):i + 60]
+    assert "<ErrorBoundary><CoopPanel" in trozo, (
+        "COOP se pinta sin ErrorBoundary: un fallo dentro tumba la aplicación")
