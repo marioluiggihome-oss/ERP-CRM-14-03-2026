@@ -447,6 +447,24 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           // volver a adivinarlo.
           costeAproximado: !conocida,
           pvp: pvpUnit,
+          /* EL PRECIO DEL FABRICANTE, GUARDADO APARTE (master, 31/08: «cuando
+             importo de Alvic q informe del precio de este fabricante y ponga
+             también el precio de MV al lado y así vemos la diferencia»).
+             
+             Hasta hoy el precio de Alvic se metía en `pvp` y ahí se acababa: era
+             indistinguible de un precio de tarifa MV, así que la comparación —
+             que es para lo que se importa una proforma de la competencia— había
+             que hacerla a mano con los dos PDF delante.
+             
+             Y ADEMÁS SE PERDÍA SIN AVISAR. `pvp` es la casilla de la tarifa MV:
+             en cuanto se tocaba el alto, el ancho o el código, `setAlto` /
+             `setMedidaMueble` / `setCod` lo recalculaban del catálogo y el
+             precio de Alvic desaparecía, sin un error y sin dejar rastro. Por
+             eso va también `pvpManual`, que es el freno que ya existía para un
+             precio que no sale de la tarifa. */
+          pvpAlvic: pvpUnit > 0 ? pvpUnit : null,
+          origenPrecio: pvpUnit > 0 ? 'ALVIC' : null,
+          pvpManual: pvpUnit > 0,
           encontrado: true,
           mano: '',
         };
@@ -934,7 +952,17 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     const pvp = Number(m.pvp) || 0;
     const margen = coste == null ? null : pvp - coste;
     const margenPct = (coste == null || pvp <= 0) ? null : (margen / pvp) * 100;
-    return { ...m, despiece: desp, coste, margen, margenPct };
+    /* EL PRECIO QUE TENDRÍA EN MV, para poner los dos al lado.
+       Se calcula AQUÍ y no al importar porque la tarifa llega del servidor
+       después de la importación: hecho allí saldría vacío siempre. Y así sigue
+       al día si se cambia el código, el alto o el ancho de la línea.
+       `puntosLocal` devuelve el `pvp` de la línea cuando el código no está en el
+       catálogo, y eso aquí sería comparar el precio de Alvic consigo mismo: se
+       le pasa `pvp: null` para que un código que MV no tiene diga «no se sabe»
+       en vez de un número que cuadra solo (regla 7). */
+    const pvpMv = m.pvpAlvic != null ? puntosLocal({ ...m, pvp: null }, m.alto) : null;
+    const difMv = (pvpMv == null || !m.pvpAlvic) ? null : Math.round((pvpMv - m.pvpAlvic) * 100) / 100;
+    return { ...m, despiece: desp, coste, margen, margenPct, pvpMv, difMv };
   });
 
   const totalUds = muebles.reduce((s, m) => s + (Number(m.qty) || 1), 0);
@@ -2935,8 +2963,31 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             }`} />
                           <span className="text-[10px] text-slate-400">€</span>
                         </div>
-                        {m.pvpManual && (
-                          <div className="text-[9px] font-black text-master-600 text-right pr-3 leading-none mt-0.5">a mano</div>
+                        {/* DE DÓNDE SALE ESTE PRECIO. «A mano» en una línea
+                            traída de Alvic sería mentira, y al revés también:
+                            si se borra el precio y MV no tiene ese código, la
+                            línea se queda con el de Alvic pero pierde
+                            `pvpManual` — y sin esto se leería como un precio de
+                            tarifa MV que no lo es. Manda lo que el número ES,
+                            no la marca que llevaba. */}
+                        {(m.origenPrecio === 'ALVIC' && Number(m.pvp) === Number(m.pvpAlvic))
+                          ? <div className="text-[9px] font-black text-master-600 text-right pr-3 leading-none mt-0.5"
+                              data-testid="cm3-marca-precio-alvic">Alvic</div>
+                          : m.pvpManual
+                            ? <div className="text-[9px] font-black text-master-600 text-right pr-3 leading-none mt-0.5">a mano</div>
+                            : null}
+                        {/* EL DE MV, DEBAJO. La comparación se ve en la tabla y
+                            no solo en el panel de abajo: la decisión de dejar el
+                            precio de Alvic o poner el de MV se toma aquí. */}
+                        {m.pvpAlvic != null && (
+                          <div className="text-[9px] text-right pr-3 leading-none mt-0.5" data-testid="cm3-pvp-mv-linea"
+                            title="Lo que costaría esta línea con la tarifa MV. El precio de arriba es el del fabricante importado.">
+                            {m.pvpMv == null
+                              ? <span className="text-slate-300">MV: ?</span>
+                              : <span className={m.difMv > 0 ? 'text-error-600' : m.difMv < 0 ? 'text-ok-600' : 'text-slate-400'}>
+                                  {`MV ${eur(m.pvpMv)}`}
+                                </span>}
+                          </div>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-black text-slate-900 text-sm">
@@ -3057,6 +3108,116 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           Y va DEBAJO, en su propia tabla: la de arriba no se ensancha al abrir
           el candado, que es lo que no le gustaba. Aquí sí se puede scrolear a lo
           ancho porque esta tabla es solo para mirar costes. */}
+      {/* ─────────── ALVIC CONTRA MV ───────────
+          Master, 31/08: «cuando importo de Alvic q informe del precio de este
+          fabricante y ponga también el precio de MV al lado y así vemos la
+          diferencia».
+
+          Sale SOLO si hay líneas importadas de Alvic: una tabla vacía
+          permanente es ruido en una pantalla que ya está llena.
+
+          NO SE INVENTA UN PRECIO DE MV. Los códigos que la tarifa MV no tiene
+          se cuentan aparte y no entran en el total: si contaran como 0 €, la
+          diferencia saldría a favor de MV por líneas que MV no sabe hacer
+          (regla 7). */}
+      {(() => {
+        const lineasAlvic = filas.filter(m => m.pvpAlvic != null);
+        if (!lineasAlvic.length) return null;
+        const uds = (m) => Number(m.qty) || 1;
+        const comparables = lineasAlvic.filter(m => m.pvpMv != null);
+        const sinTarifaMv = lineasAlvic.length - comparables.length;
+        const totAlvic = comparables.reduce((t, m) => t + m.pvpAlvic * uds(m), 0);
+        const totMv = comparables.reduce((t, m) => t + m.pvpMv * uds(m), 0);
+        const dif = Math.round((totMv - totAlvic) * 100) / 100;
+        const pct = totAlvic > 0 ? (dif / totAlvic) * 100 : null;
+        return (
+          <div data-testid="cm3-comparativa-alvic" className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
+              <Factory size={15} className="text-master-600" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-700">
+                Alvic contra MV
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {`${lineasAlvic.length} línea${lineasAlvic.length === 1 ? '' : 's'} importada${lineasAlvic.length === 1 ? '' : 's'} de la proforma`}
+              </span>
+              {sinTarifaMv > 0 && (
+                <span className="text-[10px] font-bold text-aviso-600" data-testid="cm3-alvic-sin-tarifa-mv"
+                  title="MV no tiene ese código en la tarifa. No se compara: un 0 € haría que la diferencia saliera a favor de MV por muebles que MV no hace.">
+                  {`${sinTarifaMv} sin equivalencia en MV — fuera de la comparación`}
+                </span>
+              )}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] whitespace-nowrap">
+                <thead className="bg-white text-slate-400 border-b border-slate-200">
+                  <tr>
+                    <th className="text-left py-2 px-3 font-black uppercase">Código</th>
+                    <th className="text-left py-2 px-3 font-black uppercase">Descripción</th>
+                    <th className="text-center py-2 px-3 font-black uppercase">Uds</th>
+                    <th className="text-right py-2 px-3 font-black uppercase">Alvic ud.</th>
+                    <th className="text-right py-2 px-3 font-black uppercase">MV ud.</th>
+                    <th className="text-right py-2 px-3 font-black uppercase">Dif. ud.</th>
+                    <th className="text-right py-2 px-3 font-black uppercase bg-slate-50">Alvic × uds</th>
+                    <th className="text-right py-2 px-3 font-black uppercase bg-slate-50">MV × uds</th>
+                    <th className="text-right py-2 px-3 font-black uppercase bg-slate-50">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {lineasAlvic.map(m => {
+                    const n = uds(m);
+                    const hay = m.pvpMv != null;
+                    return (
+                      <tr key={m._k} className="hover:bg-slate-50/60">
+                        <td className="py-2 px-3 font-mono font-bold text-slate-700">{m.cod || '—'}</td>
+                        <td className="py-2 px-3 text-slate-600 max-w-[22rem] truncate">{descDe(m)}</td>
+                        <td className="py-2 px-3 text-center font-mono text-slate-600">{n}</td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-700">{eur(m.pvpAlvic)}</td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-700">
+                          {hay ? eur(m.pvpMv) : <span className="text-aviso-600 font-bold">sin tarifa MV</span>}
+                        </td>
+                        <td className={`py-2 px-3 text-right font-mono font-bold ${!hay ? 'text-slate-300' : m.difMv > 0 ? 'text-error-600' : m.difMv < 0 ? 'text-ok-600' : 'text-slate-400'}`}>
+                          {hay ? `${m.difMv > 0 ? '+' : ''}${eur(m.difMv)}` : '—'}
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-800 bg-slate-50/50">{eur(m.pvpAlvic * n)}</td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-800 bg-slate-50/50">{hay ? eur(m.pvpMv * n) : '—'}</td>
+                        <td className={`py-2 px-3 text-right font-mono font-black bg-slate-50/50 ${!hay ? 'text-slate-300' : m.difMv > 0 ? 'text-error-600' : m.difMv < 0 ? 'text-ok-600' : 'text-slate-400'}`}>
+                          {hay ? `${m.difMv > 0 ? '+' : ''}${eur(m.difMv * n)}` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-slate-50 border-t-2 border-slate-200 font-black">
+                  <tr>
+                    <td className="py-2.5 px-3 uppercase tracking-widest text-slate-500" colSpan={6}>
+                      {`Total comparable (${comparables.length} de ${lineasAlvic.length})`}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono text-dato-950" data-testid="cm3-alvic-total-alvic">{eur(totAlvic)}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-dato-950" data-testid="cm3-alvic-total-mv">{eur(totMv)}</td>
+                    <td className={`py-2.5 px-3 text-right font-mono ${dif > 0 ? 'text-error-700' : dif < 0 ? 'text-ok-700' : 'text-slate-500'}`}
+                      data-testid="cm3-alvic-diferencia">
+                      {`${dif > 0 ? '+' : ''}${eur(dif)}`}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-200 text-[11px] text-slate-500">
+              {pct == null
+                ? 'Sin importe con el que comparar.'
+                : dif === 0
+                  ? 'Los dos fabricantes salen al mismo precio en las líneas comparables.'
+                  : `Con la tarifa MV, estas líneas saldrían ${dif > 0 ? 'MÁS CARAS' : 'MÁS BARATAS'} en ${eur(Math.abs(dif))} (${Math.abs(pct).toFixed(1)} %).`}
+              <span className="text-slate-400">
+                {' '}El PVP que se está usando en el presupuesto es el de Alvic; para pasarlo al de MV, borra el precio de la línea.
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
       {verCoste && filas.length > 0 && (
         <div data-testid="cm3-escandallo" className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
