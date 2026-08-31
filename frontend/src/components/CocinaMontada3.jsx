@@ -947,27 +947,29 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     setFoco(false);
   };
 
+  /** Las tarifas, para poder pulsarlas. SIN IMPORTE ESTIMADO.
+   *
+   *  Aquí había una «interpolación lineal» que calculaba el total de cada
+   *  tarifa por su POSICIÓN EN LA LISTA (`base × (i+1)/(iActual+1)`). En una
+   *  cocina de 1.196,20 € en T21 eso daba «T1 → 56,96 €», un número sin
+   *  ninguna relación con la tarifa. No llegaba a pintarse —el botón solo
+   *  enseña el nombre—, así que era cálculo muerto; se quita para que nadie lo
+   *  saque a pantalla creyendo que significa algo. El gemelo de
+   *  `RelacionReview` SÍ lo pintaba.
+   *
+   *  El catálogo MV no sigue orden de precio: la misma puerta de 80×45 son 16
+   *  puntos en T1 y 92 en T21. No se puede estimar; hay que recalcular, y eso
+   *  es lo que hace pulsar la tarifa. */
   const comparativaTarifas = useMemo(() => {
-    // Usar las tarifas disponibles del API; si no han cargado aún, fallback a T1-T5
-    const listaTarifas = tarifas.length > 0
+    const lista = tarifas.length > 0
       ? tarifas.map(t => t.tarifa)
       : ['T1', 'T2', 'T3', 'T4', 'T5'];
-    // Índice de la tarifa actual para calcular estimaciones relativas
-    const iActual = Math.max(0, listaTarifas.indexOf(tarifa || 'T1'));
-    return listaTarifas.map((t, i) => {
-      // Estimación por interpolación lineal desde la tarifa actual
-      // (los precios del JSON son los reales; aquí solo se usan para comparativa visual)
-      const ratio = iActual === 0 ? 1 + i * 0.12 : (i / iActual);
-      const totalEst = iActual === 0 ? baseImponible * ratio
-        : baseImponible * ((i + 1) / (iActual + 1));
-      return {
-        tarifa: t,
-        nombre: TARIFAS_NOMBRES[t] || t,
-        total: totalEst,
-        activa: t === tarifa,
-      };
-    });
-  }, [baseImponible, tarifa, tarifas]);
+    return lista.map(t => ({
+      tarifa: t,
+      nombre: TARIFAS_NOMBRES[t] || t,
+      activa: t === tarifa,
+    }));
+  }, [tarifa, tarifas]);
 
   const copiarParaWhatsApp = () => {
     const lineas = [

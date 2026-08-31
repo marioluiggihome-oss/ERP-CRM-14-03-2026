@@ -435,22 +435,40 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
     setFoco(false);
   };
 
-  // Comparador de presupuesto en todas las tarifas (T1 a T5)
+  /**
+   * CAMBIAR DE TARIFA: LAS TARIFAS, SIN EUROS INVENTADOS.
+   *
+   * Esto enseñaba un importe por tarifa, y ese importe SE LO INVENTABA:
+   *
+   *     const multTarifas = { T1: 1.0, T2: 1.15, T3: 1.28, T4: 1.42, T5: 1.60 };
+   *     totalEstimado = totalPvp * (mult[t] / mult[tarifaActual]);
+   *
+   * Unos multiplicadores escritos a mano, como si el catálogo subiera un poco
+   * en cada escalón. NO SUBE. La MISMA puerta de 80×45 son 16 puntos en T1 y
+   * 92 en T21: un ×5,75, no un ×1,6. Y el propio ERP ya lo avisaba al lado —
+   * «el catálogo MV no sigue orden de precio T1→T21»—, o sea que se sabía que
+   * los números estaban mal y en vez de quitarlos se les puso una advertencia
+   * al lado. Un importe en euros con un aviso pequeño debajo se lee como un
+   * importe en euros.
+   *
+   * Además solo cubría T1..T5 de las 21 que hay, y `pvTarifas` no lo usaba
+   * nadie: estaba declarado y muerto.
+   *
+   * QUÉ SE HACE AHORA: se enseñan las tarifas para poder PULSARLAS, que
+   * recalcula el presupuesto entero con los precios de verdad — que es lo que
+   * el propio aviso decía que había que hacer. Lo que no se sabe no se pinta
+   * (CLAUDE.md: nunca inventar).
+   */
   const comparativaTarifas = useMemo(() => {
-    const pvTarifas = { T1: 3.33, T2: 3.33, T3: 3.33, T4: 3.33, T5: 3.33 };
-    const multTarifas = { T1: 1.0, T2: 1.15, T3: 1.28, T4: 1.42, T5: 1.60 };
-    
-    return ['T1', 'T2', 'T3', 'T4', 'T5'].map(t => {
-      const totalEstimado = totalPvp * (multTarifas[t] / multTarifas[tarifa || 'T1']);
-      return {
-        tarifa: t,
-        nombre: TARIFAS_NOMBRES[t] || t,
-        total: totalEstimado,
-        diferencia: totalEstimado - totalPvp,
-        activa: t === tarifa
-      };
-    });
-  }, [totalPvp, tarifa]);
+    const lista = (tarifas && tarifas.length)
+      ? tarifas.map(t => t.tarifa || t)
+      : ['T1', 'T2', 'T3', 'T4', 'T5'];
+    return lista.map(t => ({
+      tarifa: t,
+      nombre: TARIFAS_NOMBRES[t] || t,
+      activa: t === tarifa,
+    }));
+  }, [tarifas, tarifa]);
 
   // Copia formateada para WhatsApp
   const copiarParaWhatsApp = () => {
@@ -733,7 +751,11 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
           <div className="px-6 py-3 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-amber-500/10 border-b border-amber-200/60 flex items-center justify-between gap-4 overflow-x-auto">
             <div className="flex items-center gap-2 shrink-0">
               <Sparkles size={16} className="text-amber-600" />
-              <span className="font-black text-xs text-slate-800 uppercase tracking-wide">Presupuesto en otras Tarifas:</span>
+              <span className="font-black text-xs text-slate-800 uppercase tracking-wide">Cambiar de tarifa:</span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                pulsa una y se recalcula con sus precios reales — el catálogo MV no
+                sigue orden de precio, así que no se puede estimar
+              </span>
             </div>
             <div className="flex items-center gap-3">
               {comparativaTarifas.map(ct => (
@@ -743,7 +765,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                   className={`px-3 py-1.5 rounded-xl border text-left transition-all ${ct.activa ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'}`}
                 >
                   <div className="text-[10px] font-black uppercase opacity-80">{ct.tarifa}</div>
-                  <div className="text-xs font-black">{eur(ct.total)}</div>
+                  <div className="text-[9px] opacity-70 truncate max-w-[90px]">{(ct.nombre || '').split('/')[0]}</div>
                 </button>
               ))}
             </div>
