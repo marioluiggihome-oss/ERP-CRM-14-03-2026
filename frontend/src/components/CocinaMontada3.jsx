@@ -39,6 +39,13 @@ import RelacionReview from './RelacionReview';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
 
+/** LO QUE SE VE EN LUGAR DEL COSTE CON EL CANDADO ECHADO.
+ *  Puntos, NO una celda vacía: la columna sigue ocupando su sitio y la tabla no
+ *  se mueve al abrir el candado — que es lo que hacía que la de antes se viera
+ *  bien y la de ahora no. Y de paso se ve que ahí HAY algo, en vez de parecer
+ *  un hueco sin rellenar. Sale del desglose original (14/08, RelacionReview). */
+const OCULTO = '•••';
+
 const norm = (s) => (s || '').toString()
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -1366,6 +1373,21 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     setPistaCandado('');
   });
 
+  /** EL CLIC DEL CANDADO, EN UN SOLO SITIO. Lo usan las DOS cabeceras de columna
+   *  y el botón del pie. Escrito tres veces, el día que se cambie el gesto
+   *  cambiaría en uno y no en los otros, y el master pulsaría un candado que no
+   *  abre — que es exactamente el fallo que ya tuvo este botón el 30/08. */
+  const clicCandado = (e) => {
+    // La pulsación larga ya ha hecho lo suyo: el clic que manda el navegador al
+    // soltar no puede deshacerlo en el mismo gesto.
+    if (handlersCandado.consumir()) return;
+    if (e.shiftKey) { setVerCoste(v => !v); setPistaCandado(''); return; }
+    // Un toque corto no abre —para eso está el candado— pero SÍ dice cómo se
+    // abre: un botón que no hace nada parece roto.
+    setPistaCandado(AYUDA_CANDADO);
+    setTimeout(() => setPistaCandado(''), 4000);
+  };
+
   return (
     <div className="absolute inset-0 overflow-y-auto bg-slate-100 p-2 sm:p-3 pb-36 space-y-2">
       
@@ -2174,6 +2196,35 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <th className="py-2.5 px-3 text-center">Ancho</th>
                   <th className="py-2.5 px-3 text-center">Alto</th>
                   <th className="py-2.5 px-3 text-center">Mano</th>
+                  {/* COSTE Y MARGEN: LAS COLUMNAS ESTÁN SIEMPRE, TAPADAS.
+                      Así era el desglose ORIGINAL de esta pantalla (14/08), el
+                      que el master echaba de menos — y estaba en
+                      `RelacionReview`, no aquí, porque Cocina Montada 3 nacio
+                      siendo una carcasa que lo reutilizaba.
+
+                      LO QUE LO HACE FUNCIONAR: al tocar el candado NO se añade
+                      ni se quita una columna, solo cambia lo que hay dentro
+                      («•••» o la cifra). Por eso la tabla no se mueve. Cuando
+                      las columnas aparecían y desaparecían, la cabecera se
+                      salía de pantalla y el PVP quedaba contra el borde: es lo
+                      que el master vio y no le gusto.
+
+                      Y son DOS, no seis. El detalle (casco, puertas, herrajes,
+                      mano de obra) va en el `title` de la celda, que es donde
+                      se mira cuando hace falta y no estorba cuando no. */}
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">
+                    <button type="button" {...handlersCandado.props} onClick={clicCandado}
+                      title={`Coste de fábrica. ${AYUDA_CANDADO}. Va escondido a propósito para poder enseñar esta pantalla con un cliente delante.`}
+                      data-testid="cm3-candado-coste"
+                      className="inline-flex items-center gap-1 text-slate-400 hover:text-master-700">
+                      {verCoste ? <Unlock size={12} /> : <Lock size={12} />} Coste
+                    </button>
+                  </th>
+                  <th className="py-2.5 px-3 text-right">
+                    <button type="button" {...handlersCandado.props} onClick={clicCandado}
+                      title={`Margen sobre el PVP. ${AYUDA_CANDADO}.`}
+                      className="text-slate-400 hover:text-master-700">Margen</button>
+                  </th>
                   <th className="py-2.5 px-3 text-right">PVP Ud.</th>
                   <th className="py-2.5 px-3 text-right">Total</th>
                   <th className="py-2.5 px-2 text-center w-10"></th>
@@ -2344,6 +2395,27 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           un precio pactado que vuelve al de tarifa en silencio
                           saca el presupuesto por otra cifra sin dar un error.
                           Dejarlo vacío devuelve la línea a la tarifa. */}
+                      {/* COSTE. Un mueble sin coste conocido enseña «—», nunca
+                          un número: es la misma regla que el desglose original
+                          ya traía («m.encontrado ? eur(m.coste) : "—"»). */}
+                      <td className="py-3 px-3 text-right font-mono text-slate-600"
+                        title={m.coste == null ? `Sin coste: el despiece no conoce «${m.familia || m.tipo || '?'}»` :
+                          `Casco ${eur(m.despiece?.casco)}${m.despiece?.cascoOtroAcabado ? ' (otra gama)' : ''} · Puertas ${eur(m.despiece?.puerta)} · Herrajes ${eur(herrajesDe(m))} · M. obra ${eur(m.despiece?.mo)}`}>
+                        {verCoste ? (m.coste == null ? <span className="text-aviso-600">—</span> : eur(m.coste)) : OCULTO}
+                      </td>
+                      {/* MARGEN, CON SEMÁFORO. Solo el porcentaje, como en el
+                          desglose original: los euros del margen por línea no
+                          se miran, lo que se mira es si la línea aguanta. */}
+                      <td className={`py-3 px-3 text-right font-mono font-bold ${
+                        !verCoste ? 'text-slate-400'
+                        : m.margenPct == null ? 'text-aviso-600'
+                        : m.margenPct >= 40 ? 'text-ok-600'
+                        : m.margenPct >= 25 ? 'text-aviso-600'
+                        : 'text-error-600'}`}
+                        title={m.margenPct == null ? 'Sin coste: no se puede calcular el margen' : `${eur(m.margen)} sobre un PVP de ${eur(m.pvp)}`}>
+                        {verCoste ? (m.margenPct == null ? '—' : `${m.margenPct.toFixed(0)}%`) : OCULTO}
+                      </td>
+
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <input type="number" min="0" step="any"
@@ -2388,152 +2460,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           )}
         </div>
 
-        {/* ─────────── EL PANEL DE COSTES ───────────
-            El master, 31/08: «no me gusta este sistema de ver costos, me
-            gustaba más la pantalla anterior», y al elegir: los costes FUERA de
-            la tabla, en un panel aparte.
-
-            Y tiene razón por lo que se ve en su pantallazo: el candado metía
-            SEIS columnas más en la tabla, de modo que la cabecera se salía y
-            el PVP —que es lo que se mira para vender— quedaba arrinconado
-            contra el borde. La tabla es la que se enseña con un cliente
-            delante; el coste es otra conversación y va en otro sitio.
-
-            El desglose por línea vive AQUÍ, y la tabla de arriba se queda
-            siempre igual: con el candado echado o abierto, las mismas columnas
-            en el mismo sitio. */}
-        {verCoste && (() => {
-          const otraGama = filas.filter(m => m.despiece?.cascoOtroAcabado);
-          const gamas = [...new Set(otraGama.map(m => m.despiece.cascoGama))];
-          const familiasSin = [...new Set(sinCoste.map(m => m.familia || '?'))];
-          return (
-            <div data-testid="cm3-panel-costes" className="border-t border-slate-200 bg-slate-50/70">
-              <div className="px-6 pt-4 pb-2 flex items-center gap-2">
-                <span className="text-[11px] font-black uppercase tracking-widest text-master-700">
-                  Coste de fábrica por línea
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  · interno, no sale en el PDF del cliente
-                </span>
-              </div>
-
-              <div className="px-6 pb-4 overflow-x-auto">
-                <table className="w-full text-[11px]">
-                  <thead className="text-slate-400">
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-1.5 pr-3 font-black uppercase">#</th>
-                      <th className="text-left py-1.5 pr-3 font-black uppercase">Código</th>
-                      <th className="text-right py-1.5 px-2 font-black uppercase">Casco</th>
-                      <th className="text-right py-1.5 px-2 font-black uppercase">Puertas</th>
-                      <th className="text-right py-1.5 px-2 font-black uppercase">Herrajes</th>
-                      <th className="text-right py-1.5 px-2 font-black uppercase" title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">M. obra</th>
-                      <th className="text-right py-1.5 px-2 font-black uppercase">Coste ud.</th>
-                      <th className="text-right py-1.5 px-2 font-black uppercase">PVP ud.</th>
-                      <th className="text-right py-1.5 pl-2 font-black uppercase">Margen</th>
-                    </tr>
-                  </thead>
-                  <tbody className="font-mono">
-                    {filas.map((m, i) => (
-                      <tr key={m._k} className={`border-b border-slate-100 ${m.coste == null ? 'bg-aviso-50/60' : ''}`}>
-                        <td className="py-1.5 pr-3 text-slate-400">{i + 1}</td>
-                        <td className="py-1.5 pr-3 font-black text-indigo-700">
-                          {m.cod}
-                          {m.qty > 1 && <span className="ml-1 text-slate-400 font-bold">×{m.qty}</span>}
-                        </td>
-                        {m.coste == null ? (
-                          <td colSpan={5} className="py-1.5 px-2 text-aviso-800 font-sans font-bold">
-                            Sin coste — el despiece no conoce «{m.familia || m.tipo || '?'}»
-                          </td>
-                        ) : (
-                          <>
-                            <td className="py-1.5 px-2 text-right text-dato-700"
-                              title={m.despiece?.cascoOtroAcabado
-                                ? `Tarifa de la gama «${m.despiece.cascoGama}»: no se fabrica en el acabado elegido.`
-                                : `Tarifa ACB${m.despiece?.dtoCascos > 0 ? ` − ${m.despiece.dtoCascos}% de descuento de compra` : ''}.`}>
-                              {eur(m.despiece?.casco)}
-                              {m.despiece?.cascoOtroAcabado && (
-                                <span data-testid="cm3-marca-otra-gama" className="ml-1 text-[9px] font-black text-aviso-600">otra gama</span>
-                              )}
-                              {m.despiece?.dtoCascos > 0 && (
-                                <span className="ml-1 text-[9px] font-black text-master-600">{`−${m.despiece.dtoCascos}%`}</span>
-                              )}
-                            </td>
-                            <td className="py-1.5 px-2 text-right text-dato-700"
-                              title={`${(m.despiece?.puertasDetalle || []).map(fr => `${fr.desc} [${fr.puntos} pts]`).join(' + ') || '0 frentes'} · ${m.despiece?.dtoPuertas || 0}% dto.`}>
-                              {eur(m.despiece?.puerta)}
-                            </td>
-                            <td className="py-1.5 px-2 text-right text-dato-700"
-                              title={`Bisagras ${eur(m.despiece?.bisagras)} · Patas ${eur(m.despiece?.patas)} · Colgadores ${eur(m.despiece?.colg)} · Cajones ${eur(m.despiece?.caj)} · Gavetas ${eur(m.despiece?.gav)} · Soportes ${eur(m.despiece?.soportes)}`}>
-                              {eur(herrajesDe(m))}
-                            </td>
-                            <td className="py-1.5 px-2 text-right text-dato-700">{eur(m.despiece?.mo)}</td>
-                            <td className="py-1.5 px-2 text-right text-dato-900 font-black">{eur(m.coste)}</td>
-                          </>
-                        )}
-                        <td className="py-1.5 px-2 text-right text-slate-600">
-                          {eur(m.pvp)}
-                          {m.pvpManual && <span className="ml-1 text-[9px] font-black text-master-600">a mano</span>}
-                        </td>
-                        <td className="py-1.5 pl-2 text-right font-bold text-dato-600">
-                          {m.margenPct == null
-                            ? <span className="text-slate-300">—</span>
-                            : <>{eur(m.margen)} <span className="text-[10px] text-emerald-500">({m.margenPct.toFixed(1)}%)</span></>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* LOS AVISOS, JUNTOS Y AL PIE DEL PANEL. Marcar la fila no basta:
-                  con veinte líneas nadie va contando cuáles llevan la marca, y
-                  el que fija el precio mira el margen de abajo. */}
-              {(sinCoste.length > 0 || otraGama.length > 0) && (
-                <div data-testid="cm3-aviso-casco" className="px-6 py-3 bg-aviso-50 border-t border-aviso-200 text-[12px] text-aviso-900 space-y-1">
-                  {sinCoste.length > 0 && (
-                    <div>
-                      <b>{sinCoste.length} línea{sinCoste.length === 1 ? '' : 's'} sin coste.</b>{' '}
-                      El despiece no conoce {familiasSin.length === 1 ? 'la familia' : 'las familias'}{' '}
-                      <span className="font-mono font-bold">{familiasSin.join(', ')}</span>, así que
-                      no se le pone precio de fábrica en vez de inventar uno. <b>No entra{sinCoste.length === 1 ? '' : 'n'} en
-                      el coste ni en el margen de abajo</b>: el margen que ves es más alto
-                      que el real.
-                    </div>
-                  )}
-                  {otraGama.length > 0 && (
-                    <div>
-                      <b>{otraGama.length} línea{otraGama.length === 1 ? '' : 's'} con el
-                      casco tarifado en otra gama.</b> ACB no fabrica{' '}
-                      {otraGama.length === 1 ? 'ese mueble' : 'esos muebles'} en el acabado
-                      elegido, así que el coste sale de{' '}
-                      <span className="font-mono font-bold">{gamas.join(', ')}</span>. Es un
-                      precio de tarifa de verdad, pero <b>no el del acabado que has
-                      elegido</b>: confírmalo antes de fijar precio.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
         {/* Resumen Final de Importes */}
         <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-4">
             <button
               type="button"
               {...handlersCandado.props}
-              onClick={(e) => {
-                // La pulsación larga ya ha hecho lo suyo: el clic que manda el
-                // navegador al soltar no puede deshacerlo en el mismo gesto.
-                if (handlersCandado.consumir()) return;
-                if (e.shiftKey) { setVerCoste(v => !v); setPistaCandado(''); return; }
-                // Un toque corto no abre —para eso está el candado— pero SÍ
-                // dice cómo se abre: un botón que no hace nada parece roto.
-                setPistaCandado(AYUDA_CANDADO);
-                setTimeout(() => setPistaCandado(''), 4000);
-              }}
-              data-testid="cm3-candado-coste"
+              onClick={clicCandado}
+              data-testid="cm3-candado-pie"
               className={`p-2.5 rounded-2xl border transition-all ${verCoste ? 'bg-master-100 text-master-800 border-master-300' : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'}`}
               /* EL TÍTULO DECÍA SOLO «Shift + Clic», y en una tablet no hay
                  tecla Shift: el master lo preguntó porque parecía que el botón
@@ -2568,9 +2502,22 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 >
                   <Percent size={18} />
                 </button>
-                <div className="flex items-center gap-4 text-xs">
-                  <div>Coste Fábrica: <b className="font-mono text-slate-800">{eur(totalCoste)}</b></div>
-                  <div>Margen Bruto: <b className="font-mono text-dato-700">{eur(totalMargen)} ({totalMargenPct.toFixed(1)}%)</b></div>
+                {/* EL PIE, EN UNA LÍNEA, como el desglose original: «coste X ·
+                    margen Y%», con el mismo semáforo que las filas. */}
+                <div className="text-xs text-slate-600" data-testid="cm3-total-coste">
+                  coste <b className="font-mono text-slate-800">{eur(totalCoste)}</b>
+                  {' · '}margen{' '}
+                  <b className={`font-mono ${
+                    totalMargenPct >= 40 ? 'text-ok-600'
+                    : totalMargenPct >= 25 ? 'text-aviso-600'
+                    : 'text-error-600'}`}>{totalMargenPct.toFixed(0)}%</b>
+                  {sinCoste.length > 0 && (
+                    <span className="ml-2 text-aviso-700 font-bold"
+                      data-testid="cm3-aviso-casco"
+                      title={`El despiece no conoce ${[...new Set(sinCoste.map(m => m.familia || m.tipo || '?'))].join(', ')}. Esas líneas no suman coste, así que el margen sale MÁS ALTO que el real.`}>
+                      · {sinCoste.length} sin coste
+                    </span>
+                  )}
                 </div>
               </>
             )}

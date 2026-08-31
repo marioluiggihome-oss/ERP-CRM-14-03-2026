@@ -123,37 +123,6 @@ def test_EL_PRESUPUESTADOR_NO_CALCULA_UN_COSTE_QUE_NO_SABE():
         "`sinDespiece` no se deduce de la regla genérica")
 
 
-def test_LA_LINEA_SIN_COSTE_SE_DICE_EN_EL_PANEL():
-    """Sin coste no es lo mismo que coste cero: hay que verlo y saber por qué."""
-    s = sin_comentarios(_lee(CM3))
-    assert "Sin coste — el despiece no conoce" in s, (
-        "una línea sin coste no se explica en el panel: se vería un hueco y "
-        "parecería que la pantalla está rota")
-
-
-def test_SE_DICE_CUANTAS_LINEAS_SE_QUEDAN_FUERA_DEL_MARGEN():
-    """Marcar la fila no basta: con veinte líneas nadie va contando cuáles
-    llevan la marca, y quien fija el precio mira el margen de abajo.
-
-    Y AHORA EL AVISO DICE LO CONTRARIO QUE ANTES, que es el cambio: el margen ya
-    no «incluye un coste inventado» sino que es MÁS ALTO que el real, porque
-    esas líneas no suman coste. Decirlo al revés sería peor que no decirlo.
-    """
-    s = sin_comentarios(_lee(CM3)).replace("\n", " ")
-    while "  " in s:
-        s = s.replace("  ", " ")
-    assert "línea{sinCoste.length === 1 ? '' : 's'} sin coste." in s, (
-        "no se cuenta cuántas líneas se han quedado sin coste")
-    assert "el margen que ves es más alto que el real" in s, (
-        "no se advierte de que el margen de abajo sale más alto de lo que es: "
-        "es justo lo que hay que saber antes de fijar un precio")
-    assert "margen de abajo incluye" not in s, (
-        "sigue el aviso viejo, que decía que el margen INCLUYE un coste "
-        "inventado. Ya no se inventa ninguno: ahora el margen sale ALTO porque "
-        "faltan costes. Un aviso que dice lo contrario de lo que pasa engaña "
-        "más que no tener aviso")
-
-
 def test_EL_GENERICO_SIGUE_MARCADO_EN_RENTABILIDAD():
     """No se ha quitado de donde ya estaba al añadirlo aquí."""
     rent = _lee(RENT)
@@ -174,30 +143,104 @@ def test_LA_REGLA_GENERICA_SIGUE_MARCANDOSE_COMO_TAL():
         "detectarla y volvería el coste inventado de un bajo de 80")
 
 
-def test_LOS_COSTES_VIVEN_FUERA_DE_LA_TABLA():
-    """El master, 31/08: «no me gusta este sistema de ver costos, me gustaba más
-    la pantalla anterior», y al elegir: los costes en un panel aparte.
+def test_LAS_COLUMNAS_DE_COSTE_ESTAN_SIEMPRE_Y_NO_ENSANCHAN_LA_TABLA():
+    """EL DESGLOSE ORIGINAL, RECUPERADO (master, 31/08: «hay que buscar bien
+    dónde está el desglose de Cocina Montada 3 inicial»).
 
-    Tenía razón por lo que se veía en su pantallazo: el candado metía SEIS
-    columnas más en la tabla, así que la cabecera se salía de pantalla y el
-    PVP —que es lo que se mira para vender— quedaba arrinconado contra el borde.
-    La tabla es la que se enseña con un cliente delante; el coste es otra
-    conversación y va en otro sitio.
+    Estaba, y no donde se buscaba: CM3 nació el 14/08 siendo una CARCASA que
+    reutilizaba `RelacionReview` —lo dice su propia cabecera—, así que el
+    desglose vivía allí. Y funcionaba de una forma que se había perdido:
 
-    LO QUE SE VIGILA: que la tabla NO tenga columnas que aparezcan y desaparezcan
-    con el candado. Que exista el panel no basta — el fallo era la tabla que se
-    ensancha, y podrían convivir los dos.
+        · DOS columnas, no seis: «Coste» y «Margen» (solo el %).
+        · ESTAN SIEMPRE. Con el candado echado enseñan «•••»; al abrirlo, la
+          cifra. Al tocar el candado NO se añade ni se quita una columna.
+        · El candado ES la cabecera de la columna.
+        · Margen con semáforo: ≥40 % verde · ≥25 % ámbar · por debajo, rojo.
+        · Sin coste conocido: «—», nunca un número.
+
+    LO QUE ARREGLA, Y ES TODO EL ASUNTO: cuando las columnas aparecían y
+    desaparecían con el candado, la tabla se ensanchaba de golpe, la cabecera se
+    salía de pantalla y el PVP —lo que se mira para vender— quedaba contra el
+    borde. Eso es lo que el master vio y no le gustó, y por eso decía que la de
+    antes era mejor: no lo era por tener menos datos, era por no moverse.
+
+    (El 31/08 por la mañana lo saqué a un panel debajo. Estaba MÁS lejos de lo
+    que él recordaba, no más cerca. Este candado guarda lo que había de verdad,
+    comprobado contra la rama del 14/08.)
     """
     cuerpo = sin_comentarios(_lee(CM3))
-    assert 'data-testid="cm3-panel-costes"' in cuerpo, (
-        "no hay panel de costes: el desglose por línea no se ve en ninguna parte")
 
-    # Ni una cabecera ni una celda condicionadas al candado dentro de la tabla.
+    # Las dos columnas existen fuera de cualquier condición de candado.
     cabecera = cuerpo[cuerpo.index("<thead"):cuerpo.index("</thead>")]
-    assert "verCoste" not in cabecera, (
-        "han vuelto las columnas de coste a la cabecera de la tabla: con el "
-        "candado abierto la tabla se ensancha, la cabecera se sale y el PVP "
-        "queda contra el borde")
-    cuerpo_tabla = cuerpo[cuerpo.index("</thead>"):cuerpo.index('data-testid="cm3-panel-costes"')]
-    assert "{verCoste && (\n                        <td" not in cuerpo_tabla, (
-        "han vuelto las celdas de coste a las filas de la tabla")
+    assert "{verCoste &&" not in cabecera, (
+        "hay columnas que aparecen y desaparecen con el candado: la tabla se "
+        "ensancha al abrirlo, la cabecera se sale y el PVP queda contra el "
+        "borde. Es justo lo que el master pidió deshacer")
+    assert ">Margen<" in cabecera and "Coste" in cabecera, (
+        "faltan las columnas de coste y margen en la cabecera")
+
+    # Y en las celdas: se TAPAN, no se quitan.
+    assert "OCULTO" in cuerpo, (
+        "las celdas de coste no se tapan con un marcador: si se dejan vacías, "
+        "la columna se estrecha y la tabla vuelve a moverse")
+    i = cuerpo.index("const OCULTO")
+    assert "'•••'" in cuerpo[i:i + 60], "el marcador de tapado ha cambiado"
+
+
+def test_EL_MARGEN_LLEVA_SEMAFORO():
+    """Del desglose original. Un margen es lo único de esta pantalla que sí es
+    bueno o malo —por eso lleva color, y el importe no (docs/DISENO.md)."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    i = cuerpo.index("m.margenPct >= 40")
+    tramo = cuerpo[i:i + 200]
+    for umbral, color in (("40", "text-ok-600"), ("25", "text-aviso-600")):
+        assert umbral in tramo, f"falta el umbral del {umbral}%"
+        assert color in tramo, f"falta el color de ese tramo ({color})"
+    assert "text-error-600" in tramo, "un margen por debajo del 25% no se pinta en rojo"
+
+
+def test_UN_MUEBLE_SIN_COSTE_ENSEÑA_UNA_RAYA_Y_NO_UN_NUMERO():
+    """Es la regla que el desglose original ya traía
+    (`m.encontrado ? eur(m.coste) : '—'`) y la que el master reeligió el 31/08."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert "m.coste == null ? <span className=\"text-aviso-600\">—</span>" in cuerpo, (
+        "una línea sin coste no enseña «—»: enseñaría un hueco o, peor, un cero")
+    assert "m.margenPct == null ? '—'" in cuerpo, (
+        "se está calculando un porcentaje de margen sobre un coste que no existe")
+
+
+def test_EL_CANDADO_SE_DECIDE_EN_UN_SOLO_SITIO():
+    """Ahora hay TRES botones que lo abren: las dos cabeceras y el del pie.
+    Escrito tres veces, el día que se cambie el gesto cambiaría en uno y no en
+    los otros, y el master pulsaría un candado que no abre — que es exactamente
+    el fallo que este botón ya tuvo el 30/08."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert "const clicCandado" in cuerpo, (
+        "el gesto del candado no está en una sola función")
+    assert cuerpo.count("onClick={clicCandado}") >= 3, (
+        f"hay botones de candado que no usan el manejador común "
+        f"({cuerpo.count('onClick={clicCandado}')} de 3)")
+    assert "handlersCandado.consumir()" in cuerpo[cuerpo.index("const clicCandado"):
+                                                  cuerpo.index("const clicCandado") + 700], (
+        "el manejador común no consume la pulsación larga: el clic que manda el "
+        "navegador al soltar volvería a cerrar el candado en el mismo gesto")
+
+
+def test_SE_DICE_CUANTAS_LINEAS_SE_QUEDAN_FUERA_DEL_MARGEN():
+    """Marcar la fila con «—» no basta: con veinte líneas nadie va contando
+    cuáles la llevan, y quien fija el precio mira el total de abajo. El aviso se
+    mudó al pie, junto al margen, que es donde se lee."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert 'data-testid="cm3-aviso-casco"' in cuerpo, (
+        "no se avisa de cuántas líneas se han quedado sin coste")
+    i = cuerpo.index('data-testid="cm3-aviso-casco"')
+    aviso = " ".join(cuerpo[i:i + 700].split())
+    assert "sin coste" in aviso, "el aviso no dice qué pasa con esas líneas"
+    assert "MÁS ALTO que el real" in aviso, (
+        "el aviso no advierte de en qué DIRECCIÓN miente el margen: si faltan "
+        "costes, sale más alto de lo que es")
+    # Y que salga JUNTO al total, no en otra parte de la pantalla.
+    total = cuerpo.index('data-testid="cm3-total-coste"')
+    assert 0 < i - total < 900, (
+        "el aviso no está junto al margen total: ahí es donde se mira antes de "
+        "fijar un precio")

@@ -245,52 +245,32 @@ def test_LAS_PANTALLAS_NO_CONVIERTEN_EL_HUECO_EN_UN_CERO(ruta, nombre):
 
 
 def test_LAS_LINEAS_SIN_COSTE_SE_CUENTAN_Y_SE_AVISAN():
-    """Marcar la fila no basta: con veinte líneas nadie va contando cuáles
-    llevan la marca. Es la misma razón por la que existe el aviso de «coste
-    aproximado» justo al lado."""
-    # POR MARCA EXPLÍCITA, no por el nombre de la variable. Renombrar
-    # `cascoOtroAcabado` a `cascoOtroAcabadoX` dejaba la prueba en verde: el
-    # nombre nuevo CONTIENE al viejo como subcadena. Es la trampa de siempre.
+    """Marcar la fila con «—» no basta: con veinte líneas nadie va contando
+    cuáles la llevan, y quien fija el precio mira el total de abajo.
+
+    EL AVISO SE MUDÓ AL PIE el 31/08, al recuperar el desglose original: va
+    pegado al margen total, que es donde se lee antes de poner precio. Antes era
+    una franja ámbar aparte; el sitio ha cambiado, la obligación no.
+    """
     cuerpo = _sin_comentarios(_lee(CM3))
     for marca, queja in (
         ("cm3-marca-otra-gama", "no se marca la línea cuyo casco se tarifa en otra gama"),
-        ("cm3-marca-sin-tarifa", "no se marca la línea cuyo casco no está en tarifa"),
-        ("cm3-aviso-casco", "no hay aviso al pie: con veinte líneas nadie va "
-                            "contando cuáles llevan la marca"),
+        ("cm3-aviso-casco", "no hay aviso de las líneas sin coste junto al total"),
+        ("cm3-total-coste", "no se enseña el coste total"),
     ):
         assert marca in cuerpo, queja
-    # Y que el aviso se alimente de verdad de las líneas sin coste.
-    i = cuerpo.index("cm3-aviso-casco")
-    ini = cuerpo.rindex("const sinCoste = filas.filter", 0, i)
+
+    ini = cuerpo.index("const sinCoste = filas.filter")
     assert "m.coste == null" in cuerpo[ini:ini + 120], (
         "las líneas sin coste no se cuentan mirando el coste")
-    # EL BLOQUE DEL AVISO, contando llaves desde su `<div>`, y no una ventana de
-    # N caracteres: la ventana de 2200 se quedó corta en cuanto el aviso creció
-    # y esta prueba se puso roja sin que nadie hubiera roto el aviso. Y en
-    # minúsculas, porque «No entran» empieza frase.
-    prof, fin = 0, None
-    abre = cuerpo.rindex("<div", 0, i)
-    for k in range(abre, len(cuerpo)):
-        if cuerpo[k] == "<" and cuerpo[k:k + 5] == "<div ":
-            prof += 1
-        elif cuerpo[k:k + 6] == "</div>":
-            prof -= 1
-            if prof == 0:
-                fin = k
-                break
-    assert fin, "el bloque del aviso no se cierra"
-    # LOS ESPACIOS, NORMALIZADOS. El JSX parte los textos donde le cabe, así que
-    # «más alto que el real» está escrito con un salto de línea y seis espacios
-    # en medio. Buscar la frase literal falla por donde el editor decidió cortar,
-    # que no es una decisión de nadie.
-    import re as _re
-    aviso = _re.sub(r"\s+", " ", cuerpo[abre:fin]).lower()
-    assert "no entra" in aviso, (
-        "el aviso no dice que esas líneas quedan fuera del margen")
-    assert "más alto que el real" in aviso, (
-        "el aviso no advierte de en qué DIRECCIÓN miente el margen: si faltan "
-        "costes, el margen sale más alto de lo que es")
 
+    i = cuerpo.index('data-testid="cm3-aviso-casco"')
+    aviso = " ".join(cuerpo[i:i + 700].split())
+    assert "sin coste" in aviso, "el aviso no dice qué les pasa a esas líneas"
+    assert "MÁS ALTO que el real" in aviso, (
+        "el aviso no advierte de en qué DIRECCIÓN miente el margen: si faltan "
+        "costes, el margen sale más alto de lo que es, y eso es lo que hay que "
+        "saber antes de fijar un precio")
 
 def test_LA_RESERVA_DE_COLORES_SE_RECORRE_DE_VERDAD():
     """`COLOR_PRIO` estuvo escrita y sin ejecutarse desde el primer commit. Una

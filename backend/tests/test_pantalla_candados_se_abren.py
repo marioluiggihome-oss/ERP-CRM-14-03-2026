@@ -120,13 +120,31 @@ def test_AL_HOOK_NO_SE_LE_PASA_UNA_FUNCION_DE_SEGUNDO_ARGUMENTO():
 def test_EL_CANDADO_DEL_PRESUPUESTADOR_ABRE_DE_LAS_DOS_FORMAS():
     """Pulsación larga para tablet, Shift+clic para quien ya lo tiene en los
     dedos. Y un toque corto no abre, pero DICE cómo se abre."""
-    cuerpo = _lee(os.path.join(COMPONENTES, "CocinaMontada3.jsx"))
-    i = cuerpo.index('data-testid="cm3-candado-coste"')
-    boton = cuerpo[max(0, i - 1200):i]
-    assert "handlersCandado.props" in boton, "no se enganchan los gestos"
-    assert "handlersCandado.consumir()" in boton, (
+    cuerpo = _limpia_jsx(_lee(os.path.join(COMPONENTES, "CocinaMontada3.jsx")))
+
+    # EL GESTO YA NO ESTA ESCRITO DENTRO DEL BOTON: desde el 31/08 hay TRES
+    # botones que abren el candado —las dos cabeceras de columna y el del pie—
+    # y el gesto vive en `clicCandado`, uno solo. Esta prueba sigue exigiendo
+    # las mismas tres cosas; lo que ha cambiado es dónde mirarlas. Rebanar 1200
+    # caracteres hacia atrás del botón ya no vale: cazaba el comentario de al
+    # lado y aprobaba con el manejador quitado.
+    assert "const clicCandado" in cuerpo, (
+        "no hay un manejador único del candado; con tres botones escritos a "
+        "mano, el día que cambie el gesto cambiará en uno y no en los otros")
+    i = cuerpo.index("const clicCandado")
+    manejador = cuerpo[i:cuerpo.index("\n  };", i)]
+    assert "handlersCandado.consumir()" in manejador, (
         "el clic que manda el navegador al soltar deshará lo que abrió la "
         "pulsación larga: el usuario ve un parpadeo y nada más")
-    assert "e.shiftKey" in boton, "Shift+clic no abre el candado"
-    assert "AYUDA_CANDADO" in boton, (
+    assert "e.shiftKey" in manejador, "Shift+clic no abre el candado"
+    assert "AYUDA_CANDADO" in manejador, (
         "un toque corto no dice cómo se abre: el botón parece roto")
+
+    # Y que TODOS los botones del candado usen ese manejador y enganchen los
+    # gestos: uno que se quede fuera no abriría con pulsación larga en tablet.
+    assert cuerpo.count("onClick={clicCandado}") >= 3, (
+        f"hay botones de candado sin el manejador común: "
+        f"{cuerpo.count('onClick={clicCandado}')} de 3")
+    assert cuerpo.count("{...handlersCandado.props}") >= 3, (
+        "hay botones de candado que no enganchan la pulsación larga: en una "
+        "tablet no hay tecla Shift, así que ese botón no abre nada")
