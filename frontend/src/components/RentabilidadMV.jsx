@@ -1009,8 +1009,24 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   // sale `null` y NO la suma de lo demás: sumar los otros tres sumandos daría
   // un número con toda la pinta de ser el coste, más bajo que el de verdad, y
   // de ahí saldría un margen inflado. Es lo que pasaba con las columnas.
+  // UNA FAMILIA QUE EL DESPIECE NO CONOCE TAMPOCO TIENE COSTE (master, 31/08:
+  // «nada: “?” y fuera del margen»).
+  //
+  // `RULES[familia] || RULE_GENERICA` no devuelve «no se sabe»: devuelve el
+  // despiece de un BAJO CON BALDA de 800 con una puerta. Así que un PANEL, un
+  // zócalo o un TIRADOR salían costando 67,01 € — el mismo número que un mueble
+  // de verdad y con la misma pinta. En la cocina que lo destapó eran 7 líneas de
+  // 12 y el margen del presupuesto entero salía en −126,8 % en una cocina que
+  // gana dinero. Marcarlo con un «aprox» diminuto no bastaba: el número seguía
+  // sumando.
+  //
+  // Ahora no suma. La línea se queda sin coste, se marca, y el aviso de abajo
+  // dice cuántas hay y que el margen que se ve es más alto que el real. Es la
+  // regla 7 de CLAUDE.md: lo que no se sabe va vacío, nunca con un número
+  // plausible.
   const cascoSinPrecio = cc.coste == null;
-  const costeTotal = cascoSinPrecio
+  const sinDespiece = !!R.generica;
+  const costeTotal = (cascoSinPrecio || sinDespiece)
     ? null
     : Math.round((cc.coste + costePuertas + costeHerrajes + costeMo) * 100) / 100;
 
@@ -1019,6 +1035,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
     casco: cc.coste,
     cascoTarifa: ccBruto.coste,   // antes del descuento de compra
     cascoSinPrecio,
+    sinDespiece,
     cascoOtroAcabado: ccBruto.otroAcabado || null,
     cascoGama: ccBruto.gamaUsada || null,
     dtoCascos,
@@ -1191,11 +1208,26 @@ export default function RentabilidadMV({ esMaster, seed }) {
   const calc = useMemo(() => {
     const rows = lineas.map(l => {
       const d = despiece({ cod: l.cod, altura: l.altura, familia: l.familia }, p) || {};
-      const coste = (d.casco || 0) + (d.puerta || 0) + (d.bisagras || 0) + (d.patas || 0) + (d.colg || 0) + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
+      // ESTA PANTALLA SUMA LAS PARTES POR SU CUENTA, así que el `costeTotal`
+      // en `null` de `despiece` no la alcanzaba: con `|| 0` en cada sumando,
+      // una línea sin coste habría salido costando la mano de obra sola. Se
+      // pregunta lo mismo que pregunta el Presupuestador, para que las dos
+      // pantallas cuenten la misma historia del mismo mueble.
+      const sinCoste = d.costeTotal == null;
+      const coste = sinCoste ? null
+        : (d.casco || 0) + (d.puerta || 0) + (d.bisagras || 0) + (d.patas || 0) + (d.colg || 0) + (d.caj || 0) + (d.gav || 0) + (d.soportes || 0) + (d.mo || 0);
       const pvp = (Number(l.puntos) || 0) * pv;
-      return { ...l, ...d, costeUd: coste, pvpUd: pvp, coste: coste * l.cant, pvp: pvp * l.cant, margen: (pvp - coste) * l.cant };
+      return { ...l, ...d, sinCoste, costeUd: coste, pvpUd: pvp,
+        coste: sinCoste ? null : coste * l.cant,
+        pvp: pvp * l.cant,
+        margen: sinCoste ? null : (pvp - coste) * l.cant };
     });
-    const tot = rows.reduce((a, r) => ({ pvp: a.pvp + r.pvp, coste: a.coste + r.coste, margen: a.margen + r.margen }), { pvp: 0, coste: 0, margen: 0 });
+    const tot = rows.reduce((a, r) => ({
+      pvp: a.pvp + r.pvp,
+      coste: a.coste + (r.coste || 0),
+      margen: a.margen + (r.margen || 0),
+      sinCoste: a.sinCoste + (r.sinCoste ? 1 : 0),
+    }), { pvp: 0, coste: 0, margen: 0, sinCoste: 0 });
     return { rows, tot };
   }, [lineas, p, pv]);
 

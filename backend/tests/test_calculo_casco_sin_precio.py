@@ -264,8 +264,32 @@ def test_LAS_LINEAS_SIN_COSTE_SE_CUENTAN_Y_SE_AVISAN():
     ini = cuerpo.rindex("const sinCoste = filas.filter", 0, i)
     assert "m.coste == null" in cuerpo[ini:ini + 120], (
         "las líneas sin coste no se cuentan mirando el coste")
-    assert "no entra" in cuerpo[i:i + 2200], (
+    # EL BLOQUE DEL AVISO, contando llaves desde su `<div>`, y no una ventana de
+    # N caracteres: la ventana de 2200 se quedó corta en cuanto el aviso creció
+    # y esta prueba se puso roja sin que nadie hubiera roto el aviso. Y en
+    # minúsculas, porque «No entran» empieza frase.
+    prof, fin = 0, None
+    abre = cuerpo.rindex("<div", 0, i)
+    for k in range(abre, len(cuerpo)):
+        if cuerpo[k] == "<" and cuerpo[k:k + 5] == "<div ":
+            prof += 1
+        elif cuerpo[k:k + 6] == "</div>":
+            prof -= 1
+            if prof == 0:
+                fin = k
+                break
+    assert fin, "el bloque del aviso no se cierra"
+    # LOS ESPACIOS, NORMALIZADOS. El JSX parte los textos donde le cabe, así que
+    # «más alto que el real» está escrito con un salto de línea y seis espacios
+    # en medio. Buscar la frase literal falla por donde el editor decidió cortar,
+    # que no es una decisión de nadie.
+    import re as _re
+    aviso = _re.sub(r"\s+", " ", cuerpo[abre:fin]).lower()
+    assert "no entra" in aviso, (
         "el aviso no dice que esas líneas quedan fuera del margen")
+    assert "más alto que el real" in aviso, (
+        "el aviso no advierte de en qué DIRECCIÓN miente el margen: si faltan "
+        "costes, el margen sale más alto de lo que es")
 
 
 def test_LA_RESERVA_DE_COLORES_SE_RECORRE_DE_VERDAD():

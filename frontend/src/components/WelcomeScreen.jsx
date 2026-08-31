@@ -8,9 +8,8 @@ import React from 'react';
 import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
-  ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, Wallet, Users } from 'lucide-react';
+  ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, Users } from 'lucide-react';
 import { puedeEntrar as puedeEntrarPresupuestador } from '@/presupuestador';
-import { esCooperativista } from '@/plataformas';
 
 // Módulos para los accesos rápidos. Las condiciones `can` replican EXACTAMENTE
 // las del menú lateral, para no mostrar accesos a los que el usuario no tiene
@@ -78,7 +77,15 @@ const MODULES = [
 
   // Mi área: la nómina del cooperativista. Solo la cooperativa la tiene;
   // carpinter.io y Studio3K son plataformas de suscripción (plataformas.js).
-  { tab: 'miArea',          label: 'Mi área',         desc: 'Lo que llevas ganado y lo que falta para el siguiente tramo', icon: Wallet, color: 'bg-ok-600', group: 'admin', can: (u) => esCooperativista(u) },
+  // «MI ÁREA» YA NO ESTÁ AQUÍ (master, 31/08: «este área quítala, ya está en
+  // COOP»). Se mudó dentro de COOP el 30/08 —es su primera pestaña— y tenerla
+  // también suelta en la bienvenida son DOS puertas a la misma pantalla: el día
+  // que cambie quién entra, se cambia en un sitio y no en el otro. Es lo que ya
+  // pasó con «Planificación», que se apagó y siguió saliendo en el menú
+  // (CLAUDE.md, regla 26: una sección, un permiso).
+  //
+  // El camino viejo `'miArea'` SIGUE VIVO en App.js: hay enlaces y estado de
+  // navegador con ese nombre, y abre la pestaña dentro de COOP (regla 22).
 
   { tab: 'coop',            label: 'COOP',            desc: 'Red de distribución: socios, asignación de pedidos y liquidación del mes', icon: Users, color: 'bg-master-600', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin || u?.isAdmin },
   // carpinter.io y Studio3K: SOLO EL MASTER (30/08, sus palabras: «la puerta de

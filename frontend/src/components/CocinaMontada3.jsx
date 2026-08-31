@@ -2174,10 +2174,6 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <th className="py-2.5 px-3 text-center">Ancho</th>
                   <th className="py-2.5 px-3 text-center">Alto</th>
                   <th className="py-2.5 px-3 text-center">Mano</th>
-                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700" title="Coste Neto de Casco ACB">Casco Neto (ACB)</th>}
-                  {verCoste && <th className="py-2.5 px-3 text-right text-purple-700" title={`Coste de Puertas según Tarifa ${tarifa}`}>Puertas ({tarifa})</th>}
-                  {verCoste && <th className="py-2.5 px-3 text-right text-dato-700">Coste Total</th>}
-                  {verCoste && <th className="py-2.5 px-3 text-right text-emerald-700">Margen</th>}
                   <th className="py-2.5 px-3 text-right">PVP Ud.</th>
                   <th className="py-2.5 px-3 text-right">Total</th>
                   <th className="py-2.5 px-2 text-center w-10"></th>
@@ -2341,40 +2337,6 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       </td>
 
                       {/* Coste y Margen (candado) */}
-                      {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-dato-700 font-bold" title={`Tarifa ACB: ${eur(m.despiece?.cascoTarifa)}${m.despiece?.dtoCascos > 0 ? ` − ${m.despiece.dtoCascos}% dto. compra` : ' (sin descuento)'} = ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
-                          {eur(m.despiece?.casco)}
-                          {m.despiece?.dtoCascos > 0 && (
-                            <span className="ml-1 text-[9px] font-black text-master-600">{`−${m.despiece.dtoCascos}%`}</span>
-                          )}
-                        </td>
-                      )}
-                      {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-dato-700 font-bold" title={`Puertas: ${(m.despiece?.puertasDetalle || []).map(f => `${f.desc} [${f.puntos} pts]`).join(' + ') || '0 frentes'} = ${m.despiece?.puntosPuertas || 0} pts (${eur(m.despiece?.puertaPvp)}) | Coste neto (${m.despiece?.dtoPuertas || 50}% dto): ${eur(m.despiece?.puerta)}`}>
-                          {eur(m.despiece?.puerta)}
-                        </td>
-                      )}
-                      {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono text-dato-900 font-black">
-                          {eur(m.coste)}
-                          {/* SI EL COSTE ES EL GENÉRICO, SE DICE. El despiece no
-                              conoce esa familia y ha usado un «Bajo Con Balda»
-                              de 800 con una puerta: el número tiene la misma
-                              pinta que uno real y no lo es. Rentabilidad ya lo
-                              marcaba; aquí no se marcaba nada. */}
-                          {m.despiece?.generica && (
-                            <span className="ml-1 text-[9px] font-black text-aviso-600"
-                              title={`El despiece no conoce la familia «${m.familia || '?'}», así que este coste sale de un mueble genérico. No es el de esta pieza.`}>
-                              aprox
-                            </span>
-                          )}
-                        </td>
-                      )}
-                      {verCoste && (
-                        <td className="py-3 px-3 text-right font-mono font-bold text-dato-600">
-                          {eur(m.margen)}{m.margenPct != null && <span className="text-[10px] text-emerald-500"> ({m.margenPct.toFixed(1)}%)</span>}
-                        </td>
-                      )}
 
                       {/* PVP */}
                       {/* EL PVP, A MANO. En cuanto se toca, ni cambiar el alto
@@ -2426,62 +2388,129 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           )}
         </div>
 
-        {/* CUÁNTO DEL MARGEN ES INVENTADO.
-            Marcar la fila no basta: con veinte líneas, quien mira el margen de
-            abajo no va a ir contando cuáles llevan «aprox». Si una parte del
-            coste sale de un mueble genérico, el margen total tampoco es real, y
-            eso hay que saberlo ANTES de fijar un precio. */}
-        {verCoste && (() => {
-          const aprox = filas.filter(m => m.despiece?.generica);
-          if (!aprox.length) return null;
-          const familias = [...new Set(aprox.map(m => m.familia || '?'))];
-          return (
-            <div className="px-6 py-3 bg-aviso-50 border-t border-aviso-200 text-[12px] text-aviso-900">
-              <b>{aprox.length} línea{aprox.length === 1 ? '' : 's'} con coste
-              aproximado.</b> El despiece no conoce {familias.length === 1 ? 'la familia' : 'las familias'}{' '}
-              <span className="font-mono font-bold">{familias.join(', ')}</span>, así que
-              para {aprox.length === 1 ? 'esa línea' : 'esas líneas'} ha usado un mueble
-              genérico (bajo de 80 con una puerta). <b>El margen de abajo incluye
-              ese coste inventado</b>: revísalas antes de fijar precio.
-            </div>
-          );
-        })()}
+        {/* ─────────── EL PANEL DE COSTES ───────────
+            El master, 31/08: «no me gusta este sistema de ver costos, me
+            gustaba más la pantalla anterior», y al elegir: los costes FUERA de
+            la tabla, en un panel aparte.
 
-        {/* EL CASCO QUE NO SE FABRICA EN ESE ACABADO, Y EL QUE NO ESTÁ EN TARIFA.
-            El master, 30/08: «mira el precio del casco de la columna». Ponía
-            0,00 €. ACB no hace la columna despensa ni la semicolumna en la gama
-            «en kit» ni en 19 mm — solo en Diseño Grueso y Especiales Blanco—,
-            así que pedirla en grafito, que es el acabado por defecto, no
-            encontraba precio y se devolvía cero. Un cero no da error y se suma
-            sin protestar: en su columna eran 306,36 € de PVP con «73,9 % de
-            margen» y un casco que en tarifa vale 168 €.
+            Y tiene razón por lo que se ve en su pantallazo: el candado metía
+            SEIS columnas más en la tabla, de modo que la cabecera se salía y
+            el PVP —que es lo que se mira para vender— quedaba arrinconado
+            contra el borde. La tabla es la que se enseña con un cliente
+            delante; el coste es otra conversación y va en otro sitio.
 
-            Marcar la fila no basta, por lo mismo que el aviso de arriba: con
-            veinte líneas nadie va contando cuáles llevan la marca. */}
+            El desglose por línea vive AQUÍ, y la tabla de arriba se queda
+            siempre igual: con el candado echado o abierto, las mismas columnas
+            en el mismo sitio. */}
         {verCoste && (() => {
           const otraGama = filas.filter(m => m.despiece?.cascoOtroAcabado);
-          if (!otraGama.length && !sinCoste.length) return null;
           const gamas = [...new Set(otraGama.map(m => m.despiece.cascoGama))];
+          const familiasSin = [...new Set(sinCoste.map(m => m.familia || '?'))];
           return (
-            <div data-testid="cm3-aviso-casco" className="px-6 py-3 bg-aviso-50 border-t border-aviso-200 text-[12px] text-aviso-900 space-y-1">
-              {otraGama.length > 0 && (
-                <div>
-                  <b>{otraGama.length} línea{otraGama.length === 1 ? '' : 's'} con el
-                  casco tarifado en otra gama.</b> ACB no fabrica{' '}
-                  {otraGama.length === 1 ? 'ese mueble' : 'esos muebles'} en el acabado
-                  elegido, así que el coste sale de{' '}
-                  <span className="font-mono font-bold">{gamas.join(', ')}</span>. Es un
-                  precio de tarifa de verdad, pero <b>no el del acabado que has
-                  elegido</b>: confírmalo antes de fijar precio.
-                </div>
-              )}
-              {sinCoste.length > 0 && (
-                <div className="text-error-800">
-                  <b>{sinCoste.length} línea{sinCoste.length === 1 ? '' : 's'} sin coste
-                  de casco.</b> {sinCoste.length === 1 ? 'Ese casco no está' : 'Esos cascos no están'}{' '}
-                  en la tarifa ACB, así que <b>no entra{sinCoste.length === 1 ? '' : 'n'} en
-                  el coste ni en el margen de abajo</b>: el margen que ves es más alto
-                  que el real.
+            <div data-testid="cm3-panel-costes" className="border-t border-slate-200 bg-slate-50/70">
+              <div className="px-6 pt-4 pb-2 flex items-center gap-2">
+                <span className="text-[11px] font-black uppercase tracking-widest text-master-700">
+                  Coste de fábrica por línea
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  · interno, no sale en el PDF del cliente
+                </span>
+              </div>
+
+              <div className="px-6 pb-4 overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead className="text-slate-400">
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-1.5 pr-3 font-black uppercase">#</th>
+                      <th className="text-left py-1.5 pr-3 font-black uppercase">Código</th>
+                      <th className="text-right py-1.5 px-2 font-black uppercase">Casco</th>
+                      <th className="text-right py-1.5 px-2 font-black uppercase">Puertas</th>
+                      <th className="text-right py-1.5 px-2 font-black uppercase">Herrajes</th>
+                      <th className="text-right py-1.5 px-2 font-black uppercase" title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">M. obra</th>
+                      <th className="text-right py-1.5 px-2 font-black uppercase">Coste ud.</th>
+                      <th className="text-right py-1.5 px-2 font-black uppercase">PVP ud.</th>
+                      <th className="text-right py-1.5 pl-2 font-black uppercase">Margen</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {filas.map((m, i) => (
+                      <tr key={m._k} className={`border-b border-slate-100 ${m.coste == null ? 'bg-aviso-50/60' : ''}`}>
+                        <td className="py-1.5 pr-3 text-slate-400">{i + 1}</td>
+                        <td className="py-1.5 pr-3 font-black text-indigo-700">
+                          {m.cod}
+                          {m.qty > 1 && <span className="ml-1 text-slate-400 font-bold">×{m.qty}</span>}
+                        </td>
+                        {m.coste == null ? (
+                          <td colSpan={5} className="py-1.5 px-2 text-aviso-800 font-sans font-bold">
+                            Sin coste — el despiece no conoce «{m.familia || m.tipo || '?'}»
+                          </td>
+                        ) : (
+                          <>
+                            <td className="py-1.5 px-2 text-right text-dato-700"
+                              title={m.despiece?.cascoOtroAcabado
+                                ? `Tarifa de la gama «${m.despiece.cascoGama}»: no se fabrica en el acabado elegido.`
+                                : `Tarifa ACB${m.despiece?.dtoCascos > 0 ? ` − ${m.despiece.dtoCascos}% de descuento de compra` : ''}.`}>
+                              {eur(m.despiece?.casco)}
+                              {m.despiece?.cascoOtroAcabado && (
+                                <span data-testid="cm3-marca-otra-gama" className="ml-1 text-[9px] font-black text-aviso-600">otra gama</span>
+                              )}
+                              {m.despiece?.dtoCascos > 0 && (
+                                <span className="ml-1 text-[9px] font-black text-master-600">{`−${m.despiece.dtoCascos}%`}</span>
+                              )}
+                            </td>
+                            <td className="py-1.5 px-2 text-right text-dato-700"
+                              title={`${(m.despiece?.puertasDetalle || []).map(fr => `${fr.desc} [${fr.puntos} pts]`).join(' + ') || '0 frentes'} · ${m.despiece?.dtoPuertas || 0}% dto.`}>
+                              {eur(m.despiece?.puerta)}
+                            </td>
+                            <td className="py-1.5 px-2 text-right text-dato-700"
+                              title={`Bisagras ${eur(m.despiece?.bisagras)} · Patas ${eur(m.despiece?.patas)} · Colgadores ${eur(m.despiece?.colg)} · Cajones ${eur(m.despiece?.caj)} · Gavetas ${eur(m.despiece?.gav)} · Soportes ${eur(m.despiece?.soportes)}`}>
+                              {eur(herrajesDe(m))}
+                            </td>
+                            <td className="py-1.5 px-2 text-right text-dato-700">{eur(m.despiece?.mo)}</td>
+                            <td className="py-1.5 px-2 text-right text-dato-900 font-black">{eur(m.coste)}</td>
+                          </>
+                        )}
+                        <td className="py-1.5 px-2 text-right text-slate-600">
+                          {eur(m.pvp)}
+                          {m.pvpManual && <span className="ml-1 text-[9px] font-black text-master-600">a mano</span>}
+                        </td>
+                        <td className="py-1.5 pl-2 text-right font-bold text-dato-600">
+                          {m.margenPct == null
+                            ? <span className="text-slate-300">—</span>
+                            : <>{eur(m.margen)} <span className="text-[10px] text-emerald-500">({m.margenPct.toFixed(1)}%)</span></>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* LOS AVISOS, JUNTOS Y AL PIE DEL PANEL. Marcar la fila no basta:
+                  con veinte líneas nadie va contando cuáles llevan la marca, y
+                  el que fija el precio mira el margen de abajo. */}
+              {(sinCoste.length > 0 || otraGama.length > 0) && (
+                <div data-testid="cm3-aviso-casco" className="px-6 py-3 bg-aviso-50 border-t border-aviso-200 text-[12px] text-aviso-900 space-y-1">
+                  {sinCoste.length > 0 && (
+                    <div>
+                      <b>{sinCoste.length} línea{sinCoste.length === 1 ? '' : 's'} sin coste.</b>{' '}
+                      El despiece no conoce {familiasSin.length === 1 ? 'la familia' : 'las familias'}{' '}
+                      <span className="font-mono font-bold">{familiasSin.join(', ')}</span>, así que
+                      no se le pone precio de fábrica en vez de inventar uno. <b>No entra{sinCoste.length === 1 ? '' : 'n'} en
+                      el coste ni en el margen de abajo</b>: el margen que ves es más alto
+                      que el real.
+                    </div>
+                  )}
+                  {otraGama.length > 0 && (
+                    <div>
+                      <b>{otraGama.length} línea{otraGama.length === 1 ? '' : 's'} con el
+                      casco tarifado en otra gama.</b> ACB no fabrica{' '}
+                      {otraGama.length === 1 ? 'ese mueble' : 'esos muebles'} en el acabado
+                      elegido, así que el coste sale de{' '}
+                      <span className="font-mono font-bold">{gamas.join(', ')}</span>. Es un
+                      precio de tarifa de verdad, pero <b>no el del acabado que has
+                      elegido</b>: confírmalo antes de fijar precio.
+                    </div>
+                  )}
                 </div>
               )}
             </div>

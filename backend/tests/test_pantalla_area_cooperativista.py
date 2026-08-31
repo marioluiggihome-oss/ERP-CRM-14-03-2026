@@ -168,35 +168,59 @@ def test_el_AREA_SE_ABRE_DESDE_COOP():
         "la puerta de COOP no se abre al socio: acaba de perder su área")
 
 
-def test_el_AREA_esta_tambien_en_la_pantalla_de_BIENVENIDA():
-    """Es por donde entra todo el mundo al abrir el ERP. Un montador que solo
-    tenga esto no debería tener que buscarlo en una barra de iconos."""
+def test_el_AREA_YA_NO_ESTA_SUELTA_EN_LA_BIENVENIDA():
+    """SE QUITÓ A PROPÓSITO (master, 31/08: «este área quítala, ya está en COOP»).
+
+    Estuvo en la bienvenida mientras «Mi área» era una pantalla suelta. Desde
+    que se mudó dentro de COOP —es su primera pestaña— tenerla también aquí son
+    DOS PUERTAS A LA MISMA PANTALLA, y eso ya ha costado un disgusto en este
+    ERP: «Planificación» se enseñaba con un permiso en el menú y con otro en la
+    bienvenida, el master la desactivó y le siguió saliendo (CLAUDE.md, regla
+    26). Dos sitios que deciden quién entra son uno que se aprieta y otro que se
+    queda abierto.
+
+    Esta prueba es la de antes DEL REVÉS, y eso es lo que hay que ver al leerla:
+    lo que se protegía —que el socio pueda llegar a su área— lo protege ahora
+    `test_el_AREA_SE_ABRE_DESDE_COOP`, que sigue vivo justo encima. Aquí solo se
+    vigila que no vuelva a aparecer una segunda puerta.
+    """
     cuerpo = _lee_ruta(BIENVENIDA)
-    assert "'miArea'" in cuerpo, "«Mi área» no está entre los módulos de bienvenida"
+    assert "tab: 'miArea'" not in cuerpo, (
+        "«Mi área» ha vuelto a la pantalla de bienvenida: son dos puertas a la "
+        "misma pantalla y el día que cambie quién entra se cambiará en una y no "
+        "en la otra")
 
 
-def test_QUIEN_VE_EL_ENLACE_lo_decide_la_regla_comun_y_no_una_copia_a_mano():
-    """Las dos pantallas preguntan a `plataformas.js`, que es lo que se compara
-    con el servidor en `test_calculo_plataformas.py`.
+def test_EL_CAMINO_VIEJO_SIGUE_ABRIENDO_ALGO():
+    """Quitar el botón NO puede dejar muerto el nombre `miArea`: hay enlaces y
+    estado de navegador con él, y tiene que seguir abriendo la pestaña dentro de
+    COOP (CLAUDE.md, regla 22: los caminos viejos siguen vivos)."""
+    cuerpo = _lee_ruta(APP)
+    assert "'miArea'" in cuerpo, (
+        "se ha perdido el camino viejo: un enlace con `miArea` llevaría a una "
+        "pantalla en blanco")
+
+
+def test_QUIEN_ENTRA_A_COOP_lo_decide_la_regla_comun_y_no_una_copia_a_mano():
+    """`App.js` pregunta a `plataformas.js`, que es lo que se compara con el
+    servidor en `test_calculo_plataformas.py`.
 
     Si aquí se escribiera la condición a mano —`isMontador || isComercial`— el
-    menú le enseñaría «Mi área» a un suscriptor de carpinter.io, que al entrar
-    se comería un 403; y el día que la regla cambie, cambiaría en un sitio y no
-    en el otro. Es exactamente lo que ya pasó con el rótulo de los tramos de
+    menú le enseñaría COOP a un suscriptor de carpinter.io, que al entrar se
+    comería un 403; y el día que la regla cambie, cambiaría en un sitio y no en
+    el otro. Es exactamente lo que ya pasó con el rótulo de los tramos de
     comisión: el importe bien y la explicación mintiendo.
     """
-    for ruta, nombre in ((APP, "App.js"), (BIENVENIDA, "WelcomeScreen.jsx")):
-        cuerpo = _lee_ruta(ruta)
-        assert "esCooperativista" in cuerpo, (
-            f"{nombre} no usa `esCooperativista` de plataformas.js")
-        assert "plataformas" in cuerpo, (
-            f"{nombre} no importa la regla común de plataformas")
-        # Y que no haya una condición escrita a mano al lado del botón.
-        i = cuerpo.find("miArea")
-        assert i != -1
-        alrededor = cuerpo[max(0, i - 250):i + 250]
-        for a_mano in ("isMontador", "isComercial", "isRepresentative"):
-            assert a_mano not in alrededor, (
-                f"{nombre} decide quién ve «Mi área» mirando `{a_mano}` a mano, "
-                "en vez de preguntarle a plataformas.js. Así es como el menú y "
-                "el servidor se separan.")
+    cuerpo = _lee_ruta(APP)
+    assert "esCooperativista" in cuerpo, (
+        "App.js no usa `esCooperativista` de plataformas.js")
+    assert "plataformas" in cuerpo, (
+        "App.js no importa la regla común de plataformas")
+    i = cuerpo.find("miArea")
+    assert i != -1
+    alrededor = cuerpo[max(0, i - 250):i + 250]
+    for a_mano in ("isMontador", "isComercial", "isRepresentative"):
+        assert a_mano not in alrededor, (
+            f"App.js decide quién entra mirando `{a_mano}` a mano, en vez de "
+            "preguntarle a plataformas.js. Así es como el menú y el servidor "
+            "se separan.")
