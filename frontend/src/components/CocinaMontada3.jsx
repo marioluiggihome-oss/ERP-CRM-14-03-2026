@@ -35,6 +35,7 @@ import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
 import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal } from './RentabilidadMV';
 import RelacionReview from './RelacionReview';
+import { despieceDeFrentes, totalesDelDespiece } from '../utils/despieceFrentes';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
@@ -252,6 +253,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   }, [state?.relacionMVPendiente]);   // eslint-disable-line
   const [showComparador, setShowComparador] = useState(false);
   const [showEscandallo, setShowEscandallo] = useState(false);
+  const [showFrentes, setShowFrentes] = useState(false);
   const [showMuestrario, setShowMuestrario] = useState(false);
   const [filtroCat, setFiltroCat] = useState('TODOS');
   const [copiadoWs, setCopiadoWs] = useState(false);
@@ -697,6 +699,49 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   }));
 
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
+
+  /** LA LISTA PARA EL PROVEEDOR, EN EXCEL.
+   *
+   *  Mismas tres reglas que la exportación de clientes, y por lo mismo: en un
+   *  Excel español el separador es `;` (con comas sale todo en una columna), el
+   *  BOM evita que «Cajón» salga «CajÃ³n», y TODAS las celdas van
+   *  entrecomilladas —una sola sin escapar corre el resto de la fila y entonces
+   *  el ancho de una pieza aparece en la casilla del alto de otra—.
+   *
+   *  SIN EUROS SI EL CANDADO ESTÁ ECHADO: esta lista se puede estar enseñando
+   *  con alguien delante, y el coste de compra es lo que le cuesta a la casa
+   *  (CLAUDE.md, reglas 5 y 9). Las medidas y las unidades salen siempre: son
+   *  lo que se pide. */
+  const exportarFrentes = () => {
+    const piezas = despieceDeFrentes(filas, { esLineal: (m) => !!anchosDe(m) });
+    if (!piezas.length) return;
+    const columnas = [
+      ['Mueble', p => p.cod],
+      ['Pieza', p => p.pieza],
+      ['Alto (cm)', p => p.alto ?? ''],
+      ['Ancho (cm)', p => p.ancho ?? ''],
+      ['Uds', p => p.uds],
+      ...(verCoste ? [
+        ['Puntos', p => p.puntos ?? ''],
+        ['Coste ud. (€)', p => (p.costeUd == null ? '' : p.costeUd)],
+        ['Coste total (€)', p => (p.coste == null ? '' : p.coste)],
+      ] : []),
+      ['Sin tarifa', p => (p.sinTarifa ? 'SI' : '')],
+    ];
+    const celda = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const contenido = [
+      'sep=;',
+      columnas.map(([t]) => celda(t)).join(';'),
+      ...piezas.map(p => columnas.map(([, saca]) => celda(saca(p))).join(';')),
+    ].join('\r\n');
+    const blob = new Blob([`\uFEFF${contenido}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Frentes_${(cliente || 'cocina').replace(/[^\w-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const _MANO_SUFIJO = /(D\/I|D|I)$/;
   const manoDe = (cod) => {
@@ -1443,6 +1488,20 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           >
             <Hammer size={12} className="text-dato-400" /> Escandallo
           </button>
+          {/* EL DESPIECE PIEZA A PIEZA (master, 31/08: «un desglose de puertas,
+              frentes, costados, etc., para luego comprobar y ver si están bien
+              de cara a poder pedir a proveedor»). El Escandallo de al lado da
+              TOTALES —metros de tablero, bisagras, horas—, y con eso no se
+              pide: al proveedor no se le piden 4,2 m² de puerta, se le piden
+              cinco puertas de 80×45. */}
+          <button
+            onClick={() => setShowFrentes(v => !v)}
+            data-testid="cm3-boton-frentes"
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showFrentes ? 'bg-accion-500 text-slate-950 border-accion-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            title="Despiece de frentes y piezas, pieza a pieza, para comprobar antes de pedir al proveedor"
+          >
+            <List size={12} className="text-dato-400" /> Frentes
+          </button>
           {/* Desplegable IMPORTAR */}
           <div className="relative">
             <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
@@ -1593,6 +1652,120 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           </div>
         </div>
       )}
+
+      {/* ─────────── DESPIECE DE FRENTES Y PIEZAS ───────────
+          Pieza a pieza, con sus medidas, para COMPROBAR antes de pedir.
+          El descuento de compra de las puertas se toca aquí mismo: es el dato
+          que decide si la lista sirve para pedir o no, y tenerlo escondido en
+          otro modal obliga a ir y volver comprobando de memoria. */}
+      {showFrentes && (() => {
+        const piezas = despieceDeFrentes(filas, { esLineal: (m) => !!anchosDe(m) });
+        const T = totalesDelDespiece(piezas);
+        return (
+          <div data-testid="cm3-panel-frentes" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in">
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <List size={16} className="text-master-600" />
+                <span className="text-xs font-black uppercase tracking-widest text-slate-700">Despiece de frentes y piezas</span>
+              </div>
+              <span className="text-[11px] text-slate-400">
+                {T.piezas} referencia{T.piezas === 1 ? '' : 's'} · {T.uds} unidades · {T.m2} m²
+              </span>
+
+              {/* EL DESCUENTO, AQUI MISMO. Solo con el candado abierto: es lo
+                  que le cuesta a la casa (CLAUDE.md, reglas 5 y 9). */}
+              {verCoste && (
+                <div className="flex items-center gap-1.5 ml-auto text-[11px]">
+                  <span className="font-bold text-slate-500">Dto. compra puertas MV:</span>
+                  <input type="number" min="0" max="100" step="any" value={dtoPuertas1}
+                    onChange={e => setDtoPuertas1(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    data-testid="frentes-dto1"
+                    className="w-14 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                  <span className="text-slate-400">%</span>
+                  <span className="text-slate-300">+</span>
+                  <input type="number" min="0" max="100" step="any" value={dtoPuertas2}
+                    onChange={e => setDtoPuertas2(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    data-testid="frentes-dto2"
+                    className="w-14 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                  <span className="text-slate-400">%</span>
+                  <span className="ml-1 font-mono font-black text-master-700">
+                    = −{Math.round((1 - (1 - dtoPuertas1 / 100) * (1 - dtoPuertas2 / 100)) * 1000) / 10}%
+                  </span>
+                </div>
+              )}
+              <button onClick={exportarFrentes} disabled={!piezas.length}
+                data-testid="frentes-exportar"
+                title="Descargar la lista para abrirla en Excel y pasársela al proveedor"
+                className={`${verCoste ? '' : 'ml-auto'} px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white text-[11px] font-bold flex items-center gap-1.5`}>
+                <Download size={13} /> Exportar a Excel
+              </button>
+            </div>
+
+            <div className="overflow-x-auto max-h-[52vh]">
+              <table className="w-full text-[11px]">
+                <thead className="bg-white text-slate-400 sticky top-0 shadow-2xs">
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-2 px-3 font-black uppercase">Mueble</th>
+                    <th className="text-left py-2 px-3 font-black uppercase">Pieza</th>
+                    <th className="text-center py-2 px-3 font-black uppercase">Alto</th>
+                    <th className="text-center py-2 px-3 font-black uppercase">Ancho</th>
+                    <th className="text-center py-2 px-3 font-black uppercase">Uds</th>
+                    {verCoste && <th className="text-right py-2 px-3 font-black uppercase">Pts</th>}
+                    {verCoste && <th className="text-right py-2 px-3 font-black uppercase">Coste ud.</th>}
+                    {verCoste && <th className="text-right py-2 px-3 font-black uppercase">Total</th>}
+                  </tr>
+                </thead>
+                <tbody className="font-mono">
+                  {piezas.map((p, i) => (
+                    <tr key={i} className={`border-b border-slate-100 ${p.sinTarifa ? 'bg-aviso-50' : ''}`}>
+                      <td className="py-1.5 px-3 font-black text-indigo-700">{p.cod}</td>
+                      <td className="py-1.5 px-3 font-sans font-bold text-slate-700">
+                        {p.pieza}
+                        {p.esLineal && <span className="ml-1 text-[9px] font-black text-slate-400 uppercase">lineal</span>}
+                        {p.sinTarifa && (
+                          <span className="ml-1 text-[9px] font-black text-aviso-700"
+                            title="Esa medida no está en la matriz de la tarifa MV. Hay que pedirle precio al proveedor: no vale cero.">
+                            sin tarifa
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1.5 px-3 text-center text-slate-600">{p.alto != null ? `${p.alto} cm` : '—'}</td>
+                      <td className="py-1.5 px-3 text-center text-slate-600">{p.ancho != null ? `${p.ancho} cm` : '—'}</td>
+                      <td className="py-1.5 px-3 text-center font-black text-slate-800">{p.uds}</td>
+                      {verCoste && <td className="py-1.5 px-3 text-right text-slate-500">{p.puntos ?? '—'}</td>}
+                      {verCoste && <td className="py-1.5 px-3 text-right text-dato-700">{eur(p.costeUd)}</td>}
+                      {verCoste && <td className="py-1.5 px-3 text-right font-black text-dato-900">{eur(p.coste)}</td>}
+                    </tr>
+                  ))}
+                  {!piezas.length && (
+                    <tr><td colSpan={8} className="py-8 text-center text-slate-400 font-sans">
+                      Sin piezas todavía: añade muebles al presupuesto.
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-4 flex-wrap text-[11px]">
+              <span className="text-slate-500">
+                <b className="text-slate-800">{T.uds}</b> piezas a pedir · <b className="text-slate-800">{T.m2}</b> m²
+                {verCoste && <> · <b className="text-slate-800">{T.puntos}</b> puntos</>}
+              </span>
+              {T.sinTarifa > 0 && (
+                <span className="text-aviso-800 font-bold" data-testid="frentes-aviso-sin-tarifa">
+                  {T.sinTarifa} pieza{T.sinTarifa === 1 ? '' : 's'} sin precio de tarifa: pídele precio al
+                  proveedor. <b>No entran en el total</b>, así que lo que ves es menos de lo que costará.
+                </span>
+              )}
+              {verCoste && (
+                <span className="font-mono">
+                  coste de compra <b className="text-dato-900 font-black">{eur(T.coste)}</b>
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Escandallo Técnico de Taller Desplegable */}
       {showEscandallo && (

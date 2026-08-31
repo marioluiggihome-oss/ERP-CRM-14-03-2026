@@ -170,8 +170,13 @@ def test_LAS_COLUMNAS_DE_COSTE_ESTAN_SIEMPRE_Y_NO_ENSANCHAN_LA_TABLA():
     """
     cuerpo = sin_comentarios(_lee(CM3))
 
-    # Las dos columnas existen fuera de cualquier condición de candado.
-    cabecera = cuerpo[cuerpo.index("<thead"):cuerpo.index("</thead>")]
+    # LA CABECERA DE LA TABLA PRINCIPAL, no «el primer <thead> del fichero».
+    # Desde que existe el panel de Frentes hay DOS tablas, y la de aquel sí
+    # esconde sus columnas de dinero con el candado (es correcto: ahí el coste
+    # de compra no se enseña con un cliente delante). Se ancla en «PVP Ud.»,
+    # que solo está en la tabla del presupuesto.
+    fin_tabla = cuerpo.index("PVP Ud.</th>")
+    cabecera = cuerpo[cuerpo.rindex("<thead", 0, fin_tabla):cuerpo.index("</thead>", fin_tabla)]
     assert "{verCoste &&" not in cabecera, (
         "hay columnas que aparecen y desaparecen con el candado: la tabla se "
         "ensancha al abrirlo, la cabecera se sale y el PVP queda contra el "
