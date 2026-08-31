@@ -70,6 +70,19 @@ export const herrajesDe = (m) => {
     .reduce((t, k) => t + (Number(d[k]) || 0), 0);
 };
 
+/** LA DESCRIPCIÓN DE UNA LÍNEA, EN UN SOLO SITIO.
+ *
+ *  Lo que el master escribe a mano, y si no ha escrito nada, la familia de
+ *  tarifa. Vive aquí y no repetida en cada plantilla porque la usan la tabla,
+ *  la ficha y el PDF: escrita tres veces, el día que se cambie una la pantalla
+ *  diría una cosa y el presupuesto del cliente otra — que es el fallo que este
+ *  proyecto ya tuvo con el rótulo de los tramos de comisión.
+ *
+ *  OJO: esto es un RÓTULO. `familia` sigue siendo lo que decide el despiece, el
+ *  coste y si la línea comisiona; escribir aquí no la toca. */
+export const descDe = (m) =>
+  (m?.desc || '').trim() || m?.familia?.replace(/_/g, ' ') || m?.tipo || 'Mueble';
+
 const costeDetalladoDe = (m, p, tarifa, pvVal, acabadoCasco) => {
   return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal, acabadoCasco);
 };
@@ -581,6 +594,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const setAlto = (k, v) => setMuebles(prev => prev.map(m => {
     if (m._k !== k) return m;
     const alto = Number(v) || null;
+    // UN PRECIO ESCRITO A MANO MANDA SOBRE LA TARIFA. Sin esta condición,
+    // cambiar el alto después de pactar un precio lo devolvía al de catálogo
+    // sin decir nada, y el presupuesto salía por otra cifra.
+    if (m.pvpManual) return { ...m, alto };
     return { ...m, alto, pvp: puntosLocal(m, alto) };
   }));
 
@@ -620,12 +637,57 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const setAnchoTarifa = (k, v) => setMuebles(prev => prev.map(m => {
     if (m._k !== k) return m;
     const conAncho = { ...m, anchoTarifa: Number(v) || ANCHO_POR_DEFECTO_LINEAL };
+    if (m.pvpManual) return conAncho;   // el precio a mano manda (ver `setPvp`)
     return { ...conAncho, pvp: puntosLocal(conAncho, m.alto) };
   }));
 
   const setObs = (k, obs) => {
     setMuebles(prev => prev.map(m => m._k === k ? { ...m, obs } : m));
   };
+
+  /** LA DESCRIPCIÓN DE LA LÍNEA, A MANO (master, 31/08: «que la línea importada
+   *  se puedan modificar todos los campos»).
+   *
+   *  Se guarda APARTE de `familia`, no encima: la familia es lo que decide el
+   *  despiece, el coste y si la línea comisiona (regla 16). Si escribir un
+   *  texto la cambiara, renombrar «BAJO» a «Mueble del office» sacaría esa
+   *  línea del cálculo de la comisión sin que nadie lo hubiera pedido.
+   *  Vacío = se enseña la familia de siempre. */
+  const setDesc = (k, desc) =>
+    setMuebles(prev => prev.map(m => m._k === k ? { ...m, desc } : m));
+
+  /** EL PRECIO DE VENTA, A MANO.
+   *
+   *  `pvpManual` NO es un adorno: en cuanto se toca a mano, ni `setAlto` ni
+   *  `setAnchoTarifa` pueden volver a pisarlo. Sin esa marca, el master escribe
+   *  un precio pactado, cambia el alto de la línea y el precio vuelve al de
+   *  tarifa EN SILENCIO — y el presupuesto sale por otra cifra sin que nadie
+   *  vea un error.
+   *
+   *  Dejar el campo VACÍO devuelve la línea a la tarifa: hace falta una forma
+   *  de deshacer que no sea borrar la línea y volver a añadirla. */
+  const setPvp = (k, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const bruto = String(v ?? '').trim().replace(',', '.');   // teclado español
+    if (bruto === '') {
+      const { pvpManual, ...limpio } = m;
+      return { ...limpio, pvp: puntosLocal(m, m.alto) };
+    }
+    const n = Number(bruto);
+    if (!Number.isFinite(n) || n < 0) return m;
+    return { ...m, pvp: Math.round(n * 100) / 100, pvpManual: true };
+  }));
+
+  /** El ancho y el alto de una línea que NO es lineal (un mueble de catálogo).
+   *  Son las medidas que van al taller. NO tocan el precio: el precio de un
+   *  mueble MV sale de su código, y si hiciera falta otro se escribe a mano
+   *  arriba — que es una decisión, no un efecto secundario (regla del escalón). */
+  const setMedidaMueble = (k, campo, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const bruto = String(v ?? '').trim().replace(',', '.');
+    const n = bruto === '' ? null : Number(bruto);
+    return { ...m, [campo]: Number.isFinite(n) && n > 0 ? n : null };
+  }));
 
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
 
@@ -921,7 +983,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
     // Tabla de Muebles
     const tableBody = muebles.map((m, idx) => {
-      const descBase = m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble';
+      const descBase = descDe(m);
       const descCompleta = m.obs?.trim() ? `${descBase}\n[Obs: ${m.obs.trim()}]` : descBase;
       return [
         idx + 1,
@@ -1897,9 +1959,18 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">Manual</span>
                           )}
                         </div>
-                        <div className="font-bold text-slate-600 text-[11px] mt-0.5">
-                          {m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
-                        </div>
+                        <input
+                          type="text"
+                          value={m.desc ?? ''}
+                          onChange={e => setDesc(m._k, e.target.value)}
+                          placeholder={m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
+                          title={`Descripción de la línea. Vacío = «${m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}», que es la familia de tarifa y NO cambia al escribir aquí.`}
+                          className={`mt-0.5 w-full px-1.5 py-0.5 rounded-lg border font-bold text-[11px] outline-none transition-all ${
+                            (m.desc || '').trim()
+                              ? 'border-slate-300 bg-white text-slate-700'
+                              : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 focus:border-indigo-400 focus:bg-white placeholder:text-slate-600 placeholder:font-bold'
+                          }`}
+                        />
                       </div>
                       <button type="button" onClick={() => quitar(m._k)}
                         title="Quitar este mueble"
@@ -1995,8 +2066,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </button>
                       </div>
                       <div className="text-right">
-                        <div className="text-[10px] text-slate-400 font-bold uppercase">
-                          {`${eur(m.pvp)} × ${m.qty}`}
+                        <div className="flex items-center justify-end gap-1 text-[10px] text-slate-400 font-bold">
+                          <input type="number" min="0" step="any"
+                            value={m.pvp ?? ''}
+                            onChange={e => setPvp(m._k, e.target.value)}
+                            title={m.pvpManual
+                              ? 'Precio escrito a mano: manda sobre la tarifa. Bórralo para volver al de catálogo.'
+                              : 'Precio de tarifa. Escribe encima para fijar uno pactado.'}
+                            className={`w-20 px-1 py-0.5 rounded-lg border text-right font-mono font-bold text-[11px] outline-none ${
+                              m.pvpManual
+                                ? 'border-master-300 bg-master-50 text-master-800'
+                                : 'border-transparent bg-transparent text-slate-500 hover:border-slate-200 focus:border-indigo-400 focus:bg-white'
+                            }`} />
+                          <span className="uppercase">{`€ × ${m.qty}`}</span>
                         </div>
                         <div className="font-mono font-black text-slate-900 text-lg leading-none">
                           {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
@@ -2149,9 +2231,23 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
                       {/* Familia / Descripción + Línea de Observaciones / Características especiales */}
                       <td className="py-3 px-3 min-w-[220px]">
-                        <div className="font-bold text-slate-800 text-xs">
-                          {m.familia?.replace(/_/g, ' ') || m.tipo || 'Mueble'}
-                        </div>
+                        {/* LA DESCRIPCIÓN, EDITABLE (master, 31/08). Se escribe
+                            APARTE de la familia: la familia decide el despiece,
+                            el coste y si la línea comisiona, así que renombrar
+                            no puede cambiarla. Vacío = la familia de siempre. */}
+                        <input
+                          type="text"
+                          value={m.desc ?? ''}
+                          onChange={e => setDesc(m._k, e.target.value)}
+                          placeholder={descDe({ ...m, desc: '' })}
+                          title={`Descripción de la línea. Vacío = «${descDe({ ...m, desc: '' })}», que es la familia de tarifa y NO cambia al escribir aquí.`}
+                          data-testid="cm3-desc-linea"
+                          className={`w-full px-1.5 py-0.5 rounded-lg border text-xs font-bold outline-none transition-all ${
+                            (m.desc || '').trim()
+                              ? 'border-slate-300 bg-white text-slate-800'
+                              : 'border-transparent bg-transparent text-slate-800 hover:border-slate-200 focus:border-indigo-400 focus:bg-white placeholder:text-slate-800 placeholder:font-bold'
+                          }`}
+                        />
                         {/* Línea de Observaciones / Características Especiales del Mueble */}
                         <div className="mt-1 flex items-center gap-1">
                           <input
@@ -2189,7 +2285,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                               title="Ancho definitivo. No cambia el precio."
                               className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-[11px] outline-none focus:border-dato-400" />
                           </div>
-                        ) : (m.ancho ? `${m.ancho} cm` : '—')}
+                        ) : (
+                          <input type="number" min="0" step="any" placeholder="—"
+                            value={m.ancho ?? ''}
+                            onChange={e => setMedidaMueble(m._k, 'ancho', e.target.value)}
+                            title="Ancho de fabricación, en cm. No cambia el precio: el de un mueble MV sale de su código."
+                            data-testid="cm3-ancho-linea"
+                            className="w-16 px-1.5 py-1 rounded-lg border border-transparent bg-transparent text-center font-bold text-slate-700 text-xs outline-none hover:border-slate-200 focus:border-indigo-400 focus:bg-white" />
+                        )}
                       </td>
 
                       {/* Alto */}
@@ -2274,7 +2377,31 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       )}
 
                       {/* PVP */}
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-700">{eur(m.pvp)}</td>
+                      {/* EL PVP, A MANO. En cuanto se toca, ni cambiar el alto
+                          ni el ancho pueden volver a pisarlo (ver `setPvp`):
+                          un precio pactado que vuelve al de tarifa en silencio
+                          saca el presupuesto por otra cifra sin dar un error.
+                          Dejarlo vacío devuelve la línea a la tarifa. */}
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <input type="number" min="0" step="any"
+                            value={m.pvp ?? ''}
+                            onChange={e => setPvp(m._k, e.target.value)}
+                            title={m.pvpManual
+                              ? 'Precio escrito a mano: manda sobre la tarifa. Bórralo para volver al precio de catálogo.'
+                              : 'Precio de tarifa. Escribe encima para fijar uno pactado.'}
+                            data-testid="cm3-pvp-linea"
+                            className={`w-24 px-1.5 py-1 rounded-lg border text-right font-mono font-bold text-sm outline-none transition-all ${
+                              m.pvpManual
+                                ? 'border-master-300 bg-master-50 text-master-800'
+                                : 'border-transparent bg-transparent text-slate-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white'
+                            }`} />
+                          <span className="text-[10px] text-slate-400">€</span>
+                        </div>
+                        {m.pvpManual && (
+                          <div className="text-[9px] font-black text-master-600 text-right pr-3 leading-none mt-0.5">a mano</div>
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-right font-mono font-black text-slate-900 text-sm">
                         {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
                       </td>
