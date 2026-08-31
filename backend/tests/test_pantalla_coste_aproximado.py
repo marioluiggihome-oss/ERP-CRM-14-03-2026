@@ -155,7 +155,10 @@ def test_LAS_COLUMNAS_DE_COSTE_ESTAN_SIEMPRE_Y_NO_ENSANCHAN_LA_TABLA():
         · ESTAN SIEMPRE. Con el candado echado enseñan «•••»; al abrirlo, la
           cifra. Al tocar el candado NO se añade ni se quita una columna.
         · El candado ES la cabecera de la columna.
-        · Margen con semáforo: ≥40 % verde · ≥25 % ámbar · por debajo, rojo.
+        · Margen con semáforo. Los umbrales eran 40 % y 25 % SOBRE EL PVP; al
+          pasar el margen a contarse sobre el COSTE (master, 31/08) se
+          tradujeron a 66,7 % y 33,3 %, que es la misma frontera: los mismos
+          muebles se pintan del mismo color que antes.
         · Sin coste conocido: «—», nunca un número.
 
     LO QUE ARREGLA, Y ES TODO EL ASUNTO: cuando las columnas aparecían y
@@ -181,7 +184,7 @@ def test_LAS_COLUMNAS_DE_COSTE_ESTAN_SIEMPRE_Y_NO_ENSANCHAN_LA_TABLA():
         "hay columnas que aparecen y desaparecen con el candado: la tabla se "
         "ensancha al abrirlo, la cabecera se sale y el PVP queda contra el "
         "borde. Es justo lo que el master pidió deshacer")
-    assert ">Margen<" in cabecera and "Coste" in cabecera, (
+    assert ">Margen s/coste<" in cabecera and "Coste" in cabecera, (
         "faltan las columnas de coste y margen en la cabecera")
 
     # Y en las celdas: se TAPAN, no se quitan.
@@ -196,12 +199,19 @@ def test_EL_MARGEN_LLEVA_SEMAFORO():
     """Del desglose original. Un margen es lo único de esta pantalla que sí es
     bueno o malo —por eso lleva color, y el importe no (docs/DISENO.md)."""
     cuerpo = sin_comentarios(_lee(CM3))
-    i = cuerpo.index("m.margenPct >= 40")
-    tramo = cuerpo[i:i + 200]
-    for umbral, color in (("40", "text-ok-600"), ("25", "text-aviso-600")):
-        assert umbral in tramo, f"falta el umbral del {umbral}%"
+    i = cuerpo.index("m.margenPct >= SEMAFORO_MARGEN.bien")
+    tramo = cuerpo[i:i + 240]
+    for umbral, color in (("SEMAFORO_MARGEN.bien", "text-ok-600"),
+                          ("SEMAFORO_MARGEN.regular", "text-aviso-600")):
+        assert umbral in tramo, f"falta el umbral {umbral}"
         assert color in tramo, f"falta el color de ese tramo ({color})"
-    assert "text-error-600" in tramo, "un margen por debajo del 25% no se pinta en rojo"
+    assert "text-error-600" in tramo, "un margen por debajo del segundo umbral no se pinta en rojo"
+    # Y los umbrales NO SE ESCRIBEN A MANO: se traducen de los de siempre. Con
+    # números sueltos, cambiar la base del margen habría repintado la pantalla
+    # en silencio (ver `test_calculo_margen_sobre_coste.py`).
+    assert "m.margenPct >= 40" not in cuerpo, (
+        "queda un umbral escrito sobre el PVP: con el margen contado sobre el "
+        "coste, ese 40 significa otra cosa")
 
 
 def test_UN_MUEBLE_SIN_COSTE_ENSEÑA_UNA_RAYA_Y_NO_UN_NUMERO():
@@ -282,7 +292,8 @@ def test_EL_ESCANDALLO_SALE_DEBAJO_MUEBLE_A_MUEBLE():
 
     # Y CADA COSTE POR SU NOMBRE, en su columna.
     for titulo in ("Casco", "Puertas", "Bisagras", "Patas", "Colgad.", "Cajones",
-                   "Gavetas", "Soportes", "M. obra", "Coste ud.", "PVP ud.", "Margen"):
+                   "Gavetas", "Soportes", "M. obra", "Coste ud.", "PVP ud.",
+                   "Margen s/coste"):
         assert f">{titulo}</th>" in tabla, (
             f"al escandallo le falta la columna «{titulo}»")
     for campo in ("d.bisagras", "d.patas", "d.colg", "d.caj", "d.gav",

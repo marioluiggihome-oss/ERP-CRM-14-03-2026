@@ -254,6 +254,54 @@ export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, pue
 // compare con `comisiones.MANO_DE_OBRA_POR_DEFECTO` del backend: si se
 // separan, la pantalla calcula el margen con una cifra y la nomina paga con
 // otra, y nadie ve un error.
+/* EL MARGEN SE CUENTA DESDE EL COSTE HASTA LA VENTA (master, 31/08: «el margen
+ * que lo ponga al incrementar desde costo hasta venta y no al revés»).
+ *
+ *     margen % = (PVP − coste) / COSTE × 100
+ *
+ * Antes se dividía entre el PVP, que es el «margen comercial» de los libros. No
+ * estaba mal calculado; estaba contado al revés de como se decide un precio en
+ * esta casa: se parte del coste y se sube. Un mueble de 128,43 € que se vende a
+ * 206,46 € salía en 37,8 %, y lo que uno quiere leer ahí es que se le ha subido
+ * un 60,8 %.
+ *
+ * SIN COSTE NO HAY INCREMENTO, y por eso devuelve `null` y no un número: no se
+ * puede decir cuánto has subido algo que partía de cero, ni de un coste que no
+ * se sabe. Sale «—», como el resto de la pantalla (CLAUDE.md, regla 7). Antes,
+ * dividiendo entre el PVP, una línea sin coste daba un cómodo 100 %.
+ */
+export const margenSobreCoste = (pvp, coste) => {
+  // OJO CON `Number(null)`, QUE ES 0. Un PVP nulo es «todavía no se sabe», y sin
+  // descartarlo antes se convertía en un precio de venta de cero euros: el
+  // margen salía en −100 % en vez de «—». Lo cazó su candado.
+  if (pvp === null || pvp === undefined || pvp === '') return null;
+  if (coste === null || coste === undefined || coste === '') return null;
+  const p = Number(pvp);
+  const c = Number(coste);
+  if (!Number.isFinite(p) || !Number.isFinite(c) || c <= 0) return null;
+  return ((p - c) / c) * 100;
+};
+
+/* LOS ESCALONES DEL SEMÁFORO, TRADUCIDOS — NO REESCRITOS.
+ *
+ * Estaban en 40 % y 25 % SOBRE EL PVP. Cambiar la base y dejar los números
+ * habría repintado la pantalla entera en silencio: un mueble que salía verde
+ * con un 42 % sobre PVP pasa a marcar un 72 % sobre coste, y con el corte en 40
+ * seguiría verde por casualidad — pero uno que estaba en rojo con un 20 % sobre
+ * PVP daría un 25 % sobre coste y se pondría ámbar sin que nadie lo hubiera
+ * decidido. La conversión es exacta: un margen `m` sobre PVP es `m / (100 − m)`
+ * sobre coste, así que los mismos muebles se pintan del mismo color que ayer.
+ * Para MOVER el criterio hay que cambiar estos dos números a propósito. */
+// HACIA ABAJO, NO AL REDONDEO MÁS CERCANO. El 40 % sobre PVP es 66,666… sobre
+// coste; redondeado a 66,7 el mueble que estaba JUSTO en la frontera del verde
+// se quedaba fuera por dos milésimas y pasaba a ámbar solo. Truncando, todo el
+// que aprobaba antes sigue aprobando y nadie nuevo entra.
+const _sobrePvpAsobreCoste = (m) => Math.floor((m / (100 - m)) * 1000000) / 10000;
+export const SEMAFORO_MARGEN = {
+  bien: _sobrePvpAsobreCoste(40),      // 66,7 % sobre coste = 40 % sobre PVP
+  regular: _sobrePvpAsobreCoste(25),   // 33,3 % sobre coste = 25 % sobre PVP
+};
+
 export const MANO_DE_OBRA_POR_DEFECTO = 17;
 
 // Costes por defecto de componentes MV (editables en la UI de Rentabilidad)
@@ -1257,14 +1305,14 @@ export default function RentabilidadMV({ esMaster, seed }) {
     pdf.text('RENTABILIDAD TARIFA MV', 12, y); y += 6;
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(110);
     pdf.text(`Valor punto ${pv} €  ·  Puerta ${p.doorM2} €/m²  ·  Generado`, 12, y); y += 6;
-    const cols = [['Código', 22], ['Cant', 12], ['Casco', 20], ['Puerta', 20], ['Bisag', 18], ['Otros', 20], ['M.O.', 16], ['Coste', 22], ['PVP', 22], ['Margen', 30]];
+    const cols = [['Código', 22], ['Cant', 12], ['Casco', 20], ['Puerta', 20], ['Bisag', 18], ['Otros', 20], ['M.O.', 16], ['Coste', 22], ['PVP', 22], ['Margen s/coste', 34]];
     let x = 12; pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(40);
     cols.forEach(([t, w]) => { pdf.text(t, x + 1, y); x += w; }); y += 2; pdf.setDrawColor(200); pdf.line(12, y, 12 + cols.reduce((a, c) => a + c[1], 0), y); y += 4;
     pdf.setFont('helvetica', 'normal');
     const E = (n) => (Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     calc.rows.forEach(r => {
       x = 12; const otros = (r.patas + r.colg + r.caj + r.gav + r.soportes) * r.cant;
-      const vals = [`${r.cod}${r.altura ? '/' + r.altura : ''}`, String(r.cant), E(r.casco * r.cant), E(r.puerta * r.cant), E(r.bisagras * r.cant), E(otros), E(r.mo * r.cant), E(r.coste), E(r.pvp), `${E(r.margen)} (${r.pvp ? Math.round(r.margen / r.pvp * 100) : 0}%)`];
+      const vals = [`${r.cod}${r.altura ? '/' + r.altura : ''}`, String(r.cant), E(r.casco * r.cant), E(r.puerta * r.cant), E(r.bisagras * r.cant), E(otros), E(r.mo * r.cant), E(r.coste), E(r.pvp), `${E(r.margen)} (${E(margenSobreCoste(r.pvp, r.coste) ?? 0)}% s/coste)`];
       vals.forEach((v, i) => { pdf.text(String(v), x + 1, y); x += cols[i][1]; }); y += 5;
       if (y > 190) { pdf.addPage(); y = 14; }
     });
@@ -1273,7 +1321,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
     pdf.text('TOTAL', 12, y);
     pdf.text(`Coste ${E(calc.tot.coste)} €`, 130, y);
     pdf.text(`PVP ${E(calc.tot.pvp)} €`, 175, y);
-    pdf.text(`MARGEN ${E(calc.tot.margen)} € (${calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%)`, 215, y);
+    pdf.text(`MARGEN ${E(calc.tot.margen)} € (${E(margenSobreCoste(calc.tot.pvp, calc.tot.coste) ?? 0)}% sobre coste)`, 215, y);
     pdf.save(`rentabilidad_mv_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
@@ -1451,7 +1499,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
             <div className="rounded-xl border border-slate-200 p-2.5"><div className="text-[10px] font-black text-slate-400 uppercase">Muebles</div><div className="text-lg font-black text-slate-800">{lineas.reduce((a, l) => a + l.cant, 0)}</div></div>
             <div className="rounded-xl border border-slate-200 p-2.5"><div className="text-[10px] font-black text-slate-400 uppercase">PVP total</div><div className="text-lg font-black text-slate-800">{pvpVisible ? eur(calc.tot.pvp) : '•••'}</div></div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2.5"><div className="text-[10px] font-black text-emerald-500 uppercase">Margen total</div><div className="text-lg font-black text-emerald-700">{margenVisible ? eur(calc.tot.margen) : '•••'}</div></div>
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2.5"><div className="text-[10px] font-black text-emerald-500 uppercase">Margen medio</div><div className="text-lg font-black text-emerald-700">{margenVisible ? `${calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%` : '•••'}</div></div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2.5"><div className="text-[10px] font-black text-emerald-500 uppercase" title="Lo que se sube desde el coste hasta la venta.">Margen medio s/coste</div><div className="text-lg font-black text-emerald-700">{margenVisible ? (margenSobreCoste(calc.tot.pvp, calc.tot.coste) == null ? '—' : `${Math.round(margenSobreCoste(calc.tot.pvp, calc.tot.coste))}%`) : '•••'}</div></div>
           </div>
         )}
 
@@ -1581,7 +1629,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   <th className="px-2 py-2">Código</th><th className="px-2 py-2 text-center">Cant.</th>
                   <th className="px-2 py-2 text-right">Casco</th><th className="px-2 py-2 text-right">Puerta</th><th className="px-2 py-2 text-right">Bisag.</th>
                   <th className="px-2 py-2 text-right">Otros</th><th className="px-2 py-2 text-right">M.O.</th>
-                  <th className="px-2 py-2 text-right">Coste</th><th className="px-2 py-2 text-right">PVP</th><th className="px-2 py-2 text-right font-black">Margen</th><th className="px-2 py-2"></th>
+                  <th className="px-2 py-2 text-right">Coste</th><th className="px-2 py-2 text-right">PVP</th><th className="px-2 py-2 text-right font-black" title="Lo que se sube desde el coste hasta la venta.">Margen s/coste</th><th className="px-2 py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1600,7 +1648,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                     <td className="px-2 py-1.5 text-right">{margenVisible ? eur(r.mo * r.cant) : '•••'}</td>
                     <td className="px-2 py-1.5 text-right font-bold">{margenVisible ? eur(r.coste) : '•••'}</td>
                     <td className="px-2 py-1.5 text-right text-slate-500">{pvpVisible ? eur(r.pvp) : '•••'}</td>
-                    <td className={`px-2 py-1.5 text-right font-black ${r.margen >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{margenVisible ? <>{eur(r.margen)} <span className="text-[9px]">({r.pvp ? Math.round(r.margen / r.pvp * 100) : 0}%)</span></> : '•••'}</td>
+                    <td className={`px-2 py-1.5 text-right font-black ${r.margen >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{margenVisible ? <>{eur(r.margen)} <span className="text-[9px]">({margenSobreCoste(r.pvp, r.coste) == null ? '—' : `${Math.round(margenSobreCoste(r.pvp, r.coste))}%`})</span></> : '•••'}</td>
                     <td className="px-2 py-1.5"><button onClick={() => setLineas(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><Trash2 size={13} /></button></td>
                   </tr>
                 ))}
@@ -1610,7 +1658,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   <td className="px-2 py-2" colSpan={7}>TOTAL COCINA</td>
                   <td className="px-2 py-2 text-right">{margenVisible ? eur(calc.tot.coste) : '•••'}</td>
                   <td className="px-2 py-2 text-right">{pvpVisible ? eur(calc.tot.pvp) : '•••'}</td>
-                  <td className="px-2 py-2 text-right text-emerald-800">{margenVisible ? <>{eur(calc.tot.margen)} <span className="text-[10px]">({calc.tot.pvp ? Math.round(calc.tot.margen / calc.tot.pvp * 100) : 0}%)</span></> : '•••'}</td>
+                  <td className="px-2 py-2 text-right text-emerald-800">{margenVisible ? <>{eur(calc.tot.margen)} <span className="text-[10px]">({margenSobreCoste(calc.tot.pvp, calc.tot.coste) == null ? '—' : `${Math.round(margenSobreCoste(calc.tot.pvp, calc.tot.coste))}%`})</span></> : '•••'}</td>
                   <td></td>
                 </tr>
               </tfoot>

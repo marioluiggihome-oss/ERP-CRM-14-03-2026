@@ -33,7 +33,7 @@ import autoTable from 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
-import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal, DTO_CASCOS_PVP, esMuebleMV } from './RentabilidadMV';
+import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal, DTO_CASCOS_PVP, esMuebleMV, margenSobreCoste, SEMAFORO_MARGEN } from './RentabilidadMV';
 import { VALOR_PUNTO_CASCOS } from '../utils/valorPuntoCascos';
 import RelacionReview from './RelacionReview';
 import { despieceDeFrentes, totalesDelDespiece } from '../utils/despieceFrentes';
@@ -951,7 +951,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     const coste = desp.costeTotal != null ? desp.costeTotal : null;
     const pvp = Number(m.pvp) || 0;
     const margen = coste == null ? null : pvp - coste;
-    const margenPct = (coste == null || pvp <= 0) ? null : (margen / pvp) * 100;
+    // DESDE EL COSTE HASTA LA VENTA, no al revés (master, 31/08). Ver
+    // `margenSobreCoste`: sin coste devuelve `null`, que se pinta «—».
+    const margenPct = coste == null ? null : margenSobreCoste(pvp, coste);
     /* EL PRECIO QUE TENDRÍA EN MV, para poner los dos al lado.
        Se calcula AQUÍ y no al importar porque la tarifa llega del servidor
        después de la importación: hecho allí saldría vacío siempre. Y así sigue
@@ -996,7 +998,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     (t, m) => (m.coste == null ? t : t + (Number(m.despiece?.[k]) || 0) * (Number(m.qty) || 1)), 0);
   const totalCoste = filas.reduce((s, m) => s + (m.coste || 0) * (Number(m.qty) || 1), 0);
   const totalMargen = baseImponible - totalCoste;
-  const totalMargenPct = baseImponible > 0 ? (totalMargen / baseImponible) * 100 : 0;
+  const totalMargenPct = margenSobreCoste(baseImponible, totalCoste);
 
   // Métricas avanzadas y Escandallo de Taller
   const metricas = useMemo(() => {
@@ -2691,7 +2693,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         <span className="text-dato-600 font-bold">
                           {m.margenPct == null
                             ? 'Margen — (sin coste de casco)'
-                            : `Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}%)`}
+                            : `Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}% s/coste)`}
                         </span>
                       </div>
                     )}
@@ -2746,8 +2748,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   </th>
                   <th className="py-2.5 px-3 text-right">
                     <button type="button" {...handlersCandado.props} onClick={clicCandado}
-                      title={`Margen sobre el PVP. ${AYUDA_CANDADO}.`}
-                      className="text-slate-400 hover:text-master-700">Margen</button>
+                      title={`Margen sobre el COSTE: lo que se sube desde lo que cuesta hasta lo que se vende. ${AYUDA_CANDADO}.`}
+                      className="text-slate-400 hover:text-master-700">Margen s/coste</button>
                   </th>
                   <th className="py-2.5 px-3 text-right">PVP Ud.</th>
                   <th className="py-2.5 px-3 text-right">Total</th>
@@ -2940,10 +2942,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       <td className={`py-3 px-3 text-right font-mono font-bold ${
                         !verCoste ? 'text-slate-400'
                         : m.margenPct == null ? 'text-aviso-600'
-                        : m.margenPct >= 40 ? 'text-ok-600'
-                        : m.margenPct >= 25 ? 'text-aviso-600'
+                        : m.margenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'
+                        : m.margenPct >= SEMAFORO_MARGEN.regular ? 'text-aviso-600'
                         : 'text-error-600'}`}
-                        title={m.margenPct == null ? 'Sin coste: no se puede calcular el margen' : `${eur(m.margen)} sobre un PVP de ${eur(m.pvp)}`}>
+                        title={m.margenPct == null
+                          ? 'Sin coste: no se puede calcular el margen'
+                          : `${eur(m.margen)} de incremento sobre un coste de ${eur(m.coste)} — se vende a ${eur(m.pvp)}`}>
                         {verCoste ? (m.margenPct == null ? '—' : `${m.margenPct.toFixed(0)}%`) : OCULTO}
                       </td>
 
@@ -3063,9 +3067,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   coste <b className="font-mono text-slate-800">{eur(totalCoste)}</b>
                   {' · '}margen{' '}
                   <b className={`font-mono ${
-                    totalMargenPct >= 40 ? 'text-ok-600'
-                    : totalMargenPct >= 25 ? 'text-aviso-600'
-                    : 'text-error-600'}`}>{totalMargenPct.toFixed(0)}%</b>
+                    totalMargenPct == null ? 'text-slate-400'
+                    : totalMargenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'
+                    : totalMargenPct >= SEMAFORO_MARGEN.regular ? 'text-aviso-600'
+                    : 'text-error-600'}`}
+                    title="Lo que se sube desde el coste hasta la venta.">
+                    {totalMargenPct == null ? '—' : `${totalMargenPct.toFixed(0)}%`}</b>
                   {sinCoste.length > 0 && (
                     <span className="ml-2 text-aviso-700 font-bold"
                       data-testid="cm3-aviso-casco"
@@ -3310,7 +3317,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <th className="text-right py-2 px-2 font-black uppercase bg-slate-50">Coste ud.</th>
                   <th className="text-right py-2 px-2 font-black uppercase bg-slate-50">Coste × uds</th>
                   <th className="text-right py-2 px-2 font-black uppercase">PVP ud.</th>
-                  <th className="text-right py-2 px-2 font-black uppercase">Margen</th>
+                  <th className="text-right py-2 px-2 font-black uppercase" title="Lo que se sube desde el coste hasta la venta.">Margen s/coste</th>
                 </tr>
               </thead>
               <tbody className="font-mono">
@@ -3359,8 +3366,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       <td className="py-1.5 px-2 text-right text-slate-600">{eur(m.pvp)}</td>
                       <td className={`py-1.5 px-2 text-right font-bold ${
                         m.margenPct == null ? 'text-slate-300'
-                        : m.margenPct >= 40 ? 'text-ok-600'
-                        : m.margenPct >= 25 ? 'text-aviso-600'
+                        : m.margenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'
+                        : m.margenPct >= SEMAFORO_MARGEN.regular ? 'text-aviso-600'
                         : 'text-error-600'}`}>
                         {m.margenPct == null ? '—' : `${eur(m.margen)} (${m.margenPct.toFixed(0)}%)`}
                       </td>
@@ -3392,9 +3399,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <td className="py-2 px-2 text-right text-dato-950" data-testid="cm3-escandallo-total">{eur(totalCoste)}</td>
                   <td className="py-2 px-2 text-right text-slate-700">{eur(subtotalBruto)}</td>
                   <td className={`py-2 px-2 text-right ${
-                    totalMargenPct >= 40 ? 'text-ok-600'
-                    : totalMargenPct >= 25 ? 'text-aviso-600' : 'text-error-600'}`}>
-                    {eur(totalMargen)} ({totalMargenPct.toFixed(0)}%)
+                    totalMargenPct == null ? 'text-slate-400'
+                    : totalMargenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'
+                    : totalMargenPct >= SEMAFORO_MARGEN.regular ? 'text-aviso-600' : 'text-error-600'}`}>
+                    {eur(totalMargen)} ({totalMargenPct == null ? '—' : `${totalMargenPct.toFixed(0)}%`})
                   </td>
                 </tr>
               </tfoot>
