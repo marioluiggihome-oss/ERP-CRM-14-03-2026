@@ -56,6 +56,7 @@ export const despieceDeFrentes = (filas, { esLineal } = {}) => {
     // ── LINEALES: no se despiezan, se piden tal cual ──
     if (esLineal && esLineal(m)) {
       piezas.push({
+        _k: m._k, indice: null, costeManual: false,
         mueble: m.cod || '?', cod: m.cod || '?',
         pieza: (m.desc || '').trim() || (m.familia || 'Pieza lineal').replace(/_/g, ' '),
         // La medida REAL manda sobre el escalón de tarifa: el escalón dice lo
@@ -73,16 +74,20 @@ export const despieceDeFrentes = (filas, { esLineal } = {}) => {
 
     if (!detalle.length) continue;   // un mueble sin frentes no aporta piezas
 
-    // EL REPARTO DEL COSTE ENTRE LOS FRENTES va POR PUNTOS, no a partes
-    // iguales: en un BCG60 el cajón de 14 y la gaveta de 35 no cuestan lo
-    // mismo, y repartir a medias daría un precio bonito y falso en las dos.
-    const puntosTotales = detalle.reduce((t, f) => t + (Number(f.puntos) || 0), 0);
-    for (const f of detalle) {
+    // EL COSTE DE CADA FRENTE LO TRAE YA `despiece`, repartido por puntos y con
+    // los precios escritos a mano ya aplicados. AQUÍ NO SE VUELVE A REPARTIR:
+    // hacerlo otra vez es tener el mismo cálculo en dos sitios, y el día que
+    // uno cambie la lista diría un precio y el presupuesto otro, del mismo
+    // mueble. Es el fallo que este proyecto ya ha tenido con el rótulo de los
+    // tramos de comisión y con la tabla de estados de fábrica.
+    for (let i = 0; i < detalle.length; i++) {
+      const f = detalle[i];
       const pts = f.puntos == null ? null : Number(f.puntos);
-      const parte = (pts != null && puntosTotales > 0) ? pts / puntosTotales : 0;
-      const pvpUd = pts == null ? null : cent((Number(d.puertaPvp) || 0) * parte);
-      const costeUd = pts == null ? null : cent((Number(d.puerta) || 0) * parte);
+      const pvpUd = f.pvpUd == null ? null : cent(f.pvpUd);
+      const costeUd = f.coste == null ? null : cent(f.coste);
       piezas.push({
+        _k: m._k, indice: i,
+        costeManual: !!f.costeManual,
         mueble: m.cod || '?', cod: m.cod || '?',
         // El rótulo del frente trae las medidas entre paréntesis; se quitan,
         // que van en sus columnas.

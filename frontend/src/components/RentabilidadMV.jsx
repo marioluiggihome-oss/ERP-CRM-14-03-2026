@@ -985,7 +985,44 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   const puntosPuertas = desgloseFrentes.puntosTotales;
 
   const pvpPuertas = Math.round(puntosPuertas * pvPuntos * 100) / 100;
-  const costePuertas = Math.round(pvpPuertas * factorDto * 100) / 100;
+
+  /* EL COSTE DE CADA FRENTE, UNO A UNO — Y EL DEL MUEBLE ES SU SUMA.
+   *
+   * Antes el coste de puertas se calculaba de golpe (`pvpPuertas × dto`) y el
+   * despiece de pantalla lo repartía DESPUÉS por su cuenta. Dos sitios haciendo
+   * el mismo reparto es el fallo de siempre: el día que uno cambie, la lista de
+   * frentes diría un precio y el presupuesto otro, del mismo mueble.
+   *
+   * Ahora se reparte AQUÍ, por puntos —en un BCG60 la gaveta de 35 vale el
+   * doble que el cajón de 14—, y el coste del mueble es la suma de sus piezas.
+   * Así no pueden separarse: son el mismo número mirado de dos formas.
+   *
+   * Y ESTO ES LO QUE HACE POSIBLE EL PRECIO A MANO (master, 31/08: «los precios
+   * de cada puerta»): si MV te pasa un precio pactado para una puerta concreta,
+   * se escribe encima y el coste del mueble lo recoge solo. `frentesPrecio` es
+   * un objeto {índice: euros}; lo que no esté escrito sigue saliendo de tarifa.
+   */
+  const preciosAMano = (item && item.frentesPrecio) || {};
+  const frentesConCoste = desgloseFrentes.frentes.map((fr, i) => {
+    const pts = fr.puntos;
+    const parte = (pts != null && puntosPuertas > 0) ? pts / puntosPuertas : 0;
+    const pvpUd = pts == null ? null : Math.round(pvpPuertas * parte * 100) / 100;
+    const deTarifa = pts == null ? null : Math.round(pvpPuertas * parte * factorDto * 100) / 100;
+    const escrito = preciosAMano[i];
+    const n = Number(String(escrito ?? '').replace(',', '.'));
+    // Un 0 escrito a propósito SE RESPETA (una puerta que regala el proveedor);
+    // lo que no vale es un texto o un negativo.
+    const aMano = escrito !== undefined && escrito !== null && String(escrito).trim() !== ''
+      && Number.isFinite(n) && n >= 0;
+    return {
+      ...fr,
+      pvpUd,
+      coste: aMano ? Math.round(n * 100) / 100 : deTarifa,
+      costeManual: aMano,
+    };
+  });
+  const costePuertas = Math.round(
+    frentesConCoste.reduce((t, fr) => t + (fr.coste || 0), 0) * 100) / 100;
 
   const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : (altura === '70' ? 713 : 790));
   const areaP = (puertas > 0 || cajones > 0 || gavetas > 0) ? (w / 1000) * (altoFrente / 1000) : 0;
@@ -1034,7 +1071,7 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
     cascoPvp: cc.pvpDesmontada,
     puerta: costePuertas,
     puertaPvp: pvpPuertas,
-    puertasDetalle: desgloseFrentes.frentes,
+    puertasDetalle: frentesConCoste,
     dtoPuertas: dto1,
     dtoPuertas1: dto1,
     dtoPuertas2: dto2,

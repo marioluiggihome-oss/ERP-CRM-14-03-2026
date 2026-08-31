@@ -92,7 +92,13 @@ export const descDe = (m) =>
   (m?.desc || '').trim() || m?.familia?.replace(/_/g, ' ') || m?.tipo || 'Mueble';
 
 const costeDetalladoDe = (m, p, tarifa, pvVal, acabadoCasco) => {
-  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '', familia: m.familia }, p, tarifa, pvVal, acabadoCasco);
+  // `frentesPrecio` viaja con el mueble: son los precios que el master ha
+  // escrito para UNA puerta concreta (master, 31/08). `despiece` los aplica y
+  // el coste del mueble los recoge solo, así que la lista de frentes y el
+  // presupuesto no pueden decir cosas distintas.
+  return despiece({ cod: m.cod, altura: m.alto ? String(m.alto) : '',
+                    familia: m.familia, frentesPrecio: m.frentesPrecio },
+                  p, tarifa, pvVal, acabadoCasco);
 };
 
 const PALETA_RAPIDA = [
@@ -696,6 +702,22 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     const bruto = String(v ?? '').trim().replace(',', '.');
     const n = bruto === '' ? null : Number(bruto);
     return { ...m, [campo]: Number.isFinite(n) && n > 0 ? n : null };
+  }));
+
+  /** EL PRECIO DE UNA PIEZA CONCRETA (master, 31/08: «los precios de cada
+   *  puerta»). Si MV pasa un precio pactado para una puerta suelta, se escribe
+   *  encima del de tarifa y el coste del mueble lo recoge solo.
+   *
+   *  Vaciarlo devuelve esa pieza a la tarifa — hace falta poder deshacer sin
+   *  borrar la línea entera. Un 0 escrito a propósito se respeta (una puerta
+   *  que regala el proveedor); un texto o un negativo, no. */
+  const setPrecioFrente = (k, indice, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const actual = { ...(m.frentesPrecio || {}) };
+    const bruto = String(v ?? '').trim();
+    if (bruto === '') delete actual[indice];
+    else actual[indice] = bruto;
+    return { ...m, frentesPrecio: actual };
   }));
 
   const quitar = (k) => setMuebles(prev => prev.filter(m => m._k !== k));
@@ -1735,7 +1757,33 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       <td className="py-1.5 px-3 text-center text-slate-600">{p.ancho != null ? `${p.ancho} cm` : '—'}</td>
                       <td className="py-1.5 px-3 text-center font-black text-slate-800">{p.uds}</td>
                       {verCoste && <td className="py-1.5 px-3 text-right text-slate-500">{p.puntos ?? '—'}</td>}
-                      {verCoste && <td className="py-1.5 px-3 text-right text-dato-700">{eur(p.costeUd)}</td>}
+                      {/* EL PRECIO DE ESTA PIEZA, EDITABLE. Lo que se escribe
+                          aquí manda sobre la tarifa y el coste del mueble lo
+                          recoge solo — es el MISMO número, no una copia.
+                          Vaciarlo vuelve a la tarifa. */}
+                      {verCoste && (
+                        <td className="py-1.5 px-3 text-right">
+                          {p.indice == null ? (
+                            <span className="text-dato-700">{eur(p.costeUd)}</span>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <input type="number" min="0" step="any"
+                                value={p.costeUd ?? ''}
+                                onChange={e => setPrecioFrente(p._k, p.indice, e.target.value)}
+                                data-testid="frentes-precio-pieza"
+                                title={p.costeManual
+                                  ? 'Precio escrito a mano para esta pieza: manda sobre la tarifa. Bórralo para volver al de catálogo.'
+                                  : 'Precio de tarifa con tu descuento. Escribe encima si MV te ha pasado un precio pactado para esta pieza.'}
+                                className={`w-20 px-1 py-0.5 rounded-lg border text-right font-mono font-bold text-[11px] outline-none ${
+                                  p.costeManual
+                                    ? 'border-master-300 bg-master-50 text-master-800'
+                                    : 'border-transparent bg-transparent text-dato-700 hover:border-slate-200 focus:border-indigo-400 focus:bg-white'
+                                }`} />
+                              {p.costeManual && <span className="text-[8px] font-black text-master-600">a mano</span>}
+                            </div>
+                          )}
+                        </td>
+                      )}
                       {verCoste && <td className="py-1.5 px-3 text-right font-black text-dato-900">{eur(p.coste)}</td>}
                     </tr>
                   ))}
