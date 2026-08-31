@@ -121,7 +121,19 @@ def test_el_valor_del_punto_viene_de_AJUSTES():
     assert "valorPunto={coef}" in cascos_jsx, (
         "Cascos ya no le pasa el valor del punto: el importador volveria al de "
         "partida sin decir nada")
-    assert "pointValueDesmontada" in cascos_jsx
+    # DE DONDE SACA `coef`. Antes se exigia la cadena `pointValueDesmontada`
+    # aqui dentro, porque Cascos lo resolvia por su cuenta. Desde el 31/08 lo
+    # resuelve `utils/valorPuntoCascos.js`, que es lo que impide que esta
+    # pantalla y el Presupuestador acaben con dos valores distintos para el
+    # mismo casco — que es justo lo que habia pasado (1 aqui, 1,30 alli).
+    # La obligacion es la misma; lo que ha cambiado es donde vive el dato.
+    assert "valorPuntoCascos(state)" in cascos_jsx, (
+        "Cascos vuelve a resolver el valor del punto por su cuenta: se separara "
+        "otra vez del Presupuestador y el mismo casco tendra dos precios")
+    fuente = _leer(os.path.join(SRC, "utils", "valorPuntoCascos.js"))
+    assert "pointValueDesmontada" in fuente and "cascosPointValue" in fuente, (
+        "la fuente comun ya no lee la casilla de Ajustes: el valor del punto "
+        "dejaria de ser configurable")
 
 
 def test_un_fregadero_sigue_siendo_un_fregadero():

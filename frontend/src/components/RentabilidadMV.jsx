@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Trash2, Loader, Calculator, TrendingUp, Upload, Lock, Unlock, Download } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { CASCOS } from '../data/cascos';
+import { valorPuntoCascos, VALOR_PUNTO_CASCOS } from '../utils/valorPuntoCascos';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -82,20 +83,11 @@ export const precioColor = (c, colorId) => {
   return null;
 };
 
-// Factor de margen de Cocina Desmontada configurado en Sección Master -> Márgenes
-export const getFactorDesmontada = () => {
-  try {
-    const rawVal = localStorage.getItem('pointValueDesmontada');
-    if (rawVal != null) return Math.max(1.0, parseFloat(rawVal) || 1.30);
-    const st = JSON.parse(localStorage.getItem('app_state') || '{}');
-    if (st?.pointValueDesmontada != null) return Math.max(1.0, parseFloat(st.pointValueDesmontada) || 1.30);
-    const set = JSON.parse(localStorage.getItem('settings') || '{}');
-    if (set?.cascosPointValue != null) return Math.max(1.0, parseFloat(set.cascosPointValue) || 1.30);
-    return 1.30;
-  } catch {
-    return 1.30;
-  }
-};
+// EL VALOR DEL PUNTO DE CASCOS vive en `utils/valorPuntoCascos.js`, para que lo
+// puedan leer también Cocina Desmontada y App.js sin arrastrarse el
+// Presupuestador entero. Se conserva el nombre viejo porque lo llaman
+// `despiece` y la ficha del mueble.
+export const getFactorDesmontada = () => valorPuntoCascos();
 
 // Coste y PVP del casco ACB: precio neto de catálogo ACB × factor de Cocina Desmontada (Master)
 export const cascoACB = (tipoAcb, ancho, alto, factor, acabadoCasco) => {

@@ -13,6 +13,7 @@ import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import { aMilimetros } from '../utils/medidas';
 import RentabilidadUnificada from './RentabilidadUnificada';
 import RelacionReview from './RelacionReview';
+import { valorPuntoCascos } from '../utils/valorPuntoCascos';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -303,8 +304,12 @@ const Cascos = ({ state, setState }) => {
   // Centros de envío configurados en Ajustes (uno por línea: "Nombre — Dirección").
   const centros = String(state?.settings?.centrosEnvio || '').split('\n').map(l => l.trim()).filter(Boolean);
   const [centroEnvio, setCentroEnvio] = useState('');
-  // Valor de punto (coeficiente) configurable en Master (Cocina Des-Montada); multiplica el precio de tarifa.
-  const coef = Number(state?.pointValueDesmontada ?? state?.settings?.cascosPointValue) || 1;
+  // EL VALOR DEL PUNTO, DE LA FUENTE COMÚN. Antes esta pantalla lo resolvía por
+  // su cuenta y caía en 1 cuando la casilla venía vacía, mientras el
+  // Presupuestador caía en 1,30: el MISMO casco se vendía a dos precios, y
+  // Desmontada a la mitad de lo que vale. Un dato de dinero con dos defectos no
+  // tiene defecto, tiene dos precios.
+  const coef = valorPuntoCascos(state);
   const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState(null); // null oculto

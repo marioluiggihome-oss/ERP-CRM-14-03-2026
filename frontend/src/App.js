@@ -72,6 +72,7 @@ import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 import { initSecurityGuard } from './utils/securityGuard';
+import { VALOR_PUNTO_CASCOS } from '@/utils/valorPuntoCascos';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -279,7 +280,7 @@ const App = () => {
           settings: settings,  // Guardar settings completo para montajesEnabled y otros
           pointValueMontada: settings.pointValueMontada || 1.0,
           pointValueDespiece: settings.pointValueDespiece || 0.88,
-          pointValueDesmontada: settings.cascosPointValue || settings.pointValueDesmontada || 1.0,
+          pointValueDesmontada: settings.cascosPointValue || settings.pointValueDesmontada || VALOR_PUNTO_CASCOS,
           defaultEdgeBandingPriceMl: settings.defaultEdgeBandingPriceMl ?? 1.77,
           specialIncrementWidth: settings.specialIncrementWidth || 45,
           specialIncrementHeight: settings.specialIncrementHeight || 45,

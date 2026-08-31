@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { Euro, Loader, Save } from 'lucide-react';
 import { settingsAPI, librariesAPI } from '../../services/api';
+import { VALOR_PUNTO_CASCOS } from '../../utils/valorPuntoCascos';
 
 /**
  * PricingTab - Pestaña de Márgenes y Configuración de Precios
@@ -31,7 +32,11 @@ const PricingTab = ({ state, setState }) => {
       const payload = {
         // pointValueMontada se gestiona por biblioteca (librariesAPI), no aquí.
         pointValueDespiece: num(state.pointValueDespiece, 0.88),
-        cascosPointValue: num(state.pointValueDesmontada, 1),
+        // EL QUE GUARDA, y por eso era el peor de los cinco: si el campo
+        // llegaba vacío escribía un 1 en la base de datos, y desde ahí el
+        // ajuste quedaba mal PARA SIEMPRE — los cascos a mitad de precio, sin
+        // que nadie hubiera tocado la casilla.
+        cascosPointValue: num(state.pointValueDesmontada, VALOR_PUNTO_CASCOS),
         specialIncrementWidth: num(state.specialIncrementWidth, 45),
         specialIncrementHeight: num(state.specialIncrementHeight, 45),
         specialIncrementDepth: num(state.specialIncrementDepth, 45),
@@ -136,8 +141,8 @@ const PricingTab = ({ state, setState }) => {
           <input
             type="number"
             step="0.01"
-            value={state.pointValueDesmontada ?? 1.0}
-            onChange={(e) => setState(prev => ({ ...prev, pointValueDesmontada: parseFloat(e.target.value) || 1.0 }))}
+            value={state.pointValueDesmontada ?? VALOR_PUNTO_CASCOS}
+            onChange={(e) => setState(prev => ({ ...prev, pointValueDesmontada: parseFloat(e.target.value) || VALOR_PUNTO_CASCOS }))}
             className="w-full bg-cyan-50 border-2 border-cyan-200 rounded-xl p-4 text-2xl font-black text-cyan-900 outline-none focus:border-orange-500 text-center max-w-xs"
           />
           <p className="text-[11px] text-slate-400 mt-1">El descuento por usuario para Des-Montada se configura en cada ficha de usuario.</p>
