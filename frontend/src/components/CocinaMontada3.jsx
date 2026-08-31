@@ -662,10 +662,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
   const filas = muebles.map(m => {
     const desp = m.encontrado ? costeDetalladoDe(m, paramsCostes, tarifa, pv, acabadoCasco) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
-    const coste = desp.costeTotal || 0;
+    // `|| 0` AQUÍ ERA EL FALLO DE LA COLUMNA. Cuando el casco no tiene precio,
+    // `costeTotal` viene `null` — que quiere decir «no se sabe»— y un `|| 0` lo
+    // convierte en «cero euros», que es una afirmación. De ahí salía un margen
+    // del 73,9 % en una columna cuyo casco vale 168 € de tarifa.
+    const coste = desp.costeTotal != null ? desp.costeTotal : null;
     const pvp = Number(m.pvp) || 0;
-    const margen = pvp - coste;
-    const margenPct = pvp > 0 ? (margen / pvp) * 100 : 0;
+    const margen = coste == null ? null : pvp - coste;
+    const margenPct = (coste == null || pvp <= 0) ? null : (margen / pvp) * 100;
     return { ...m, despiece: desp, coste, margen, margenPct };
   });
 
@@ -676,7 +680,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const cuotaIva = baseImponible * (Number(ivaRate) || 0) / 100;
   const totalPvp = baseImponible + cuotaIva;
 
-  const totalCoste = filas.reduce((s, m) => s + m.coste * (Number(m.qty) || 1), 0);
+  // LAS LÍNEAS SIN COSTE NO SE SUMAN COMO CERO: SE CUENTAN Y SE AVISAN. Sumar
+  // cero da un coste total más bajo que el real y un margen más alto, que es
+  // exactamente el número por el que alguien fija un precio de venta.
+  const sinCoste = filas.filter(m => m.coste == null);
+  const totalCoste = filas.reduce((s, m) => s + (m.coste || 0) * (Number(m.qty) || 1), 0);
   const totalMargen = baseImponible - totalCoste;
   const totalMargenPct = baseImponible > 0 ? (totalMargen / baseImponible) * 100 : 0;
 
@@ -2019,6 +2027,25 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           {m.despiece?.dtoCascos > 0 && (
                             <span className="ml-1 text-[9px] font-black text-master-600">{`−${m.despiece.dtoCascos}%`}</span>
                           )}
+                          {/* ACB NO FABRICA TODO EN TODAS LAS GAMAS. Si esta
+                              familia no existe en el acabado elegido, el precio
+                              sale de la gama en la que SÍ se fabrica: es tarifa
+                              de verdad, pero no la del acabado pedido, y quien
+                              presupuesta tiene que verlo antes de fijar precio. */}
+                          {m.despiece?.cascoOtroAcabado && (
+                            <span data-testid="cm3-marca-otra-gama"
+                              className="ml-1 text-[9px] font-black text-aviso-600"
+                              title={`No se fabrica en el acabado elegido. Precio de tarifa de la gama «${m.despiece.cascoGama}» (${m.despiece.cascoOtroAcabado}).`}>
+                              otra gama
+                            </span>
+                          )}
+                          {m.despiece?.cascoSinPrecio && (
+                            <span data-testid="cm3-marca-sin-tarifa"
+                              className="ml-1 text-[9px] font-black text-error-600"
+                              title="Este casco no está en la tarifa ACB. No se puede dar un coste, y por eso esta línea no entra en el margen.">
+                              sin tarifa
+                            </span>
+                          )}
                         </span>
                         <span className="text-dato-700 font-bold">{`Puertas ${eur(m.despiece?.puerta)}`}</span>
                         <span className="text-dato-700 font-bold"
@@ -2034,7 +2061,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </span>
                         <span className="text-dato-900 font-black">{`Coste ${eur(m.coste)}`}</span>
                         <span className="text-dato-600 font-bold">
-                          {`Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}%)`}
+                          {m.margenPct == null
+                            ? 'Margen — (sin coste de casco)'
+                            : `Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}%)`}
                         </span>
                       </div>
                     )}
@@ -2240,7 +2269,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       )}
                       {verCoste && (
                         <td className="py-3 px-3 text-right font-mono font-bold text-dato-600">
-                          {eur(m.margen)} <span className="text-[10px] text-emerald-500">({m.margenPct.toFixed(1)}%)</span>
+                          {eur(m.margen)}{m.margenPct != null && <span className="text-[10px] text-emerald-500"> ({m.margenPct.toFixed(1)}%)</span>}
                         </td>
                       )}
 
@@ -2287,6 +2316,47 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               para {aprox.length === 1 ? 'esa línea' : 'esas líneas'} ha usado un mueble
               genérico (bajo de 80 con una puerta). <b>El margen de abajo incluye
               ese coste inventado</b>: revísalas antes de fijar precio.
+            </div>
+          );
+        })()}
+
+        {/* EL CASCO QUE NO SE FABRICA EN ESE ACABADO, Y EL QUE NO ESTÁ EN TARIFA.
+            El master, 30/08: «mira el precio del casco de la columna». Ponía
+            0,00 €. ACB no hace la columna despensa ni la semicolumna en la gama
+            «en kit» ni en 19 mm — solo en Diseño Grueso y Especiales Blanco—,
+            así que pedirla en grafito, que es el acabado por defecto, no
+            encontraba precio y se devolvía cero. Un cero no da error y se suma
+            sin protestar: en su columna eran 306,36 € de PVP con «73,9 % de
+            margen» y un casco que en tarifa vale 168 €.
+
+            Marcar la fila no basta, por lo mismo que el aviso de arriba: con
+            veinte líneas nadie va contando cuáles llevan la marca. */}
+        {verCoste && (() => {
+          const otraGama = filas.filter(m => m.despiece?.cascoOtroAcabado);
+          if (!otraGama.length && !sinCoste.length) return null;
+          const gamas = [...new Set(otraGama.map(m => m.despiece.cascoGama))];
+          return (
+            <div data-testid="cm3-aviso-casco" className="px-6 py-3 bg-aviso-50 border-t border-aviso-200 text-[12px] text-aviso-900 space-y-1">
+              {otraGama.length > 0 && (
+                <div>
+                  <b>{otraGama.length} línea{otraGama.length === 1 ? '' : 's'} con el
+                  casco tarifado en otra gama.</b> ACB no fabrica{' '}
+                  {otraGama.length === 1 ? 'ese mueble' : 'esos muebles'} en el acabado
+                  elegido, así que el coste sale de{' '}
+                  <span className="font-mono font-bold">{gamas.join(', ')}</span>. Es un
+                  precio de tarifa de verdad, pero <b>no el del acabado que has
+                  elegido</b>: confírmalo antes de fijar precio.
+                </div>
+              )}
+              {sinCoste.length > 0 && (
+                <div className="text-error-800">
+                  <b>{sinCoste.length} línea{sinCoste.length === 1 ? '' : 's'} sin coste
+                  de casco.</b> {sinCoste.length === 1 ? 'Ese casco no está' : 'Esos cascos no están'}{' '}
+                  en la tarifa ACB, así que <b>no entra{sinCoste.length === 1 ? '' : 'n'} en
+                  el coste ni en el margen de abajo</b>: el margen que ves es más alto
+                  que el real.
+                </div>
+              )}
             </div>
           );
         })()}

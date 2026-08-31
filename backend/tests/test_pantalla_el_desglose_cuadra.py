@@ -41,14 +41,22 @@ def _lee(ruta):
 def test_LA_FORMULA_DEL_COSTE_TIENE_CUATRO_SUMANDOS():
     """Se lee del cálculo. Si un día se añade un quinto, esta prueba lo dice y
     hay que enseñarlo también — que es exactamente lo que falló."""
+    # LA SENTENCIA ENTERA, hasta su `;`. Buscar «la línea que contiene
+    # `const costeTotal = Math.round`» dejó de encontrar nada el día que la
+    # fórmula pasó a ser un ternario repartido en tres líneas (para que un
+    # casco sin precio no se sume como cero), y esta prueba se puso roja sin
+    # que nadie hubiera roto el desglose.
     rent = _lee(RENT)
-    linea = next(l for l in rent.split("\n") if "const costeTotal = Math.round" in l)
+    i = rent.index("const costeTotal")
+    sentencia = rent[i:rent.index(";", i)]
+    # Solo la parte que SUMA, no la rama del `null`.
+    suma = sentencia[sentencia.index("Math.round"):]
     for parte in ("cc.coste", "costePuertas", "costeHerrajes", "costeMo"):
-        assert parte in linea, (
+        assert parte in suma, (
             f"«{parte}» ya no entra en el coste total; la fórmula ha cambiado y "
             "el desglose de pantalla hay que revisarlo")
-    assert linea.count("+") == 3, (
-        f"la fórmula del coste ya no tiene cuatro sumandos: {linea.strip()}. "
+    assert suma.count("+") == 3, (
+        f"la fórmula del coste ya no tiene cuatro sumandos: {suma.strip()}. "
         "Si se ha añadido otro, tiene que salir también en la ficha o el "
         "desglose dejará de cuadrar")
 

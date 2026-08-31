@@ -36,12 +36,50 @@ const MAP_CASCO_COLOR = {
   'Olmo (Diseño Grueso 18mm)': { color: 'olmo', grosor: 18 },
 };
 
-// Precio del color: preferencia según color indicado o por defecto el primero disponible
+// EL PRECIO DEL CASCO CUANDO EL ACABADO PEDIDO NO EXISTE EN ESA FAMILIA.
+//
+// El master, 30/08: «mira el precio del casco de la columna». Ponía 0,00 €.
+//
+// ACB NO FABRICA TODO EN TODAS LAS GAMAS, y eso no es un fallo de datos: es la
+// tarifa. La «Columna Despensa» y la «Semicolumna Despensa» solo existen en
+// Diseño Grueso (roble 16 / olmo 18) y Especiales Blanco 16 — no hay ni una en
+// la gama «en kit» ni en 19 mm. Así que pedir una columna en grafito, que es el
+// acabado POR DEFECTO, no encontraba precio.
+//
+// Y lo que hacía entonces era lo peor que se puede hacer: devolver CERO.
+//
+// Un cero no da error, no se ve raro y se suma sin protestar. En la columna del
+// master eran 306,36 € de PVP con «73,9 % de margen» y un casco que en tarifa
+// vale entre 128 y 306 €: el margen de verdad era una fracción de eso, o
+// negativo. Un hueco se ve; un cero se cobra. Es la regla 7 de CLAUDE.md por su
+// lado más caro: lo que no se sabe NO se rellena con un número plausible, y el
+// cero es el más plausible de todos porque siempre cuadra.
+//
+// LA RESERVA ESTABA ESCRITA Y NO SE EJECUTABA NUNCA. `COLOR_PRIO` llevaba aquí
+// desde el principio, y la función que tenía que recorrerla se quedó en un
+// `return null` seco: se la llama SIEMPRE sin color (`precioColor(c)`), así que
+// devolvía null siempre y la lista era decorado. El gemelo de esta función en
+// `ProformaImporter.jsx` sí la recorre — o sea que esta es una copia a la que
+// se le cayó el cuerpo, y nadie lo notó porque el resultado era un número.
 const COLOR_PRIO = ['grafito', 'aluminio', 'blancoEsp', 'blanco', 'roble', 'olmo', 'stone', 'spike', 'blancoHidrofugo', 'robleAurora'];
-const precioColor = (c, colorId) => { 
-  if (!c || !c.precios) return null; 
-  if (colorId && c.precios[colorId] != null) return c.precios[colorId];
-  return null; 
+
+/** Devuelve `{ precio, color }` o `null`. NUNCA cero: un casco que no está en
+ *  tarifa no cuesta cero, es que no se sabe lo que cuesta. */
+export const precioColor = (c, colorId) => {
+  if (!c || !c.precios) return null;
+  if (colorId && c.precios[colorId] != null) {
+    return { precio: c.precios[colorId], color: colorId };
+  }
+  for (const col of COLOR_PRIO) {
+    if (c.precios[col] != null) return { precio: c.precios[col], color: col };
+  }
+  // Y si el catálogo trae mañana un color que no está en la lista de arriba,
+  // tampoco se tira el precio: se coge el que haya. Quedarse sin precio por no
+  // haber actualizado una lista es volver al cero por otro camino.
+  for (const col of Object.keys(c.precios)) {
+    if (c.precios[col] != null) return { precio: c.precios[col], color: col };
+  }
+  return null;
 };
 
 // Factor de margen de Cocina Desmontada configurado en Sección Master -> Márgenes
@@ -67,36 +105,53 @@ export const cascoACB = (tipoAcb, ancho, alto, factor, acabadoCasco) => {
   const targetGrosor = conf.grosor;
 
   const pool = CASCOS.filter(c => c.tipo === tipoAcb);
-  if (!pool.length) return { coste: 0, pvpDesmontada: 0, med: '' };
+  // SIN PRECIO NO ES CERO. Si esa familia no está en el catálogo, no hay coste
+  // que dar: se dice, y quien mire el presupuesto lo ve. Devolver cero es
+  // decirle a quien vende que ese mueble sale gratis.
+  if (!pool.length) return { coste: null, pvpDesmontada: null, med: '', sinPrecio: true };
 
   const porGrosor = pool.filter(c => c.grosor === targetGrosor);
   const usePool = porGrosor.length ? porGrosor : pool;
 
-  let best = null, bd = Infinity;
-  for (const c of usePool) {
-    const pNeto = (c.precios && c.precios[targetColor] != null) ? c.precios[targetColor] : precioColor(c);
-    if (pNeto != null) {
+  // SE BUSCA EN DOS VUELTAS Y EN ESTE ORDEN, que importa: primero el acabado
+  // que se ha pedido, y solo si esa familia NO se fabrica en él, el que haya.
+  // Al revés, un mueble que sí existe en grafito podría acabar tarifado con el
+  // precio de otra gama sin que nadie lo pidiera.
+  const busca = (lista, color) => {
+    let mejor = null, bd = Infinity;
+    for (const c of lista) {
+      const hit = precioColor(c, color);
+      if (!hit) continue;
+      // Solo vale si es EL color pedido, cuando se está pidiendo uno concreto.
+      if (color && hit.color !== color) continue;
       const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
-      if (d < bd) { bd = d; best = { ...c, pNeto }; }
+      if (d < bd) { bd = d; mejor = { ...c, pNeto: hit.precio, colorUsado: hit.color }; }
     }
-  }
+    return mejor;
+  };
 
+  let best = busca(usePool, targetColor) || busca(pool, targetColor);
+  let otroAcabado = null;
   if (!best) {
-    for (const c of pool) {
-      const pNeto = precioColor(c);
-      if (pNeto != null) {
-        const d = Math.abs((c.ancho || 0) - ancho) * 3 + Math.abs((c.alto || 0) - alto);
-        if (d < bd) { bd = d; best = { ...c, pNeto }; }
-      }
-    }
+    // La familia no se fabrica en el acabado pedido. Se coge el precio REAL de
+    // la gama en la que sí se fabrica y SE MARCA: es un precio de tarifa, no un
+    // invento, pero no es el del acabado que se ha elegido y quien presupuesta
+    // tiene que saberlo antes de fijar precio.
+    best = busca(usePool, null) || busca(pool, null);
+    if (best) otroAcabado = best.colorUsado;
   }
 
-  if (!best) return { coste: 0, pvpDesmontada: 0, med: '' };
-  const precioNeto = best.pNeto || 0;
-  return { 
-    coste: Math.round(precioNeto * 100) / 100, 
-    pvpDesmontada: Math.round(precioNeto * f * 100) / 100, 
-    med: `${best.ancho}x${best.alto}` 
+  if (!best || best.pNeto == null) {
+    return { coste: null, pvpDesmontada: null, med: '', sinPrecio: true };
+  }
+  const precioNeto = best.pNeto;
+  return {
+    coste: Math.round(precioNeto * 100) / 100,
+    pvpDesmontada: Math.round(precioNeto * f * 100) / 100,
+    med: `${best.ancho}x${best.alto}`,
+    sinPrecio: false,
+    otroAcabado,          // el color realmente tarifado, si no era el pedido
+    gamaUsada: best.gama,
   };
 };
 
@@ -916,7 +971,10 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   // función que devuelve también el PVP de Desmontada: el descuento es de
   // COMPRA, y el PVP no se toca.
   const dtoCascos = Math.min(100, Math.max(0, Number((p && p.dtoCascos) || 0)));
-  const cc = dtoCascos > 0
+  // Sobre un casco SIN PRECIO no se aplica descuento: el 28% de «no se sabe»
+  // sigue siendo «no se sabe», y calcularlo lo convertiría en un 0,00 € con
+  // pinta de cifra.
+  const cc = (dtoCascos > 0 && ccBruto.coste != null)
     ? { ...ccBruto, coste: Math.round(ccBruto.coste * (1 - dtoCascos / 100) * 100) / 100 }
     : ccBruto;
   
@@ -947,12 +1005,22 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
     + (gavetas * (Number(p.gaveta) || 0))
     + (baldas * 4 * (Number(p.soporte) || 0))) * 100) / 100;
   const costeMo = Number(p.mano) || 0;
-  const costeTotal = Math.round((cc.coste + costePuertas + costeHerrajes + costeMo) * 100) / 100;
+  // UN COSTE INCOMPLETO NO ES UN COSTE. Si el casco no tiene precio, el total
+  // sale `null` y NO la suma de lo demás: sumar los otros tres sumandos daría
+  // un número con toda la pinta de ser el coste, más bajo que el de verdad, y
+  // de ahí saldría un margen inflado. Es lo que pasaba con las columnas.
+  const cascoSinPrecio = cc.coste == null;
+  const costeTotal = cascoSinPrecio
+    ? null
+    : Math.round((cc.coste + costePuertas + costeHerrajes + costeMo) * 100) / 100;
 
   return {
     fam: familia, med: cc.med, inc: w < 300 ? 'inc. corte' : '',
     casco: cc.coste,
     cascoTarifa: ccBruto.coste,   // antes del descuento de compra
+    cascoSinPrecio,
+    cascoOtroAcabado: ccBruto.otroAcabado || null,
+    cascoGama: ccBruto.gamaUsada || null,
     dtoCascos,
     cascoPvp: cc.pvpDesmontada,
     puerta: costePuertas,

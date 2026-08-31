@@ -322,16 +322,18 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
   const filas = muebles.map(m => {
     const desp = m.encontrado ? costeDetalladoDe(m, p, tarifa, pv, acabadoCasco) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
-    const coste = desp.costeTotal || 0;
+    // Mismo `|| 0` que en CocinaMontada3, mismo fallo: un casco sin precio en
+    // tarifa se convertía en «cero euros» y de ahí salía un margen inflado.
+    const coste = desp.costeTotal != null ? desp.costeTotal : null;
     const pvp = Number(m.pvp) || 0;
-    const margen = pvp - coste;
-    const margenPct = pvp > 0 ? (margen / pvp) * 100 : 0;
+    const margen = coste == null ? null : pvp - coste;
+    const margenPct = (coste == null || pvp <= 0) ? null : (margen / pvp) * 100;
     return { ...m, despiece: desp, coste, margen, margenPct };
   });
 
   const totalUds = muebles.reduce((s, m) => s + (Number(m.qty) || 1), 0);
   const totalPvp = filas.reduce((s, m) => s + m.pvp * (Number(m.qty) || 1), 0);
-  const totalCoste = filas.reduce((s, m) => s + m.coste * (Number(m.qty) || 1), 0);
+  const totalCoste = filas.reduce((s, m) => s + (m.coste || 0) * (Number(m.qty) || 1), 0);
   const totalMargen = totalPvp - totalCoste;
   const totalMargenPct = totalPvp > 0 ? (totalMargen / totalPvp) * 100 : 0;
 
@@ -1000,7 +1002,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
                       )}
                       {verCoste && (
                         <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">
-                          {eur(m.margen)} <span className="text-[10px] text-emerald-500">({m.margenPct.toFixed(1)}%)</span>
+                          {eur(m.margen)}{m.margenPct != null && <span className="text-[10px] text-emerald-500"> ({m.margenPct.toFixed(1)}%)</span>}
                         </td>
                       )}
 
