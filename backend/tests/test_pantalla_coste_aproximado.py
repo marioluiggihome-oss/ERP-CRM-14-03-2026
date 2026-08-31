@@ -249,3 +249,54 @@ def test_SE_DICE_CUANTAS_LINEAS_SE_QUEDAN_FUERA_DEL_MARGEN():
     assert 0 < i - total < 900, (
         "el aviso no está junto al margen total: ahí es donde se mira antes de "
         "fijar un precio")
+
+
+def test_EL_DESGLOSE_COMPLETO_SALE_DEBAJO_DE_SU_LINEA():
+    """El master, 31/08: «que aparezcan bien los costes de herraje, accesorios,
+    patas, etc., coste mano de obra, margen, puertas, etc., como aparecía antes».
+
+    Con la tabla de dos columnas —que es la que él quería recuperar— el detalle
+    solo estaba en el texto de ayuda, y ahí no se ve de un vistazo.
+
+    VA EN UNA FILA APARTE, DEBAJO, y no en columnas nuevas: así se ve entero y
+    la tabla NO se ensancha al abrir el candado, que es lo que no le gustaba.
+    Las dos cosas a la vez, no una a costa de la otra.
+    """
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert 'data-testid="cm3-desglose-linea"' in cuerpo, (
+        "no hay desglose debajo de cada línea: con el candado abierto solo se "
+        "verían el coste y el margen, sin decir de dónde salen")
+
+    i = cuerpo.index('data-testid="cm3-desglose-linea"')
+    fin = cuerpo.index("</tr>", i)
+    fila = cuerpo[i:fin]
+    for concepto in ("Casco ", "Puertas ", "Herrajes ", "M. obra ", "Margen "):
+        assert concepto in fila, (
+            f"el desglose no enseña «{concepto.strip()}», y el master lo pidió "
+            "por su nombre")
+    # LOS HERRAJES, UNO A UNO, EN LA LISTA QUE SE PINTA. Buscar la palabra a
+    # secas no valía: «Patas» sale también en el texto de ayuda del total de
+    # herrajes, así que quitarla de la lista pasaba en verde. Se comprobó
+    # rompiéndolo.
+    for pieza, campo in (("Bisagras", "bisagras"), ("Patas", "patas"),
+                         ("Colgadores", "colg"), ("Cajones", "caj"),
+                         ("Gavetas", "gav"), ("Soportes", "soportes")):
+        assert f"['{pieza}', m.despiece?.{campo}]" in fila, (
+            f"el desglose no detalla «{pieza}» pieza a pieza, y el master los "
+            "pidió por su nombre («herraje, accesorios, patas»)")
+
+    # Y NO puede depender de que la tabla se ensanche: la fila del desglose va
+    # con `colSpan`, no como columnas nuevas.
+    assert "colSpan" in fila, (
+        "el desglose se está metiendo como columnas: la tabla volvería a "
+        "ensancharse al abrir el candado")
+
+
+def test_EL_DESGLOSE_NO_SALE_SIN_COSTE():
+    """Una línea sin coste no tiene nada que desglosar: enseñar «Casco — +
+    Puertas — + …» es ruido que parece un fallo."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    i = cuerpo.index('data-testid="cm3-desglose-linea"')
+    guarda = cuerpo[cuerpo.rindex("{verCoste", 0, i):i]
+    assert "m.coste != null" in guarda, (
+        "el desglose se pinta también en las líneas sin coste")

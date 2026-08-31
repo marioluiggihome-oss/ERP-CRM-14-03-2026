@@ -33,7 +33,8 @@ import autoTable from 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
-import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal } from './RentabilidadMV';
+import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal, DTO_CASCOS_PVP } from './RentabilidadMV';
+import { VALOR_PUNTO_CASCOS } from '../utils/valorPuntoCascos';
 import RelacionReview from './RelacionReview';
 import { despieceDeFrentes, totalesDelDespiece } from '../utils/despieceFrentes';
 
@@ -430,12 +431,25 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   // EL DESCUENTO DE COMPRA DE CASCOS ACB. Se teclea a mano porque la tarifa del
   // proveedor se negocia. Por defecto 0: sin tocarlo, el coste sale igual que
   // siempre (ver `despiece` en RentabilidadMV).
-  const [dtoCascos, setDtoCascos] = useState(() => {
+  // LOS DOS DESCUENTOS DE CASCOS (master, 31/08: «multiplicando por dos y
+  // haciendo dos descuentos, el −50 % y el −28 %, para calcular mis costos»).
+  // El primero deshace el ×2 del PVP —es aritmética, por eso arranca en 50— y
+  // el segundo es el de ACB, que él teclea porque puede variar.
+  const [dtoCascos1, setDtoCascos1] = useState(() => {
+    try {
+      const v = localStorage.getItem('dto_cascos_pvp');
+      return v == null || v === '' ? DTO_CASCOS_PVP : (Number(v) || 0);
+    } catch { return DTO_CASCOS_PVP; }
+  });
+  const [dtoCascos2, setDtoCascos2] = useState(() => {
     try { return Number(localStorage.getItem('dto_cascos_acb')) || 0; } catch { return 0; }
   });
   useEffect(() => {
-    try { localStorage.setItem('dto_cascos_acb', String(dtoCascos)); } catch { /* noop */ }
-  }, [dtoCascos]);
+    try {
+      localStorage.setItem('dto_cascos_pvp', String(dtoCascos1));
+      localStorage.setItem('dto_cascos_acb', String(dtoCascos2));
+    } catch { /* noop */ }
+  }, [dtoCascos1, dtoCascos2]);
 
   const [dtoPuertas1, setDtoPuertas1] = useState(() => {
     try { return parseFloat(localStorage.getItem('dto_puertas_1') || localStorage.getItem('dto_puertas') || '50'); } catch { return 50; }
@@ -463,10 +477,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
   const paramsCostes = useMemo(() => ({
     ...p,
-    dtoCascos,
+    dtoCascos1,
+    dtoCascos2,
     dtoPuertas1,
     dtoPuertas2,
-  }), [p, dtoCascos, dtoPuertas1, dtoPuertas2]);
+  }), [p, dtoCascos1, dtoCascos2, dtoPuertas1, dtoPuertas2]);
 
   const [familias, setFamilias] = useState(null);
   const [pv, setPv] = useState(3.33);
@@ -2459,7 +2474,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   const opcionesAnc = anchosDe(m);
                   const tieneMano = manoDe(m.cod);
                   return (
-                    <tr key={m._k} className="hover:bg-slate-50/80 transition-colors group">
+                  <React.Fragment key={m._k}>
+                    <tr className="hover:bg-slate-50/80 transition-colors group">
                       <td className="py-3 px-2 text-center font-bold text-slate-400">{idx + 1}</td>
                       
                       {/* Cantidad con +/- */}
@@ -2675,6 +2691,69 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                         </button>
                       </td>
                     </tr>
+
+                    {/* EL DESGLOSE, DEBAJO DE SU LÍNEA (master, 31/08: «que
+                        aparezcan bien los costes de herraje, accesorios, patas,
+                        etc., coste mano de obra, margen, puertas, etc., como
+                        aparecía antes»).
+
+                        VA EN UNA FILA APARTE, no en columnas nuevas: así se ve
+                        entero y la tabla NO se ensancha al abrir el candado —
+                        que es lo que no le gustaba. Los números son los mismos
+                        que suman el coste de la línea de arriba; el desglose
+                        cuadra con el total por construcción, no por parecido. */}
+                    {verCoste && m.coste != null && (
+                      <tr key={`${m._k}-desglose`} className="bg-slate-50/70" data-testid="cm3-desglose-linea">
+                        <td></td>
+                        <td colSpan={10} className="pb-2.5 px-3">
+                          <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
+                            <span className="text-slate-400 uppercase font-black tracking-wide">Coste:</span>
+                            <span className="text-dato-700 font-bold"
+                              title={m.despiece?.cascoOtroAcabado
+                                ? `Tarifa ACB ${eur(m.despiece?.cascoTarifa)} de la gama «${m.despiece.cascoGama}» (no se fabrica en el acabado elegido) · ×${m.despiece?.factorDesmontada} − ${m.despiece?.dtoCascos1}% − ${m.despiece?.dtoCascos2}%`
+                                : `Tarifa ACB ${eur(m.despiece?.cascoTarifa)} · ×${m.despiece?.factorDesmontada} − ${m.despiece?.dtoCascos1}% − ${m.despiece?.dtoCascos2}%`}>
+                              Casco {eur(m.despiece?.casco)}
+                            </span>
+                            <span className="text-slate-300">+</span>
+                            <span className="text-dato-700 font-bold"
+                              title={`${(m.despiece?.puertasDetalle || []).map(fr => `${fr.desc} [${fr.puntos} pts]`).join(' + ') || '0 frentes'} · ${m.despiece?.puntosPuertas || 0} pts × ${pv} €/punto − ${m.despiece?.dtoPuertas1 || 0}%${m.despiece?.dtoPuertas2 ? ` − ${m.despiece.dtoPuertas2}%` : ''}`}>
+                              Puertas {eur(m.despiece?.puerta)}
+                            </span>
+                            <span className="text-slate-300">+</span>
+                            <span className="text-dato-700 font-bold"
+                              title={`Bisagras ${eur(m.despiece?.bisagras)} · Patas ${eur(m.despiece?.patas)} · Colgadores ${eur(m.despiece?.colg)} · Cajones ${eur(m.despiece?.caj)} · Gavetas ${eur(m.despiece?.gav)} · Soportes de balda ${eur(m.despiece?.soportes)}`}>
+                              Herrajes {eur(herrajesDe(m))}
+                            </span>
+                            {/* Los herrajes, uno a uno: el master los pidió por su
+                                nombre («herraje, accesorios, patas»). Solo salen
+                                los que esa pieza lleva de verdad. */}
+                            {[['Bisagras', m.despiece?.bisagras], ['Patas', m.despiece?.patas],
+                              ['Colgadores', m.despiece?.colg], ['Cajones', m.despiece?.caj],
+                              ['Gavetas', m.despiece?.gav], ['Soportes', m.despiece?.soportes]]
+                              .filter(([, v]) => Number(v) > 0)
+                              .map(([n, v]) => (
+                                <span key={n} className="text-slate-500">{n} {eur(v)}</span>
+                              ))}
+                            <span className="text-slate-300">+</span>
+                            <span className="text-dato-700 font-bold"
+                              title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">
+                              M. obra {eur(m.despiece?.mo)}
+                            </span>
+                            <span className="text-slate-300">=</span>
+                            <span className="text-dato-900 font-black">{eur(m.coste)}</span>
+                            <span className="text-slate-300">·</span>
+                            <span className={`font-bold ${
+                              m.margenPct == null ? 'text-slate-400'
+                              : m.margenPct >= 40 ? 'text-ok-600'
+                              : m.margenPct >= 25 ? 'text-aviso-600'
+                              : 'text-error-600'}`}>
+                              Margen {eur(m.margen)}{m.margenPct != null && ` (${m.margenPct.toFixed(1)}%)`}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                   );
                 })}
               </tbody>
@@ -2832,26 +2911,36 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <div className="flex items-center gap-2 text-[11px] font-black text-master-800 uppercase tracking-wide">
                 <Package size={13} /> Cascos ACB
               </div>
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Descuento de compra sobre tarifa ACB (%):
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  min="0"
-                  max="100"
-                  value={dtoCascos}
-                  onChange={e => setDtoCascos(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                  data-testid="cm3-dto-cascos"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800 bg-white focus:border-master-500 outline-none"
-                  placeholder="0"
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Se aplica al COSTE del casco. El PVP de Cocina Desmontada no se
-                  toca: lo que se negocia es lo que paga la casa, no lo que paga
-                  el cliente.
-                </p>
+              <p className="text-[10px] text-slate-500">
+                El coste del casco parte del PVP: <b>tarifa × {VALOR_PUNTO_CASCOS}</b>,
+                y de ahí los dos descuentos.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Descuento 1 (%):</label>
+                  <input type="number" step="any" min="0" max="100"
+                    value={dtoCascos1}
+                    onChange={e => setDtoCascos1(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    data-testid="cm3-dto-cascos1"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800 bg-white focus:border-master-500 outline-none" />
+                  <p className="text-[10px] text-slate-500 mt-1">El que deshace el ×{VALOR_PUNTO_CASCOS}.</p>
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Descuento 2 (%):</label>
+                  <input type="number" step="any" min="0" max="100"
+                    value={dtoCascos2}
+                    onChange={e => setDtoCascos2(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    data-testid="cm3-dto-cascos"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800 bg-white focus:border-master-500 outline-none"
+                    placeholder="28" />
+                  <p className="text-[10px] text-slate-500 mt-1">El de ACB, el que negocias.</p>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-master-200 flex items-center justify-between font-bold text-slate-800">
+                <span>Sobre la tarifa ACB queda:</span>
+                <span className="font-mono text-master-700 font-black" data-testid="cm3-neto-cascos">
+                  ×{Math.round(VALOR_PUNTO_CASCOS * (1 - dtoCascos1 / 100) * (1 - dtoCascos2 / 100) * 1000) / 1000}
+                </span>
               </div>
             </div>
 

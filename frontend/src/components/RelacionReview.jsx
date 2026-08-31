@@ -1008,7 +1008,7 @@ export default function RelacionReview({ muebles: inicial, noLeidas, onConfirm, 
 
                       {/* Coste y Margen (candado) */}
                       {verCoste && (
-                        <td className="py-2.5 px-3 text-right font-mono text-purple-700 font-bold" title={`Neto ACB: ${eur(m.despiece?.casco)} | PVP Desmontada (factor ${m.despiece?.factorDesmontada}): ${eur(m.despiece?.cascoPvp)}`}>
+                        <td className="py-2.5 px-3 text-right font-mono text-purple-700 font-bold" title={`Tarifa ACB: ${eur(m.despiece?.cascoTarifa)} → ×${m.despiece?.factorDesmontada} (PVP) − ${m.despiece?.dtoCascos1}% − ${m.despiece?.dtoCascos2}% = ${eur(m.despiece?.casco)}`}>
                           {eur(m.despiece?.casco)}
                         </td>
                       )}

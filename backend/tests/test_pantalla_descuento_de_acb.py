@@ -26,9 +26,29 @@ LO QUE NO PUEDE PASAR NUNCA:
   todos los márgenes ya calculados salen exactamente igual que antes. Un
   descuento que aparece solo mueve el margen de toda la casa sin que nadie lo
   haya decidido, y eso no da ningún error — solo un margen distinto.
-- Que toque el PVP. Lo que se negocia es lo que PAGA LA CASA. El PVP de Cocina
-  Desmontada es lo que paga el CLIENTE y no se mueve (CLAUDE.md, regla 5: los
-  descuentos no salen en nada que vea un cliente).
+- Que toque el precio que ve el cliente. Lo que se negocia es lo que PAGA LA
+  CASA (CLAUDE.md, regla 5: los descuentos no salen en nada que vea un cliente).
+
+── 31/08, MÁS TARDE: SON DOS DESCUENTOS, NO UNO ──────────────────────────────
+
+El master, al revisarlo: «en cocina montada lo uso, multiplicando por dos y
+haciendo dos descuentos, el −50 % y el −28 %, para calcular mis costos».
+
+    PVP   = tarifa ACB × valor del punto  (2)
+    coste = PVP × (1 − dto1) × (1 − dto2)
+
+El −50 % es el que DESHACE el ×2 —aritmética, no negociación— y el −28 % es el
+que se pacta con ACB. Son dos campos y no uno porque es como lo tiene él en la
+cabeza y como se lo pasa el proveedor.
+
+LOS VALORES DE PARTIDA NO MUEVEN NINGÚN MARGEN, y eso es lo que hay que
+sostener: dto1 = 50 y dto2 = 0 dan `tarifa × 2 × 0,50 × 1 = tarifa`, el mismo
+coste de siempre. Si dto1 arrancara en 0, el coste se DUPLICARÍA de golpe en
+todos los presupuestos sin que nadie lo hubiera decidido.
+
+Y OJO CON LA OTRA PANTALLA: en COCINA DESMONTADA no hay PVP («conseguimos
+precios de cascos sueltos y no hay pvp»), así que allí el precio es la tarifa a
+secas y nada de esto aplica.
 - Que el botón se vea con el candado echado. Con el candado echado esta pantalla
   se enseña con un cliente delante (reglas 5 y 9).
 """
@@ -127,7 +147,8 @@ def test_EL_CAMPO_LLEGA_AL_CALCULO_Y_NO_SE_QUEDA_DE_ADORNO():
     """Un campo que se teclea y no viaja es peor que no tenerlo: el master lo
     pone al 28%, ve el número puesto y el margen no se mueve."""
     cuerpo = _sin_comentarios(_lee(CM3))
-    assert "cm3-dto-cascos" in cuerpo, "no hay campo donde teclear el descuento de ACB"
+    for testid in ("cm3-dto-cascos1", "cm3-dto-cascos"):
+        assert testid in cuerpo, f"falta el campo «{testid}» en el modal de descuentos"
 
     i = cuerpo.index("const paramsCostes")
     corte = cuerpo.index("}), [", i)
@@ -137,10 +158,10 @@ def test_EL_CAMPO_LLEGA_AL_CALCULO_Y_NO_SE_QUEDA_DE_ADORNO():
     # el descuento sin efecto— pasaba en verde. Se comprobó rompiéndolo.
     params = cuerpo[i:corte]
     deps = cuerpo[corte:corte + 80]
-    assert "dtoCascos," in params, (
+    assert "dtoCascos2," in params, (
         "`dtoCascos` no se mete en los parámetros del cálculo: el campo se "
         "teclea y el coste no cambia")
-    assert "dtoCascos" in deps, (
+    assert "dtoCascos2" in deps, (
         "`dtoCascos` no está en las dependencias del useMemo: al cambiarlo, "
         "React reutilizaría los parámetros viejos y el coste no se recalcularía "
         "hasta que se tocara otra cosa. Peor que no cambiar nada: cambia tarde")
@@ -157,8 +178,8 @@ def test_SE_GUARDA_ENTRE_SESIONES():
 
 # ── 3. LA ARITMÉTICA, EJECUTANDO EL CÓDIGO DE VERDAD ──────────────────────────
 
-def _ejecuta_el_descuento(valores):
-    """Extrae del JSX las líneas REALES que aplican el descuento y las ejecuta.
+def _ejecuta_el_descuento(pares):
+    """Extrae del JSX las líneas REALES que aplican los descuentos y las ejecuta.
 
     No se reescribe la fórmula aquí: una copia de la fórmula en la prueba se
     separa del original y entonces el candado aprueba algo que ya no existe.
@@ -166,80 +187,98 @@ def _ejecuta_el_descuento(valores):
     if not shutil.which("node"):
         return None
     rent = _lee(RENT)
-    i = rent.index("const dtoCascos = Math.min")
-    j = rent.index("\n", rent.index("    : ccBruto;", i))
+    i = rent.index("  const _dto = (v, defecto)")
+    j = rent.index("    : { ...ccBruto,", i)
+    j = rent.index("\n", j)
     bloque = rent[i:j]
     js = """
-const ccBruto = { coste: 61.15, pvpDesmontada: 203.83, med: '800x900' };
+const DTO_CASCOS_PVP = 50;
+const valorPuntoCascos = () => 2;
+const ccBruto = { coste: 61.15, pvpDesmontada: 122.30, med: '800x900' };
 const out = [];
-for (const v of %s) {
-  const p = { dtoCascos: v };
-  %s
+for (const par of %s) {
+  const p = { dtoCascos1: par[0], dtoCascos2: par[1] };
+%s
   out.push([cc.coste, cc.pvpDesmontada]);
 }
 console.log(JSON.stringify(out));
-""" % (json.dumps(valores), bloque)
+""" % (json.dumps(pares), bloque)
     r = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, f"el bloque del descuento no se ejecuta: {r.stderr[-400:]}"
     return json.loads(r.stdout)
 
 
-def test_EL_DESCUENTO_SE_APLICA_AL_COSTE_CON_NUMEROS_DE_VERDAD():
-    """El caso del master: un casco de 61,15 € de tarifa."""
-    salida = _ejecuta_el_descuento([0, 28, 50])
+def test_LOS_VALORES_DE_PARTIDA_NO_MUEVEN_NINGUN_MARGEN():
+    """LO MÁS IMPORTANTE. Con dto1=50 y dto2=0 el coste tiene que salir la
+    TARIFA, igual que antes de que estos campos existieran. Si dto1 arrancara en
+    0, el coste se duplicaría en todos los presupuestos de golpe."""
+    salida = _ejecuta_el_descuento([[None, None]])
     if salida is None:
         return
     assert salida[0][0] == 61.15, (
-        f"sin descuento el coste ya no sale igual que antes: {salida[0][0]} en "
-        "vez de 61,15. Poner el campo NO puede mover un margen ya calculado")
-    assert salida[1][0] == 44.03, f"un 28% sobre 61,15 son 44,03, no {salida[1][0]}"
-    assert salida[2][0] == 30.58, f"un 50% sobre 61,15 son 30,58, no {salida[2][0]}"
+        f"sin tocar nada el casco cuesta {salida[0][0]} en vez de su tarifa "
+        "(61,15). Poner los campos NO puede mover un margen ya calculado")
 
 
-def test_EL_PVP_DEL_CLIENTE_NO_SE_TOCA():
-    """Lo que se negocia con ACB es lo que PAGA LA CASA. El PVP de Cocina
-    Desmontada es lo que paga el cliente (regla 5)."""
-    salida = _ejecuta_el_descuento([0, 28, 50, 100])
+def test_LA_CADENA_DEL_MASTER_DA_SU_NUMERO():
+    """×2, −50 %, −28 % sobre una tarifa de 61,15 € son 44,03 €."""
+    salida = _ejecuta_el_descuento([[50, 28], [50, 0], [50, 35]])
+    if salida is None:
+        return
+    assert salida[0][0] == 44.03, f"×2 −50% −28% sobre 61,15 son 44,03, no {salida[0][0]}"
+    assert salida[1][0] == 61.15, f"×2 −50% sin el segundo son 61,15, no {salida[1][0]}"
+    assert salida[2][0] == 39.75, f"×2 −50% −35% sobre 61,15 son 39,75, no {salida[2][0]}"
+
+
+def test_EL_PRECIO_DEL_CLIENTE_NO_SE_TOCA():
+    """Lo que se negocia con ACB es lo que PAGA LA CASA (regla 5)."""
+    salida = _ejecuta_el_descuento([[50, 0], [50, 28], [50, 50]])
     if salida is None:
         return
     pvps = {fila[1] for fila in salida}
-    assert pvps == {203.83}, (
-        f"el descuento de compra le está bajando el PVP al cliente: {pvps}. "
+    assert pvps == {122.30}, (
+        f"el descuento de compra le está moviendo el precio al cliente: {pvps}. "
         "Eso es regalar el margen entero de la negociación")
 
 
 def test_UN_VALOR_IMPOSIBLE_NO_INVENTA_UN_COSTE():
-    """El valor sale de localStorage, o sea de algo que se puede corromper. Un
-    negativo NO puede subir el coste y un 150% no puede dejarlo en negativo."""
-    salida = _ejecuta_el_descuento([-5, 150, "abc", None])
+    """Los dos salen de localStorage, o sea de algo que se puede corromper. Un
+    valor roto tiene que caer en el de la casa, NO tomarse por bueno: con un
+    dto1 en 0 el coste se duplica."""
+    salida = _ejecuta_el_descuento([[-5, 0], [150, 0], ["abc", 0], [50, "abc"], [50, -3]])
     if salida is None:
         return
-    assert salida[0][0] == 61.15, (
-        f"un descuento negativo está SUBIENDO el coste: {salida[0][0]}")
-    assert salida[1][0] == 0.0, f"un 150% deja el coste en {salida[1][0]}"
-    assert salida[2][0] == 61.15, (
-        f"un valor que no es un número se está tomando por un descuento: "
-        f"{salida[2][0]}")
-    assert salida[3][0] == 61.15
+    for i, caso in enumerate(("negativo", "mayor que 100", "texto")):
+        assert salida[i][0] == 61.15, (
+            f"un dto1 {caso} se está tomando por bueno: {salida[i][0]}")
+    assert salida[3][0] == 61.15, "un dto2 que no es un número se toma por bueno"
+    assert salida[4][0] == 61.15, "un dto2 negativo se toma por bueno"
 
 
-def test_POR_DEFECTO_ES_CERO():
-    """Lo más importante de todo. Un descuento que aparece con un valor puesto
-    mueve el margen de todos los presupuestos de la casa sin que nadie lo haya
-    decidido, y no salta ningún error: solo un margen distinto."""
+def test_LOS_DEFECTOS_SON_50_Y_0():
+    """El 50 es aritmética (deshace el ×2) y el 0 es la decisión: el descuento
+    de ACB lo teclea el master «porque puede variar»."""
     rent = _sin_comentarios(_lee(RENT))
+    assert "export const DTO_CASCOS_PVP = 50;" in rent, (
+        "el descuento que deshace el ×2 ya no vale 50: el coste del casco "
+        "dejaría de salir la tarifa cuando no se ha tocado nada")
     i = rent.index("MV_COSTES_DEFAULT")
     bloque = rent[i:rent.index("\n};", i)]
-    m = re.search(r"dtoCascos:\s*([\d.]+)", bloque)
-    assert m, "`dtoCascos` no está en los parámetros por defecto"
-    assert float(m.group(1)) == 0.0, (
-        f"el descuento de ACB viene con un {m.group(1)}% puesto de fábrica")
+    assert re.search(r"dtoCascos1:\s*DTO_CASCOS_PVP", bloque), (
+        "el primer descuento no arranca en el valor de la casa")
+    m = re.search(r"dtoCascos2:\s*([\d.]+)", bloque)
+    assert m and float(m.group(1)) == 0.0, (
+        f"el descuento de ACB viene con un {m.group(1) if m else '?'}% puesto de "
+        "fábrica, y ese lo teclea el master")
 
     cm3 = _sin_comentarios(_lee(CM3))
-    j = cm3.index("const [dtoCascos, setDtoCascos]")
-    inicial = cm3[j:cm3.index("});", j)]
-    assert "|| 0" in inicial and "return 0" in inicial, (
-        "el estado del descuento no arranca a cero cuando no hay nada guardado")
+    j = cm3.index("const [dtoCascos2, setDtoCascos2]")
+    assert "|| 0" in cm3[j:cm3.index("});", j)], (
+        "el descuento de ACB no arranca a cero cuando no hay nada guardado")
+    k = cm3.index("const [dtoCascos1, setDtoCascos1]")
+    assert "DTO_CASCOS_PVP" in cm3[k:cm3.index("});", k)], (
+        "el descuento que deshace el ×2 no arranca en el valor de la casa: con "
+        "un 0 ahí, el coste de TODOS los cascos se duplica")
 
 
 # ── 4. EL DESGLOSE LO CUENTA ──────────────────────────────────────────────────
@@ -272,7 +311,7 @@ def test_EL_CALCULO_DEVUELVE_LO_QUE_LA_PANTALLA_NECESITA():
     devuelto = rent[i:i + 260]
     assert "cascoTarifa: ccBruto.coste" in devuelto, (
         "`despiece` no devuelve la tarifa antes del descuento")
-    assert "dtoCascos," in devuelto, (
+    assert "dtoCascos2," in devuelto, (
         "`despiece` no devuelve el descuento aplicado: la pantalla tendría que "
         "volver a leerlo por su cuenta y las dos cifras podrían separarse")
 

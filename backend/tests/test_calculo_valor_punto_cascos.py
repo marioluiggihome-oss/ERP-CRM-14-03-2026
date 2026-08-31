@@ -168,15 +168,46 @@ def test_EL_DESCUENTO_DE_ACB_NO_SE_CABLEA_AQUI():
             "descuento del proveedor lo teclea el master, no se cablea")
 
 
-def test_EL_PVP_Y_EL_COSTE_SON_DOS_CUENTAS_DISTINTAS():
-    """El valor del punto hace el PVP; el descuento hace el coste. Si el
-    descuento tocara el PVP, se le estaría regalando al cliente el margen de la
-    negociación con ACB (CLAUDE.md, regla 5)."""
-    rent = sin_comentarios(_lee(RENT))
-    i = rent.index("const dtoCascos = Math.min")
-    tramo = rent[i:i + 400]
-    assert "pvpDesmontada" not in tramo, (
-        "el descuento de compra está tocando el PVP de venta")
+def test_EN_COCINA_DESMONTADA_EL_PRECIO_ES_LA_TARIFA_SIN_MULTIPLICAR():
+    """El master, 31/08: «en cocina desmontada conseguimos precios de cascos
+    sueltos y NO HAY PVP», y «en cocina montada del presupuestador sí hay pvp,
+    en cocina desmontada no».
+
+    Aquí se multiplicaba por el valor del punto, así que un tablero de 246,00 €
+    de tarifa ACB salía a 492,00 € — EL DOBLE de lo que se cobra. Se ve en el
+    catálogo, se añade al presupuesto y se manda al cliente: ningún error, solo
+    un presupuesto por el doble.
+
+    (Esta prueba sustituye a la de «el PVP y el coste son dos cuentas
+    distintas», que vigilaba lo mismo —que un descuento de compra no mueva lo
+    que paga el cliente— cuando se creía que Desmontada tenía PVP. La
+    obligación es la misma; lo que ha cambiado es dónde está el riesgo.)
+    """
+    cascos = sin_comentarios(_lee(CASCOS))
+    i = cascos.index("const pc = (base)")
+    linea = cascos[i:cascos.index("\n", i)]
+    # NI `coef` NI UN 2 A PELO. Prohibir solo el nombre de la variable dejaba
+    # pasar `base * 2`, que es el mismo fallo escrito de otra forma: se comprobó
+    # rompiéndolo. Se cuentan las multiplicaciones: la única permitida es la del
+    # redondeo a céntimos.
+    assert "* 100) / 100" in linea, "se ha perdido el redondeo a céntimos"
+    sin_redondeo = linea.replace("* 100) / 100", "")
+    assert "*" not in sin_redondeo, (
+        f"el precio de Cocina Desmontada vuelve a multiplicarse: "
+        f"{linea.strip()}. En cascos sueltos NO hay PVP; el precio es la tarifa, "
+        "y con un ×2 se le cobraría al cliente el doble")
+
+
+def test_EL_PEDIDO_AL_PROVEEDOR_SIGUE_SALIENDO_DE_LA_TARIFA():
+    """Y los presupuestos GUARDADOS antes de hoy llevan dentro un `precio` que
+    era la tarifa × 2. Sin leer primero `precioBase`, reabrir uno pediría al
+    proveedor por el doble."""
+    cascos = sin_comentarios(_lee(CASCOS))
+    i = cascos.index("const baseDe = (l)")
+    linea = cascos[i:cascos.index("\n", i)]
+    assert "l.precioBase != null" in linea, (
+        "el pedido a proveedor ya no parte del precio de tarifa guardado: un "
+        "presupuesto de antes de hoy se pediría por el doble")
 
 
 def test_TAMBIEN_SE_LEE_LO_QUE_HAY_GUARDADO_EN_EL_NAVEGADOR():

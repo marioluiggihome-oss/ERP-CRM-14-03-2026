@@ -216,6 +216,11 @@ export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, pue
 export const MANO_DE_OBRA_POR_DEFECTO = 17;
 
 // Costes por defecto de componentes MV (editables en la UI de Rentabilidad)
+/** El descuento que DESHACE el ×2 del PVP. No es una negociación: es
+ *  aritmética, y por eso vale 50 y no se toca salvo que cambie el valor del
+ *  punto. El del proveedor (hoy −28 %) es el otro, y ese lo teclea el master. */
+export const DTO_CASCOS_PVP = 50;
+
 export const MV_COSTES_DEFAULT = {
   doorM2: 26,       // € por m² de puerta (tarifa base)
   bisagra: 3.07,    // € por bisagra (2 por puerta)
@@ -228,7 +233,8 @@ export const MV_COSTES_DEFAULT = {
   mano: MANO_DE_OBRA_POR_DEFECTO,
   cajon: 41.34,     // € por cajón
   gaveta: 54.37,    // € por gaveta
-  dtoCascos: 0,     // % descuento de compra sobre la tarifa ACB de cascos
+  dtoCascos1: DTO_CASCOS_PVP,  // % que deshace el ×2 del PVP (aritmética)
+  dtoCascos2: 0,               // % de descuento de ACB — lo teclea el master
   dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
   dtoPuertas2: 0,   // % descuento 2 (acumulado sobre el resultado del 1)
   dtoPuertas: 0,    // alias legado (compatibilidad)
@@ -962,13 +968,45 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   // Se aplica aquí y no dentro de `cascoACB` para no cambiarle la forma a una
   // función que devuelve también el PVP de Desmontada: el descuento es de
   // COMPRA, y el PVP no se toca.
-  const dtoCascos = Math.min(100, Math.max(0, Number((p && p.dtoCascos) || 0)));
-  // Sobre un casco SIN PRECIO no se aplica descuento: el 28% de «no se sabe»
-  // sigue siendo «no se sabe», y calcularlo lo convertiría en un 0,00 € con
-  // pinta de cifra.
-  const cc = (dtoCascos > 0 && ccBruto.coste != null)
-    ? { ...ccBruto, coste: Math.round(ccBruto.coste * (1 - dtoCascos / 100) * 100) / 100 }
-    : ccBruto;
+  /* EL COSTE DEL CASCO EN COCINA MONTADA: SE PARTE DEL PVP (master, 31/08).
+   *
+   * «En cocina montada lo uso, multiplicando por dos y haciendo dos descuentos,
+   * el −50 % y el −28 %, para calcular mis costos.»
+   *
+   *     PVP    = tarifa ACB × valor del punto   (2)
+   *     coste  = PVP × (1 − dto1) × (1 − dto2)
+   *
+   * El −50 % es el que DESHACE el ×2 —por eso la cuenta acaba siendo tarifa ×
+   * 0,72— y el −28 % es el que negocia con ACB. Son dos campos y no uno a
+   * propósito: es como el master lo tiene en la cabeza y como se lo pasa el
+   * proveedor, así que el día que cambie cualquiera de los dos lo teclea donde
+   * lo espera. Ojo: en COCINA DESMONTADA no hay PVP y esto no aplica — allí el
+   * precio es la tarifa a secas.
+   *
+   * LOS VALORES DE PARTIDA NO MUEVEN NINGÚN MARGEN, y eso es deliberado:
+   * dto1 = 50 y dto2 = 0 dan `tarifa × 2 × 0,50 × 1 = tarifa`, exactamente el
+   * coste que salía antes de existir estos campos. El −28 % lo teclea él
+   * «porque puede variar». Si dto1 arrancara en 0, el coste se DUPLICARÍA de
+   * golpe en todos los presupuestos sin que nadie lo hubiera decidido.
+   */
+  // OJO CON EL NULO: `Number(null)` es 0, y un 0 aquí NO es «sin descuento», es
+  // «no deshagas el ×2» — o sea el coste del casco DUPLICADO en todos los
+  // presupuestos. Un ajuste guardado con `dtoCascos1: null` lo habría hecho sin
+  // dar un error. Por eso se descarta antes de convertir. Lo cazó su candado.
+  const _dto = (v, defecto) => {
+    if (v === null || v === undefined || v === '') return defecto;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 && n <= 100 ? n : defecto;
+  };
+  const dtoCascos1 = _dto(p && p.dtoCascos1, DTO_CASCOS_PVP);
+  // Compatibilidad: el campo viejo `dtoCascos` era el descuento del proveedor
+  // aplicado sobre la tarifa. Con el ×2 y el −50 % delante, el resultado es el
+  // mismo, así que un presupuesto guardado con un 28 ahí sigue costando igual.
+  const dtoCascos2 = _dto(p && p.dtoCascos2, _dto(p && p.dtoCascos, 0));
+  const factorCasco = (valorPuntoCascos() * (1 - dtoCascos1 / 100) * (1 - dtoCascos2 / 100));
+  const cc = ccBruto.coste == null
+    ? ccBruto
+    : { ...ccBruto, coste: Math.round(ccBruto.coste * factorCasco * 100) / 100 };
   
   // Desglose técnico preciso de puertas y frentes
   const desgloseFrentes = getDesglosePuertasDetallado(cod, familia, w, altura, altoMm, R, tariff);
@@ -1062,12 +1100,14 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   return {
     fam: familia, med: cc.med, inc: w < 300 ? 'inc. corte' : '',
     casco: cc.coste,
-    cascoTarifa: ccBruto.coste,   // antes del descuento de compra
+    cascoTarifa: ccBruto.coste,   // la tarifa ACB, antes de nada
     cascoSinPrecio,
     sinDespiece,
     cascoOtroAcabado: ccBruto.otroAcabado || null,
     cascoGama: ccBruto.gamaUsada || null,
-    dtoCascos,
+    dtoCascos1,
+    dtoCascos2,
+    dtoCascos: dtoCascos2,   // nombre viejo: la pantalla y los guardados
     cascoPvp: cc.pvpDesmontada,
     puerta: costePuertas,
     puertaPvp: pvpPuertas,

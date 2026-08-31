@@ -304,13 +304,31 @@ const Cascos = ({ state, setState }) => {
   // Centros de envío configurados en Ajustes (uno por línea: "Nombre — Dirección").
   const centros = String(state?.settings?.centrosEnvio || '').split('\n').map(l => l.trim()).filter(Boolean);
   const [centroEnvio, setCentroEnvio] = useState('');
-  // EL VALOR DEL PUNTO, DE LA FUENTE COMÚN. Antes esta pantalla lo resolvía por
-  // su cuenta y caía en 1 cuando la casilla venía vacía, mientras el
-  // Presupuestador caía en 1,30: el MISMO casco se vendía a dos precios, y
-  // Desmontada a la mitad de lo que vale. Un dato de dinero con dos defectos no
-  // tiene defecto, tiene dos precios.
+  /* EN COCINA DESMONTADA NO HAY PVP: EL PRECIO ES LA TARIFA (master, 31/08).
+   *
+   * «En cocina desmontada conseguimos precios de cascos sueltos y no hay pvp»,
+   * y «en cocina montada del presupuestador sí hay pvp, en cocina desmontada
+   * no».
+   *
+   * Aquí se multiplicaba por el valor del punto, así que un tablero de 246,00 €
+   * de tarifa ACB salía a 492,00 € — el doble de lo que se cobra. Se ve en la
+   * pantalla del catálogo, se añade al presupuesto y se manda al cliente: no
+   * hay ningún error que saltar, solo un presupuesto por el doble.
+   *
+   * EL VALOR DEL PUNTO NO DESAPARECE, cambia de sitio: en el Presupuestador
+   * (Cocina Montada) sí se usa, pero para calcular el COSTE —tarifa × 2, luego
+   * −50 % y −28 %—, no para el precio de venta. Aquí no pinta nada.
+   *
+   * Sobre este precio actúa después el descuento comercial del cliente, que
+   * viene de su ficha de usuario (`descuento`, más abajo).
+   */
+  const pc = (base) => (base == null ? null : Math.round(base * 100) / 100);
+
+  /* EL VALOR DEL PUNTO SIGUE HACIENDO FALTA, PERO NO PARA EL PRECIO. Lo usan
+   * el panel de Rentabilidad y el importador de proformas, que calculan COSTES
+   * —ahí sí se parte del PVP y se aplican los descuentos—. Lo que ya no hace es
+   * multiplicar lo que se le cobra al cliente. */
   const coef = valorPuntoCascos(state);
-  const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState(null); // null oculto
   // Panel de presupuesto: redimensionable (arrastrar) y ocultable, como en Cocina Montada.
@@ -539,8 +557,14 @@ const Cascos = ({ state, setState }) => {
   // porque la altura real se muestra aparte, de forma independiente.
   const limpiaTipo = (tp) => String(tp || '').replace(/\s*\d{3,4}\/\d{3,4}\s*/g, ' ').replace(/\s*X\d{2,4}\s*/gi, ' ').replace(/\s{2,}/g, ' ').trim();
   const nombre = (m) => altoSensible(m.tipo) ? `${limpiaTipo(m.tipo)} · ${med(m.alto)} ${unidad} alto` : m.tipo;
-  // Precio base (tarifa) de una línea, con respaldo para pedidos antiguos.
-  const baseDe = (l) => (l.precioBase != null ? l.precioBase : (coef ? (l.precio || 0) / coef : (l.precio || 0)));
+  /** El precio de TARIFA de una línea, que es lo que se le pide al proveedor.
+   *
+   *  Desde que el precio de venta ES la tarifa, los dos coinciden. El respaldo
+   *  sigue haciendo falta para los presupuestos GUARDADOS antes de hoy: aquellos
+   *  llevan dentro un `precio` que era la tarifa × 2, y su `precioBase` con la
+   *  tarifa buena. Por eso se lee primero `precioBase` — sin él, reabrir un
+   *  pedido viejo pediría al proveedor por el doble. */
+  const baseDe = (l) => (l.precioBase != null ? l.precioBase : (l.precio || 0));
   const setQty = (key, q) => setCart(prev => prev.map(l => l.key === key ? { ...l, qty: Math.max(1, parseInt(q) || 1) } : l));
   const removeLine = (key) => setCart(prev => prev.filter(l => l.key !== key));
 
