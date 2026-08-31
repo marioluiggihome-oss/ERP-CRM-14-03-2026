@@ -683,6 +683,29 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
    *  texto la cambiara, renombrar «BAJO» a «Mueble del office» sacaría esa
    *  línea del cálculo de la comisión sin que nadie lo hubiera pedido.
    *  Vacío = se enseña la familia de siempre. */
+  /** EL CÓDIGO DEL ARTÍCULO, A MANO (master, 31/08: «las puertas y unidades y
+   *  artículos en todos los casos se tienen que poder modificar»).
+   *
+   *  Una relación importada trae lo que escribió el proveedor, y a veces el
+   *  código viene mal leído. Sin poder corregirlo había que borrar la línea y
+   *  volver a teclearla, y con ella se iban las observaciones y el precio
+   *  pactado.
+   *
+   *  OJO: el código decide la TARIFA y la MANO (D/I). Al cambiarlo se vuelve a
+   *  preguntar el precio, salvo que se haya escrito uno a mano — eso manda
+   *  siempre (ver `setPvp`). Y se marca `encontrado` según si el catálogo lo
+   *  conoce: si se deja de marcar, un código inventado saldría con pinta de
+   *  bueno y llegaría al pedido del proveedor. */
+  const setCod = (k, cod) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const limpio = String(cod || '').toUpperCase().trim();
+    const info = familias?.[m.familia];
+    const existe = !!(info && info.items && info.items[limpio]);
+    const actualizado = { ...m, cod: limpio, encontrado: existe };
+    if (m.pvpManual) return actualizado;   // un precio pactado manda
+    return { ...actualizado, pvp: puntosLocal(actualizado, m.alto) };
+  }));
+
   const setDesc = (k, desc) =>
     setMuebles(prev => prev.map(m => m._k === k ? { ...m, desc } : m));
 
@@ -835,6 +858,24 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   // cero da un coste total más bajo que el real y un margen más alto, que es
   // exactamente el número por el que alguien fija un precio de venta.
   const sinCoste = filas.filter(m => m.coste == null);
+
+  /** LO QUE SUMA UN CONCEPTO, CONTANDO SOLO LAS LÍNEAS QUE TIENEN COSTE.
+   *
+   *  El master, 31/08: «la mano de obra no se suma bien». Y no: el total daba
+   *  493 € —las 29 unidades del presupuesto × 17— mientras la columna enseñaba
+   *  cinco 17,00 €. Las otras siete líneas salen «Sin coste» en la tabla y NO
+   *  pintan nada, pero sus sumandos seguían contando: `despiece` calcula el
+   *  casco, las puertas y la mano de obra de todas formas, y solo pone a `null`
+   *  el TOTAL.
+   *
+   *  Un total que suma lo que la tabla dice que no existe. Y encima ninguno de
+   *  esos totales cuadraba con `totalCoste`, que sí las excluye: tres cifras
+   *  distintas del mismo dinero en la misma pantalla.
+   *
+   *  Se usa la MISMA condición que decide el coste (`m.coste == null`) para que
+   *  no puedan separarse. */
+  const sumaConCoste = (k) => filas.reduce(
+    (t, m) => (m.coste == null ? t : t + (Number(m.despiece?.[k]) || 0) * (Number(m.qty) || 1)), 0);
   const totalCoste = filas.reduce((s, m) => s + (m.coste || 0) * (Number(m.qty) || 1), 0);
   const totalMargen = baseImponible - totalCoste;
   const totalMargenPct = baseImponible > 0 ? (totalMargen / baseImponible) * 100 : 0;
@@ -2214,7 +2255,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono font-black text-indigo-700 text-lg leading-none">{m.cod}</span>
+                          <input
+                            type="text"
+                            value={m.cod || ''}
+                            onChange={e => setCod(m._k, e.target.value)}
+                            title="Código del artículo. Al cambiarlo se vuelve a mirar la tarifa; si has escrito un precio a mano, ese manda."
+                            className="w-28 px-1 py-0.5 rounded-lg border border-transparent bg-transparent font-mono font-black text-indigo-700 text-lg leading-none outline-none hover:border-slate-200 focus:border-indigo-400 focus:bg-white uppercase"
+                          />
                           {!m.encontrado && (
                             <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">Manual</span>
                           )}
@@ -2507,7 +2554,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       {/* Código */}
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-black text-indigo-700 text-sm">{m.cod}</span>
+                          <input
+                            type="text"
+                            value={m.cod || ''}
+                            onChange={e => setCod(m._k, e.target.value)}
+                            data-testid="cm3-cod-linea"
+                            title="Código del artículo. Al cambiarlo se vuelve a mirar la tarifa; si has escrito un precio a mano, ese manda."
+                            className="w-24 px-1 py-0.5 rounded-lg border border-transparent bg-transparent font-mono font-black text-indigo-700 text-sm outline-none hover:border-slate-200 focus:border-indigo-400 focus:bg-white uppercase"
+                          />
                           {!m.encontrado && (
                             <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">Manual</span>
                           )}
@@ -2794,14 +2848,74 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           ancho porque esta tabla es solo para mirar costes. */}
       {verCoste && filas.length > 0 && (
         <div data-testid="cm3-escandallo" className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
-            <Hammer size={15} className="text-master-600" />
-            <span className="text-xs font-black uppercase tracking-widest text-slate-700">
-              Escandallo · coste mueble a mueble
-            </span>
-            <span className="text-[10px] text-slate-400">
-              interno · no sale en el PDF del cliente
-            </span>
+          <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Hammer size={15} className="text-master-600" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-700">
+                Escandallo · coste mueble a mueble
+              </span>
+              <span className="text-[10px] text-slate-400">
+                interno · no sale en el PDF del cliente
+              </span>
+            </div>
+
+            {/* LOS DESCUENTOS, AQUÍ MISMO (master, 31/08: «no veo dónde meter los
+                descuentos para calcular los precios de cascos y puertas», «no
+                está en esta sección y lo quiero tener a mano todo»).
+
+                Estaban en un modal aparte, así que había que abrirlo, teclear,
+                cerrarlo y volver a mirar la tabla — comprobando de memoria. Son
+                las DOS palancas que mueven todos los costes de abajo: van donde
+                se leen. El modal sigue existiendo; esto es la misma cifra, no
+                una copia (mismo estado). */}
+            <div className="mt-2.5 flex items-center gap-x-5 gap-y-2 flex-wrap text-[11px]"
+                 data-testid="cm3-descuentos-escandallo">
+              <div className="flex items-center gap-1.5">
+                <span className="font-black uppercase tracking-wide text-master-700">Cascos ACB</span>
+                <span className="text-slate-400">tarifa ×{VALOR_PUNTO_CASCOS}</span>
+                <span className="text-slate-300">−</span>
+                <input type="number" min="0" max="100" step="any" value={dtoCascos1}
+                  onChange={e => setDtoCascos1(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="esc-dto-casco1"
+                  title="El descuento que deshace el ×2 del PVP. Es aritmética: si lo cambias sin cambiar el valor del punto, el coste deja de cuadrar."
+                  className="w-12 px-1 py-0.5 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                <span className="text-slate-400">%</span>
+                <span className="text-slate-300">−</span>
+                <input type="number" min="0" max="100" step="any" value={dtoCascos2}
+                  onChange={e => setDtoCascos2(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="esc-dto-casco2"
+                  title="El descuento que negocias con ACB."
+                  className="w-12 px-1 py-0.5 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                <span className="text-slate-400">%</span>
+                <span className="font-mono font-black text-master-700">
+                  = ×{Math.round(VALOR_PUNTO_CASCOS * (1 - dtoCascos1 / 100) * (1 - dtoCascos2 / 100) * 1000) / 1000}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="font-black uppercase tracking-wide text-master-700">Puertas MV</span>
+                <span className="text-slate-400">tarifa</span>
+                <span className="text-slate-300">−</span>
+                <input type="number" min="0" max="100" step="any" value={dtoPuertas1}
+                  onChange={e => setDtoPuertas1(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="esc-dto-puerta1"
+                  className="w-12 px-1 py-0.5 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                <span className="text-slate-400">%</span>
+                <span className="text-slate-300">−</span>
+                <input type="number" min="0" max="100" step="any" value={dtoPuertas2}
+                  onChange={e => setDtoPuertas2(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="esc-dto-puerta2"
+                  className="w-12 px-1 py-0.5 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                <span className="text-slate-400">%</span>
+                <span className="font-mono font-black text-master-700">
+                  = ×{Math.round((1 - dtoPuertas1 / 100) * (1 - dtoPuertas2 / 100) * 1000) / 1000}
+                </span>
+              </div>
+
+              <span className="text-[10px] text-slate-400">
+                mueven todos los costes de abajo
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -2887,11 +3001,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <td colSpan={4} className="py-2 px-2 font-sans uppercase text-[10px] tracking-widest text-slate-500">
                     Totales · {totalUds} uds
                   </td>
-                  <td className="py-2 px-2 text-right text-dato-800">{eur(filas.reduce((t, m) => t + (m.despiece?.casco || 0) * (Number(m.qty) || 1), 0))}</td>
-                  <td className="py-2 px-2 text-right text-dato-800">{eur(filas.reduce((t, m) => t + (m.despiece?.puerta || 0) * (Number(m.qty) || 1), 0))}</td>
+                  {/* SOLO LAS LÍNEAS QUE TIENEN COSTE (master, 31/08: «la mano
+                      de obra no se suma bien»). El total sumaba las 12 líneas
+                      × sus unidades —29 × 17 = 493 €— mientras la columna solo
+                      enseñaba cinco 17,00: las otras siete salen «Sin coste» y
+                      no pintan nada. Un total que suma lo que la tabla dice
+                      que no existe.
+                      Y peor: esos totales tampoco cuadraban con `totalCoste`,
+                      que sí las excluye. Tres cifras del mismo dinero. */}
+                  <td className="py-2 px-2 text-right text-dato-800">{eur(sumaConCoste('casco'))}</td>
+                  <td className="py-2 px-2 text-right text-dato-800">{eur(sumaConCoste('puerta'))}</td>
                   {['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes', 'mo'].map(k => (
                     <td key={k} className="py-2 px-2 text-right text-slate-700">
-                      {eur(filas.reduce((t, m) => t + (Number(m.despiece?.[k]) || 0) * (Number(m.qty) || 1), 0))}
+                      {eur(sumaConCoste(k))}
                     </td>
                   ))}
                   <td className="py-2 px-2"></td>
@@ -2918,7 +3040,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               Los porcentajes son sobre el coste, no sobre el PVP: aquí no se
               mira lo que se gana, se mira en qué se gasta. */}
           {(() => {
-            const suma = (k) => filas.reduce((t, m) => t + (Number(m.despiece?.[k]) || 0) * (Number(m.qty) || 1), 0);
+            const suma = sumaConCoste;
             const herr = ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes'];
             const conceptos = [
               { n: 'Cascos ACB', v: suma('casco'), d: 'Se le pide a ACB' },

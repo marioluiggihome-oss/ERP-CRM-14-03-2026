@@ -297,8 +297,19 @@ def test_EL_ESCANDALLO_SUMA_Y_NO_SE_TRAGA_LAS_UNIDADES():
     cuerpo = sin_comentarios(_lee(CM3))
     i = cuerpo.index('data-testid="cm3-escandallo"')
     tabla = cuerpo[i:cuerpo.index("{showPegadoMasivo &&", i)]
-    assert "(Number(m.qty) || 1)" in tabla, (
-        "los totales del escandallo no multiplican por las unidades")
+    # LAS UNIDADES VIVEN EN `sumaConCoste`, que es de donde salen todos los
+    # totales por concepto desde que se arregló lo de la mano de obra. Buscarlas
+    # dentro de la tabla ya no vale: no están ahí, están en la función.
+    assert "sumaConCoste(" in tabla, (
+        "los totales del escandallo no usan la función común: se calcularían "
+        "por su cuenta y volverían a contar las líneas sin coste")
+    # HASTA EL CIERRE DEL `reduce`, no «hasta la línea en blanco»: el corte por
+    # `\n\n` caía antes o después según los comentarios y la comprobación no
+    # llegaba a mirar la fórmula. Se comprobó rompiéndolo.
+    k = cuerpo.index("const sumaConCoste")
+    formula = cuerpo[k:cuerpo.index(", 0);", k)]
+    assert "(Number(m.qty) || 1)" in formula, (
+        f"los totales no multiplican por las unidades: {formula.strip()[-90:]}")
     assert 'data-testid="cm3-escandallo-total"' in tabla and "{eur(totalCoste)}" in tabla, (
         "el total del escandallo no es el mismo `totalCoste` que el pie del "
         "presupuesto: dos números para el mismo dinero")
@@ -344,7 +355,7 @@ def test_EN_QUE_SE_VA_EL_COSTE_SALE_DESPUES_DEL_ESCANDALLO():
     # DESDE EL CÁLCULO, no desde la marca: los nombres de los conceptos se
     # declaran ARRIBA, en el array, y cortar en el `data-testid` los dejaba
     # fuera — la prueba fallaba con el desglose bien puesto.
-    bloque = cuerpo[cuerpo.rindex("const suma = (k)", 0, j):cuerpo.index("{showPegadoMasivo &&", j)]
+    bloque = cuerpo[cuerpo.rindex("const suma = sumaConCoste", 0, j):cuerpo.index("{showPegadoMasivo &&", j)]
     for concepto in ("Cascos ACB", "Puertas y frentes MV", "Bisagras", "Patas",
                      "Colgadores", "Cajones", "Gavetas", "Soportes de balda",
                      "Mano de obra"):
@@ -356,8 +367,15 @@ def test_EL_DESGLOSE_POR_CONCEPTO_MULTIPLICA_LAS_UNIDADES():
     desglose diría que a ACB se le pide la mitad de lo que se le pide."""
     cuerpo = sin_comentarios(_lee(CM3))
     j = cuerpo.index('data-testid="cm3-reparto-coste"')
-    suma = cuerpo[cuerpo.rindex("const suma = (k)", 0, j):j]
-    assert "(Number(m.qty) || 1)" in suma, (
+    # Comparte función con el escandallo: una sola definición de «cuánto suma un
+    # concepto», para que los dos bloques no puedan contar cosas distintas.
+    bloque = cuerpo[cuerpo.rindex("const suma = sumaConCoste", 0, j):j]
+    assert "const suma = sumaConCoste;" in bloque, (
+        "el desglose por concepto suma por su cuenta en vez de usar la función "
+        "común: se separaría del escandallo y del coste total")
+    k = cuerpo.index("const sumaConCoste")
+    formula = cuerpo[k:cuerpo.index(", 0);", k)]
+    assert "(Number(m.qty) || 1)" in formula, (
         "el desglose por concepto no multiplica por las unidades")
 
 
@@ -370,3 +388,83 @@ def test_UN_CONCEPTO_A_CERO_NO_SALE():
     assert ".filter(c => c.v > 0)" in bloque, (
         "se enseñan conceptos a cero: ruido en una lista que se lee para "
         "decidir a quién se le pide")
+
+
+def test_LOS_TOTALES_SOLO_SUMAN_LAS_LINEAS_QUE_TIENEN_COSTE():
+    """El master, 31/08: «la mano de obra no se suma bien».
+
+    Y no se sumaba: el total daba 493 € —las 29 unidades del presupuesto × 17—
+    mientras la columna enseñaba cinco 17,00 €. Las otras siete líneas salen
+    «Sin coste» en la tabla y no pintan nada, pero sus sumandos seguían
+    contando: `despiece` calcula el casco, las puertas y la mano de obra de
+    todas formas y solo pone a `null` el TOTAL.
+
+    Un total que suma lo que la tabla dice que no existe. Y encima ninguno de
+    esos totales cuadraba con `totalCoste`, que sí las excluye: TRES cifras del
+    mismo dinero en la misma pantalla.
+    """
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert "const sumaConCoste" in cuerpo, (
+        "no hay una función única que sume los conceptos")
+    i = cuerpo.index("const sumaConCoste")
+    fn = cuerpo[i:cuerpo.index("\n\n", i)]
+    assert "m.coste == null ? t :" in fn, (
+        "los totales por concepto vuelven a sumar las líneas sin coste: la "
+        "columna enseñaría cinco valores y el total contaría doce")
+
+    # Y que NADIE sume por su cuenta dentro del escandallo.
+    j = cuerpo.index('data-testid="cm3-escandallo"')
+    tabla = cuerpo[j:cuerpo.index("{showPegadoMasivo &&", j)]
+    assert "filas.reduce((t, m) => t + (m.despiece" not in tabla, (
+        "hay un total del escandallo que se calcula por su cuenta en vez de "
+        "usar `sumaConCoste`: se separará y volverá a contar de más")
+
+
+def test_EL_ARTICULO_Y_LAS_UNIDADES_SE_PUEDEN_CAMBIAR():
+    """El master, 31/08: «las puertas y unidades y artículos en todos los casos
+    se tienen que poder modificar».
+
+    Una relación importada trae lo que escribió el proveedor, y a veces el
+    código viene mal leído. Sin poder corregirlo había que borrar la línea y
+    volver a teclearla, y con ella se iban las observaciones y el precio pactado.
+    """
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert 'data-testid="cm3-cod-linea"' in cuerpo, (
+        "el código del artículo no se puede corregir")
+    assert "const setCod" in cuerpo, "no hay setter del código"
+    i = cuerpo.index("const setCod")
+    fn = cuerpo[i:cuerpo.index("\n  }));", i)]
+    assert "m.pvpManual" in fn, (
+        "cambiar el código pisa un precio escrito a mano: el precio pactado "
+        "desaparecería al corregir una letra del código")
+    assert "encontrado: existe" in fn, (
+        "al cambiar el código no se vuelve a mirar si el catálogo lo conoce: un "
+        "código inventado saldría con pinta de bueno y llegaría al pedido")
+    assert "onChange={e => setQty(m._k, e.target.value)}" in cuerpo, (
+        "se ha perdido la edición de las unidades")
+
+
+def test_LOS_DESCUENTOS_ESTAN_EN_EL_ESCANDALLO():
+    """El master, 31/08: «no veo dónde meter los descuentos para calcular los
+    precios de cascos y puertas», «no está en esta sección y lo quiero tener a
+    mano todo».
+
+    Estaban solo en un modal aparte: había que abrirlo, teclear, cerrarlo y
+    volver a mirar la tabla comprobando de memoria. Son las dos palancas que
+    mueven todos los costes de abajo, así que van donde se leen.
+    """
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert 'data-testid="cm3-descuentos-escandallo"' in cuerpo, (
+        "los descuentos no están en el escandallo")
+    i = cuerpo.index('data-testid="cm3-descuentos-escandallo"')
+    bloque = cuerpo[i:cuerpo.index("{showPegadoMasivo &&", i)]
+    for testid in ("esc-dto-casco1", "esc-dto-casco2", "esc-dto-puerta1", "esc-dto-puerta2"):
+        assert testid in bloque, f"falta el campo «{testid}» en el escandallo"
+
+    # LA MISMA CIFRA, NO UNA COPIA: los campos del escandallo y los del modal
+    # tienen que mover el MISMO estado, o se separarían y cada sitio calcularía
+    # con un descuento distinto.
+    for setter in ("setDtoCascos1", "setDtoCascos2", "setDtoPuertas1", "setDtoPuertas2"):
+        assert setter in bloque, (
+            f"el campo del escandallo no usa `{setter}`: sería una copia del "
+            "descuento, y el modal y la tabla acabarían con cifras distintas")
