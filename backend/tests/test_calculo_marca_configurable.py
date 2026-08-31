@@ -31,6 +31,8 @@ os.environ.setdefault("JWT_SECRET", "secreto-de-pruebas-largo-y-aleatorio-012345
 
 import pytest  # noqa: E402
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACK = os.path.join(RAIZ, "backend")
 FRONT = os.path.join(RAIZ, "frontend", "src")
@@ -70,7 +72,7 @@ def _sin_comentarios(t):
     se le manda a un cliente. Lo que se vigila es lo que SALE.
     """
     t = re.sub(r'"""[\s\S]*?"""', "", t)
-    t = re.sub(r"/\*[\s\S]*?\*/", "", t)
+    t = _limpia_jsx(t)
     t = re.sub(r"^\s*(?:#|//).*$", "", t, flags=re.M)
     return t
 

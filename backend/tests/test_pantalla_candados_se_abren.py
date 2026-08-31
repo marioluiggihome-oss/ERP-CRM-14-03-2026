@@ -29,6 +29,8 @@ POR QUÉ ESTE CANDADO BARRE TODAS LAS PANTALLAS. El fallo es de una sola letra
 import os
 import re
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COMPONENTES = os.path.join(RAIZ, "frontend", "src", "components")
 HOOK = os.path.join(RAIZ, "frontend", "src", "utils", "pulsacionLarga.js")
@@ -48,9 +50,7 @@ def _sin_comentarios(cuerpo: str) -> str:
     reconocedor se creía la explicación. Un candado que caza su propia
     documentación acusa al código que acaba de arreglarse.
     """
-    cuerpo = re.sub(r"/\*.*?\*/", "", cuerpo, flags=re.S)
-    return "\n".join(l for l in cuerpo.split("\n")
-                     if not l.lstrip().startswith("//"))
+    return _limpia_jsx(cuerpo)
 
 
 def _pantallas_con_candado():

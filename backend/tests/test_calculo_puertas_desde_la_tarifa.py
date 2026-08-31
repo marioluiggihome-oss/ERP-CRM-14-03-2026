@@ -35,6 +35,8 @@ import re
 import subprocess
 import sys
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("JWT_SECRET", "secreto-de-pruebas-largo-y-aleatorio-0123456789")
 
@@ -93,8 +95,7 @@ def _sin_comentarios(cuerpo):
     apaños viejos, con su texto literal. Sin esto, la prueba de abajo se caza a
     sí misma: el apaño ya no existe, pero la explicación de que no existe sí.
     """
-    cuerpo = re.sub(r"/\*.*?\*/", "", cuerpo, flags=re.S)
-    return re.sub(r"^\s*//.*$", "", cuerpo, flags=re.M)
+    return _limpia_jsx(cuerpo)
 
 
 def test_NO_QUEDA_NINGUN_APAÑO_que_tape_un_hueco_con_un_numero():

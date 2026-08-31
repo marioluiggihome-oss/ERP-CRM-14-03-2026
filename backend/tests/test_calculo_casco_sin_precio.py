@@ -66,6 +66,8 @@ import subprocess
 
 import pytest
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(RAIZ, "frontend", "src")
 RENT = os.path.join(SRC, "components", "RentabilidadMV.jsx")
@@ -83,10 +85,7 @@ def _sin_comentarios(cuerpo):
     """Este fichero y los que vigila EXPLICAN el fallo citando lo que se busca
     («0,00 €», «coste: 0»). Sin quitar los comentarios, un candado se aprueba a
     sí mismo con su propia explicación — ya ha pasado cinco veces en este repo."""
-    import re
-    cuerpo = re.sub(r"/\*.*?\*/", " ", cuerpo, flags=re.S)
-    return "\n".join(l for l in cuerpo.split("\n")
-                     if not l.lstrip().startswith("//"))
+    return _limpia_jsx(cuerpo)
 
 
 # ── EJECUTAR EL CÓDIGO DE VERDAD ──────────────────────────────────────────────

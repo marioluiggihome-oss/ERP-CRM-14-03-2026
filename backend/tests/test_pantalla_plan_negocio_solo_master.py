@@ -29,6 +29,8 @@ import sys
 
 import pytest
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKEND = os.path.join(RAIZ, "backend")
 RUTA = os.path.join(BACKEND, "routes", "plan_negocio.py")
@@ -54,8 +56,7 @@ def _sin_comentarios_py(src):
 
 
 def _sin_comentarios_jsx(src):
-    src = re.sub(r"/\*[\s\S]*?\*/", "", src)
-    return re.sub(r"^\s*//[^\n]*", "", src, flags=re.M)
+    return _limpia_jsx(src)
 
 
 # Los paquetes que otras pruebas SUSTITUYEN por modulos de mentira para poder

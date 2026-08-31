@@ -686,7 +686,6 @@ export default function AIRenderStudio({ state, setState }) {
   const [showEstilo, setShowEstilo] = useState(false);
   const [showPlanos, setShowPlanos] = useState(false);
   // Caso raro: querer ignorar el plano y generar solo desde el texto.
-  const [soloTexto, setSoloTexto] = useState(false);
   const [showMedidas, setShowMedidas] = useState(false);
   // Ref para auto-scroll al panel de render en móvil
   const renderPanelRef = useRef(null);
@@ -3352,7 +3351,7 @@ export default function AIRenderStudio({ state, setState }) {
     if (err) { setError(err); return; }
     // Si hay plano o bocetos, se usan SIEMPRE junto con el texto y la
     // referencia de acabado: son fuentes complementarias, no alternativas.
-    if (!soloTexto && (floorPlan || wallSketches.length > 0)) {
+    if (floorPlan || wallSketches.length > 0) {
       await handleGenerateComposed();
       return;
     }

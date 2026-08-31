@@ -38,6 +38,8 @@ import re
 import shutil
 import subprocess
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CM3 = os.path.join(RAIZ, "frontend", "src", "components", "CocinaMontada3.jsx")
 RENT = os.path.join(RAIZ, "frontend", "src", "components", "RentabilidadMV.jsx")
@@ -59,9 +61,7 @@ def _sin_comentarios(cuerpo):
     borrar el botón entero dejaba la prueba EN VERDE, aprobada por su propia
     explicación. Se comprobó rompiéndolo.
     """
-    cuerpo = re.sub(r"/\*.*?\*/", " ", cuerpo, flags=re.S)
-    return "\n".join(l for l in cuerpo.split("\n")
-                      if not l.lstrip().startswith("//"))
+    return _limpia_jsx(cuerpo)
 
 
 # ── 1. LA PUERTA ──────────────────────────────────────────────────────────────

@@ -37,6 +37,8 @@ import tempfile
 
 import pytest
 
+from jsx_limpio import sin_comentarios as _limpia_jsx
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COMPONENTES = os.path.join(RAIZ, "frontend", "src", "components")
 
@@ -54,9 +56,7 @@ def _lee(ruta):
 def _sin_comentarios(cuerpo: str) -> str:
     """Sin comentarios: los ficheros EXPLICAN el fallo citándolo, y el
     reconocedor se creía la explicación. Ya van cuatro veces en el proyecto."""
-    cuerpo = re.sub(r"/\*.*?\*/", "", cuerpo, flags=re.S)
-    return "\n".join(l for l in cuerpo.split("\n")
-                     if not l.lstrip().startswith("//"))
+    return _limpia_jsx(cuerpo)
 
 
 def _constantes_de_modulo(cuerpo: str):
