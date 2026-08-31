@@ -207,6 +207,47 @@ export const FAMILIAS_CON_DESPIECE = new Set(Object.keys(RULES));
 export const tieneDespieceReal = (familia) =>
   FAMILIAS_CON_DESPIECE.has(String(familia || '').toUpperCase());
 
+/* LA MANO DE OBRA ES SOLO DE LOS MUEBLES (master, 31/08).
+ *
+ * Se cobraban 17 € de montaje por CADA línea: una puerta suelta, un costado, una
+ * regleta o un techo llevaban la mano de obra entera de un mueble. No es que
+ * saliera cara: es que ese mismo 17 € es lo que cobra el montador (CLAUDE.md,
+ * regla 16: «su comisión ES la mano de obra por mueble que ya se teclea en
+ * Rentabilidad MV — no tiene fórmula propia a propósito, porque dos números
+ * para lo mismo acaban sin cuadrar»). Y el backend ya paga SOLO los muebles
+ * desde el 25/08. O sea que la pantalla contaba una nómina y la nómina pagaba
+ * otra, sin que ninguna de las dos pareciera un error.
+ *
+ * ESTA LISTA ES LA DEL BACKEND. Allí (`services/comisiones.py`) se deduce de dos
+ * sitios: la categoría «lineal» de `nomenclaturas_pdf` y el tipo «matrix» de la
+ * tarifa MV. Aquí no se puede leer ninguno de los dos, así que se escribe — y su
+ * candado la compara nombre a nombre con `FAMILIAS_SIN_COMISION`. Si allí entra
+ * una familia nueva y aquí no, el CI se pone rojo: es la única forma de que dos
+ * listas del mismo dinero no se separen.
+ *
+ * OJO CON NO PASARSE: un ALTO_VITRINA o una MEDIACOLUMNA_VITRINA SÍ son muebles
+ * —un casco con puerta de cristal, y se montan igual—. Lo que no lo es son los
+ * FRENTES sueltos. Por eso la lista tiene nombres exactos y no la palabra
+ * «vitrina».
+ */
+export const FAMILIAS_SIN_MANO_DE_OBRA = new Set([
+  'PUERTAS', 'VITRINA', 'VITRINA_INGLESA', 'REJILLA_CONFESIONARIO',
+  'COSTADOS_COLOR', 'COSTADOS_MELAMINA', 'LATERALES_COLOR',
+  'REGLETA_COLOR', 'REGLETA_MELAMINA', 'TECHO_COLOR',
+  'ELEMENTOS_LINEALES',
+]);
+
+/** ¿Esta línea se monta como un mueble? (o sea: ¿paga mano de obra y comisión?)
+ *
+ *  SIN FAMILIA ES QUE NO, igual que en el backend: una línea tecleada a mano
+ *  para un servicio no tiene familia del catálogo. Es la decisión conservadora
+ *  a propósito — pagar de menos se reclama, pagar de más no se devuelve. */
+export const esMuebleMV = (familia) => {
+  const f = String(familia || '').trim().toUpperCase();
+  if (!f) return false;
+  return !FAMILIAS_SIN_MANO_DE_OBRA.has(f);
+};
+
 export const RULE_GENERICA = { casco: 'Bajo Con Balda', alto: 800, patas: 1, puertas: 1, generica: true };
 
 // La mano de obra por mueble montado. Se exporta para que el candado la
@@ -1071,7 +1112,11 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
     + (cajones * (Number(p.cajon) || 0))
     + (gavetas * (Number(p.gaveta) || 0))
     + (baldas * 4 * (Number(p.soporte) || 0))) * 100) / 100;
-  const costeMo = Number(p.mano) || 0;
+  // SOLO LOS MUEBLES LLEVAN MANO DE OBRA (master, 31/08: «la mano de obra sólo
+  // tiene que ser de los muebles»). Una puerta suelta o un costado se piden al
+  // proveedor y se cuelgan; no son un mueble que montar, y el montador no cobra
+  // por ellos. Ver `esMuebleMV`.
+  const costeMo = esMuebleMV(familia) ? (Number(p.mano) || 0) : 0;
   // UN COSTE INCOMPLETO NO ES UN COSTE. Si el casco no tiene precio, el total
   // sale `null` y NO la suma de lo demás: sumar los otros tres sumandos daría
   // un número con toda la pinta de ser el coste, más bajo que el de verdad, y
@@ -1291,12 +1336,24 @@ export default function RentabilidadMV({ esMaster, seed }) {
         pvp: pvp * l.cant,
         margen: sinCoste ? null : (pvp - coste) * l.cant };
     });
-    const tot = rows.reduce((a, r) => ({
-      pvp: a.pvp + r.pvp,
-      coste: a.coste + (r.coste || 0),
-      margen: a.margen + (r.margen || 0),
-      sinCoste: a.sinCoste + (r.sinCoste ? 1 : 0),
-    }), { pvp: 0, coste: 0, margen: 0, sinCoste: 0 });
+    // LO QUE INCENTIVA VA APARTE (master, 31/08). El total del pedido lleva las
+    // puertas, los costados y las regletas; la COMISIÓN no, ni en unidades ni
+    // en importe (CLAUDE.md, regla 16). Y no es solo que se contaran unidades
+    // que no se montan: su importe empujaba el TRAMO de todos los demás
+    // muebles, así que la pantalla prometía una comisión más alta de la que la
+    // nómina paga.
+    const tot = rows.reduce((a, r) => {
+      const mueble = esMuebleMV(r.familia);
+      return {
+        pvp: a.pvp + r.pvp,
+        coste: a.coste + (r.coste || 0),
+        margen: a.margen + (r.margen || 0),
+        sinCoste: a.sinCoste + (r.sinCoste ? 1 : 0),
+        udsMuebles: a.udsMuebles + (mueble ? r.cant : 0),
+        pvpMuebles: a.pvpMuebles + (mueble ? r.pvp : 0),
+        udsFuera: a.udsFuera + (mueble ? 0 : r.cant),
+      };
+    }, { pvp: 0, coste: 0, margen: 0, sinCoste: 0, udsMuebles: 0, pvpMuebles: 0, udsFuera: 0 });
     return { rows, tot };
   }, [lineas, p, pv]);
 
@@ -1404,7 +1461,13 @@ export default function RentabilidadMV({ esMaster, seed }) {
             él. Y va dentro de Rentabilidad MV, que ya es solo del master
             (CLAUDE.md, regla 8): esto es nómina de gente. */}
         {calc.rows.length > 0 && (() => {
-          const uds = lineas.reduce((a, l) => a + l.cant, 0);
+          // SOLO LOS MUEBLES. Antes esto era `lineas.reduce((a, l) => a + l.cant, 0)`
+          // —TODAS las líneas—, y el rótulo de al lado ponía «× N muebles»
+          // contando puertas y costados. El backend paga solo los muebles desde
+          // el 25/08, así que esta pantalla prometía a la cara lo que la nómina
+          // no iba a pagar.
+          const uds = calc.tot.udsMuebles;
+          const udsFuera = calc.tot.udsFuera;
           // EL TRAMO LO MARCA LA BASE IMPONIBLE: el PVP DESPUÉS del descuento y
           // SIN IVA. El master, 25/08: «siempre va sobre la base imponible, no
           // sobre el total con IVA».
@@ -1419,7 +1482,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
           // para él: el descuento se mete en Cocina Montada 3, en otra
           // pantalla, así que sin esto el tramo salía del PVP SIN DESCONTAR y
           // se comisionaba sobre dinero que no llega a entrar.
-          const baseImponible = Math.round(calc.tot.pvp * (1 - Math.min(Math.max(Number(dtoComision) || 0, 0), 100) / 100) * 100) / 100;
+          const baseImponible = Math.round(calc.tot.pvpMuebles * (1 - Math.min(Math.max(Number(dtoComision) || 0, 0), 100) / 100) * 100) / 100;
           const valoracion = baseImponible;
           const porMuebleCom = comisionPorMueble(valoracion);
           const totalCom = Math.round(porMuebleCom * uds * 100) / 100;
@@ -1438,7 +1501,7 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   qué se ha calculado esto?», que es la que hizo el master. */}
               <div className="flex items-center gap-2 flex-wrap mb-2 text-[11px]">
                 <span className="text-slate-500">
-                  {`PVP muebles ${pvpVisible ? eur(calc.tot.pvp) : '•••'}`}
+                  {`PVP muebles ${pvpVisible ? eur(calc.tot.pvpMuebles) : '•••'}`}
                 </span>
                 <span className="text-slate-400">−</span>
                 <label className="flex items-center gap-1">
@@ -1454,6 +1517,15 @@ export default function RentabilidadMV({ esMaster, seed }) {
                   {`Base imponible ${pvpVisible ? eur(baseImponible) : '•••'}`}
                 </span>
                 <span className="text-slate-400 text-[10px]">(el IVA no cuenta)</span>
+                {/* LO QUE SE HA QUEDADO FUERA, A LA VISTA. Quien ve «14 muebles»
+                    en un pedido de 20 líneas tiene que poder entender por qué,
+                    o pensará que le están quitando. */}
+                {udsFuera > 0 && (
+                  <span className="text-slate-400 text-[10px]" data-testid="mv-uds-fuera"
+                    title="Puertas, vitrinas, rejillas, costados, laterales, regletas, techos y elementos lineales. Se piden y se cobran, pero no se montan como un mueble: no llevan mano de obra ni comisión, y su importe no empuja el tramo.">
+                    {`· ${udsFuera} ud${udsFuera === 1 ? '' : 's'} de frentes y lineales, fuera`}
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="rounded-lg border border-dato-200 bg-white p-2.5">

@@ -33,7 +33,7 @@ import autoTable from 'jspdf-autotable';
 import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
-import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal, DTO_CASCOS_PVP } from './RentabilidadMV';
+import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal, DTO_CASCOS_PVP, esMuebleMV } from './RentabilidadMV';
 import { VALOR_PUNTO_CASCOS } from '../utils/valorPuntoCascos';
 import RelacionReview from './RelacionReview';
 import { despieceDeFrentes, totalesDelDespiece } from '../utils/despieceFrentes';
@@ -3253,6 +3253,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           {(() => {
             const suma = sumaConCoste;
             const herr = ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes'];
+            /* CUÁNTOS MUEBLES PAGAN MONTAJE, escrito al lado del importe.
+               La mano de obra es lo MISMO que cobra el montador (regla 16), así
+               que este número tiene que poder compararse con su liquidación sin
+               hacer ninguna cuenta. Puertas, costados y regletas no entran: se
+               piden y se cuelgan, no se montan. */
+            const udsMuebles = filas.reduce(
+              (t, m) => (m.coste == null || !esMuebleMV(m.familia) ? t : t + (Number(m.qty) || 1)), 0);
             const conceptos = [
               { n: 'Cascos ACB', v: suma('casco'), d: 'Se le pide a ACB' },
               { n: 'Puertas y frentes MV', v: suma('puerta'), d: 'Se le pide a MV' },
@@ -3261,7 +3268,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                      caj: 'Cajones', gav: 'Gavetas', soportes: 'Soportes de balda' }[k],
                 v: suma(k), d: 'Herraje', herraje: true,
               })),
-              { n: 'Mano de obra', v: suma('mo'), d: 'Montaje — es la comisión del montador' },
+              { n: 'Mano de obra', v: suma('mo'),
+                d: `Montaje de ${udsMuebles} mueble${udsMuebles === 1 ? '' : 's'} — es la comisión del montador` },
             ].filter(c => c.v > 0);
             const tot = conceptos.reduce((t, c) => t + c.v, 0);
             if (!tot) return null;
