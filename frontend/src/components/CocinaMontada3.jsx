@@ -48,6 +48,48 @@ const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { m
  *  un hueco sin rellenar. Sale del desglose original (14/08, RelacionReview). */
 const OCULTO = '•••';
 
+/** LO QUE SE LE PIDE A CADA PROVEEDOR, Y A QUÉ PRECIO (master, 31/08).
+ *
+ *  Agrupado POR PROVEEDOR y no por concepto: el pedido se hace a ACB, a MV y al
+ *  del herraje por separado, así que al comprobar precios antes de pedir se
+ *  mira un proveedor entero de una vez.
+ *
+ *  ESTA LISTA TIENE QUE CUBRIR TODA TARIFA QUE ENTRE EN EL COSTE. Su candado
+ *  compara las claves con `MV_COSTES_DEFAULT`: el día que se añada un herraje
+ *  nuevo al cálculo y no se pueda teclear aquí, el CI se pone rojo — porque una
+ *  tarifa que solo se puede cambiar en otra pantalla es una tarifa que nadie
+ *  cambia, y el coste se queda con el precio del año pasado sin dar un error.
+ *  Los descuentos NO están aquí: van en la cabecera del escandallo, que es
+ *  donde se ve su efecto. */
+export const TARIFAS_DE_PROVEEDOR = [
+  {
+    grupo: 'Puertas y frentes · MV',
+    nota: 'la tarifa MV va por m²; el precio de cada pieza se puede afinar en «Frentes»',
+    campos: [
+      { k: 'doorM2', rot: 'Puerta / frente', ud: '€/m²' },
+    ],
+  },
+  {
+    grupo: 'Herrajes',
+    nota: 'lo que se pide al proveedor de herraje, por unidad',
+    campos: [
+      { k: 'bisagra', rot: 'Bisagra', ud: '€/ud', nota: '2 por puerta' },
+      { k: 'pata4', rot: 'Patas', ud: '€/juego', nota: '4 patas por bajo' },
+      { k: 'colgador', rot: 'Colgador', ud: '€/ud', nota: '2 por alto' },
+      { k: 'cajon', rot: 'Cajón', ud: '€/ud' },
+      { k: 'gaveta', rot: 'Gaveta', ud: '€/ud' },
+      { k: 'soporte', rot: 'Soporte de balda', ud: '€/ud', nota: '4 por balda' },
+    ],
+  },
+  {
+    grupo: 'Mano de obra',
+    nota: 'la cifra de la casa; cada montador socio puede tener la suya en su ficha',
+    campos: [
+      { k: 'mano', rot: 'Montaje', ud: '€/mueble' },
+    ],
+  },
+];
+
 const norm = (s) => (s || '').toString()
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -261,6 +303,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [showComparador, setShowComparador] = useState(false);
   const [showEscandallo, setShowEscandallo] = useState(false);
   const [showFrentes, setShowFrentes] = useState(false);
+  const [showProveedores, setShowProveedores] = useState(false);
   const [showMuestrario, setShowMuestrario] = useState(false);
   const [filtroCat, setFiltroCat] = useState('TODOS');
   const [copiadoWs, setCopiadoWs] = useState(false);
@@ -466,14 +509,61 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     } catch { /* noop */ }
   }, [dtoPuertas1, dtoPuertas2]);
 
-  const p = useMemo(() => {
-    try { 
-      const s = JSON.parse(localStorage.getItem('mv_costes') || 'null'); 
-      return s ? { ...MV_COSTES_DEFAULT, ...s } : MV_COSTES_DEFAULT; 
-    } catch { 
-      return MV_COSTES_DEFAULT; 
+  /* LAS TARIFAS DE PROVEEDOR SE TECLEAN AQUÍ (master, 31/08: «pon botones para
+     poder editar y cambiar datos para pedir a los distintos proveedores de
+     cascos, herraje, puertas, etc.»).
+     
+     Hasta hoy esto era un `useMemo` con dependencias vacías: se leía UNA vez de
+     `localStorage` y no había forma de cambiarlo desde el Presupuestador. Las
+     cifras existían —bisagra, patas, colgador, cajón, gaveta, soporte, €/m² de
+     puerta, mano de obra— y movían todos los costes de la pantalla, pero para
+     tocarlas había que irse a Rentabilidad MV, cambiarlas allí y volver. O sea
+     que el número que decide si un presupuesto gana dinero se editaba en otra
+     pantalla.
+     
+     SE GUARDA EN LA MISMA CLAVE (`mv_costes`) QUE RENTABILIDAD MV, y eso es lo
+     importante: una segunda copia acabaría diciendo que la bisagra vale 3,07 €
+     en una pantalla y 4,10 € en la otra, con el mismo pedido y sin que ninguna
+     de las dos pareciera un error.
+     
+     Y SE ESCRIBE EN EL SETTER, NO EN UN `useEffect` DE MONTAJE: si se escribiera
+     al montar, abrir el Presupuestador pisaría con su copia lo que el master
+     acabara de teclear en Rentabilidad. Entrar a mirar no puede cambiar una
+     tarifa. */
+  const [p, setP] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('mv_costes') || 'null');
+      return s ? { ...MV_COSTES_DEFAULT, ...s } : MV_COSTES_DEFAULT;
+    } catch {
+      return MV_COSTES_DEFAULT;
     }
-  }, []);
+  });
+  // Un campo vacío se queda VACÍO, no en 0: `Number('')` es 0, y un 0 aquí es
+  // «esta bisagra no cuesta nada», que es una afirmación distinta de «todavía
+  // no lo he tecleado» (regla 7). Al calcular, `Number('') || 0` ya lo trata
+  // como que no suma, sin dejar un 0 escrito en la tarifa.
+  const setTarifaProveedor = (k, valor) => setP(prev => {
+    const siguiente = { ...prev, [k]: valor === '' ? '' : Number(valor) };
+    try { localStorage.setItem('mv_costes', JSON.stringify(siguiente)); } catch { /* noop */ }
+    return siguiente;
+  });
+  /* «VALORES DE LA CASA» NO TOCA LOS DESCUENTOS, y eso no es un detalle.
+     
+     `MV_COSTES_DEFAULT` lleva dentro los descuentos además de los precios, así
+     que restablecerlo entero devolvería el −28 % de ACB y los de puertas a cero
+     — el descuento NEGOCIADO, borrado por pulsar un botón que dice «vuelve a
+     los precios de la casa». Y no en esta pantalla: en Rentabilidad MV, que lee
+     los descuentos de esta misma clave, así que el master no lo vería hasta
+     mirar un margen que ya no cuadra. Se restablece lo que el botón promete:
+     los PRECIOS. */
+  const restablecerTarifas = () => setP(prev => {
+    const siguiente = { ...MV_COSTES_DEFAULT };
+    Object.keys(siguiente).forEach(k => {
+      if (k.startsWith('dto') && prev[k] !== undefined) siguiente[k] = prev[k];
+    });
+    try { localStorage.setItem('mv_costes', JSON.stringify(siguiente)); } catch { /* noop */ }
+    return siguiente;
+  });
 
   const paramsCostes = useMemo(() => ({
     ...p,
@@ -1582,6 +1672,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           >
             <List size={12} className="text-dato-400" /> Frentes
           </button>
+          {/* LAS TARIFAS DE PROVEEDOR, A MANO (master, 31/08: «pon botones para
+              poder editar y cambiar datos para pedir a los distintos
+              proveedores de cascos, herraje, puertas, etc.»). Antes había que
+              irse a Rentabilidad MV a cambiar el precio de una bisagra y
+              volver. */}
+          <button
+            onClick={() => setShowProveedores(v => !v)}
+            data-testid="cm3-boton-proveedores"
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${showProveedores ? 'bg-accion-500 text-slate-950 border-accion-400' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}`}
+            title="Precios de proveedor: cascos, puertas, herrajes y mano de obra. Se guardan y mueven todos los costes."
+          >
+            <Hammer size={12} className="text-dato-400" /> Proveedores
+          </button>
           {/* Desplegable IMPORTAR */}
           <div className="relative">
             <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
@@ -1729,6 +1832,114 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────── PRECIOS DE PROVEEDOR ───────────
+          Master, 31/08: «pon botones para poder editar y cambiar datos para
+          pedir a los distintos proveedores de cascos, herraje, puertas, etc.».
+          Todo lo que entra en el coste, tecleable, agrupado por proveedor. */}
+      {showProveedores && (
+        <div data-testid="cm3-panel-proveedores" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in">
+          <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
+            <Hammer size={15} className="text-master-600" />
+            <span className="text-xs font-black uppercase tracking-widest text-slate-700">
+              Precios de proveedor
+            </span>
+            <span className="text-[10px] text-slate-400">
+              interno · mueve el coste de todas las líneas · se guarda
+            </span>
+            <button
+              onClick={restablecerTarifas}
+              data-testid="cm3-restablecer-tarifas"
+              className="ml-auto px-2 py-1 rounded-lg border border-slate-300 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
+              title="Vuelve a los precios de la casa"
+            >
+              Valores de la casa
+            </button>
+          </div>
+
+          <div className="p-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {/* CASCOS: aquí no hay precio que teclear, hay DESCUENTOS. El precio
+                lo pone la tarifa de ACB y no se escribe a mano; lo que se
+                negocia es el descuento. Van los mismos campos que la cabecera
+                del escandallo, con los MISMOS setters: son la misma cifra, no
+                una copia. */}
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <div className="text-[11px] font-black uppercase tracking-wide text-master-700">Cascos · ACB</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 mb-3">
+                el precio sale de la tarifa ACB; lo que se teclea es el descuento
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px]" data-testid="cm3-prov-cascos">
+                <span className="text-slate-500">tarifa ×{VALOR_PUNTO_CASCOS}</span>
+                <span className="text-slate-300">−</span>
+                <input type="number" min="0" max="100" step="any" value={dtoCascos1}
+                  onChange={e => setDtoCascos1(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="prov-dto-casco1"
+                  title="El descuento que deshace el ×2 del PVP."
+                  className="w-14 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                <span className="text-slate-400">%</span>
+                <span className="text-slate-300">−</span>
+                <input type="number" min="0" max="100" step="any" value={dtoCascos2}
+                  onChange={e => setDtoCascos2(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  data-testid="prov-dto-casco2"
+                  title="El descuento que negocias con ACB."
+                  className="w-14 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                <span className="text-slate-400">%</span>
+              </div>
+              <div className="mt-2 text-[11px] font-mono font-black text-master-700">
+                neto = tarifa ×{Math.round(VALOR_PUNTO_CASCOS * (1 - dtoCascos1 / 100) * (1 - dtoCascos2 / 100) * 1000) / 1000}
+              </div>
+            </div>
+
+            {TARIFAS_DE_PROVEEDOR.map(g => (
+              <div key={g.grupo} className="rounded-2xl border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-wide text-master-700">{g.grupo}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5 mb-3">{g.nota}</div>
+
+                {g.grupo.startsWith('Puertas') && (
+                  <div className="flex items-center gap-1.5 text-[11px] mb-3" data-testid="cm3-prov-puertas-dto">
+                    <span className="text-slate-500">descuento</span>
+                    <span className="text-slate-300">−</span>
+                    <input type="number" min="0" max="100" step="any" value={dtoPuertas1}
+                      onChange={e => setDtoPuertas1(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                      data-testid="prov-dto-puerta1"
+                      className="w-14 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                    <span className="text-slate-400">%</span>
+                    <span className="text-slate-300">−</span>
+                    <input type="number" min="0" max="100" step="any" value={dtoPuertas2}
+                      onChange={e => setDtoPuertas2(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                      data-testid="prov-dto-puerta2"
+                      className="w-14 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800" />
+                    <span className="text-slate-400">%</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {g.campos.map(c => (
+                    <div key={c.k} className="flex items-center gap-2 text-[11px]">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-700 truncate">{c.rot}</div>
+                        {c.nota && <div className="text-[10px] text-slate-400">{c.nota}</div>}
+                      </div>
+                      <input
+                        type="number" min="0" step="any"
+                        value={p[c.k] === '' || p[c.k] == null ? '' : p[c.k]}
+                        onChange={e => setTarifaProveedor(c.k, e.target.value)}
+                        data-testid={`prov-tarifa-${c.k}`}
+                        className="w-20 px-1.5 py-1 rounded-lg border border-slate-300 text-right font-mono font-bold text-slate-800"
+                      />
+                      <span className="text-[10px] text-slate-400 w-16">{c.ud}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="px-5 pb-4 text-[10px] text-slate-400">
+            Estos precios son los mismos que usa Rentabilidad MV: se guardan una vez y valen para las dos pantallas.
           </div>
         </div>
       )}
