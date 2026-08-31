@@ -251,52 +251,122 @@ def test_SE_DICE_CUANTAS_LINEAS_SE_QUEDAN_FUERA_DEL_MARGEN():
         "fijar un precio")
 
 
-def test_EL_DESGLOSE_COMPLETO_SALE_DEBAJO_DE_SU_LINEA():
-    """El master, 31/08: «que aparezcan bien los costes de herraje, accesorios,
-    patas, etc., coste mano de obra, margen, puertas, etc., como aparecía antes».
+def test_EL_ESCANDALLO_SALE_DEBAJO_MUEBLE_A_MUEBLE():
+    """El master, 31/08: «prefiero que debajo, cuando toque el candado + shift,
+    salgan los costos mueble a mueble línea a línea, AUNQUE REPITAS LÍNEAS y
+    tengamos que scrolear».
 
-    Con la tabla de dos columnas —que es la que él quería recuperar— el detalle
-    solo estaba en el texto de ayuda, y ahí no se ve de un vistazo.
+    Esa última parte es la decisión y va contra el instinto de agrupar: cada
+    línea del presupuesto tiene SU fila, aunque el mueble se repita. Agrupadas
+    habría que ir contando a qué línea corresponde cada coste, y esta tabla
+    existe para cuadrar contra la factura del proveedor.
 
-    VA EN UNA FILA APARTE, DEBAJO, y no en columnas nuevas: así se ve entero y
-    la tabla NO se ensancha al abrir el candado, que es lo que no le gustaba.
-    Las dos cosas a la vez, no una a costa de la otra.
+    (Antes de esto se probaron otras dos formas: columnas dentro de la tabla del
+    presupuesto —que la ensanchaban y sacaban el PVP de pantalla— y una fila de
+    desglose debajo de cada línea. Las dos rechazadas por él. Esta prueba guarda
+    la tercera, que es la que quiso.)
     """
     cuerpo = sin_comentarios(_lee(CM3))
-    assert 'data-testid="cm3-desglose-linea"' in cuerpo, (
-        "no hay desglose debajo de cada línea: con el candado abierto solo se "
-        "verían el coste y el margen, sin decir de dónde salen")
+    assert 'data-testid="cm3-escandallo"' in cuerpo, (
+        "no hay tabla de costes debajo del presupuesto")
 
-    i = cuerpo.index('data-testid="cm3-desglose-linea"')
-    fin = cuerpo.index("</tr>", i)
-    fila = cuerpo[i:fin]
-    for concepto in ("Casco ", "Puertas ", "Herrajes ", "M. obra ", "Margen "):
-        assert concepto in fila, (
-            f"el desglose no enseña «{concepto.strip()}», y el master lo pidió "
-            "por su nombre")
-    # LOS HERRAJES, UNO A UNO, EN LA LISTA QUE SE PINTA. Buscar la palabra a
-    # secas no valía: «Patas» sale también en el texto de ayuda del total de
-    # herrajes, así que quitarla de la lista pasaba en verde. Se comprobó
-    # rompiéndolo.
-    for pieza, campo in (("Bisagras", "bisagras"), ("Patas", "patas"),
-                         ("Colgadores", "colg"), ("Cajones", "caj"),
-                         ("Gavetas", "gav"), ("Soportes", "soportes")):
-        assert f"['{pieza}', m.despiece?.{campo}]" in fila, (
-            f"el desglose no detalla «{pieza}» pieza a pieza, y el master los "
-            "pidió por su nombre («herraje, accesorios, patas»)")
+    i = cuerpo.index('data-testid="cm3-escandallo"')
+    tabla = cuerpo[i:cuerpo.index("{showPegadoMasivo &&", i)]
 
-    # Y NO puede depender de que la tabla se ensanche: la fila del desglose va
-    # con `colSpan`, no como columnas nuevas.
-    assert "colSpan" in fila, (
-        "el desglose se está metiendo como columnas: la tabla volvería a "
-        "ensancharse al abrir el candado")
+    # UNA FILA POR LÍNEA DEL PRESUPUESTO, sin agrupar.
+    assert "filas.map((m, i) =>" in tabla, (
+        "el escandallo no recorre las líneas del presupuesto una a una: si "
+        "agrupa, no se puede cuadrar contra la factura del proveedor")
+    assert "groupBy" not in tabla and "reduce((acc" not in tabla, (
+        "el escandallo está agrupando líneas, y el master pidió que se repitan")
+
+    # Y CADA COSTE POR SU NOMBRE, en su columna.
+    for titulo in ("Casco", "Puertas", "Bisagras", "Patas", "Colgad.", "Cajones",
+                   "Gavetas", "Soportes", "M. obra", "Coste ud.", "PVP ud.", "Margen"):
+        assert f">{titulo}</th>" in tabla, (
+            f"al escandallo le falta la columna «{titulo}»")
+    for campo in ("d.bisagras", "d.patas", "d.colg", "d.caj", "d.gav",
+                  "d.soportes", "d.mo", "d.casco", "d.puerta"):
+        assert campo in tabla, f"la columna de «{campo}» no lee su dato"
 
 
-def test_EL_DESGLOSE_NO_SALE_SIN_COSTE():
-    """Una línea sin coste no tiene nada que desglosar: enseñar «Casco — +
-    Puertas — + …» es ruido que parece un fallo."""
+def test_EL_ESCANDALLO_SUMA_Y_NO_SE_TRAGA_LAS_UNIDADES():
+    """Dos muebles iguales cuestan el doble (CLAUDE.md, regla 4). Y el total del
+    escandallo tiene que ser el MISMO que el del pie del presupuesto, o la
+    pantalla contaría dos historias del mismo dinero."""
     cuerpo = sin_comentarios(_lee(CM3))
-    i = cuerpo.index('data-testid="cm3-desglose-linea"')
+    i = cuerpo.index('data-testid="cm3-escandallo"')
+    tabla = cuerpo[i:cuerpo.index("{showPegadoMasivo &&", i)]
+    assert "(Number(m.qty) || 1)" in tabla, (
+        "los totales del escandallo no multiplican por las unidades")
+    assert 'data-testid="cm3-escandallo-total"' in tabla and "{eur(totalCoste)}" in tabla, (
+        "el total del escandallo no es el mismo `totalCoste` que el pie del "
+        "presupuesto: dos números para el mismo dinero")
+
+
+def test_EL_ESCANDALLO_SOLO_CON_EL_CANDADO():
+    """Es el coste de fábrica: con el candado echado esta pantalla se enseña con
+    un cliente delante (reglas 5 y 9)."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    i = cuerpo.index('data-testid="cm3-escandallo"')
     guarda = cuerpo[cuerpo.rindex("{verCoste", 0, i):i]
-    assert "m.coste != null" in guarda, (
-        "el desglose se pinta también en las líneas sin coste")
+    assert "verCoste && filas.length > 0" in guarda, (
+        "el escandallo se pinta con el candado echado, o se pinta vacío")
+
+
+def test_UNA_LINEA_SIN_COSTE_SE_DICE_EN_EL_ESCANDALLO():
+    cuerpo = sin_comentarios(_lee(CM3))
+    i = cuerpo.index('data-testid="cm3-escandallo"')
+    tabla = cuerpo[i:cuerpo.index("{showPegadoMasivo &&", i)]
+    assert "Sin coste — el despiece no conoce" in tabla, (
+        "una línea sin coste no se explica: saldría una fila de huecos")
+    assert "el margen mayor que los reales" in " ".join(tabla.split()), (
+        "no se advierte de en qué dirección mienten los totales cuando faltan "
+        "costes")
+
+
+def test_EN_QUE_SE_VA_EL_COSTE_SALE_DESPUES_DEL_ESCANDALLO():
+    """El master, 31/08: «y pon un desglose de puertas, cascos etc, después».
+
+    La tabla de arriba dice lo que cuesta CADA MUEBLE; esto dice a QUIÉN se le
+    paga —cuánto a ACB, cuánto a MV, cuánto de herrajes, cuánto al montador—,
+    que es lo que hace falta para pedirle a cada proveedor.
+    """
+    cuerpo = sin_comentarios(_lee(CM3))
+    assert 'data-testid="cm3-reparto-coste"' in cuerpo, (
+        "no hay desglose por concepto debajo del escandallo")
+
+    # DESPUÉS del escandallo, que es donde lo pidió.
+    i = cuerpo.index('data-testid="cm3-escandallo"')
+    j = cuerpo.index('data-testid="cm3-reparto-coste"')
+    assert j > i, "el desglose por concepto sale ANTES del escandallo"
+
+    # DESDE EL CÁLCULO, no desde la marca: los nombres de los conceptos se
+    # declaran ARRIBA, en el array, y cortar en el `data-testid` los dejaba
+    # fuera — la prueba fallaba con el desglose bien puesto.
+    bloque = cuerpo[cuerpo.rindex("const suma = (k)", 0, j):cuerpo.index("{showPegadoMasivo &&", j)]
+    for concepto in ("Cascos ACB", "Puertas y frentes MV", "Bisagras", "Patas",
+                     "Colgadores", "Cajones", "Gavetas", "Soportes de balda",
+                     "Mano de obra"):
+        assert concepto in bloque, f"falta el concepto «{concepto}» en el desglose"
+
+
+def test_EL_DESGLOSE_POR_CONCEPTO_MULTIPLICA_LAS_UNIDADES():
+    """Dos muebles iguales gastan el doble en cascos. Sin las unidades, este
+    desglose diría que a ACB se le pide la mitad de lo que se le pide."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    j = cuerpo.index('data-testid="cm3-reparto-coste"')
+    suma = cuerpo[cuerpo.rindex("const suma = (k)", 0, j):j]
+    assert "(Number(m.qty) || 1)" in suma, (
+        "el desglose por concepto no multiplica por las unidades")
+
+
+def test_UN_CONCEPTO_A_CERO_NO_SALE():
+    """Un mueble sin cajones no tiene por qué enseñar «Cajones 0,00 €»: es ruido
+    en una lista que se lee para decidir a quién pedir."""
+    cuerpo = sin_comentarios(_lee(CM3))
+    j = cuerpo.index('data-testid="cm3-reparto-coste"')
+    bloque = cuerpo[cuerpo.rindex("const conceptos", 0, j):j]
+    assert ".filter(c => c.v > 0)" in bloque, (
+        "se enseñan conceptos a cero: ruido en una lista que se lee para "
+        "decidir a quién se le pide")

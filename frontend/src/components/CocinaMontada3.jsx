@@ -2474,8 +2474,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   const opcionesAnc = anchosDe(m);
                   const tieneMano = manoDe(m.cod);
                   return (
-                  <React.Fragment key={m._k}>
-                    <tr className="hover:bg-slate-50/80 transition-colors group">
+                    <tr key={m._k} className="hover:bg-slate-50/80 transition-colors group">
                       <td className="py-3 px-2 text-center font-bold text-slate-400">{idx + 1}</td>
                       
                       {/* Cantidad con +/- */}
@@ -2692,68 +2691,6 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       </td>
                     </tr>
 
-                    {/* EL DESGLOSE, DEBAJO DE SU LÍNEA (master, 31/08: «que
-                        aparezcan bien los costes de herraje, accesorios, patas,
-                        etc., coste mano de obra, margen, puertas, etc., como
-                        aparecía antes»).
-
-                        VA EN UNA FILA APARTE, no en columnas nuevas: así se ve
-                        entero y la tabla NO se ensancha al abrir el candado —
-                        que es lo que no le gustaba. Los números son los mismos
-                        que suman el coste de la línea de arriba; el desglose
-                        cuadra con el total por construcción, no por parecido. */}
-                    {verCoste && m.coste != null && (
-                      <tr key={`${m._k}-desglose`} className="bg-slate-50/70" data-testid="cm3-desglose-linea">
-                        <td></td>
-                        <td colSpan={10} className="pb-2.5 px-3">
-                          <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
-                            <span className="text-slate-400 uppercase font-black tracking-wide">Coste:</span>
-                            <span className="text-dato-700 font-bold"
-                              title={m.despiece?.cascoOtroAcabado
-                                ? `Tarifa ACB ${eur(m.despiece?.cascoTarifa)} de la gama «${m.despiece.cascoGama}» (no se fabrica en el acabado elegido) · ×${m.despiece?.factorDesmontada} − ${m.despiece?.dtoCascos1}% − ${m.despiece?.dtoCascos2}%`
-                                : `Tarifa ACB ${eur(m.despiece?.cascoTarifa)} · ×${m.despiece?.factorDesmontada} − ${m.despiece?.dtoCascos1}% − ${m.despiece?.dtoCascos2}%`}>
-                              Casco {eur(m.despiece?.casco)}
-                            </span>
-                            <span className="text-slate-300">+</span>
-                            <span className="text-dato-700 font-bold"
-                              title={`${(m.despiece?.puertasDetalle || []).map(fr => `${fr.desc} [${fr.puntos} pts]`).join(' + ') || '0 frentes'} · ${m.despiece?.puntosPuertas || 0} pts × ${pv} €/punto − ${m.despiece?.dtoPuertas1 || 0}%${m.despiece?.dtoPuertas2 ? ` − ${m.despiece.dtoPuertas2}%` : ''}`}>
-                              Puertas {eur(m.despiece?.puerta)}
-                            </span>
-                            <span className="text-slate-300">+</span>
-                            <span className="text-dato-700 font-bold"
-                              title={`Bisagras ${eur(m.despiece?.bisagras)} · Patas ${eur(m.despiece?.patas)} · Colgadores ${eur(m.despiece?.colg)} · Cajones ${eur(m.despiece?.caj)} · Gavetas ${eur(m.despiece?.gav)} · Soportes de balda ${eur(m.despiece?.soportes)}`}>
-                              Herrajes {eur(herrajesDe(m))}
-                            </span>
-                            {/* Los herrajes, uno a uno: el master los pidió por su
-                                nombre («herraje, accesorios, patas»). Solo salen
-                                los que esa pieza lleva de verdad. */}
-                            {[['Bisagras', m.despiece?.bisagras], ['Patas', m.despiece?.patas],
-                              ['Colgadores', m.despiece?.colg], ['Cajones', m.despiece?.caj],
-                              ['Gavetas', m.despiece?.gav], ['Soportes', m.despiece?.soportes]]
-                              .filter(([, v]) => Number(v) > 0)
-                              .map(([n, v]) => (
-                                <span key={n} className="text-slate-500">{n} {eur(v)}</span>
-                              ))}
-                            <span className="text-slate-300">+</span>
-                            <span className="text-dato-700 font-bold"
-                              title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">
-                              M. obra {eur(m.despiece?.mo)}
-                            </span>
-                            <span className="text-slate-300">=</span>
-                            <span className="text-dato-900 font-black">{eur(m.coste)}</span>
-                            <span className="text-slate-300">·</span>
-                            <span className={`font-bold ${
-                              m.margenPct == null ? 'text-slate-400'
-                              : m.margenPct >= 40 ? 'text-ok-600'
-                              : m.margenPct >= 25 ? 'text-aviso-600'
-                              : 'text-error-600'}`}>
-                              Margen {eur(m.margen)}{m.margenPct != null && ` (${m.margenPct.toFixed(1)}%)`}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
                   );
                 })}
               </tbody>
@@ -2841,6 +2778,203 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         </div>
 
       </div>
+
+      {/* ═══════════ ESCANDALLO: MUEBLE A MUEBLE, LÍNEA A LÍNEA ═══════════
+          El master, 31/08: «prefiero que debajo, cuando toque el candado +
+          shift, salgan los costos mueble a mueble línea a línea, AUNQUE
+          REPITAS LÍNEAS y tengamos que scrolear».
+
+          Eso último es la decisión, y va contra el instinto de agrupar: cada
+          línea del presupuesto tiene aquí SU fila, aunque el mueble se repita.
+          Agrupadas habría que ir contando a qué línea corresponde cada coste, y
+          esta tabla existe para cuadrar contra la factura del proveedor.
+
+          Y va DEBAJO, en su propia tabla: la de arriba no se ensancha al abrir
+          el candado, que es lo que no le gustaba. Aquí sí se puede scrolear a lo
+          ancho porque esta tabla es solo para mirar costes. */}
+      {verCoste && filas.length > 0 && (
+        <div data-testid="cm3-escandallo" className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
+            <Hammer size={15} className="text-master-600" />
+            <span className="text-xs font-black uppercase tracking-widest text-slate-700">
+              Escandallo · coste mueble a mueble
+            </span>
+            <span className="text-[10px] text-slate-400">
+              interno · no sale en el PDF del cliente
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px] whitespace-nowrap">
+              <thead className="bg-white text-slate-400 border-b border-slate-200">
+                <tr>
+                  <th className="text-left py-2 px-2 font-black uppercase">#</th>
+                  <th className="text-left py-2 px-2 font-black uppercase">Código</th>
+                  <th className="text-left py-2 px-2 font-black uppercase">Descripción</th>
+                  <th className="text-center py-2 px-2 font-black uppercase">Uds</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Casco</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Puertas</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Bisagras</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Patas</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Colgad.</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Cajones</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Gavetas</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Soportes</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">M. obra</th>
+                  <th className="text-right py-2 px-2 font-black uppercase bg-slate-50">Coste ud.</th>
+                  <th className="text-right py-2 px-2 font-black uppercase bg-slate-50">Coste × uds</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">PVP ud.</th>
+                  <th className="text-right py-2 px-2 font-black uppercase">Margen</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                {filas.map((m, i) => {
+                  const q = Number(m.qty) || 1;
+                  const d = m.despiece || {};
+                  const nada = <span className="text-slate-200">·</span>;
+                  const c = (v) => (Number(v) > 0 ? eur(v) : nada);
+                  return (
+                    <tr key={m._k} className={`border-b border-slate-100 ${m.coste == null ? 'bg-aviso-50/60' : 'hover:bg-slate-50'}`}>
+                      <td className="py-1.5 px-2 text-slate-400">{i + 1}</td>
+                      <td className="py-1.5 px-2 font-black text-indigo-700">{m.cod}</td>
+                      <td className="py-1.5 px-2 font-sans font-bold text-slate-700">{descDe(m)}</td>
+                      <td className="py-1.5 px-2 text-center font-black text-slate-800">{q}</td>
+                      {m.coste == null ? (
+                        <td colSpan={10} className="py-1.5 px-2 font-sans font-bold text-aviso-800">
+                          Sin coste — el despiece no conoce «{m.familia || m.tipo || '?'}»
+                        </td>
+                      ) : (
+                        <>
+                          <td className="py-1.5 px-2 text-right text-dato-700"
+                            title={`Tarifa ACB ${eur(d.cascoTarifa)} · ×${d.factorDesmontada} − ${d.dtoCascos1}% − ${d.dtoCascos2}%${d.cascoOtroAcabado ? ` · gama «${d.cascoGama}» (no se fabrica en el acabado elegido)` : ''}`}>
+                            {c(d.casco)}
+                            {d.cascoOtroAcabado && <span className="ml-1 text-[8px] font-black text-aviso-600">otra gama</span>}
+                          </td>
+                          <td className="py-1.5 px-2 text-right text-dato-700"
+                            title={`${(d.puertasDetalle || []).map(fr => `${fr.desc} [${fr.puntos} pts]`).join(' + ') || '0 frentes'} · ${d.puntosPuertas || 0} pts × ${pv} €/punto − ${d.dtoPuertas1 || 0}%${d.dtoPuertas2 ? ` − ${d.dtoPuertas2}%` : ''}`}>
+                            {c(d.puerta)}
+                          </td>
+                          <td className="py-1.5 px-2 text-right text-slate-600">{c(d.bisagras)}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-600">{c(d.patas)}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-600">{c(d.colg)}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-600">{c(d.caj)}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-600">{c(d.gav)}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-600">{c(d.soportes)}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-600"
+                            title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">
+                            {c(d.mo)}
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-black text-dato-900 bg-slate-50/60">{eur(m.coste)}</td>
+                        </>
+                      )}
+                      <td className="py-1.5 px-2 text-right font-black text-dato-900 bg-slate-50/60">
+                        {m.coste == null ? nada : eur(m.coste * q)}
+                      </td>
+                      <td className="py-1.5 px-2 text-right text-slate-600">{eur(m.pvp)}</td>
+                      <td className={`py-1.5 px-2 text-right font-bold ${
+                        m.margenPct == null ? 'text-slate-300'
+                        : m.margenPct >= 40 ? 'text-ok-600'
+                        : m.margenPct >= 25 ? 'text-aviso-600'
+                        : 'text-error-600'}`}>
+                        {m.margenPct == null ? '—' : `${eur(m.margen)} (${m.margenPct.toFixed(0)}%)`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-100 font-black">
+                  <td colSpan={4} className="py-2 px-2 font-sans uppercase text-[10px] tracking-widest text-slate-500">
+                    Totales · {totalUds} uds
+                  </td>
+                  <td className="py-2 px-2 text-right text-dato-800">{eur(filas.reduce((t, m) => t + (m.despiece?.casco || 0) * (Number(m.qty) || 1), 0))}</td>
+                  <td className="py-2 px-2 text-right text-dato-800">{eur(filas.reduce((t, m) => t + (m.despiece?.puerta || 0) * (Number(m.qty) || 1), 0))}</td>
+                  {['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes', 'mo'].map(k => (
+                    <td key={k} className="py-2 px-2 text-right text-slate-700">
+                      {eur(filas.reduce((t, m) => t + (Number(m.despiece?.[k]) || 0) * (Number(m.qty) || 1), 0))}
+                    </td>
+                  ))}
+                  <td className="py-2 px-2"></td>
+                  <td className="py-2 px-2 text-right text-dato-950" data-testid="cm3-escandallo-total">{eur(totalCoste)}</td>
+                  <td className="py-2 px-2 text-right text-slate-700">{eur(subtotalBruto)}</td>
+                  <td className={`py-2 px-2 text-right ${
+                    totalMargenPct >= 40 ? 'text-ok-600'
+                    : totalMargenPct >= 25 ? 'text-aviso-600' : 'text-error-600'}`}>
+                    {eur(totalMargen)} ({totalMargenPct.toFixed(0)}%)
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* ─── EN QUÉ SE VA EL DINERO (master, 31/08: «y pon un desglose de
+              puertas, cascos etc, después»).
+
+              La tabla de arriba dice lo que cuesta CADA MUEBLE; esto dice a
+              QUIÉN se le paga: cuánto se va a ACB, cuánto a MV, cuánto a
+              herrajes y cuánto al montador. Es lo que hace falta para pedir a
+              cada proveedor y para saber dónde apretar si el margen no sale.
+
+              Los porcentajes son sobre el coste, no sobre el PVP: aquí no se
+              mira lo que se gana, se mira en qué se gasta. */}
+          {(() => {
+            const suma = (k) => filas.reduce((t, m) => t + (Number(m.despiece?.[k]) || 0) * (Number(m.qty) || 1), 0);
+            const herr = ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes'];
+            const conceptos = [
+              { n: 'Cascos ACB', v: suma('casco'), d: 'Se le pide a ACB' },
+              { n: 'Puertas y frentes MV', v: suma('puerta'), d: 'Se le pide a MV' },
+              ...herr.map(k => ({
+                n: { bisagras: 'Bisagras', patas: 'Patas', colg: 'Colgadores',
+                     caj: 'Cajones', gav: 'Gavetas', soportes: 'Soportes de balda' }[k],
+                v: suma(k), d: 'Herraje', herraje: true,
+              })),
+              { n: 'Mano de obra', v: suma('mo'), d: 'Montaje — es la comisión del montador' },
+            ].filter(c => c.v > 0);
+            const tot = conceptos.reduce((t, c) => t + c.v, 0);
+            if (!tot) return null;
+            return (
+              <div data-testid="cm3-reparto-coste" className="px-5 py-4 border-t border-slate-200 bg-white">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">
+                  En qué se va el coste
+                </div>
+                <div className="space-y-1">
+                  {conceptos.map(c => {
+                    const pct = tot > 0 ? (c.v / tot) * 100 : 0;
+                    return (
+                      <div key={c.n} className="flex items-center gap-3 text-[11px]">
+                        <span className={`w-44 shrink-0 font-bold ${c.herraje ? 'text-slate-500 pl-3' : 'text-slate-800'}`}>{c.n}</span>
+                        <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden min-w-[60px]">
+                          <div className={`h-full rounded-full ${c.herraje ? 'bg-slate-300' : 'bg-master-400'}`}
+                            style={{ width: `${Math.min(100, pct)}%` }} />
+                        </div>
+                        <span className="w-24 text-right font-mono font-black text-dato-900">{eur(c.v)}</span>
+                        <span className="w-12 text-right font-mono text-slate-400">{pct.toFixed(0)}%</span>
+                        <span className="hidden sm:block w-56 text-slate-400 truncate">{c.d}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center gap-3 text-[11px] font-black">
+                  <span className="w-44 shrink-0 uppercase tracking-widest text-slate-500">Coste total</span>
+                  <div className="flex-1" />
+                  <span className="w-24 text-right font-mono text-dato-950">{eur(tot)}</span>
+                  <span className="w-12" />
+                  <span className="hidden sm:block w-56" />
+                </div>
+              </div>
+            );
+          })()}
+
+          {sinCoste.length > 0 && (
+            <div className="px-5 py-2.5 bg-aviso-50 border-t border-aviso-200 text-[11px] text-aviso-900">
+              <b>{sinCoste.length} línea{sinCoste.length === 1 ? '' : 's'} sin coste.</b> El
+              despiece no conoce {[...new Set(sinCoste.map(m => m.familia || m.tipo || '?'))].join(', ')},
+              así que no se le pone precio en vez de inventar uno. <b>No entra{sinCoste.length === 1 ? '' : 'n'} en
+              los totales</b>: el coste que ves es menor y el margen mayor que los reales.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal de Pegado Masivo */}
       {showPegadoMasivo && (
