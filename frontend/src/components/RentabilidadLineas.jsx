@@ -9,7 +9,7 @@ import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
   ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users,
-  Lock, Unlock
+  Lock, Unlock, Download
 } from 'lucide-react';
 import { clientsAPI, authHeaders } from '../services/api';
 import ArticleCostsIAModal from './ArticleCostsIAModal';
@@ -132,6 +132,53 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   const openClients = async () => {
     setClientsModal(true);
     try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { setClients([]); }
+  };
+
+  // EXPORTAR LOS CLIENTES A EXCEL (master, 31/08: «pásame un listado de todos
+  // estos clientes en Excel»). Hasta hoy la lista solo se podía mirar: para
+  // llevársela había que copiarla a mano de la pantalla.
+  //
+  // POR QUÉ `;` Y NO `,`: en un Excel en español el separador de lista es el
+  // punto y coma. Con comas —que es lo que hacen las otras exportaciones de
+  // este repo— el fichero se abre con TODO metido en la primera columna, y
+  // entonces «exportar a Excel» no sirve de nada. El `sep=;` de la primera
+  // línea es lo que lee Excel para no preguntar.
+  //
+  // Y el BOM (`\uFEFF`) va porque sin él Excel se come los acentos: «Enríquez»
+  // sale «EnrÃ­quez» y hay que corregir a mano un listado de clientes.
+  const exportarClientesExcel = () => {
+    const filas = (clients || []);
+    if (!filas.length) return;
+    const columnas = [
+      ['Código', c => c.codigo || c.clientCode || ''],
+      ['Nombre', c => c.nombre || c.name || ''],
+      ['CIF / NIF', c => c.cif || c.taxId || ''],
+      ['Email', c => c.email || ''],
+      ['Teléfono', c => c.telefono || c.phone || ''],
+      ['Dirección', c => c.direccion || c.address || ''],
+      ['Localidad', c => c.localidad || c.city || ''],
+      ['Provincia', c => c.provincia || c.province || ''],
+      ['C.P.', c => c.codigoPostal || c.postalCode || ''],
+      ['Segmento', c => c.segmento || c.segment || ''],
+      ['Alta', c => (c.createdAt || '').slice(0, 10)],
+    ];
+    // Una celda se escapa SIEMPRE, no solo «si tiene una coma»: en una
+    // dirección hay puntos y comas, y en unas notas hay saltos de línea. Uno
+    // solo sin escapar desplaza el resto de la fila una columna y el listado
+    // deja de cuadrar sin que nadie vea un error.
+    const celda = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const contenido = [
+      'sep=;',
+      columnas.map(([t]) => celda(t)).join(';'),
+      ...filas.map(c => columnas.map(([, saca]) => celda(saca(c))).join(';')),
+    ].join('\r\n');
+    const blob = new Blob([`\uFEFF${contenido}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Clientes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── Revisión de controller: marcar/desmarcar que la factura y sus márgenes han sido revisados ──
@@ -1766,7 +1813,17 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
               <h2 className="text-lg font-black flex items-center gap-2"><Users size={18} /> Clientes importados ({(clients || []).length})</h2>
-              <button onClick={() => setClientsModal(false)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportarClientesExcel}
+                  disabled={!(clients || []).length}
+                  data-testid="clientes-exportar-excel"
+                  title="Descargar la lista completa de clientes para abrirla en Excel"
+                  className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1.5">
+                  <Download size={14} /> Exportar a Excel
+                </button>
+                <button onClick={() => setClientsModal(false)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
+              </div>
             </div>
             <div className="p-4 border-b border-slate-100">
               <input value={clientsQ} onChange={e => setClientsQ(e.target.value)} placeholder="Buscar por nombre, código o email…"
