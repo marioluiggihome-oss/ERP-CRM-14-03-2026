@@ -28,13 +28,9 @@ db = _get_db_singleton()
 
 logger = logging.getLogger(__name__)
 
-# Auth obligatoria: el análisis de planos con IA consume créditos y no debe
-# quedar abierto sin token.
-try:
-    from services.jwt_service import require_auth
-    _IALAB_DEPS = [Depends(require_auth)]
-except Exception:  # pragma: no cover
-    _IALAB_DEPS = []
+# Autenticación y permiso explícito en la puerta del módulo.
+from services.jwt_service import require_module_access
+_IALAB_DEPS = [Depends(require_module_access("canUseAIAnalysis"))]
 
 router = APIRouter(prefix="/ia-lab", tags=["IA Lab"], dependencies=_IALAB_DEPS)
 

@@ -26,15 +26,48 @@ from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
-# Seguridad: el modulo no exigia ningun token; cualquiera que conociera la URL
-# podia ver los tickets/gastos (importes, proveedores) de cualquier comercial.
-try:
-    from services.jwt_service import require_module_access
-    _GASTOS_DEPS = [Depends(require_module_access("canAccessGastos"))]
-except Exception:  # pragma: no cover - fallback si no hay jwt_service
-    _GASTOS_DEPS = []
+# Seguridad: el módulo falla de forma cerrada; no se publica ninguna ruta si
+# no puede cargarse la autenticación y su permiso explícito.
+from services.jwt_service import require_auth, require_module_access
+_GASTOS_DEPS = [Depends(require_module_access("canAccessGastos"))]
 
 router = APIRouter(tags=["gastos"], dependencies=_GASTOS_DEPS)
+
+
+def _can_view_all_documents(user: dict) -> bool:
+    return bool(user) and (
+        user.get("isMaster") is True
+        or user.get("isPrimaryAdmin") is True
+        or user.get("canViewAllDocuments") is True
+    )
+
+
+def _gasto_scope(user: dict) -> dict:
+    if _can_view_all_documents(user):
+        return {}
+    uid = (user or {}).get("id")
+    if not uid:
+        raise HTTPException(status_code=401, detail="Usuario no identificado")
+    return {"userId": uid}
+
+
+def _gasto_query(query: dict, user: dict) -> dict:
+    return {**query, **_gasto_scope(user)}
+
+
+async def _find_gasto(gasto_id: str, user: dict):
+    gasto = await _get_db().gastos.find_one(_gasto_query({"id": gasto_id}, user), {"_id": 0})
+    if not gasto:
+        raise HTTPException(status_code=404, detail="Gasto no encontrado")
+    return gasto
+
+
+async def _find_informe(informe_id: str, user: dict):
+    inf = await _get_db().gasto_informes.find_one(
+        _gasto_query({"id": informe_id}, user), {"_id": 0})
+    if not inf:
+        raise HTTPException(status_code=404, detail="Informe no encontrado")
+    return inf
 
 
 # Tipos de gasto admitidos (clave interna -> etiqueta)
@@ -164,13 +197,14 @@ async def get_tipos():
 
 
 @router.get("/gastos")
-async def list_gastos(userId: Optional[str] = None, mes: Optional[str] = None):
+async def list_gastos(userId: Optional[str] = None, mes: Optional[str] = None,
+                      current_user: dict = Depends(require_auth)):
     """Lista de gastos (cada comercial los suyos si se pasa userId).
 
     mes opcional 'YYYY-MM' para filtrar por mes.
     """
-    query = {}
-    if userId:
+    query = _gasto_scope(current_user)
+    if _can_view_all_documents(current_user) and userId:
         query["userId"] = userId
     if mes:
         query["fecha"] = {"$regex": f"^{re.escape(mes)}"}
@@ -184,7 +218,7 @@ async def list_gastos(userId: Optional[str] = None, mes: Optional[str] = None):
 
 
 @router.post("/gastos")
-async def create_gasto(payload: dict):
+async def create_gasto(payload: dict, current_user: dict = Depends(require_auth)):
     """Registra un gasto (opcionalmente archiva el ticket)."""
     imp = _num((payload or {}).get("importe"))
     if imp <= 0:
@@ -202,6 +236,7 @@ async def create_gasto(payload: dict):
         doc_id = f"gastodoc-{uuid.uuid4().hex[:8]}"
         await _get_db().gasto_docs.insert_one({
             "id": doc_id, "gastoId": gid,
+            "userId": current_user.get("id"), "ownerUserId": current_user.get("id"),
             "dataBase64": stripped,
             "mime": str(payload.get("docMime") or "application/octet-stream"),
             "filename": str(payload.get("docName") or "ticket"),
@@ -210,8 +245,9 @@ async def create_gasto(payload: dict):
 
     doc = {
         "id": gid,
-        "userId": str(payload.get("userId") or ""),
-        "userName": str(payload.get("userName") or ""),
+        "userId": current_user.get("id"),
+        "ownerUserId": current_user.get("id"),
+        "userName": str(current_user.get("username") or current_user.get("email") or ""),
         "tipo": tipo,
         "importe": imp,
         "base": _num(payload.get("base")),
@@ -231,11 +267,10 @@ async def create_gasto(payload: dict):
 
 
 @router.put("/gastos/{gasto_id}")
-async def update_gasto(gasto_id: str, payload: dict):
-    """Edita un gasto (importe, tipo, fecha, proveedor...)."""
-    existing = await _get_db().gastos.find_one({"id": gasto_id}, {"_id": 0})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Gasto no encontrado")
+async def update_gasto(gasto_id: str, payload: dict,
+                       current_user: dict = Depends(require_auth)):
+    """Edita un gasto dentro del ámbito autorizado."""
+    await _find_gasto(gasto_id, current_user)
     allowed = ("tipo", "importe", "base", "iva", "fecha", "proveedor", "descripcion", "litros", "kms")
     update = {}
     for k in allowed:
@@ -250,20 +285,29 @@ async def update_gasto(gasto_id: str, payload: dict):
     if not update:
         raise HTTPException(status_code=400, detail="Nada que actualizar")
     update["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    await _get_db().gastos.update_one({"id": gasto_id}, {"$set": update})
-    doc = await _get_db().gastos.find_one({"id": gasto_id}, {"_id": 0})
+    query = _gasto_query({"id": gasto_id}, current_user)
+    await _get_db().gastos.update_one(query, {"$set": update})
+    doc = await _get_db().gastos.find_one(query, {"_id": 0})
     return {"success": True, "gasto": doc}
 
 
 @router.delete("/gastos/{gasto_id}")
-async def delete_gasto(gasto_id: str):
-    await _get_db().gastos.delete_one({"id": gasto_id})
+async def delete_gasto(gasto_id: str, current_user: dict = Depends(require_auth)):
+    await _find_gasto(gasto_id, current_user)
+    await _get_db().gastos.delete_one(_gasto_query({"id": gasto_id}, current_user))
+    # El gasto ya ha demostrado la propiedad; así también se limpian adjuntos
+    # heredados que todavía no llevaban userId.
     await _get_db().gasto_docs.delete_many({"gastoId": gasto_id})
     return {"success": True}
 
 
 @router.get("/gastos/doc/{doc_id}")
-async def get_gasto_doc(doc_id: str):
+async def get_gasto_doc(doc_id: str, current_user: dict = Depends(require_auth)):
+    # Se autoriza por el gasto padre, no por datos que pudiera enviar el cliente.
+    gasto = await _get_db().gastos.find_one(
+        _gasto_query({"docId": doc_id}, current_user), {"_id": 0, "id": 1})
+    if not gasto:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
     d = await _get_db().gasto_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
@@ -277,7 +321,7 @@ async def get_gasto_doc(doc_id: str):
 # ============================================================================
 
 @router.post("/gastos/informes")
-async def create_informe(payload: dict):
+async def create_informe(payload: dict, current_user: dict = Depends(require_auth)):
     """Crea un informe de gastos asociando los tickets marcados (cierre mensual)."""
     nombre = str((payload or {}).get("nombre") or "").strip()
     gasto_ids = list((payload or {}).get("gastoIds") or [])
@@ -286,8 +330,11 @@ async def create_informe(payload: dict):
     if not gasto_ids:
         raise HTTPException(status_code=400, detail="Marca al menos un ticket")
 
-    gastos = await _get_db().gastos.find({"id": {"$in": gasto_ids}}, {"_id": 0}).to_list(5000)
-    if not gastos:
+    gastos = await _get_db().gastos.find(
+        _gasto_query({"id": {"$in": gasto_ids}}, current_user), {"_id": 0}
+    ).to_list(5000)
+    if len(gastos) != len(set(gasto_ids)):
+        # No revelar cuáles existen: basta con indicar que el conjunto no es válido.
         raise HTTPException(status_code=404, detail="No se encontraron los gastos indicados")
 
     total = round(sum(float(g.get("importe", 0) or 0) for g in gastos), 2)
@@ -304,8 +351,9 @@ async def create_informe(payload: dict):
     iid = f"inf-{uuid.uuid4().hex[:8]}"
     doc = {
         "id": iid,
-        "userId": str(payload.get("userId") or ""),
-        "userName": str(payload.get("userName") or ""),
+        "userId": current_user.get("id"),
+        "ownerUserId": current_user.get("id"),
+        "userName": str(current_user.get("username") or current_user.get("email") or ""),
         "nombre": nombre,
         "gastoIds": [g.get("id") for g in gastos],
         "total": total,
@@ -319,37 +367,41 @@ async def create_informe(payload: dict):
     doc.pop("_id", None)
     # Marcar los gastos como incluidos en este informe (cierre)
     await _get_db().gastos.update_many(
-        {"id": {"$in": doc["gastoIds"]}},
+        _gasto_query({"id": {"$in": doc["gastoIds"]}}, current_user),
         {"$set": {"informeId": iid, "informeNombre": nombre}},
     )
     return {"success": True, "informe": doc}
 
 
 @router.get("/gastos/informes")
-async def list_informes(userId: Optional[str] = None):
-    query = {"userId": userId} if userId else {}
+async def list_informes(userId: Optional[str] = None,
+                        current_user: dict = Depends(require_auth)):
+    query = _gasto_scope(current_user)
+    if _can_view_all_documents(current_user) and userId:
+        query["userId"] = userId
     items = await _get_db().gasto_informes.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
     return {"items": items}
 
 
 @router.get("/gastos/informes/{informe_id}")
-async def get_informe(informe_id: str):
-    inf = await _get_db().gasto_informes.find_one({"id": informe_id}, {"_id": 0})
-    if not inf:
-        raise HTTPException(status_code=404, detail="Informe no encontrado")
-    gastos = await _get_db().gastos.find({"id": {"$in": inf.get("gastoIds", [])}}, {"_id": 0}).sort("fecha", 1).to_list(5000)
+async def get_informe(informe_id: str, current_user: dict = Depends(require_auth)):
+    inf = await _find_informe(informe_id, current_user)
+    gastos = await _get_db().gastos.find(
+        _gasto_query({"id": {"$in": inf.get("gastoIds", [])}}, current_user), {"_id": 0}
+    ).sort("fecha", 1).to_list(5000)
     inf["gastos"] = gastos
     return inf
 
 
 @router.delete("/gastos/informes/{informe_id}")
-async def delete_informe(informe_id: str):
-    inf = await _get_db().gasto_informes.find_one({"id": informe_id}, {"_id": 0})
+async def delete_informe(informe_id: str, current_user: dict = Depends(require_auth)):
+    inf = await _find_informe(informe_id, current_user)
     if inf:
         # Desmarcar los gastos para que vuelvan a estar disponibles
         await _get_db().gastos.update_many(
-            {"id": {"$in": inf.get("gastoIds", [])}},
+            _gasto_query({"id": {"$in": inf.get("gastoIds", [])}}, current_user),
             {"$unset": {"informeId": "", "informeNombre": ""}},
         )
-    await _get_db().gasto_informes.delete_one({"id": informe_id})
+    await _get_db().gasto_informes.delete_one(
+        _gasto_query({"id": informe_id}, current_user))
     return {"success": True}

@@ -16,11 +16,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    from services.jwt_service import require_auth
-    _DEPS = [Depends(require_auth)]
-except Exception:
-    _DEPS = []
+from services.jwt_service import require_module_access
+_DEPS = [Depends(require_module_access("canUsePropData"))]
 
 router = APIRouter(tags=["propdata"], dependencies=_DEPS)
 

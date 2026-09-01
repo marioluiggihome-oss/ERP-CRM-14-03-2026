@@ -56,9 +56,14 @@ const Invoices = ({ currentUser, state }) => {
 
   // Volcado / Importación desde app
   const [showVolcadoModal, setShowVolcadoModal] = useState(false);
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [presupuestosLocales, setPresupuestosLocales] = useState([]);
+  const localDocsKey = useMemo(
+    () => `documentos_gestor_comercial:${currentUser?.id || 'sin_usuario'}`,
+    [currentUser?.id]
+  );
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { load(); }, [statusFilter, localDocsKey]);
 
   const load = async () => {
     setLoading(true);
@@ -70,7 +75,7 @@ const Invoices = ({ currentUser, state }) => {
       ]);
 
       // Recuperar documentos guardados localmente para asegurar sincronización
-      const docsGuardados = JSON.parse(localStorage.getItem('documentos_gestor_comercial') || '[]');
+      const docsGuardados = JSON.parse(localStorage.getItem(localDocsKey) || '[]');
       const combinados = [...(Array.isArray(invs) ? invs : [])];
       
       docsGuardados.forEach(d => {
@@ -92,9 +97,9 @@ const Invoices = ({ currentUser, state }) => {
 
   const guardarLocalmente = (doc) => {
     try {
-      const prev = JSON.parse(localStorage.getItem('documentos_gestor_comercial') || '[]');
+      const prev = JSON.parse(localStorage.getItem(localDocsKey) || '[]');
       const next = [doc, ...prev.filter(x => x.id !== doc.id && x.invoiceNumber !== doc.invoiceNumber)];
-      localStorage.setItem('documentos_gestor_comercial', JSON.stringify(next));
+      localStorage.setItem(localDocsKey, JSON.stringify(next));
     } catch {}
   };
 
@@ -104,6 +109,7 @@ const Invoices = ({ currentUser, state }) => {
     const num = `${prefix}-${randomNum}`;
     setForm({ ...EMPTY_FORM, docType: tipo, invoiceNumber: num });
     setEditingId(null);
+    setShowCreateMenu(false);
     setShowModal(true);
   };
 
@@ -371,8 +377,8 @@ const Invoices = ({ currentUser, state }) => {
     if (!window.confirm('¿Eliminar este documento comercial?')) return;
     try { await invoicesAPI.delete(id); } catch {}
     try {
-      const prev = JSON.parse(localStorage.getItem('documentos_gestor_comercial') || '[]');
-      localStorage.setItem('documentos_gestor_comercial', JSON.stringify(prev.filter(x => x.id !== id)));
+      const prev = JSON.parse(localStorage.getItem(localDocsKey) || '[]');
+      localStorage.setItem(localDocsKey, JSON.stringify(prev.filter(x => x.id !== id)));
     } catch {}
     load();
   };
@@ -512,18 +518,18 @@ const Invoices = ({ currentUser, state }) => {
   });
 
   return (
-    <div className="h-full flex flex-col bg-slate-100 overflow-y-auto p-4 sm:p-6 pb-36 space-y-4">
+    <div className="h-full min-w-0 flex flex-col bg-slate-100 overflow-y-auto overflow-x-hidden p-3 sm:p-6 pb-36 space-y-4">
       {/* Cabecera Principal. `hueco-logo` le deja sitio al botón flotante del
           logo: con el menú plegado se le comía el icono y el principio del
           título. */}
-      <div className="hueco-logo bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-slate-800 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-orange-600 border border-orange-400/40 flex items-center justify-center shadow-lg shadow-orange-600/30">
+      <div className="hueco-logo bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-800 flex items-start sm:items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 w-full lg:w-auto">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-orange-600 border border-orange-400/40 flex items-center justify-center shadow-lg shadow-orange-600/30">
             <Receipt size={26} className="text-white" />
           </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-white tracking-tight">Gestor Comercial & Facturación</h1>
+          <div className="min-w-0">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-wrap">
+              <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight leading-tight break-words">Gestor Comercial & Facturación</h1>
               <span className="px-2.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300 text-xs font-black uppercase">
                 {invoices.length} Documentos Totales
               </span>
@@ -534,7 +540,7 @@ const Invoices = ({ currentUser, state }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto">
           <button
             onClick={abrirVolcado}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs shadow-lg transition-all border border-indigo-400/30"
@@ -544,11 +550,11 @@ const Invoices = ({ currentUser, state }) => {
           </button>
 
           <div className="relative group">
-            <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black text-xs shadow-lg transition-all">
+            <button onClick={() => setShowCreateMenu(v => !v)} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black text-xs shadow-lg transition-all" aria-expanded={showCreateMenu}>
               <Plus size={16} /> + Crear Documento
             </button>
 
-            <div className="absolute right-0 mt-1 hidden group-hover:block w-48 bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-800 z-50">
+            <div className={`absolute left-0 sm:left-auto sm:right-0 mt-1 ${showCreateMenu ? 'block' : 'hidden'} sm:group-hover:block w-48 bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden text-slate-800 z-50`}>
               <button onClick={() => openNew('presupuesto')} className="w-full text-left px-3.5 py-2.5 hover:bg-orange-50 font-bold text-xs flex items-center gap-2">
                 📄 Presupuesto
               </button>
@@ -567,8 +573,8 @@ const Invoices = ({ currentUser, state }) => {
       </div>
 
       {/* Pestañas por Tipo de Documento Comercial */}
-      <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-sm flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-3 border border-slate-200 shadow-sm flex items-center justify-between gap-3 flex-wrap min-w-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 w-full xl:w-auto [&>*]:shrink-0">
           <button
             onClick={() => setDocTypeFilter('TODOS')}
             className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all ${docTypeFilter === 'TODOS' ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -601,13 +607,13 @@ const Invoices = ({ currentUser, state }) => {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Search size={16} className="text-slate-400" />
+        <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+          <Search size={16} className="text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar documento, cliente, NIF…"
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none w-52"
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none w-full sm:w-64 min-w-0"
           />
         </div>
       </div>
@@ -634,13 +640,13 @@ const Invoices = ({ currentUser, state }) => {
             const estaVencido = inv.status === 'issued' && inv.dueDate && new Date(inv.dueDate) < new Date();
 
             return (
-              <div key={inv.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
+              <div key={inv.id} className="p-3 sm:p-4 hover:bg-slate-50 transition-colors flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 min-w-0">
+                <div className="flex items-start sm:items-center gap-3 min-w-0">
                   <div className={`p-3 rounded-2xl border ${tConf.color} shrink-0`}>
                     <TIcon size={20} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
                       <span className="font-mono font-black text-sm text-slate-900">{inv.invoiceNumber}</span>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${tConf.color}`}>{tConf.label}</span>
                       
@@ -670,8 +676,8 @@ const Invoices = ({ currentUser, state }) => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="text-right">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="text-left sm:text-right">
                     <p className="text-lg font-black text-slate-900">{fmt(inv.total)}</p>
                     <p className="text-[10px] font-bold text-slate-400">
                       {(inv.status === 'partially_paid' || inv.senialPagada)
@@ -681,7 +687,7 @@ const Invoices = ({ currentUser, state }) => {
                   </div>
 
                   {/* Acciones & Pipeline de Conversión */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 overflow-x-auto sm:flex-wrap pb-1 sm:pb-0 min-w-0 [&>*]:shrink-0">
                     {/* Botón para ver comprobante de pago archivado */}
                     {inv.comprobantePago && (
                       <button
@@ -803,7 +809,7 @@ const Invoices = ({ currentUser, state }) => {
       {/* Modal Volcar Presupuestos de App */}
       {showVolcadoModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-2xl max-w-2xl w-full max-h-[90dvh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
                 <Sparkles size={18} className="text-indigo-600" /> Volcar Presupuestos a Gestor Comercial
@@ -819,7 +825,7 @@ const Invoices = ({ currentUser, state }) => {
 
             <div className="space-y-2 max-h-96 overflow-y-auto divide-y divide-slate-100">
               {presupuestosLocales.map((p, idx) => (
-                <div key={p.id || idx} className="pt-2.5 flex items-center justify-between gap-3">
+                <div key={p.id || idx} className="pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <span className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">{p.origen}</span>
                     <h4 className="font-black text-sm text-slate-800 mt-1">{p.cliente} · <span className="text-slate-500 font-normal">{p.ref}</span></h4>
@@ -853,7 +859,7 @@ const Invoices = ({ currentUser, state }) => {
       {/* Modal Crear / Editar Documento */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-2xl max-w-2xl w-full max-h-[92dvh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-black text-slate-900 text-base">
                 {editingId ? 'Editar Documento' : `Nuevo ${DOC_TYPES[form.docType]?.label || 'Documento'}`}
@@ -923,35 +929,35 @@ const Invoices = ({ currentUser, state }) => {
               </div>
 
               {form.lines.map((l, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-center text-xs">
+                <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center text-xs p-2 sm:p-0 rounded-xl bg-slate-50 sm:bg-transparent">
                   <input
                     value={l.description}
                     onChange={e => updateLine(idx, 'description', e.target.value)}
                     placeholder="Descripción mueble/módulo"
-                    className="col-span-5 px-3 py-1.5 border border-slate-200 rounded-xl font-bold"
+                    className="sm:col-span-5 px-3 py-2 sm:py-1.5 border border-slate-200 rounded-xl font-bold min-w-0"
                   />
                   <input
                     type="number"
                     value={l.quantity}
                     onChange={e => updateLine(idx, 'quantity', parseFloat(e.target.value) || 0)}
                     placeholder="Cant"
-                    className="col-span-2 px-2 py-1.5 border border-slate-200 rounded-xl font-bold text-center"
+                    className="sm:col-span-2 px-2 py-2 sm:py-1.5 border border-slate-200 rounded-xl font-bold text-center min-w-0"
                   />
                   <input
                     type="number"
                     value={l.unitPrice}
                     onChange={e => updateLine(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
                     placeholder="Precio €"
-                    className="col-span-3 px-2 py-1.5 border border-slate-200 rounded-xl font-bold"
+                    className="sm:col-span-3 px-2 py-2 sm:py-1.5 border border-slate-200 rounded-xl font-bold min-w-0"
                   />
-                  <button onClick={() => removeLine(idx)} className="col-span-2 p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl">
+                  <button onClick={() => removeLine(idx)} className="sm:col-span-2 p-2 text-rose-500 hover:bg-rose-50 rounded-xl flex items-center justify-center">
                     <Trash2 size={15} />
                   </button>
                 </div>
               ))}
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-slate-100 [&>button]:w-full sm:[&>button]:w-auto">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-xs">
                 Cancelar
               </button>

@@ -350,7 +350,12 @@ def require_module_access(flag_name: str):
     que se le haya dado ese permiso especifico.
     """
     async def _dep(user: dict = Depends(require_auth)) -> Dict[str, Any]:
-        if any(user.get(f) for f in ADMIN_ROLE_FLAGS):
+        if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or user.get("isMaster") or user.get("isPrimaryAdmin"):
+            return user
+        # `require_auth` ya devuelve la ficha actual de Mongo. Comprobarla aquí
+        # hace que quitar un permiso tenga efecto inmediato y evita depender de
+        # que el campo estuviera incluido en el JWT emitido al iniciar sesión.
+        if user.get(flag_name) is True:
             return user
         uid = user.get("id")
         if uid:

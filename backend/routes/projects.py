@@ -41,6 +41,36 @@ router = APIRouter(tags=["Projects"])
 from models.schemas import ProjectModel, ProjectCreate, ProjectUpdate
 
 
+def _can_view_all_documents(user: dict) -> bool:
+    """Alcance global deliberado; un rol comercial no lo obtiene por accidente."""
+    return bool(user) and (
+        user.get("isMaster") is True
+        or user.get("isPrimaryAdmin") is True
+        or user.get("canViewAllDocuments") is True
+    )
+
+
+def _owner_scope(user: dict) -> dict:
+    if _can_view_all_documents(user):
+        return {}
+    uid = (user or {}).get("id")
+    if not uid:
+        raise HTTPException(status_code=401, detail="Usuario no identificado")
+    return {"userId": uid}
+
+
+def _project_query(project_id: str, user: dict) -> dict:
+    return {"id": project_id, **_owner_scope(user)}
+
+
+async def _find_project(project_id: str, user: dict, projection=None):
+    project = await db.projects.find_one(_project_query(project_id, user), projection or {"_id": 0})
+    if not project:
+        # No revelar si un identificador existe pero pertenece a otra persona.
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return project
+
+
 @router.get("/projects", response_model=List[ProjectModel])
 async def get_projects(
     user_id: Optional[str] = None,
@@ -57,14 +87,14 @@ async def get_projects(
     Por defecto, cada usuario solo ve sus propios presupuestos.
     Si tiene permisos especiales (isAdmin, isGerente, isDirectorComercial), puede ver todos.
     """
-    query = {}
-    
-    # Filtrar por código de cliente si se especifica
+    query = _owner_scope(current_user)
+
     if client_code:
-        query["clientCode"] = client_code
-    
-    # Filtrar por usuario si se especifica
-    if user_id and not include_all:
+        query["clientCode"] = client_code.upper()
+
+    # Solo una cuenta con alcance documental global puede elegir otro usuario.
+    # En los demás casos se ignoran `user_id` e `include_all` y manda el token.
+    if _can_view_all_documents(current_user) and user_id and not include_all:
         query["userId"] = user_id
     
     projects = await db.projects.find(query, {"_id": 0}).to_list(1000)
@@ -76,10 +106,8 @@ async def get_projects_by_client(client_code: str, current_user: dict = Depends(
     Obtener todos los presupuestos de un cliente específico.
     Útil para ver el historial de presupuestos de un cliente.
     """
-    projects = await db.projects.find(
-        {"clientCode": client_code.upper()},
-        {"_id": 0}
-    ).sort("createdAt", -1).to_list(500)
+    query = {"clientCode": client_code.upper(), **_owner_scope(current_user)}
+    projects = await db.projects.find(query, {"_id": 0}).sort("createdAt", -1).to_list(500)
     
     return {
         "clientCode": client_code.upper(),
@@ -93,7 +121,11 @@ async def get_projects_summary_by_client(current_user: dict = Depends(require_au
     Obtener resumen de presupuestos agrupados por código de cliente.
     Para vista de administrador/gerente.
     """
-    pipeline = [
+    pipeline = []
+    scope = _owner_scope(current_user)
+    if scope:
+        pipeline.append({"$match": scope})
+    pipeline.extend([
         {
             "$group": {
                 "_id": "$clientCode",
@@ -104,7 +136,7 @@ async def get_projects_summary_by_client(current_user: dict = Depends(require_au
             }
         },
         {"$sort": {"lastProject": -1}}
-    ]
+    ])
     
     summary = await db.projects.aggregate(pipeline).to_list(500)
     
@@ -117,15 +149,13 @@ async def get_projects_summary_by_client(current_user: dict = Depends(require_au
 @router.get("/projects/{project_id}", response_model=ProjectModel)
 async def get_project(project_id: str, current_user: dict = Depends(require_auth)):
     """Obtener un proyecto por ID"""
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    return project
+    return await _find_project(project_id, current_user)
 
 @router.get("/projects/check-budget-number/{budget_number}")
 async def check_budget_number(budget_number: str, current_user: dict = Depends(require_auth)):
     """Verificar si ya existe un presupuesto con este número"""
-    project = await db.projects.find_one({"budgetNumber": budget_number}, {"_id": 0})
+    project = await db.projects.find_one(
+        {"budgetNumber": budget_number, **_owner_scope(current_user)}, {"_id": 0})
     if project:
         return {
             "exists": True,
@@ -136,14 +166,19 @@ async def check_budget_number(budget_number: str, current_user: dict = Depends(r
     return {"exists": False}
 
 @router.post("/projects", response_model=ProjectModel)
-async def create_project(project: ProjectCreate, user_id: str, client_code: Optional[str] = None, current_user: dict = Depends(require_auth)):
+async def create_project(project: ProjectCreate, user_id: Optional[str] = None, client_code: Optional[str] = None, current_user: dict = Depends(require_auth)):
     """
     Crear un nuevo proyecto/presupuesto.
     El client_code se usa para agrupar presupuestos por cliente.
     """
     project_data = project.model_dump()
     project_data["id"] = f"proj-{uuid.uuid4().hex[:8]}"
-    project_data["userId"] = user_id
+    # El propietario siempre sale del token; nunca de la query ni del payload.
+    owner_id = current_user.get("id")
+    if not owner_id:
+        raise HTTPException(status_code=401, detail="Usuario no identificado")
+    project_data["userId"] = owner_id
+    project_data["ownerUserId"] = owner_id
     
     # Usar clientCode del proyecto o del parámetro
     if client_code and not project_data.get("clientCode"):
@@ -161,9 +196,9 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
     # Tracking de actividad
     tracker = get_tracker()
     if tracker:
-        user = await db.users.find_one({"id": user_id}, {"_id": 0, "username": 1})
+        user = await db.users.find_one({"id": owner_id}, {"_id": 0, "username": 1})
         await tracker.track(
-            user_id=user_id,
+            user_id=owner_id,
             username=user.get("username") if user else "unknown",
             activity_type=ActivityType.BUDGET_CREATE,
             details={"projectId": project_data["id"], "budgetNumber": project_data.get("budgetNumber")}
@@ -175,9 +210,7 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
 @router.put("/projects/{project_id}", response_model=ProjectModel)
 async def update_project(project_id: str, project: ProjectUpdate, current_user: dict = Depends(require_auth)):
     """Actualizar un proyecto guardando snapshot de versión anterior"""
-    existing = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    existing = await _find_project(project_id, current_user)
 
     update_data = {k: v for k, v in project.model_dump().items() if v is not None}
     now = datetime.now(timezone.utc)
@@ -202,12 +235,12 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
             "status": existing.get("status", "borrador"),
         }
         await db.projects.update_one(
-            {"id": project_id},
+            _project_query(project_id, current_user),
             {"$push": {"versions": snapshot}}
         )
 
     if update_data:
-        await db.projects.update_one({"id": project_id}, {"$set": update_data})
+        await db.projects.update_one(_project_query(project_id, current_user), {"$set": update_data})
 
     # ── CONTROL DE CAMBIOS ──────────────────────────────────────────────────
     # `versions` (arriba) guarda el estado anterior para no perder trabajo.
@@ -216,10 +249,10 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
     # por qué la factura no cuadra con lo que firmó. Si el proyecto ya estaba
     # aceptado, el cambio nace marcado como crítico y bloquea la fabricación
     # hasta que alguien lo apruebe.
-    tras_guardar = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    tras_guardar = await _find_project(project_id, current_user)
     cambio = resumen_cambio(existing, tras_guardar, autor=current_user.get("username"))
     if cambio:
-        await db.projects.update_one({"id": project_id}, {"$push": {"cambios": cambio}})
+        await db.projects.update_one(_project_query(project_id, current_user), {"$push": {"cambios": cambio}})
 
     # Tracking de actividad
     tracker = get_tracker()
@@ -232,16 +265,14 @@ async def update_project(project_id: str, project: ProjectUpdate, current_user: 
             details={"projectId": project_id}
         )
 
-    updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    updated = await _find_project(project_id, current_user)
     return updated
 
 
 @router.get("/projects/{project_id}/cambios")
 async def listar_cambios(project_id: str, current_user: dict = Depends(require_auth)):
     """Historial de cambios del proyecto y si puede pasar a fabricación."""
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
 
     ok, motivo = puede_fabricar(proyecto)
     return {
@@ -263,9 +294,7 @@ async def anotar_cambio(project_id: str, indice: int, payload: dict,
     teclea lo que pide el cliente, así que dar por hecho que el autor es el
     solicitante convertiría el historial en una coartada falsa.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
     cambios = proyecto.get("cambios") or []
     if not 0 <= indice < len(cambios):
         raise HTTPException(status_code=404, detail="Ese cambio no existe.")
@@ -281,8 +310,8 @@ async def anotar_cambio(project_id: str, indice: int, payload: dict,
 
     if not upd:
         raise HTTPException(status_code=400, detail="No hay nada que anotar.")
-    await db.projects.update_one({"id": project_id}, {"$set": upd})
-    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    await db.projects.update_one(_project_query(project_id, current_user), {"$set": upd})
+    nuevo = await _find_project(project_id, current_user)
     return {"success": True, "cambio": nuevo["cambios"][indice]}
 
 
@@ -295,9 +324,7 @@ async def aprobar_cambio(project_id: str, indice: int,
     un presupuesto ya aceptado es una decisión de gerencia, no de quien lo
     teclea. Si lo pudiera aprobar el mismo que lo hizo, el control sobraría.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
     cambios = proyecto.get("cambios") or []
     if not 0 <= indice < len(cambios):
         raise HTTPException(status_code=404, detail="Ese cambio no existe.")
@@ -305,11 +332,11 @@ async def aprobar_cambio(project_id: str, indice: int,
         raise HTTPException(status_code=400, detail="Ese cambio ya estaba aprobado.")
 
     ahora = datetime.now(timezone.utc).isoformat()
-    await db.projects.update_one({"id": project_id}, {"$set": {
+    await db.projects.update_one(_project_query(project_id, current_user), {"$set": {
         f"cambios.{indice}.aprobadoPor": current_user.get("username"),
         f"cambios.{indice}.aprobadoAt": ahora,
     }})
-    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    nuevo = await _find_project(project_id, current_user)
     ok, motivo = puede_fabricar(nuevo)
     return {"success": True, "cambio": nuevo["cambios"][indice],
             "puedeFabricar": ok, "motivo": motivo}
@@ -324,9 +351,7 @@ async def expediente_proyecto(project_id: str, current_user: dict = Depends(requ
     Ocultar en el navegador no protege nada — el dato se ve abriendo el
     inspector.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
 
     pendientes = cambios_sin_aprobar(proyecto.get("cambios"))
     val = validar(proyecto, pendientes_cambios=len(pendientes))
@@ -343,9 +368,7 @@ async def expediente_validacion(project_id: str, current_user: dict = Depends(re
     no lleva a ninguna parte obliga a repasar el proyecto entero, y eso no se
     hace: se ignora.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
 
     pendientes = len(cambios_sin_aprobar(proyecto.get("cambios")))
     return {"success": True, **validar(proyecto, pendientes_cambios=pendientes)}
@@ -361,9 +384,7 @@ async def medidas_proyecto(project_id: str, tolerancia: float = 0,
     diferencia entre ellas es justo lo que hay que poder mirar cuando algo sale
     mal.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
     return {"success": True, **medicion_obra.revisar(proyecto.get("medidas"), tolerancia)}
 
 
@@ -376,9 +397,7 @@ async def guardar_medidas(project_id: str, payload: dict,
     (tomar, confirmar) y tiene su propia ruta, con su autor y su fecha. Si
     guardar pudiera confirmar de paso, confirmar dejaría de significar nada.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
     medidas = payload.get("medidas")
     if not isinstance(medidas, list):
         raise HTTPException(status_code=422, detail="Hace falta una lista de medidas.")
@@ -390,7 +409,7 @@ async def guardar_medidas(project_id: str, payload: dict,
             status_code=422,
             detail=f"Estas medidas no tienen nombre y no se podrían volver a encontrar: {sin_clave}.")
 
-    await db.projects.update_one({"id": project_id}, {"$set": {"medidas": medidas}})
+    await db.projects.update_one(_project_query(project_id, current_user), {"$set": {"medidas": medidas}})
     return {"success": True, **medicion_obra.revisar(medidas)}
 
 
@@ -398,9 +417,7 @@ async def _cambiar_nivel(project_id: str, clave: str, payload: dict, usuario: di
     """Tomar o confirmar una medida. Es la misma operación con distinto nombre,
     y por eso está escrita una vez: dos copias acabarían guardando cosas
     distintas."""
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, usuario)
 
     medidas = list(proyecto.get("medidas") or [])
     idx = next((i for i, m in enumerate(medidas)
@@ -418,7 +435,7 @@ async def _cambiar_nivel(project_id: str, clave: str, payload: dict, usuario: di
         # botón que no comprueba nada y encima parece que sí.
         raise HTTPException(status_code=422, detail=str(e))
 
-    await db.projects.update_one({"id": project_id}, {"$set": {"medidas": medidas}})
+    await db.projects.update_one(_project_query(project_id, usuario), {"$set": {"medidas": medidas}})
     return {"success": True, "medida": medicion_obra.revisar_una(medidas[idx]),
             **medicion_obra.revisar(medidas)}
 
@@ -455,9 +472,7 @@ async def impacto_de_una_medida(project_id: str, clave: str, payload: dict = {},
     ninguno con pared asignada, el motor lo DICE — no contesta «no afecta a
     nada», que se leería como que está todo bien.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
 
     medidas = proyecto.get("medidas") or []
     medida = next((m for m in medidas
@@ -481,9 +496,7 @@ async def comparar_mediciones_proyecto(project_id: str, payload: dict,
     dos y las diferencias, y NO se elige: quedarse con la más nueva, o con la
     de quien tiene más galones, es como se acaba cortando con la mala.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
     otras = payload.get("medidas")
     if not isinstance(otras, list):
         raise HTTPException(status_code=422, detail="Hace falta la otra lista de medidas.")
@@ -510,9 +523,7 @@ async def liberar_con_excepcion(project_id: str, payload: dict,
     fabrica sabiendo qué falta, que es lo contrario de fabricar como si no
     faltara nada.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
 
     exc = {
         "motivo": str(payload.get("motivo") or "").strip(),
@@ -530,8 +541,8 @@ async def liberar_con_excepcion(project_id: str, payload: dict,
             detail=("Una excepción sin motivo o sin riesgo asumido no es una excepción: "
                     f"falta {', '.join(faltan)}."))
 
-    await db.projects.update_one({"id": project_id}, {"$set": {"excepcionFabricacion": exc}})
-    nuevo = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    await db.projects.update_one(_project_query(project_id, current_user), {"$set": {"excepcionFabricacion": exc}})
+    nuevo = await _find_project(project_id, current_user)
     pendientes = len(cambios_sin_aprobar(nuevo.get("cambios")))
     return {"success": True, "excepcion": exc,
             **validar(nuevo, pendientes_cambios=pendientes)}
@@ -540,10 +551,9 @@ async def liberar_con_excepcion(project_id: str, payload: dict,
 @router.delete("/projects/{project_id}/excepcion")
 async def retirar_excepcion(project_id: str, current_user: dict = Depends(require_admin)):
     """Quita la autorización. Vuelven a mandar los bloqueos."""
-    await db.projects.update_one({"id": project_id}, {"$unset": {"excepcionFabricacion": ""}})
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    await _find_project(project_id, current_user)
+    await db.projects.update_one(_project_query(project_id, current_user), {"$unset": {"excepcionFabricacion": ""}})
+    proyecto = await _find_project(project_id, current_user)
     pendientes = len(cambios_sin_aprobar(proyecto.get("cambios")))
     return {"success": True, **validar(proyecto, pendientes_cambios=pendientes)}
 
@@ -557,9 +567,7 @@ async def comparar_con_fabricacion(project_id: str, current_user: dict = Depends
     después. El dinero se pierde igual en los tres casos, y hoy no se ve hasta
     que el montador llega a la obra.
     """
-    proyecto = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not proyecto:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    proyecto = await _find_project(project_id, current_user)
 
     # Proyecto -> pedido (por nº de presupuesto) -> orden de fabricación.
     pedido = None
@@ -597,16 +605,15 @@ async def clone_project(project_id: str, user_id: str, body: dict = {}, current_
     Copia todos los items, colores y materiales.
     El nuevo presupuesto parte como 'borrador' con número autogenerado.
     """
-    original = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not original:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    original = await _find_project(project_id, current_user)
 
     now = datetime.now(timezone.utc)
     new_budget_number = body.get("budgetNumber") or f"{original.get('budgetNumber', 'COPIA')}-COPIA"
 
     new_project = {
         "id": f"proj-{uuid.uuid4().hex[:8]}",
-        "userId": user_id,
+        "userId": current_user.get("id"),
+        "ownerUserId": current_user.get("id"),
         "clientCode": original.get("clientCode", ""),
         "budgetNumber": new_budget_number,
         "customerName": original.get("customerName", ""),
@@ -647,7 +654,8 @@ async def clone_project(project_id: str, user_id: str, body: dict = {}, current_
 @router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, current_user: dict = Depends(require_auth)):
     """Eliminar un proyecto"""
-    result = await db.projects.delete_one({"id": project_id})
+    await _find_project(project_id, current_user)
+    result = await db.projects.delete_one(_project_query(project_id, current_user))
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"message": "Proyecto eliminado"}
@@ -684,9 +692,7 @@ async def change_project_status(project_id: str, body: dict, current_user: dict 
     if not new_status:
         raise HTTPException(status_code=400, detail="Campo 'status' requerido")
 
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
-    if not project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    project = await _find_project(project_id, current_user)
 
     current_status = project.get("status", "borrador")
     allowed = VALID_TRANSITIONS.get(current_status, [])
@@ -729,23 +735,23 @@ async def change_project_status(project_id: str, body: dict, current_user: dict 
     }
 
     await db.projects.update_one(
-        {"id": project_id},
+        _project_query(project_id, current_user),
         {
             "$set": update_data,
             "$push": {"statusHistory": history_entry}
         }
     )
 
-    updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    updated = await _find_project(project_id, current_user)
     return updated
 
 
 @router.get("/projects/{project_id}/status-history")
 async def get_project_status_history(project_id: str, current_user: dict = Depends(require_auth)):
     """Obtener el historial de cambios de estado de un presupuesto"""
-    project = await db.projects.find_one({"id": project_id}, {"_id": 0, "statusHistory": 1, "status": 1, "budgetNumber": 1})
-    if not project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    project = await _find_project(
+        project_id, current_user,
+        {"_id": 0, "statusHistory": 1, "status": 1, "budgetNumber": 1})
     return {
         "budgetNumber": project.get("budgetNumber"),
         "currentStatus": project.get("status"),

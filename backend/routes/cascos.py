@@ -18,14 +18,8 @@ import logging
 import os
 import uuid
 
-try:
-    from services.jwt_service import get_current_user, require_auth, ADMIN_ROLE_FLAGS
-    _CASCOS_DEPS = [Depends(require_auth)]
-except Exception:
-    async def get_current_user():
-        return None
-    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
-    _CASCOS_DEPS = []
+from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS, require_module_access
+_CASCOS_DEPS = [Depends(require_module_access("canUseCascos"))]
 
 logger = logging.getLogger(__name__)
 # Todos los pedidos de cascos requieren token válido (aislamiento por usuario dentro).

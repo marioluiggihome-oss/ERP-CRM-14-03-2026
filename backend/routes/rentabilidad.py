@@ -31,10 +31,21 @@ logger = logging.getLogger(__name__)
 try:
     from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
 
-    async def require_rentabilidad(user: dict = Depends(require_auth)):
+    async def require_rentabilidad(request: Request, user: dict = Depends(require_auth)):
         if await tiene_acceso_rentabilidad(user):
             return user
-        raise HTTPException(status_code=403, detail="Sin acceso al módulo de Rentabilidad")
+        # Electros comparte históricamente dos rutas de lectura con Rentabilidad.
+        # Su permiso solo abre esas lecturas y nunca el resto del módulo ni sus
+        # mutaciones. El endpoint elimina además los campos de coste.
+        path = request.url.path.rstrip("/")
+        es_lectura_electros = request.method.upper() in ("GET", "HEAD") and (
+            (path.endswith("/rentabilidad/article-costs") and
+             request.query_params.get("electros", "").lower() == "true")
+            or path.endswith("/rentabilidad/bodegones")
+        )
+        if es_lectura_electros and user.get("canAccessElectros") is True:
+            return user
+        raise HTTPException(status_code=403, detail="Sin acceso al módulo solicitado")
 
     async def solo_lectura_controller(request: Request, user: dict = Depends(require_auth)):
         """El perfil CONTROLLER es de CONSULTA: puede leer el informe de
@@ -1272,7 +1283,8 @@ async def _article_costs_map() -> Dict[str, Any]:
 
 
 @router.get("/rentabilidad/article-costs")
-async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False, electros: bool = False):
+async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False,
+                        electros: bool = False, user: dict = Depends(require_auth)):
     """Lista/busca el catalogo de costes unitarios por articulo (desde MongoDB)."""
     await _seed_article_costs_if_empty()
     query: Dict[str, Any] = {}
@@ -1288,6 +1300,10 @@ async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar:
         ]
     total = await _get_db().article_costs.count_documents(query)
     items = await _get_db().article_costs.find(query, {"_id": 0}).sort("codigo", 1).to_list(max(1, min(limit, 5000)))
+    puede_ver_coste = _is_elevated(user) or user.get("isMaster") or user.get("isPrimaryAdmin") or user.get("canAccessRentabilidad")
+    if electros and not puede_ver_coste:
+        campos_coste = {"costeUnitario", "costeTotal", "precioCoste", "margen"}
+        items = [{k: v for k, v in item.items() if k not in campos_coste} for item in items]
     return {"total": total, "items": items}
 
 
@@ -1639,7 +1655,7 @@ async def tag_electros(payload: Optional[dict] = None, user: dict = Depends(requ
 # puede estar en varios bodegones. tipo: 'bodegon' (suma PVP) u 'oferta'
 # (valores individuales, no suma). Coleccion: electro_bodegones.
 # ---------------------------------------------------------------------------
-async def _resolve_bodegon(b: dict) -> dict:
+async def _resolve_bodegon(b: dict, include_cost: bool = False) -> dict:
     """Anade a un bodegon el detalle de sus articulos desde article_costs y el
     total de PVP (solo suma si tipo == 'bodegon')."""
     codes = b.get("articleCodes") or []
@@ -1650,7 +1666,8 @@ async def _resolve_bodegon(b: dict) -> dict:
             arts.append({
                 "codigo": a.get("codigo"), "codigoNorm": a.get("codigoNorm"),
                 "nombre": a.get("nombre"), "marca": a.get("marca"),
-                "costeUnitario": a.get("costeUnitario"), "pvp": a.get("pvp"),
+                **({"costeUnitario": a.get("costeUnitario")} if include_cost else {}),
+                "pvp": a.get("pvp"),
             })
     # Ordena los articulos segun el orden guardado en articleCodes.
     order = {c: i for i, c in enumerate(codes)}
@@ -1663,11 +1680,12 @@ async def _resolve_bodegon(b: dict) -> dict:
 
 
 @router.get("/rentabilidad/bodegones")
-async def list_bodegones():
-    """Lista los bodegones de electros con el detalle de sus articulos."""
+async def list_bodegones(user: dict = Depends(require_auth)):
+    """Lista los bodegones de electros con el detalle autorizado."""
     out = []
+    puede_ver_coste = _is_elevated(user) or user.get("isMaster") or user.get("isPrimaryAdmin") or user.get("canAccessRentabilidad")
     async for b in _get_db().electro_bodegones.find({}, {"_id": 0}).sort("createdAt", 1):
-        out.append(await _resolve_bodegon(b))
+        out.append(await _resolve_bodegon(b, include_cost=puede_ver_coste))
     return {"total": len(out), "items": out}
 
 

@@ -14,15 +14,11 @@ import os
 import uuid
 from services.db_client import get_db as _get_db
 
-try:
-    from services.jwt_service import require_auth
-except Exception:  # pragma: no cover
-    async def require_auth():
-        raise HTTPException(status_code=503, detail="Auth service unavailable")
+from services.jwt_service import require_auth
 
-# CERRADO EN LA PUERTA. La dependencia va en el propio APIRouter y no
-# endpoint a endpoint: asi el que se aniada maniana nace cerrado, que es
-# justo lo que fallo hasta ahora — el catalogo de tarifas de la casa.
+# El catálogo de bibliotecas es infraestructura compartida por los distintos
+# presupuestadores; exige autenticación, mientras que el permiso de Archivo se
+# aplica a la pantalla y a los documentos de proyecto, no al catálogo común.
 router = APIRouter(prefix="/libraries", tags=["libraries"],
                    dependencies=[Depends(require_auth)])
 

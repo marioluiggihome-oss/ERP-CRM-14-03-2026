@@ -33,19 +33,68 @@ from services.marca import nombre_comercial
 
 logger = logging.getLogger(__name__)
 
-# Seguridad: el modulo no exigia ningun token (el HTTPBearer de abajo estaba
-# importado pero nunca usado). Facturas reales quedaban accesibles a
-# cualquiera que conociera la URL. No hay permiso granular especifico para
-# facturacion, asi que se exige al menos estar logueado.
-try:
-    from services.jwt_service import require_auth
-    _INVOICES_DEPS = [Depends(require_auth)]
-except Exception:  # pragma: no cover - fallback si no hay jwt_service
-    _INVOICES_DEPS = []
+# Todas las operaciones de Gestión comercial exigen el permiso explícito. La
+# dependencia vive en el router para que un endpoint nuevo no quede abierto por
+# olvidar repetir el guardia.
+from services.jwt_service import require_auth, require_module_access
 
+_INVOICES_DEPS = [Depends(require_module_access("canAccessInvoices"))]
 router = APIRouter(prefix="/invoices", tags=["Invoices"], dependencies=_INVOICES_DEPS)
 security = HTTPBearer(auto_error=False)
 
+
+def _can_view_all_documents(user: dict) -> bool:
+    return bool(user) and (
+        user.get("isMaster") is True
+        or user.get("isPrimaryAdmin") is True
+        or user.get("canViewAllDocuments") is True
+    )
+
+
+def _invoice_scope(user: dict) -> dict:
+    if _can_view_all_documents(user):
+        return {}
+    uid = (user or {}).get("id")
+    if not uid:
+        raise HTTPException(401, "Usuario no identificado")
+    return {"$or": [{"ownerUserId": uid}, {"userId": uid}]}
+
+
+def _scoped_invoice_query(query: dict, user: dict) -> dict:
+    scope = _invoice_scope(user)
+    return query if not scope else {"$and": [query, scope]}
+
+
+_OWNERSHIP_BACKFILLED = False
+
+
+async def _backfill_invoice_ownership():
+    """Completa facturas heredadas solo cuando el proyecto determina el dueño."""
+    global _OWNERSHIP_BACKFILLED
+    if _OWNERSHIP_BACKFILLED:
+        return
+    async for inv in _get_db().invoices.find({
+        "ownerUserId": {"$exists": False},
+        "userId": {"$exists": False},
+        "projectId": {"$nin": [None, ""]},
+    }, {"_id": 0, "id": 1, "projectId": 1}):
+        project = await _get_db().projects.find_one(
+            {"id": inv.get("projectId")}, {"_id": 0, "userId": 1})
+        owner_id = (project or {}).get("userId")
+        if owner_id:
+            await _get_db().invoices.update_one(
+                {"id": inv.get("id"), "ownerUserId": {"$exists": False}},
+                {"$set": {"ownerUserId": owner_id, "userId": owner_id}})
+    _OWNERSHIP_BACKFILLED = True
+
+
+async def _find_invoice(invoice_id: str, user: dict, projection=None):
+    await _backfill_invoice_ownership()
+    inv = await _get_db().invoices.find_one(
+        _scoped_invoice_query({"id": invoice_id}, user), projection or {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+    return inv
 
 
 # ─── Modelos ────────────────────────────────────────────────────────────────
@@ -357,9 +406,11 @@ def generate_invoice_pdf(invoice: dict, settings: dict) -> bytes:
 async def get_invoices(
     status: Optional[str] = None,
     search: Optional[str] = None,
-    limit: int = 100
+    limit: int = 100,
+    current_user: dict = Depends(require_auth),
 ):
-    """Listar facturas"""
+    """Listar exclusivamente las facturas del ámbito autorizado."""
+    await _backfill_invoice_ownership()
     query = {}
     if status:
         query["status"] = status
@@ -371,7 +422,9 @@ async def get_invoices(
             {"clientName": {"$regex": q, "$options": "i"}},
             {"budgetNumber": {"$regex": q, "$options": "i"}},
         ]
-    invoices = await _get_db().invoices.find(query, {"_id": 0}).sort("createdAt", -1).limit(limit).to_list(limit)
+    invoices = await _get_db().invoices.find(
+        _scoped_invoice_query(query, current_user), {"_id": 0}
+    ).sort("createdAt", -1).limit(limit).to_list(limit)
     return invoices
 
 
@@ -383,20 +436,21 @@ async def get_next_number():
 
 
 @router.get("/stats")
-async def get_invoice_stats():
+async def get_invoice_stats(current_user: dict = Depends(require_auth)):
     """Estadísticas de facturación"""
+    await _backfill_invoice_ownership()
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
 
-    total = await _get_db().invoices.count_documents({})
-    draft = await _get_db().invoices.count_documents({"status": "draft"})
-    issued = await _get_db().invoices.count_documents({"status": "issued"})
-    paid = await _get_db().invoices.count_documents({"status": "paid"})
-    overdue = await _get_db().invoices.count_documents({"status": "overdue"})
+    total = await _get_db().invoices.count_documents(_scoped_invoice_query({}, current_user))
+    draft = await _get_db().invoices.count_documents(_scoped_invoice_query({"status": "draft"}, current_user))
+    issued = await _get_db().invoices.count_documents(_scoped_invoice_query({"status": "issued"}, current_user))
+    paid = await _get_db().invoices.count_documents(_scoped_invoice_query({"status": "paid"}, current_user))
+    overdue = await _get_db().invoices.count_documents(_scoped_invoice_query({"status": "overdue"}, current_user))
 
     # Total facturado este mes
     pipeline = [
-        {"$match": {"status": {"$in": ["issued","paid"]}, "createdAt": {"$gte": month_start}}},
+        {"$match": _scoped_invoice_query({"status": {"$in": ["issued","paid"]}, "createdAt": {"$gte": month_start}}, current_user)},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
     month_result = await _get_db().invoices.aggregate(pipeline).to_list(1)
@@ -404,7 +458,7 @@ async def get_invoice_stats():
 
     # Total pendiente de cobro
     pipeline2 = [
-        {"$match": {"status": "issued"}},
+        {"$match": _scoped_invoice_query({"status": "issued"}, current_user)},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
     pending_result = await _get_db().invoices.aggregate(pipeline2).to_list(1)
@@ -419,15 +473,12 @@ async def get_invoice_stats():
 
 
 @router.get("/{invoice_id}")
-async def get_invoice(invoice_id: str):
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
-    return inv
+async def get_invoice(invoice_id: str, current_user: dict = Depends(require_auth)):
+    return await _find_invoice(invoice_id, current_user)
 
 
 @router.post("")
-async def create_invoice(invoice: InvoiceCreate):
+async def create_invoice(invoice: InvoiceCreate, current_user: dict = Depends(require_auth)):
     """Crear una nueva factura (manual o desde presupuesto)"""
     now = datetime.now(timezone.utc)
 
@@ -438,11 +489,18 @@ async def create_invoice(invoice: InvoiceCreate):
     issue = invoice.issueDate or now.date().isoformat()
     due = invoice.dueDate or (now + timedelta(days=30)).date().isoformat()
 
-    # Si viene de un presupuesto, enriquecer con sus datos
+    # Si viene de un presupuesto, se valida siempre dentro del ámbito del usuario.
     lines = [l.model_dump() for l in invoice.lines]
-    if invoice.projectId and not lines:
-        project = await _get_db().projects.find_one({"id": invoice.projectId}, {"_id": 0})
-        if project:
+    project_query = None
+    project = None
+    if invoice.projectId:
+        project_query = {"id": invoice.projectId}
+        if not _can_view_all_documents(current_user):
+            project_query["userId"] = current_user.get("id")
+        project = await _get_db().projects.find_one(project_query, {"_id": 0})
+        if not project:
+            raise HTTPException(404, "Presupuesto no encontrado")
+    if project and not lines:
             items_montada = project.get("itemsMontada", [])
             items_despiece = project.get("itemsDespiece", [])
             all_items = items_montada + items_despiece
@@ -456,9 +514,12 @@ async def create_invoice(invoice: InvoiceCreate):
                 })
 
     totals = calc_totals(lines, invoice.vatRate, invoice.irpfRate)
+    owner_id = (project or {}).get("userId") or current_user.get("id")
 
     doc = {
         "id": f"inv-{uuid.uuid4().hex[:8]}",
+        "ownerUserId": owner_id,
+        "userId": owner_id,
         "invoiceNumber": inv_number,
         "projectId": invoice.projectId,
         "budgetNumber": invoice.budgetNumber,
@@ -483,7 +544,7 @@ async def create_invoice(invoice: InvoiceCreate):
     # Si status=issued, marcar el presupuesto como facturado
     if invoice.projectId and invoice.status == "issued":
         await _get_db().projects.update_one(
-            {"id": invoice.projectId},
+            project_query,
             {"$set": {"invoiceId": doc["id"], "invoiceNumber": inv_number}}
         )
 
@@ -491,9 +552,13 @@ async def create_invoice(invoice: InvoiceCreate):
 
 
 @router.post("/from-project/{project_id}")
-async def create_invoice_from_project(project_id: str, inv_number_override: Optional[str] = None):
+async def create_invoice_from_project(project_id: str, inv_number_override: Optional[str] = None,
+                                      current_user: dict = Depends(require_auth)):
     """Crear factura automáticamente desde un presupuesto aceptado"""
-    project = await _get_db().projects.find_one({"id": project_id}, {"_id": 0})
+    project_query = {"id": project_id}
+    if not _can_view_all_documents(current_user):
+        project_query["userId"] = current_user.get("id")
+    project = await _get_db().projects.find_one(project_query, {"_id": 0})
     if not project:
         raise HTTPException(404, "Presupuesto no encontrado")
     if project.get("status") not in ["aceptado", "en_fabricacion", "entregado"]:
@@ -528,8 +593,11 @@ async def create_invoice_from_project(project_id: str, inv_number_override: Opti
             client_email = client.get("email", "")
             client_taxid = client.get("taxId", client.get("cif", ""))
 
+    owner_id = project.get("userId") or current_user.get("id")
     doc = {
         "id": f"inv-{uuid.uuid4().hex[:8]}",
+        "ownerUserId": owner_id,
+        "userId": owner_id,
         "invoiceNumber": inv_number,
         "projectId": project_id,
         "budgetNumber": project.get("budgetNumber", ""),
@@ -552,7 +620,7 @@ async def create_invoice_from_project(project_id: str, inv_number_override: Opti
     doc.pop("_id", None)
 
     await _get_db().projects.update_one(
-        {"id": project_id},
+        project_query,
         {"$set": {"invoiceId": doc["id"], "invoiceNumber": inv_number}}
     )
 
@@ -560,10 +628,9 @@ async def create_invoice_from_project(project_id: str, inv_number_override: Opti
 
 
 @router.put("/{invoice_id}")
-async def update_invoice(invoice_id: str, update: InvoiceUpdate):
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+async def update_invoice(invoice_id: str, update: InvoiceUpdate,
+                         current_user: dict = Depends(require_auth)):
+    inv = await _find_invoice(invoice_id, current_user)
 
     data = {k: v for k, v in update.model_dump().items() if v is not None}
     if "lines" in data or "irpfRate" in data:
@@ -573,24 +640,24 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
         data.update({k: v for k, v in totals.items() if k != "lines"})
 
     data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    await _get_db().invoices.update_one({"id": invoice_id}, {"$set": data})
-    return await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
+    query = _scoped_invoice_query({"id": invoice_id}, current_user)
+    await _get_db().invoices.update_one(query, {"$set": data})
+    return await _find_invoice(invoice_id, current_user)
 
 
 @router.delete("/{invoice_id}")
-async def delete_invoice(invoice_id: str):
-    result = await _get_db().invoices.delete_one({"id": invoice_id})
+async def delete_invoice(invoice_id: str, current_user: dict = Depends(require_auth)):
+    result = await _get_db().invoices.delete_one(
+        _scoped_invoice_query({"id": invoice_id}, current_user))
     if result.deleted_count == 0:
         raise HTTPException(404, "Factura no encontrada")
     return {"message": "Factura eliminada"}
 
 
 @router.get("/{invoice_id}/pdf")
-async def download_invoice_pdf(invoice_id: str):
-    """Descargar PDF de la factura"""
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+async def download_invoice_pdf(invoice_id: str, current_user: dict = Depends(require_auth)):
+    """Descargar PDF de una factura autorizada."""
+    inv = await _find_invoice(invoice_id, current_user)
 
     settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     pdf = generate_invoice_pdf(inv, settings)
@@ -603,13 +670,12 @@ async def download_invoice_pdf(invoice_id: str):
 
 
 @router.post("/{invoice_id}/send-email")
-async def send_invoice_by_email(invoice_id: str, body: dict = {}):
-    """Enviar factura por email al cliente"""
+async def send_invoice_by_email(invoice_id: str, body: dict = {},
+                                current_user: dict = Depends(require_auth)):
+    """Enviar una factura autorizada por email al cliente."""
     from services.email_service import send_email
 
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+    inv = await _find_invoice(invoice_id, current_user)
 
     to_email = body.get("email") or inv.get("clientEmail")
     if not to_email:
@@ -643,7 +709,7 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
 
     if sent:
         await _get_db().invoices.update_one(
-            {"id": invoice_id},
+            _scoped_invoice_query({"id": invoice_id}, current_user),
             {"$set": {"sentAt": datetime.now(timezone.utc).isoformat(), "sentTo": to_email}}
         )
         return {"success": True, "message": f"Factura enviada a {to_email}"}
@@ -652,7 +718,8 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
 
 
 @router.patch("/{invoice_id}/status")
-async def change_invoice_status(invoice_id: str, body: dict):
+async def change_invoice_status(invoice_id: str, body: dict,
+                                current_user: dict = Depends(require_auth)):
     """Cambiar estado de la factura, y CUÁNTO se ha cobrado de ella.
 
     `partial` era un estado sin importe: se podía decir «cobrada a medias» y no
@@ -672,9 +739,7 @@ async def change_invoice_status(invoice_id: str, body: dict):
     if new_status not in valid:
         raise HTTPException(400, f"Estado inválido. Válidos: {valid}")
 
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+    inv = await _find_invoice(invoice_id, current_user)
 
     now = datetime.now(timezone.utc).isoformat()
     update = {"status": new_status, "updatedAt": now}
@@ -696,8 +761,9 @@ async def change_invoice_status(invoice_id: str, body: dict):
                      f"factura ({total:.2f} €).")
         update["cobrado"] = cobrado
 
-    await _get_db().invoices.update_one({"id": invoice_id}, {"$set": update})
-    return await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
+    await _get_db().invoices.update_one(
+        _scoped_invoice_query({"id": invoice_id}, current_user), {"$set": update})
+    return await _find_invoice(invoice_id, current_user)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -705,13 +771,11 @@ async def change_invoice_status(invoice_id: str, body: dict):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @router.get("/{invoice_id}/facturae")
-async def download_facturae_xml(invoice_id: str):
-    """Descargar factura en formato FacturaE 3.2.2 (XML)"""
+async def download_facturae_xml(invoice_id: str, current_user: dict = Depends(require_auth)):
+    """Descargar una factura autorizada en formato FacturaE 3.2.2."""
     from services.facturacion import FacturaeGenerator
 
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+    inv = await _find_invoice(invoice_id, current_user)
 
     settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
 
@@ -735,13 +799,11 @@ async def download_facturae_xml(invoice_id: str):
 
 
 @router.get("/{invoice_id}/sii-json")
-async def get_sii_json(invoice_id: str):
-    """Obtener JSON para envío al SII de la AEAT"""
+async def get_sii_json(invoice_id: str, current_user: dict = Depends(require_auth)):
+    """Obtener JSON SII de una factura dentro del ámbito autorizado."""
     from services.facturacion import AccountingExporter
 
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+    inv = await _find_invoice(invoice_id, current_user)
 
     settings = await _get_db().settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
     exporter = AccountingExporter()
@@ -761,8 +823,9 @@ class ExportRequest(BaseModel):
 
 
 @router.post("/export/accounting")
-async def export_accounting(req: ExportRequest):
-    """Exportar facturas en formato contable (CSV estándar, a3, Sage, SII)"""
+async def export_accounting(req: ExportRequest, current_user: dict = Depends(require_auth)):
+    """Exportar facturas del ámbito autorizado en formato contable."""
+    await _backfill_invoice_ownership()
     from services.facturacion import AccountingExporter
 
     query = {}
@@ -776,7 +839,9 @@ async def export_accounting(req: ExportRequest):
         else:
             query["issueDate"] = {"$lte": req.dateTo}
 
-    invoices = await _get_db().invoices.find(query, {"_id": 0}).sort("issueDate", 1).to_list(5000)
+    invoices = await _get_db().invoices.find(
+        _scoped_invoice_query(query, current_user), {"_id": 0}
+    ).sort("issueDate", 1).to_list(5000)
     if not invoices:
         raise HTTPException(404, "No hay facturas para exportar con esos filtros")
 
@@ -821,7 +886,8 @@ class PaymentCreate(BaseModel):
 
 
 @router.post("/{invoice_id}/payments")
-async def register_payment(invoice_id: str, payment: PaymentCreate):
+async def register_payment(invoice_id: str, payment: PaymentCreate,
+                           current_user: dict = Depends(require_auth)):
     """Registrar un cobro parcial o total"""
     from services.facturacion import PaymentTracker
     tracker = PaymentTracker(db)
@@ -831,7 +897,8 @@ async def register_payment(invoice_id: str, payment: PaymentCreate):
             amount=payment.amount,
             payment_method=payment.paymentMethod,
             reference=payment.reference,
-            notes=payment.notes
+            notes=payment.notes,
+            invoice_filter=_invoice_scope(current_user),
         )
         return result
     except ValueError as e:
@@ -839,41 +906,43 @@ async def register_payment(invoice_id: str, payment: PaymentCreate):
 
 
 @router.get("/{invoice_id}/payments")
-async def get_payments(invoice_id: str):
+async def get_payments(invoice_id: str, current_user: dict = Depends(require_auth)):
     """Obtener historial de cobros de una factura"""
     from services.facturacion import PaymentTracker
     tracker = PaymentTracker(db)
     try:
-        return await tracker.get_balance(invoice_id)
+        return await tracker.get_balance(invoice_id, invoice_filter=_invoice_scope(current_user))
     except ValueError as e:
         raise HTTPException(404, str(e))
 
 
 @router.delete("/payments/{payment_id}")
-async def cancel_payment(payment_id: str, body: dict = {}):
+async def cancel_payment(payment_id: str, body: dict = {},
+                         current_user: dict = Depends(require_auth)):
     """Anular un cobro registrado"""
     from services.facturacion import PaymentTracker
     tracker = PaymentTracker(db)
     try:
-        return await tracker.cancel_payment(payment_id, body.get("reason", ""))
+        return await tracker.cancel_payment(
+            payment_id, body.get("reason", ""), invoice_filter=_invoice_scope(current_user))
     except ValueError as e:
         raise HTTPException(404, str(e))
 
 
 @router.get("/reports/aging")
-async def get_aging_report():
+async def get_aging_report(current_user: dict = Depends(require_auth)):
     """Informe de antigüedad de deuda"""
     from services.facturacion import PaymentTracker
     tracker = PaymentTracker(db)
-    return await tracker.get_aging_report()
+    return await tracker.get_aging_report(invoice_filter=_invoice_scope(current_user))
 
 
 @router.post("/check-overdue")
-async def check_overdue():
+async def check_overdue(current_user: dict = Depends(require_auth)):
     """Detectar y marcar facturas vencidas (ejecutar periódicamente)"""
     from services.facturacion import PaymentTracker
     tracker = PaymentTracker(db)
-    overdue = await tracker.check_overdue_invoices()
+    overdue = await tracker.check_overdue_invoices(invoice_filter=_invoice_scope(current_user))
     return {"message": f"{len(overdue)} facturas marcadas como vencidas", "count": len(overdue)}
 
 
@@ -905,11 +974,10 @@ async def get_next_number_by_series(series: str = "FAC"):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @router.post("/{invoice_id}/attachments")
-async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)):
-    """Subir archivo adjunto a una factura (albarán, contrato, foto, etc.)"""
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...),
+                            current_user: dict = Depends(require_auth)):
+    """Subir un adjunto únicamente a una factura autorizada."""
+    await _find_invoice(invoice_id, current_user)
 
     # Leer archivo
     content = await file.read()
@@ -927,7 +995,7 @@ async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)
     }
 
     await _get_db().invoices.update_one(
-        {"id": invoice_id},
+        _scoped_invoice_query({"id": invoice_id}, current_user),
         {"$push": {"attachments": attachment}}
     )
 
@@ -940,22 +1008,19 @@ async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)
 
 
 @router.get("/{invoice_id}/attachments")
-async def list_attachments(invoice_id: str):
-    """Listar archivos adjuntos de una factura"""
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0, "attachments": 1})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+async def list_attachments(invoice_id: str, current_user: dict = Depends(require_auth)):
+    """Listar adjuntos de una factura autorizada."""
+    inv = await _find_invoice(invoice_id, current_user, {"_id": 0, "attachments": 1})
     attachments = inv.get("attachments", [])
     # No devolver el contenido base64 en el listado
     return [{k: v for k, v in a.items() if k != "data"} for a in attachments]
 
 
 @router.get("/{invoice_id}/attachments/{attachment_id}")
-async def download_attachment(invoice_id: str, attachment_id: str):
-    """Descargar un archivo adjunto"""
-    inv = await _get_db().invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if not inv:
-        raise HTTPException(404, "Factura no encontrada")
+async def download_attachment(invoice_id: str, attachment_id: str,
+                              current_user: dict = Depends(require_auth)):
+    """Descargar un adjunto de una factura autorizada."""
+    inv = await _find_invoice(invoice_id, current_user)
 
     attachments = inv.get("attachments", [])
     attachment = next((a for a in attachments if a["id"] == attachment_id), None)
@@ -971,10 +1036,12 @@ async def download_attachment(invoice_id: str, attachment_id: str):
 
 
 @router.delete("/{invoice_id}/attachments/{attachment_id}")
-async def delete_attachment(invoice_id: str, attachment_id: str):
-    """Eliminar un archivo adjunto"""
+async def delete_attachment(invoice_id: str, attachment_id: str,
+                            current_user: dict = Depends(require_auth)):
+    """Eliminar un adjunto de una factura autorizada."""
+    await _find_invoice(invoice_id, current_user)
     result = await _get_db().invoices.update_one(
-        {"id": invoice_id},
+        _scoped_invoice_query({"id": invoice_id}, current_user),
         {"$pull": {"attachments": {"id": attachment_id}}}
     )
     if result.modified_count == 0:

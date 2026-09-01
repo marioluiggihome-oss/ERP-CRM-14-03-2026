@@ -8,8 +8,8 @@ import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'rea
 import GlobalEventReminder from './components/GlobalEventReminder';
 import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes, Calculator, Wallet } from 'lucide-react';
 import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
-import { esCooperativista } from '@/plataformas';
-import { MONTADA as PRE_MONTADA, DESMONTADA as PRE_DESMONTADA, puedeEntrar as puedeEntrarPresupuestador } from '@/presupuestador';
+import { MONTADA as PRE_MONTADA, DESMONTADA as PRE_DESMONTADA } from '@/presupuestador';
+import { canAccessTab } from '@/modulePermissions';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -214,6 +214,17 @@ const App = () => {
     }
     return defaultState;
   });
+
+  const canOpenTab = (tab) => canAccessTab(tab, state.currentUser, state.settings);
+
+  // Si un permiso cambia con la sesión abierta, no dejamos el contenido antiguo
+  // montado: volver a Inicio cierra también la ruta interna, no solo el botón.
+  useEffect(() => {
+    if (!state.currentUser || state.currentTab === 'welcome') return;
+    if (!canAccessTab(state.currentTab, state.currentUser, state.settings)) {
+      setState((prev) => ({ ...prev, currentTab: 'welcome' }));
+    }
+  }, [state.currentUser, state.currentTab, state.settings]);
 
   // Load data from API on mount
   useEffect(() => {
@@ -1287,7 +1298,7 @@ const App = () => {
                     </button>
 
                     {/* CRM - Solo visible para usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
-                    {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
+                    {canOpenTab('crm-dashboard') && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${
@@ -1304,7 +1315,7 @@ const App = () => {
 
                     {/* Agenda de Negocios (Prescriptor) - icono ADITIVO, justo debajo del CRM:
                         aparece si el usuario tiene el permiso, sin ocultar el resto de funciones */}
-                    {state.currentUser?.isPrescriptor && (
+                    {canOpenTab('agendaNegocios') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'agendaNegocios'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agendaNegocios' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1316,7 +1327,7 @@ const App = () => {
                     )}
 
                     {/* Presupuestador (MV por tarifa) - principal, abre por defecto */}
-                    {(state.currentUser?.canUsePresupuestador2 !== false) && (
+                    {canOpenTab('presupuestador2') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1327,7 +1338,7 @@ const App = () => {
                     )}
 
                     {/* Presupuestador 2 (el anterior) - requiere autorización por usuario */}
-                    {(state.currentUser?.canUsePresupuestador1 !== false) && (
+                    {canOpenTab('budget') && (
                     <button
                       onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
                       className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1341,7 +1352,7 @@ const App = () => {
                         las dos formas de presupuestar una cocina, bajo una sola
                         puerta (master, 28/08). Quién ve qué pestaña lo decide
                         `presupuestador.js`, con los permisos de SIEMPRE. */}
-                    {puedeEntrarPresupuestador(state.currentUser) && (
+                    {canOpenTab('presupuestador') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'presupuestador', presupuestadorTab: undefined}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1354,7 +1365,7 @@ const App = () => {
                     )}
 
                     {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
+                    {canOpenTab('misPedidos') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1366,7 +1377,7 @@ const App = () => {
                     )}
 
                     {/* Resumen Totales - resumen por cocinas con totales y forma de pago (permiso específico) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUseResumenTotales === true && (
+                    {canOpenTab('resumenCocinas') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'resumenCocinas'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'resumenCocinas' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1377,7 +1388,7 @@ const App = () => {
                     )}
 
                     {/* Prospección de Obra Nueva y Prescripción (PropData IA) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUsePropData === true && (
+                    {canOpenTab('propdata') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'propdata'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'propdata' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1389,7 +1400,7 @@ const App = () => {
                     )}
 
                     {/* Armarios 2 - diseñador IA (permiso específico) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canUseArmarios2 === true && (
+                    {canOpenTab('armarios2') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'armarios2'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'armarios2' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1411,7 +1422,7 @@ const App = () => {
                     )}
 
                     {/* Archivo - requiere permiso explícito (la casilla manda) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
+                    {canOpenTab('library') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'library'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1426,7 +1437,7 @@ const App = () => {
                         mano, porque el filtro está en el servidor — a quien no
                         puede ver importes NO se le mandan, no es que se tapen
                         en pantalla. */}
-                    {state.currentUser?.canAccessExpediente !== false && (
+                    {canOpenTab('expediente') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'expediente'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'expediente' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1440,7 +1451,7 @@ const App = () => {
                     {/* Almacén — existencias, lo apartado por cada obra y qué
                         hay que comprar. Va con el expediente: son la misma
                         pregunta vista desde el material. */}
-                    {state.currentUser?.canAccessAlmacen !== false && (
+                    {canOpenTab('almacen') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'almacen'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'almacen' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1452,7 +1463,7 @@ const App = () => {
                     )}
 
                     {/* G. Comercial / Facturación (Presupuestos, Pedidos, Albaranes, Facturas) */}
-                    {state.currentUser?.canAccessInvoices !== false && (
+                    {canOpenTab('invoices') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'invoices'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'invoices' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1464,7 +1475,7 @@ const App = () => {
                     )}
 
                     {/* Rentabilidad - requiere permiso explícito (la casilla manda) */}
-                    {state.currentUser?.canAccessRentabilidad === true && (
+                    {canOpenTab('rentabilidad') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'rentabilidad'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'rentabilidad' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1480,7 +1491,7 @@ const App = () => {
                         elevados: por aquí pasan el coste de compra del casco, el
                         descuento del proveedor y el margen por canal. La guarda
                         de verdad está en el backend; esto solo esconde el botón. */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isPrimaryAdmin || state.currentUser?.isMaster) && (
+                    {canOpenTab('planNegocio') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'planNegocio'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'planNegocio' ? 'bg-emerald-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1493,7 +1504,7 @@ const App = () => {
                     )}
 
                     {/* Gastos de comercial (escaneo de tickets) - comerciales y admin, con permiso */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessGastos !== false && (
+                    {canOpenTab('gastos') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'gastos'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'gastos' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1505,7 +1516,7 @@ const App = () => {
                     )}
 
                     {/* Luiggi Floor - división de suelo SPC (solo con permiso canAccessFloor) */}
-                    {(state.currentUser?.canAccessFloor === true) && (
+                    {canOpenTab('luiggifloor') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'luiggifloor'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'luiggifloor' ? 'bg-amber-500 text-zinc-900 shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1517,7 +1528,7 @@ const App = () => {
                     )}
 
                     {/* Panel de Mando - requiere permiso explícito (la casilla manda) */}
-                    {state.currentUser?.canAccessMando === true && (
+                    {canOpenTab('command') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'command'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'command' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1529,7 +1540,7 @@ const App = () => {
                     )}
                     
                     {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
-                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
+                    {canOpenTab('visualizer') && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1546,7 +1557,7 @@ const App = () => {
 
 
                     {/* Diseñador de Armarios */}
-                    {state.currentUser?.canAccessArmarios && !state.currentUser?.isTienda && (
+                    {canOpenTab('armarios') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'armarios'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'armarios' ? 'bg-cyan-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1558,7 +1569,7 @@ const App = () => {
                     )}
 
                     {/* Electros — catálogo de electrodomésticos (coste solo master; el resto ve PVP) */}
-                    {!state.currentUser?.isTienda && (
+                    {canOpenTab('electros') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'electros'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'electros' ? 'bg-amber-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1573,7 +1584,7 @@ const App = () => {
                     {/* Informes: ahora vive DENTRO de RENTAB (pestaña "Generador de informes") */}
 
                     {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
-                    {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
+                    {canOpenTab('digitalizador') && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1585,7 +1596,8 @@ const App = () => {
                     )}
                     
                     {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
-                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (                      <button 
+                    {canOpenTab('montajes') && (
+                      <button
                         onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="montajes-nav-btn"
@@ -1596,7 +1608,7 @@ const App = () => {
                     )}
                     
                     {/* Portal de Fábrica - requiere permiso explícito (la casilla manda) */}
-                    {state.currentUser?.canAccessFabrica === true && (
+                    {canOpenTab('fabrica') && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1616,8 +1628,7 @@ const App = () => {
                         quitaba del menú lateral —el master lo vio— y activarlo
                         no siempre lo ponía. Dos permisos para una sección es
                         uno que se aprieta y otro que se queda abierto. */}
-                    {(state.currentUser?.canAccessPlanificacion !== false
-                      && !state.currentUser?.isTienda) && (
+                    {canOpenTab('planificacionProduccion') && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'planificacionProduccion'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'planificacionProduccion' ? 'bg-indigo-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1630,7 +1641,7 @@ const App = () => {
                     )}
 
                     {/* Agentes Diseñadores IA - sección Producción */}
-                    {(state.currentUser?.canUseAgentesIA || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
+                    {canOpenTab('agentesDisenadores') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'agentesDisenadores'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agentesDisenadores' ? 'bg-purple-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1654,7 +1665,7 @@ const App = () => {
                     {/* COOP: la gestión de la cooperativa —socios, asignación de
                         pedidos y liquidación del mes— en un solo sitio. SOLO master:
                         por aquí se decide quién cobra y se cierra la nómina. */}
-                    {(state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin || state.currentUser?.isAdmin) && (
+                    {canOpenTab('coop') && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'coop'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'coop' ? 'bg-master-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1788,7 +1799,7 @@ const App = () => {
                 )}
               </ErrorBoundary>
             )}
-            {state.currentTab === 'budget' && (state.currentUser?.canUsePresupuestador1 !== false) && (
+            {state.currentTab === 'budget' && canOpenTab('budget') && (
               <ErrorBoundary>
               <BudgetTable
                 items={state.currentModule === 'montada' ? state.budgetItemsMontada : state.budgetItemsDespiece} 
@@ -1800,9 +1811,9 @@ const App = () => {
               />
               </ErrorBoundary>
             )}
-            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false) && (
+            {state.currentTab === 'presupuestador2' && canOpenTab('presupuestador2') && (
               <ErrorBoundary>
-              {!((state.volverA || []).length && state.currentTab === state.migaPara) && state.currentUser?.canUseAIAnalysis && (
+              {!((state.volverA || []).length && state.currentTab === state.migaPara) && canOpenTab('renderStudio') && (
                 <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-white border-b border-slate-200">
                   <button onClick={() => irA(setState, 'renderStudio', { estudio3dPreset: { tipo: 'cocina' } })}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-sm"
@@ -1822,7 +1833,7 @@ const App = () => {
               /></ErrorBoundary>
             )}
             {['presupuestador', 'cocinaMontada3', 'cascos'].includes(state.currentTab)
-              && puedeEntrarPresupuestador(state.currentUser) && (
+              && canOpenTab(state.currentTab) && (
               <ErrorBoundary>
                 <PresupuestadorPanel
                   currentUser={state.currentUser}
@@ -1836,46 +1847,46 @@ const App = () => {
                 />
               </ErrorBoundary>
             )}
-            {state.currentTab === 'planificacionProduccion' && (
+            {state.currentTab === 'planificacionProduccion' && canOpenTab('planificacionProduccion') && (
               <ErrorBoundary>
                 <PlanificacionProduccion
                   currentUser={state.currentUser}
                 />
               </ErrorBoundary>
             )}
-            {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (
+            {state.currentTab === 'visualizer' && canOpenTab('visualizer') && (
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
-            {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
-            {state.currentTab === 'resumenCocinas' && state.currentUser?.canUseResumenTotales === true && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
-            {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
-            {state.currentTab === 'armarios2' && state.currentUser?.canUseArmarios2 === true && <ErrorBoundary><Armarios2 state={state} /></ErrorBoundary>}
-            {state.currentTab === 'cocinasai' && (state.currentUser?.canUseCocinasAI === true || state.currentUser?.isAdmin) && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}
-            {state.currentTab === 'backup' && <BackupManager />}
-            {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
-            {state.currentTab === 'rentabilidad' && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}
-            {state.currentTab === 'gastos' && <ErrorBoundary><GestionGastos currentUser={state.currentUser} /></ErrorBoundary>}
-            {state.currentTab === 'luiggifloor' && <ErrorBoundary><LuiggiFloor currentUser={state.currentUser} /></ErrorBoundary>}
-            {state.currentTab === 'command' && <ErrorBoundary><CommandCenter currentUser={state.currentUser} /></ErrorBoundary>}
-            {state.currentTab === 'expediente' && state.currentUser?.canAccessExpediente !== false && (
+            {state.currentTab === 'library' && canOpenTab('library') && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
+            {state.currentTab === 'resumenCocinas' && canOpenTab('resumenCocinas') && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
+            {state.currentTab === 'propdata' && canOpenTab('propdata') && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
+            {state.currentTab === 'armarios2' && canOpenTab('armarios2') && <ErrorBoundary><Armarios2 state={state} /></ErrorBoundary>}
+            {state.currentTab === 'cocinasai' && canOpenTab('cocinasai') && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}
+            {state.currentTab === 'backup' && canOpenTab('backup') && <BackupManager />}
+            {state.currentTab === 'invoices' && canOpenTab('invoices') && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'rentabilidad' && canOpenTab('rentabilidad') && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'gastos' && canOpenTab('gastos') && <ErrorBoundary><GestionGastos currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'luiggifloor' && canOpenTab('luiggifloor') && <ErrorBoundary><LuiggiFloor currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'command' && canOpenTab('command') && <ErrorBoundary><CommandCenter currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'expediente' && canOpenTab('expediente') && (
               <ErrorBoundary><Expediente state={state} /></ErrorBoundary>
             )}
-            {state.currentTab === 'almacen' && state.currentUser?.canAccessAlmacen !== false && (
+            {state.currentTab === 'almacen' && canOpenTab('almacen') && (
               <ErrorBoundary><Almacen state={state} /></ErrorBoundary>
             )}
             {/* El plan de negocio comprueba el master TAMBIÉN dentro (y el backend
                 otra vez): esconder el botón no es cerrar una puerta. */}
-            {state.currentTab === 'planNegocio' && (
+            {state.currentTab === 'planNegocio' && canOpenTab('planNegocio') && (
               <ErrorBoundary><PlanNegocio state={state} /></ErrorBoundary>
             )}
-            {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
+            {state.currentTab === 'digitalizador' && canOpenTab('digitalizador') && (
               <Digitalizador state={state} setState={setState} />
             )}
-            {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
+            {state.currentTab === 'armarios' && canOpenTab('armarios') && (
               <Armarios state={state} setState={setState} />
             )}
             {/* Electros — catálogo de electrodomésticos (menú principal) */}
-            {state.currentTab === 'electros' && !state.currentUser?.isTienda && (
+            {state.currentTab === 'electros' && canOpenTab('electros') && (
               <ErrorBoundary>
                 <div className="hueco-logo-centrado max-w-6xl mx-auto p-4 sm:p-8">
                   <ElectrosTab
@@ -1885,7 +1896,7 @@ const App = () => {
                 </div>
               </ErrorBoundary>
             )}
-            {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (
+            {state.currentTab === 'montajes' && canOpenTab('montajes') && (
               <AgendaMontajes currentUser={state.currentUser} />
             )}
 
@@ -1908,14 +1919,13 @@ const App = () => {
                 enlaces y el estado de navegador que ya existen no se pierdan
                 (regla 22: los caminos viejos siguen vivos). */}
             {['coop', 'miArea'].includes(state.currentTab)
-              && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin
-                  || state.currentUser?.isAdmin || esCooperativista(state.currentUser)) && (
+              && canOpenTab(state.currentTab) && (
               <ErrorBoundary>
                 <CoopPanel currentUser={state.currentUser} state={state} setState={setState}
                   pestanaInicial={state.currentTab === 'miArea' ? 'miarea' : undefined} />
               </ErrorBoundary>
             )}
-            {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
+            {state.currentTab === 'agendaNegocios' && canOpenTab('agendaNegocios') && (
               <PrescriptorAgenda
                 currentUser={{...state.currentUser, companyLogo: state.logo}}
                 embedded={true}
@@ -1924,40 +1934,40 @@ const App = () => {
             )}
             
             {/* Portal de Fábrica - SOLO usuarios con permiso explícito o Director de Fábrica */}
-            {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isDirectorFabrica) && (
+            {state.currentTab === 'fabrica' && canOpenTab('fabrica') && (
               <PortalFabrica currentUser={state.currentUser} />
             )}
             
             {/* Render 3D Studio */}
-            {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
+            {state.currentTab === 'renderStudio' && canOpenTab('renderStudio') && (
               <ErrorBoundary><AIRenderStudio state={state} setState={setState} /></ErrorBoundary>
             )}
             {/* Kitchen 3D Designer - Panel de proyectos (mantenido por compatibilidad) */}
-            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && (
+            {state.currentTab === 'kitchenDesigner' && canOpenTab('kitchenDesigner') && (
               <KitchenDesigner3D state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
             {/* Estudio de Cocinas — Módulo unificado */}
-            {state.currentTab === 'estudioCocinas' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && (
+            {state.currentTab === 'estudioCocinas' && canOpenTab('estudioCocinas') && (
               <EstudioCocinas state={state} setState={setState} />
             )}
 
             {/* Agentes Diseñadores en Paralelo */}
-            {state.currentTab === 'agentesDisenadores' && (state.currentUser?.canUseAgentesIA || state.currentUser?.isAdmin) && (
+            {state.currentTab === 'agentesDisenadores' && canOpenTab('agentesDisenadores') && (
               <ErrorBoundary><AgentesDisenadores state={state} /></ErrorBoundary>
             )}
 
             {/* Generador de Informes */}
-            {state.currentTab === 'informes' && (state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && (
+            {state.currentTab === 'informes' && canOpenTab('informes') && (
               <ReportGenerator />
             )}
 
             {/* Mis Pedidos */}
-            {state.currentTab === 'misPedidos' && (
+            {state.currentTab === 'misPedidos' && canOpenTab('misPedidos') && (
               <MisPedidos currentUser={state.currentUser} />
             )}
             
             {/* CRM - Single Component with internal navigation */}
-            {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} initialTab={(state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined} focusEvent={state.crmFocusEvent} />}
+            {state.currentTab?.startsWith('crm') && canOpenTab('crm-dashboard') && <CRMLayout currentUser={state.currentUser} initialTab={(state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined} focusEvent={state.crmFocusEvent} />}
 
             {/* carpinter.io — LA ADMINISTRACIÓN DE ESA PLATAFORMA, SOLO MASTER.
                 (master, 30/08: «la puerta de carpinter y studio3k, sólo la veo
@@ -1968,7 +1978,7 @@ const App = () => {
                 El permiso se comprueba AQUÍ además de en el menú: esconder un
                 botón no cierra ninguna puerta (regla 8). */}
             {state.currentTab === 'carpinter'
-              && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin) && (
+              && canOpenTab('carpinter') && (
               <ErrorBoundary>
                 <div className="h-full overflow-y-auto">
                   <CarpinterPanel
@@ -1982,7 +1992,7 @@ const App = () => {
 
             {/* Landing Comercial Studio3K */}
             {state.currentTab === 'landingStudio'
-              && (state.currentUser?.isMaster || state.currentUser?.isPrimaryAdmin) && (
+              && canOpenTab('landingStudio') && (
               <ErrorBoundary>
                 <div className="h-full overflow-y-auto">
                   <LandingStudio3K onOpenApp={() => setState(p => ({ ...p, currentTab: 'estudioCocinas' }))} />

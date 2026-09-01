@@ -25,11 +25,12 @@ const ESTUDIO_3D_TIPOS = [
 // Capacidades técnicas (checkboxes del panel de permisos) para los botones
 // "Marcar todo / Desmarcar todo". Solo capacidades, NO roles ni modos "solo".
 const CAPABILITY_KEYS = [
-  'canUsePresupuestador2', 'canUsePresupuestador1', 'canSeeCost', 'canViewTechnicalDespiece',
-  'canAccessCRM', 'canAccessGastos', 'canAccessFabrica', 'canAccessMontajes', 'isMontador',
+  'canUsePresupuestador2', 'canUsePresupuestador1', 'canUsePresupuestador3', 'canSeeCost', 'canViewTechnicalDespiece',
+  'canAccessCRM', 'canAccessGastos', 'canAccessFabrica', 'canAccessMontajes', 'canAccessPlanificacion', 'isMontador',
   'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
-  'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando', 'isController',
+  'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessElectros', 'canAccessExpediente',
+  'canAccessAlmacen', 'canAccessBackup', 'canViewAllDocuments', 'canAccessRentabilidad', 'canAccessMando', 'isController',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
   'canUseRender360', 'canUse4K', 'canUseAmueblado', 'canVolcarMV',
 ];
@@ -209,10 +210,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessArmarios: false,
     canAccessFabrica: false,  // Acceso a Portal de Fábrica
     canAccessMontajes: false,  // Acceso a Agenda de Montajes
-    canUsePresupuestador1: true,  // Acceso al Presupuestador 2 (el anterior; por defecto sí)
-    canUsePresupuestador2: true,  // Acceso al Presupuestador (MV, principal; por defecto sí)
-    canAccessMaster: true,  // Acceso al Panel MASTER (config) - visible por defecto
-    canAccessGastos: true,  // Acceso al módulo de Gastos - visible por defecto
+    canUsePresupuestador1: false,
+    canUsePresupuestador2: false,
+    canUsePresupuestador3: false,
+    canAccessMaster: false,
+    canAccessGastos: false,
+    canAccessPlanificacion: false,
+    canAccessPedidos: false,
+    canAccessArchivo: false,
+    canAccessInvoices: false,
+    canAccessElectros: false,
+    canAccessExpediente: false,
+    canAccessAlmacen: false,
+    canAccessBackup: false,
+    canViewAllDocuments: false,
     canAccessFloor: false,  // Luiggi Floor - opt-in por usuario (red de distribución)
     canUseAgentesIA: false,  // Agentes IA - diseño en paralelo con IA
     floorOnly: false,  // Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
@@ -885,10 +896,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessArmarios: false,
       canAccessFabrica: false,
       canAccessMontajes: false,
-      canUsePresupuestador1: true,
-      canUsePresupuestador2: true,
-      canAccessMaster: true,
-      canAccessGastos: true,
+      canUsePresupuestador1: false,
+      canUsePresupuestador2: false,
+      canUsePresupuestador3: false,
+      canAccessMaster: false,
+      canAccessGastos: false,
+      canAccessPlanificacion: false,
+      canAccessPedidos: false,
+      canAccessArchivo: false,
+      canAccessInvoices: false,
+      canAccessElectros: false,
+      canAccessExpediente: false,
+      canAccessAlmacen: false,
+      canAccessBackup: false,
+      canViewAllDocuments: false,
       canAccessFloor: false,
       canUseAgentesIA: false,
       floorOnly: false,
@@ -1258,20 +1279,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-6">
       <div className={`bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
         isFullScreen 
           ? 'w-full h-full max-w-none max-h-none rounded-none' 
-          : 'w-full max-w-5xl max-h-[90vh]'
+          : 'w-full max-w-5xl max-h-[96dvh] sm:max-h-[90vh]'
       }`}>
         {/* Header */}
-        <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-950 to-indigo-900 shrink-0">
-          <div className="flex items-center gap-4">
+        <div className="px-3 sm:px-8 py-3 sm:py-6 border-b border-slate-100 flex justify-between items-center gap-2 bg-gradient-to-r from-indigo-950 to-indigo-900 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <div className="p-3 bg-white/10 rounded-xl">
               <SettingsIcon size={24} className="text-white" />
             </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">Panel Maestro</h2>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-2xl font-black text-white uppercase tracking-tight leading-tight">Panel Maestro</h2>
               <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Configuración Industrial</p>
             </div>
           </div>
@@ -1738,7 +1759,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               </div>
                             </div>
                             
-                            {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && <div className="grid grid-cols-3 gap-3 mt-3">
+                            {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
                                 <p className="text-xs font-bold text-slate-900">
@@ -2937,10 +2958,40 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <span className="text-xs font-bold text-slate-700">Archivo</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-orange-100 px-2 py-1.5 rounded-lg hover:bg-orange-200 transition-colors border border-orange-300">
-                              <input type="checkbox" checked={userForm.canAccessInvoices !== false}
+                              <input type="checkbox" checked={userForm.canAccessInvoices === true}
                                 onChange={(e) => setUserForm({...userForm, canAccessInvoices: e.target.checked})}
                                 className="w-4 h-4 rounded accent-orange-600" />
                               <span className="text-xs font-black text-orange-900">Gestión Comercial</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessElectros === true}
+                                onChange={(e) => setUserForm({...userForm, canAccessElectros: e.target.checked})}
+                                className="w-4 h-4 rounded accent-amber-600" />
+                              <span className="text-xs font-bold text-slate-700">Electros</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessExpediente === true}
+                                onChange={(e) => setUserForm({...userForm, canAccessExpediente: e.target.checked})}
+                                className="w-4 h-4 rounded accent-indigo-600" />
+                              <span className="text-xs font-bold text-slate-700">Expediente</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessAlmacen === true}
+                                onChange={(e) => setUserForm({...userForm, canAccessAlmacen: e.target.checked})}
+                                className="w-4 h-4 rounded accent-slate-600" />
+                              <span className="text-xs font-bold text-slate-700">Almacén</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessBackup === true}
+                                onChange={(e) => setUserForm({...userForm, canAccessBackup: e.target.checked})}
+                                className="w-4 h-4 rounded accent-slate-600" />
+                              <span className="text-xs font-bold text-slate-700">Copias de seguridad</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-rose-50 px-2 py-1.5 rounded-lg hover:bg-rose-100 transition-colors border border-rose-200">
+                              <input type="checkbox" checked={userForm.canViewAllDocuments === true}
+                                onChange={(e) => setUserForm({...userForm, canViewAllDocuments: e.target.checked})}
+                                className="w-4 h-4 rounded accent-rose-600" />
+                              <span className="text-xs font-bold text-rose-800">Ver documentos de todos</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input type="checkbox" checked={userForm.canAccessRentabilidad === true}
@@ -3272,7 +3323,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div className="bg-slate-50 rounded-xl p-3 text-center">
                       <p className="text-2xl font-black text-slate-700">{clients.length}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
