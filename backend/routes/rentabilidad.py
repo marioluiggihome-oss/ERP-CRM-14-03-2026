@@ -63,6 +63,7 @@ router = APIRouter(tags=["rentabilidad"], dependencies=_RENTA_DEPS)
 
 
 MAX_DOC_SIZE_MB = 15
+CONTROLLER_INVOICE_FROM = "2025-10-01"
 
 
 def _is_elevated(user: dict) -> bool:
@@ -100,11 +101,16 @@ def _reviewed_by_master(ficha: dict, master_ids: set, master_names: set) -> bool
 
 
 async def _controller_visible_invoice_scope():
-    """Ids y referencias de facturas cuyo visto bueno procede de MASTER."""
+    """Ids y referencias de facturas MASTER desde el 01/10/2025."""
     candidates = await _get_db().sale_fichas.find(
-        {"docType": "factura", "revisada": True},
-        {"_id": 0, "id": 1, "ref": 1, "projectRef": 1, "revisada": 1,
-         "revisadaPor": 1, "revisadaPorUserId": 1, "revisadaPorMaster": 1},
+        {
+            "docType": "factura",
+            "revisada": True,
+            "fecha": {"$gte": CONTROLLER_INVOICE_FROM},
+        },
+        {"_id": 0, "id": 1, "ref": 1, "projectRef": 1, "fecha": 1,
+         "revisada": 1, "revisadaPor": 1, "revisadaPorUserId": 1,
+         "revisadaPorMaster": 1},
     ).to_list(2000)
     master_ids, master_names = await _master_reviewer_identities()
     visible = [f for f in candidates if _reviewed_by_master(f, master_ids, master_names)]
@@ -1827,7 +1833,11 @@ async def list_fichas(userId: Optional[str] = None, user: dict = Depends(require
             _is_elevated(user) or _is_master_user(user))
         query = {"createdBy": userId} if userId and not es_controller else {}
         if es_controller:
-            query.update({"docType": "factura", "revisada": True})
+            query.update({
+                "docType": "factura",
+                "revisada": True,
+                "fecha": {"$gte": CONTROLLER_INVOICE_FROM},
+            })
         fichas = await _get_db().sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
         if es_controller:
             master_ids, master_names = await _master_reviewer_identities()
@@ -1858,7 +1868,9 @@ async def get_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)):
         _is_elevated(user) or _is_master_user(user))
     if es_controller:
         master_ids, master_names = await _master_reviewer_identities()
-        if not _reviewed_by_master(f, master_ids, master_names):
+        fecha_factura = str(f.get("fecha") or "")[:10]
+        if (fecha_factura < CONTROLLER_INVOICE_FROM or
+                not _reviewed_by_master(f, master_ids, master_names)):
             raise HTTPException(status_code=404, detail="Ficha no disponible")
     f["totals"] = _ficha_totals(f.get("lines", []))
     cobrado_map = await _cobrado_por_ficha_map()

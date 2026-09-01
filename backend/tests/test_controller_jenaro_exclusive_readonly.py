@@ -77,7 +77,9 @@ def test_jenaro_se_normaliza_en_despliegue_y_en_recreacion():
 
 def test_controller_lista_solo_facturas_revisadas_por_master():
     src = text(BACKEND / "routes" / "rentabilidad.py")
-    assert 'query.update({"docType": "factura", "revisada": True})' in src
+    assert 'CONTROLLER_INVOICE_FROM = "2025-10-01"' in src
+    assert '"fecha": {"$gte": CONTROLLER_INVOICE_FROM}' in src
+    assert "fecha_factura < CONTROLLER_INVOICE_FROM" in src
     assert "master_ids, master_names = await _master_reviewer_identities()" in src
     assert "if _reviewed_by_master(ficha, master_ids, master_names)" in src
     assert '"revisadaPorUserId": (user or {}).get("id", "")' in src
@@ -106,6 +108,8 @@ def test_detalle_y_adjuntos_validan_la_factura_master_visible():
 def test_costes_ingresos_y_sus_adjuntos_quedan_en_el_mismo_ambito():
     src = text(BACKEND / "routes" / "rentabilidad.py")
     assert "async def _controller_visible_invoice_scope()" in src
+    helper = src[src.index("async def _controller_visible_invoice_scope"):src.index("def _check_doc_size")]
+    assert '"fecha": {"$gte": CONTROLLER_INVOICE_FROM}' in helper
     assert "async def list_project_costs(projectRef: Optional[str] = None, user: dict = Depends(require_rentabilidad))" in src
     assert "async def get_project_cost_doc(doc_id: str, user: dict = Depends(require_rentabilidad))" in src
     assert "async def list_ingresos(userId: Optional[str] = None, user: dict = Depends(require_rentabilidad))" in src
