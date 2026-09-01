@@ -109,7 +109,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   const [columnFilters, setColumnFilters] = useState({
     ref: '',
     cliente: '',
-    fechaDesde: '',
+    fechaDesde: soloLectura ? '2025-10-01' : '',
     fechaHasta: '',
     ventaMin: '',
     ventaMax: '',
@@ -121,7 +121,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
   // Ordenacion
   const [sortColumn, setSortColumn] = useState('fecha');
-  const [sortDirection, setSortDirection] = useState('desc');
+  const [sortDirection, setSortDirection] = useState(soloLectura ? 'asc' : 'desc');
 
   // Paginacion
   const [pageSize, setPageSize] = useState(25);
@@ -1213,7 +1213,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
   const clearColumnFilters = () => {
     setColumnFilters({
-      ref: '', cliente: '', fechaDesde: '', fechaHasta: '',
+      ref: '', cliente: '', fechaDesde: soloLectura ? '2025-10-01' : '', fechaHasta: '',
       ventaMin: '', ventaMax: '', costeMin: '', costeMax: '',
       margenMin: '', margenMax: '',
     });
@@ -1443,6 +1443,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   <input
                     type="date"
                     value={columnFilters.fechaDesde}
+                    min={soloLectura ? '2025-10-01' : undefined}
                     onChange={e => setColumnFilters(prev => ({ ...prev, fechaDesde: e.target.value }))}
                     className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal"
                     title="Desde"

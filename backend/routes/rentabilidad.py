@@ -1838,7 +1838,12 @@ async def list_fichas(userId: Optional[str] = None, user: dict = Depends(require
                 "revisada": True,
                 "fecha": {"$gte": CONTROLLER_INVOICE_FROM},
             })
-        fichas = await _get_db().sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+        cursor = _get_db().sale_fichas.find(query, {"_id": 0})
+        if es_controller:
+            cursor = cursor.sort([("fecha", 1), ("ref", 1)])
+        else:
+            cursor = cursor.sort("createdAt", -1)
+        fichas = await cursor.to_list(2000)
         if es_controller:
             master_ids, master_names = await _master_reviewer_identities()
             visibles = []

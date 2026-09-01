@@ -11,16 +11,23 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Download, Filter, RefreshCw, Calendar, User, Tag, TrendingUp, BarChart3, X, Printer } from 'lucide-react';
+import { authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 const pct = (n) => `${(Number(n) || 0).toFixed(2)}%`;
 
-const ReportGenerator = ({ onOpenDocument }) => {
+const ReportGenerator = ({ onOpenDocument, currentUser }) => {
+  const soloLectura = !!currentUser?.isController && !(currentUser?.isAdmin
+    || currentUser?.isMaster || currentUser?.isPrimaryAdmin || currentUser?.isGerente
+    || currentUser?.isDirectorComercial || currentUser?.isDirectorFabrica
+    || currentUser?.isResponsableDelegacion);
+  const INICIO_CONTROLLER = '2025-10-01';
+
   // Filtros
   const [filters, setFilters] = useState({
-    fecha_desde: '',
+    fecha_desde: soloLectura ? INICIO_CONTROLLER : '',
     fecha_hasta: '',
     cliente: '',
     categoria: '',
@@ -28,9 +35,9 @@ const ReportGenerator = ({ onOpenDocument }) => {
     min_venta: '',
     max_venta: '',
     created_by: '',
-    revisada: '',
+    revisada: soloLectura ? 'si' : '',
     sort_by: 'fecha',
-    sort_order: 'desc',
+    sort_order: soloLectura ? 'asc' : 'desc',
   });
 
   // Multi-cliente: filters.cliente guarda los clientes separados por '|' (NO por
@@ -69,15 +76,17 @@ const ReportGenerator = ({ onOpenDocument }) => {
   useEffect(() => {
     const loadFilters = async () => {
       try {
-        const r = await fetch(`${API_URL}/api/reports/available-filters`);
+        const r = await fetch(`${API_URL}/api/reports/available-filters`, { headers: authHeaders() });
         if (r.ok) {
           const data = await r.json();
           setAvailableFilters(data);
           // Establecer rango de fechas por defecto. El inicio del ejercicio es
           // SIEMPRE el 02/10/2025 (salvo que haya documentos aún anteriores).
-          const INICIO_EJERCICIO = '2025-10-02';
+          const INICIO_EJERCICIO = soloLectura ? INICIO_CONTROLLER : '2025-10-02';
           if (data.fechaMin && data.fechaMax) {
-            const desde = (data.fechaMin && data.fechaMin < INICIO_EJERCICIO) ? data.fechaMin : INICIO_EJERCICIO;
+            const desde = soloLectura
+              ? INICIO_CONTROLLER
+              : ((data.fechaMin && data.fechaMin < INICIO_EJERCICIO) ? data.fechaMin : INICIO_EJERCICIO);
             setFilters(prev => ({
               ...prev,
               fecha_desde: desde,
@@ -92,7 +101,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
       }
     };
     loadFilters();
-  }, []);
+  }, [soloLectura]);
 
   // Generar informe
   const generateReport = useCallback(async () => {
@@ -103,7 +112,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
         if (value) params.append(key, value);
       });
       
-      const r = await fetch(`${API_URL}/api/reports/rentabilidad?${params.toString()}`);
+      const r = await fetch(`${API_URL}/api/reports/rentabilidad?${params.toString()}`, { headers: authHeaders() });
       if (r.ok) {
         const data = await r.json();
         setReport(data);
@@ -128,7 +137,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
       });
       if (detalle) params.append('detalle', '1');
 
-      const r = await fetch(`${API_URL}/api/reports/rentabilidad/pdf?${params.toString()}`);
+      const r = await fetch(`${API_URL}/api/reports/rentabilidad/pdf?${params.toString()}`, { headers: authHeaders() });
       if (r.ok) {
         const blob = await r.blob();
         const url = window.URL.createObjectURL(blob);
@@ -149,8 +158,10 @@ const ReportGenerator = ({ onOpenDocument }) => {
 
   // Limpiar filtros
   const clearFilters = () => {
-    const INICIO_EJERCICIO = '2025-10-02';
-    const minDesde = (availableFilters.fechaMin && availableFilters.fechaMin < INICIO_EJERCICIO) ? availableFilters.fechaMin : INICIO_EJERCICIO;
+    const INICIO_EJERCICIO = soloLectura ? INICIO_CONTROLLER : '2025-10-02';
+    const minDesde = soloLectura
+      ? INICIO_CONTROLLER
+      : ((availableFilters.fechaMin && availableFilters.fechaMin < INICIO_EJERCICIO) ? availableFilters.fechaMin : INICIO_EJERCICIO);
     setFilters({
       fecha_desde: minDesde,
       fecha_hasta: availableFilters.fechaMax || '',
@@ -160,9 +171,9 @@ const ReportGenerator = ({ onOpenDocument }) => {
       min_venta: '',
       max_venta: '',
       created_by: '',
-      revisada: '',
+      revisada: soloLectura ? 'si' : '',
       sort_by: 'fecha',
-      sort_order: 'desc',
+      sort_order: soloLectura ? 'asc' : 'desc',
     });
   };
 
@@ -337,8 +348,8 @@ const ReportGenerator = ({ onOpenDocument }) => {
                 </select>
               </div>
               
-              {/* Check Controller */}
-              <div>
+              {/* Estado de revisión: fijo y oculto en el perfil de consulta. */}
+              {!soloLectura && <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Check Controller</label>
                 <select
                   value={filters.revisada}
@@ -349,7 +360,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
                   <option value="no">❓ Faltan por revisar</option>
                   <option value="si">✅ Revisadas</option>
                 </select>
-              </div>
+              </div>}
 
               {/* Venta mínima */}
               <div>
@@ -392,8 +403,9 @@ const ReportGenerator = ({ onOpenDocument }) => {
                     <option value="cliente">Cliente (nombre)</option>
                   </select>
                   <button
-                    onClick={() => setFilters(prev => ({ ...prev, sort_order: prev.sort_order === 'desc' ? 'asc' : 'desc' }))}
-                    className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-100"
+                    onClick={() => !soloLectura && setFilters(prev => ({ ...prev, sort_order: prev.sort_order === 'desc' ? 'asc' : 'desc' }))}
+                    disabled={soloLectura}
+                    className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {filters.sort_order === 'desc' ? '↓' : '↑'}
                   </button>
@@ -616,7 +628,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
 
             {/* Footer del informe */}
             <div className="text-center text-xs text-slate-400 py-4">
-              Informe generado el {new Date(report.generatedAt).toLocaleString('es-ES')} — Motor de IA — ERP v4.1
+              Informe generado el {new Date(report.generatedAt).toLocaleString('es-ES')} — ERP v4.1
             </div>
           </div>
         ) : (

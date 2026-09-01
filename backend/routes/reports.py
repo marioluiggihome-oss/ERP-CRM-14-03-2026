@@ -17,22 +17,24 @@ import re
 
 logger = logging.getLogger("reports")
 
-# Seguridad: estos informes exponen facturacion, margenes y el desglose por
-# cliente de toda la empresa (incluido descargable en PDF). Antes no exigian
-# ningun token: cualquiera que conociera la URL podia verlos. Mismo criterio
-# de acceso que el resto de Rentabilidad (rol elevado o canAccessRentabilidad).
-try:
-    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
+# Seguridad: estos informes exponen facturacion, margenes y documentos.
+# El acceso falla siempre de forma cerrada y usa la ficha autenticada actual.
+from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
 
-    async def require_reports_access(user: dict = Depends(require_auth)):
-        # El perfil CONTROLLER entra aqui: los informes son de solo lectura (GET),
-        # que es justo lo que debe poder consultar.
-        if await tiene_acceso_rentabilidad(user):
-            return user
-        raise HTTPException(status_code=403, detail="Sin acceso a los informes de rentabilidad")
-    _REPORTS_DEPS = [Depends(require_reports_access)]
-except Exception:  # pragma: no cover - fallback si no hay jwt_service
-    _REPORTS_DEPS = []
+
+async def require_reports_access(user: dict = Depends(require_auth)):
+    if await tiene_acceso_rentabilidad(user):
+        return user
+    raise HTTPException(status_code=403, detail="Sin acceso a los informes de rentabilidad")
+
+
+_REPORTS_DEPS = [Depends(require_reports_access)]
+
+
+def _is_controller_report_user(user: dict) -> bool:
+    elevados = any(bool((user or {}).get(flag)) for flag in ADMIN_ROLE_FLAGS)
+    master = bool((user or {}).get("isMaster") or (user or {}).get("isPrimaryAdmin"))
+    return bool((user or {}).get("isController")) and not (elevados or master)
 
 router = APIRouter(tags=["reports"], dependencies=_REPORTS_DEPS)
 
@@ -117,6 +119,7 @@ async def generate_rentabilidad_report(
     revisada: Optional[str] = Query(None, description="Check Controller: 'si' revisadas, 'no' faltan por revisar"),
     sort_by: Optional[str] = Query("fecha", description="Ordenar por: fecha, venta, margen, cliente"),
     sort_order: Optional[str] = Query("desc", description="Orden: asc, desc"),
+    user: dict = Depends(require_reports_access),
 ):
     """
     Genera un informe de rentabilidad por líneas con filtros avanzados.
@@ -125,12 +128,24 @@ async def generate_rentabilidad_report(
     from services.db_client import get_db as _get_db_rep2; db = _get_db_rep2()
 
     try:
+        es_controller = _is_controller_report_user(user)
+        if es_controller:
+            from routes.rentabilidad import CONTROLLER_INVOICE_FROM, _controller_visible_invoice_scope
+            fecha_desde = max(str(fecha_desde or CONTROLLER_INVOICE_FROM), CONTROLLER_INVOICE_FROM)
+            doc_type = "factura"
+            revisada = "si"
+            sort_by = "fecha"
+            sort_order = "asc"
+            visible_ids, _ = await _controller_visible_invoice_scope()
+
         # Se filtra en MONGO lo que se puede (fecha, tipo, revisada) en vez de
         # traerlo todo y filtrar en Python. Antes se leía find({}) con tope 1000:
         # al superar 1000 fichas el informe PERDÍA documentos EN SILENCIO y los
         # totales salían mal sin avisar. Ahora se acota la consulta y se detecta
         # el truncado para avisar.
         q = {}
+        if es_controller:
+            q["id"] = {"$in": list(visible_ids)}
         if fecha_desde or fecha_hasta:
             rango = {}
             if fecha_desde:
@@ -411,6 +426,7 @@ async def generate_rentabilidad_pdf(
     sort_by: Optional[str] = Query("fecha"),
     sort_order: Optional[str] = Query("desc"),
     detalle: Optional[int] = Query(0, description="1 = PDF superdetallado: TODOS los productos, documento a documento"),
+    user: dict = Depends(require_reports_access),
 ):
     """
     Genera un PDF del informe de rentabilidad con los mismos filtros.
@@ -430,7 +446,8 @@ async def generate_rentabilidad_pdf(
         fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
         cliente=cliente, categoria=categoria, doc_type=doc_type,
         min_venta=min_venta, max_venta=max_venta,
-        created_by=created_by, revisada=revisada, sort_by=sort_by, sort_order=sort_order
+        created_by=created_by, revisada=revisada, sort_by=sort_by,
+        sort_order=sort_order, user=user
     )
     
     if not data.get("success"):
@@ -678,16 +695,21 @@ async def generate_rentabilidad_pdf(
 
 
 @router.get("/reports/available-filters")
-async def get_available_filters():
+async def get_available_filters(user: dict = Depends(require_reports_access)):
     """Devuelve los valores disponibles para los filtros (clientes, categorías, etc.)"""
     from services.db_client import get_db as _get_db_rep2; db = _get_db_rep2()
 
     try:
         # Solo se necesitan estos campos para poblar los desplegables de filtros:
         # con proyección y un tope alto no se pierden clientes al crecer la base.
+        query = {}
+        if _is_controller_report_user(user):
+            from routes.rentabilidad import _controller_visible_invoice_scope
+            visible_ids, _ = await _controller_visible_invoice_scope()
+            query = {"id": {"$in": list(visible_ids)}}
         fichas = await db["sale_fichas"].find(
-            {}, {"_id": 0, "cliente": 1, "clienteCodigo": 1, "docType": 1,
-                 "createdByName": 1, "lines.concepto": 1}
+            query, {"_id": 0, "cliente": 1, "clienteCodigo": 1, "docType": 1,
+                    "createdByName": 1, "fecha": 1, "lines.concepto": 1}
         ).to_list(length=20000)
 
         clientes = set()

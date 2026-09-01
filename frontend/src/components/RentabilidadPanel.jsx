@@ -430,21 +430,19 @@ const RentabilidadPanel = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* Las vistas con operaciones se ocultan por completo en el perfil de consulta. */}
-      {!soloLectura && (
-        <div className="flex gap-2 mb-5 overflow-x-auto">
-          <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
-          <button onClick={() => setView('ingresos')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'ingresos' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ingresos a cuenta</button>
-          <button onClick={() => setView('saldo')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'saldo' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Saldo de cliente</button>
-          <button onClick={() => setView('informes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
-          <button onClick={() => setView('revision')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'revision' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>Revisión</button>
-        </div>
-      )}
+      {/* CONTROLLER puede alternar únicamente entre documentos e informes. */}
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        <button onClick={() => setView('lineas')} className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
+        {!soloLectura && <button onClick={() => setView('ingresos')} className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm ${view === 'ingresos' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ingresos a cuenta</button>}
+        {!soloLectura && <button onClick={() => setView('saldo')} className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm ${view === 'saldo' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Saldo de cliente</button>}
+        <button onClick={() => setView('informes')} className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
+        {!soloLectura && <button onClick={() => setView('revision')} className={`shrink-0 px-4 py-2 rounded-xl font-bold text-sm ${view === 'revision' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>Revisión</button>}
+      </div>
 
       {!soloLectura && view === 'ingresos' && <IngresosACuenta currentUser={currentUser} />}
       {!soloLectura && view === 'saldo' && <SaldoCliente onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
       {!soloLectura && view === 'revision' && <RevisionFichas onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
-      {!soloLectura && view === 'informes' && <ReportGenerator onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(true); setView('lineas'); }} />}
+      {view === 'informes' && <ReportGenerator currentUser={currentUser} onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(true); setView('lineas'); }} />}
 
       {view === 'lineas' && <RentabilidadLineas currentUser={currentUser}
         openRef={openRef}

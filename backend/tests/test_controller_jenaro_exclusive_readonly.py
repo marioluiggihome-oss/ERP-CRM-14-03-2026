@@ -127,3 +127,41 @@ def test_frontend_envia_sesion_y_no_carga_metricas_globales_a_controller():
     assert "setAnalytics(null)" in panel
     assert "rentabilidad/ingresos`, { headers: authH }" in panel
     assert "project-costs?projectRef=${encodeURIComponent(row.ref)}`, { headers: authH }" in panel
+
+
+def test_controller_ve_octubre_2025_primero_y_los_meses_siguientes_despues():
+    backend = text(BACKEND / "routes" / "rentabilidad.py")
+    frontend = text(FRONTEND / "components" / "RentabilidadLineas.jsx")
+    assert 'cursor = cursor.sort([("fecha", 1), ("ref", 1)])' in backend
+    assert "fechaDesde: soloLectura ? '2025-10-01' : ''" in frontend
+    assert "useState(soloLectura ? 'asc' : 'desc')" in frontend
+    assert "min={soloLectura ? '2025-10-01' : undefined}" in frontend
+
+
+def test_controller_tiene_generador_pdf_pero_no_vistas_mutables():
+    panel = text(FRONTEND / "components" / "RentabilidadPanel.jsx")
+    reports_ui = text(FRONTEND / "components" / "ReportGenerator.jsx")
+    assert "<ReportGenerator currentUser={currentUser}" in panel
+    assert "{!soloLectura && <button onClick={() => setView('ingresos')}" in panel
+    assert "{!soloLectura && <button onClick={() => setView('revision')}" in panel
+    assert "const INICIO_CONTROLLER = '2025-10-01'" in reports_ui
+    assert "sort_order: soloLectura ? 'asc' : 'desc'" in reports_ui
+    assert "api/reports/rentabilidad/pdf?${params.toString()}`, { headers: authHeaders() }" in reports_ui
+
+
+def test_informes_controller_reutilizan_el_ambito_master_y_el_corte_temporal():
+    reports = text(BACKEND / "routes" / "reports.py")
+    assert "def _is_controller_report_user(user: dict)" in reports
+    assert "fecha_desde = max(str(fecha_desde or CONTROLLER_INVOICE_FROM), CONTROLLER_INVOICE_FROM)" in reports
+    assert 'q["id"] = {"$in": list(visible_ids)}' in reports
+    assert 'doc_type = "factura"' in reports
+    assert 'revisada = "si"' in reports
+    assert 'sort_order = "asc"' in reports
+    assert "sort_order=sort_order, user=user" in reports
+    assert 'query = {"id": {"$in": list(visible_ids)}}' in reports
+    assert '"fecha": 1' in reports
+
+
+def test_generador_de_informes_no_expone_atribuciones_tecnicas():
+    reports_ui = text(FRONTEND / "components" / "ReportGenerator.jsx")
+    assert "Motor de IA" not in reports_ui
