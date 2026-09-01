@@ -126,10 +126,14 @@ def test_comparar_pdf_usa_preview_sin_sustituir_el_original():
     assert "setOriginalRef(prev => prev || b64)" in ui
 
 
-def test_acceso_a_la_prueba_es_neutral_y_solo_master():
+def test_botonera_ia_es_solo_master_y_mantiene_ia0_por_defecto():
     ui = _leer(RENDER_STUDIO)
-    assert "{isMaster && (" in ui
-    assert "Probar mejoras" in ui
-    assert "Prueba activa" in ui
-    assert ">IA 7<" not in ui
+    inicio = ui.index("{isMaster && (", ui.index("Acción principal"))
+    fin = ui.index("</div>\n                )}", inicio)
+    botonera = ui[inicio:fin]
+    for perfil in ("IA0", "IA1", "IA3", "IA5", "IA7"):
+        assert f"'{perfil}'" in botonera
+    assert "const [motor, setMotor] = useState('ia0');" in ui
+    assert "Probar mejoras" not in ui
+    assert "Prueba activa" not in ui
     assert ">Motor<" not in ui

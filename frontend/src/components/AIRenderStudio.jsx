@@ -3625,20 +3625,6 @@ export default function AIRenderStudio({ state, setState }) {
                 <Sparkles size={12} /> Créditos: sin lectura
               </span>
             )}
-            {isMaster && (
-              <button
-                type="button"
-                onClick={() => setMotor(actual => actual === 'ia7' ? 'ia0' : 'ia7')}
-                title="Alternar entre la configuración estable y la prueba de mayor detalle"
-                className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black transition-colors ${
-                  motor === 'ia7'
-                    ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-300'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}>
-                <Wand2 size={12} />
-                {motor === 'ia7' ? 'Prueba activa' : 'Probar mejoras'}
-              </button>
-            )}
             {aiCredits && (
               isMaster && !aiCredits.ilimitado ? (
                 <button
@@ -4009,6 +3995,25 @@ export default function AIRenderStudio({ state, setState }) {
 
                 {/* Acción principal — barra fija siempre visible */}
               <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
+                {isMaster && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">IA</span>
+                    <div className="flex bg-slate-100 rounded-lg p-1">
+                      {[
+                        ['ia0', 'IA0', 'Configuración estable'],
+                        ['ia1', 'IA1', 'Configuración estándar'],
+                        ['ia3', 'IA3', 'Configuración alternativa'],
+                        ['ia5', 'IA5', 'Configuración histórica alternativa'],
+                        ['ia7', 'IA7', 'Configuración mejorada de prueba'],
+                      ].map(([id, label, title]) => (
+                        <button key={id} type="button" onClick={() => setMotor(id)} title={title}
+                          className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">

@@ -196,13 +196,16 @@ ESTUDIO_3D = os.path.join(
     os.path.dirname(BACKEND), "frontend", "src", "components", "AIRenderStudio.jsx")
 
 
-def test_la_pantalla_no_expone_motores_ni_proveedores():
-    """CANDADO: la interfaz no revela la tecnología interna utilizada."""
+def test_la_botonera_de_perfiles_es_solo_para_master_y_no_revela_proveedores():
+    """Los botones internos son del master; el resultado no expone tecnología."""
     fuente = open(ESTUDIO_3D, encoding="utf-8").read()
+    inicio = fuente.index("{isMaster && (", fuente.index("Acción principal"))
+    fin = fuente.index("</div>\n                )}", inicio)
+    botonera = fuente[inicio:fin]
+    for label in ("IA0", "IA1", "IA3", "IA5", "IA7"):
+        assert f"'{label}'" in botonera
     assert "Render 3D IA" not in fuente
     assert ">Motor<" not in fuente
-    assert ">IA 0<" not in fuente
-    assert ">IA 1<" not in fuente
     assert "Motor principal (Gemini)" not in fuente
     assert "Motor Pro" not in fuente
     assert "motorUsado" not in fuente
