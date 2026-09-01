@@ -433,10 +433,15 @@ export default function EstudioCocinas({ state, setState }) {
   // ── Permisos ──
   const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true;
 
-  // ── Motor IA (solo master ve IA2/IA3/IA4) ──
-  // ia1=Gemini pro (default), ia2=Manus, ia3=Gemini flash (rápido), ia4=Gemini ultra-fotorrealista
+  // ── Motor IA (solo master ve los motores de prueba) ──
+  // ia0=camino histórico del 11/07, ia1=Gemini actual, ia2=Manus,
+  // ia3=Gemini premium, ia4=Gemini flash.
   const [motorIA, setMotorIA] = useState('ia1');
-  const providerDeMotor = () => motorIA === 'ia2' ? 'manus' : 'gemini';
+  const providerDeMotor = () => {
+    if (motorIA === 'ia0') return 'julio11';
+    if (motorIA === 'ia2') return 'manus';
+    return 'gemini';
+  };
   // Prompt extra según motor
   const promptExtraMotor = (base) => {
     if (motorIA === 'ia4') {
@@ -1406,7 +1411,7 @@ export default function EstudioCocinas({ state, setState }) {
                   <div className={`flex items-center gap-2 p-2 rounded-lg ${t.card}`}>
                     <span className={`text-[9px] font-black uppercase tracking-widest ${t.motorText} whitespace-nowrap`}>Motor</span>
                     <div className="flex bg-slate-100/10 rounded-lg p-0.5 gap-0.5 flex-1">
-                      {[['ia1','IA 1','Motor principal (Gemini pro)'],['ia2','IA 2','Motor alternativo (Manus)'],['ia3','IA 3','Gemini flash — rápido'],['ia4','IA 4','Ultra-fotorrealista (prompt potenciado)']].map(([id,lbl,title]) => (
+                      {[['ia0','IA 0','Prueba histórica — camino del 11/07/2026'],['ia1','IA 1','Motor actual de producción (Gemini)'],['ia2','IA 2','Motor alternativo (Manus)'],['ia3','IA 3','Gemini premium'],['ia4','IA 4','Gemini flash']].map(([id,lbl,title]) => (
                         <button key={id} onClick={() => setMotorIA(id)} title={title}
                           className={`flex-1 py-1 rounded-md text-[9px] font-black transition-all ${
                             motorIA === id ? 'bg-indigo-600 text-white' : `${t.tabInactive}`

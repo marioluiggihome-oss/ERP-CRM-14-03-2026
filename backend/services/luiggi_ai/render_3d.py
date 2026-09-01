@@ -631,6 +631,33 @@ class Render3DService:
                 reference_image_base64=ref_b64, reference_mime=ref_mime,
                 provider=provider,
             )
+        # ── IA 0: EL CAMINO DEL 11 DE JULIO, TAL CUAL ─────────────────────────
+        #
+        # Botón de comparación histórica. Conserva el encargo de croquis anterior
+        # a los cambios de agosto y fuerza el primer modelo de imagen que estaba
+        # en producción el 11/07/2026. IA1 y sus reglas actuales no se modifican.
+        if ref_b64 and is_sketch and provider == "julio11":
+            from services.luiggi_ai.render_11jul import (
+                build_render_prompt as _brp_11jul, prompt_del_croquis_11jul)
+            parsed_params["motor"] = "IA 0 — camino del 11/07/2026"
+            parsed_params["fromSketch"] = bool(is_sketch)
+            # En julio el brief se expandía con Gemini 2.5 Pro antes de montar
+            # el prompt de imagen. Se conserva para medir el mismo camino.
+            _brief = await self._expand_brief(description, space_type)
+            parsed_params["briefExpanded"] = bool(_brief) and _brief != (description or "").strip()
+            _generico = _brp_11jul(
+                description=_brief or description,
+                style=parsed_params.get("style", "photorealistic"),
+                space_type=space_type,
+            )
+            task_prompt = prompt_del_croquis_11jul(
+                _generico, hay_referencia=True, es_croquis=bool(is_sketch))
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                reference_image_base64=ref_b64, reference_mime=ref_mime,
+                provider="julio11", reference_images=reference_images or None,
+            )
+
         # ── IA 5: EL CAMINO DEL 10 DE JULIO, TAL CUAL ─────────────────────────
         #
         # El master, tras cuatro renders seguidos de la misma cocina: «busca lo
@@ -1929,6 +1956,18 @@ class Render3DService:
             logger.info(
                 "Se ha pedido el motor IA 2 (Manus), que está apagado "
                 "(MOTOR_MANUS_ACTIVO). Se rinde con el motor de siempre.")
+
+        # IA 0: modelo de imagen que estaba primero el 11/07/2026. Este camino
+        # se mantiene explícito y separado para que IA1 siga usando su cascada
+        # actual sin cambiar por una prueba histórica.
+        if provider == "julio11":
+            return await self._render_with_gemini(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64,
+                reference_mime=reference_mime,
+                reference_images=reference_images,
+                model_override="gemini-3-pro-image-preview",
+            )
 
         # IA 2: Manus
         if provider == "manus" and manus_ready:

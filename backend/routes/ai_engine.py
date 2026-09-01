@@ -452,7 +452,7 @@ class RenderRequest(BaseModel):
     referenceImage: Optional[str] = Field(None, description="Imagen/PDF de referencia en base64 para condicionar el render")
     referenceMime: Optional[str] = Field(None, description="MIME de la imagen de referencia")
     referenceImages: Optional[List[str]] = Field(None, description="Imágenes adicionales (elemento a copiar: puerta, mueble…) en base64/data URL")
-    provider: Optional[str] = Field(None, description="Motor de render: manus | gemini (opcional; por defecto manus)")
+    provider: Optional[str] = Field(None, description="Motor de render: julio11 (IA0 histórica) | gemini (IA1) | manus | otros motores de master")
     projectType: Optional[str] = Field(None, description="Tipo de proyecto elegido por el usuario: cocina|armario|bano|otro. Fuerza el sujeto del render.")
     roomPhoto: Optional[bool] = Field(False, description="La imagen de referencia es una FOTO de la estancia REAL (vacía o a reformar): diseñar el mueble DENTRO de ella respetando su arquitectura.")
     editingRender: Optional[bool] = Field(False, description="La referencia es un render que ha generado el propio ERP y se le esta aplicando un cambio. Marca la PROCEDENCIA: asi no hay que adivinar si es un croquis, y una cocina blanca no se toma por un dibujo a mano.")
@@ -466,7 +466,7 @@ class RenderComposeRequest(BaseModel):
     wallSketches: Optional[list] = Field(None, description="Bocetos por pared (lista base64/dataURL)")
     referenceImages: Optional[list] = Field(
         None, description="Referencias de ACABADO (foto de estilo). Se usan A LA VEZ que el plano")
-    provider: Optional[str] = Field(None, description="Motor elegido en pantalla (IA 1/2/3/4)")
+    provider: Optional[str] = Field(None, description="Motor elegido en pantalla (IA 0/1/2/3/4)")
     projectType: Optional[str] = Field(None, description="cocina|armario|bano|otro")
 
 
