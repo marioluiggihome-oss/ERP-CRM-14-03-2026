@@ -52,12 +52,13 @@ def test_ia1_sigue_siendomotor_gemini_y_ia0_tiene_boton():
     ui = _leer(ESTUDIO)
     assert "if (motorIA === 'ia0') return 'julio11';" in ui
     assert "['ia0','IA 0'" in ui
-    assert "const [motorIA, setMotorIA] = useState('ia1');" in ui
+    assert "const [motorIA, setMotorIA] = useState('ia0');" in ui
     assert "return 'gemini';" in ui
 
 
 def test_render_studio_visible_para_master_y_envia_ia0():
     ui = _leer(RENDER_STUDIO)
     assert "state?.currentUser?.isMaster === true" in ui
+    assert "const [motor, setMotor] = useState('ia0');" in ui
     assert "if (motor === 'ia0') return 'julio11';" in ui
     assert "['ia0', 'IA 0'" in ui

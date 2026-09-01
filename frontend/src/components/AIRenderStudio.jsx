@@ -476,7 +476,7 @@ export default function AIRenderStudio({ state, setState }) {
   // 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
   // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro.
   // ('ia2' e 'ia4' están apagadas.)
-  const [motor, setMotor] = useState('ia1');
+  const [motor, setMotor] = useState('ia0');
   // ─── LO QUE VA A COSTAR, ANTES DE PULSAR ─────────────────────────────────
   //
   // El coste en créditos depende del motor (25/08). Pero el aviso NO PUEDE

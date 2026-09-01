@@ -436,7 +436,7 @@ export default function EstudioCocinas({ state, setState }) {
   // ── Motor IA (solo master ve los motores de prueba) ──
   // ia0=camino histórico del 11/07, ia1=Gemini actual, ia2=Manus,
   // ia3=Gemini premium, ia4=Gemini flash.
-  const [motorIA, setMotorIA] = useState('ia1');
+  const [motorIA, setMotorIA] = useState('ia0');
   const providerDeMotor = () => {
     if (motorIA === 'ia0') return 'julio11';
     if (motorIA === 'ia2') return 'manus';
