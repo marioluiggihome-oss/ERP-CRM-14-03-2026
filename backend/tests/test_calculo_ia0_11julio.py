@@ -90,3 +90,46 @@ def test_interfaz_filtra_errores_tecnicos_del_servidor():
     assert "const mensajePublico" in cocinas
     assert "OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider" in studio
     assert "OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider" in cocinas
+
+
+def test_ia7_es_ia0_mas_geometria_y_vanos_sin_tocar_ia0():
+    src = _leer(RENDER)
+    historico = _leer(HISTORICAL)
+    assert 'provider == "julio11_plus"' in src
+    assert 'provider="julio11_plus"' in src
+    assert "prompt_del_croquis_22jul" in src
+    assert "Preserve every window and door at the SAME position, width and height" in src
+    assert "Geometry comes 100% from the drawings" in src
+    assert 'model_override="gemini-3-pro-image-preview"' in src
+    # IA0 continúa dependiendo exclusivamente de su módulo congelado.
+    assert "prompt_del_croquis_11jul" in src
+    assert "A HAND-DRAWN FLOOR PLAN / SKETCH" in historico
+
+
+def test_ia7_mejora_la_calidad_de_entrada_sin_cambiar_el_perfil_estable():
+    backend = _leer(RENDER)
+    ui = _leer(RENDER_STUDIO)
+    assert 'dpi_referencia = 280 if provider == "julio11_plus" else 150' in backend
+    assert "await downscaleImage(file, 3000, 0.96, 'image/png')" in ui
+    assert "const [motor, setMotor] = useState('ia0');" in ui
+    assert "if (motor === 'ia7') return 'julio11_plus';" in ui
+
+
+def test_comparar_pdf_usa_preview_sin_sustituir_el_original():
+    ruta = _leer(AI_ENGINE_ROUTE)
+    ui = _leer(RENDER_STUDIO)
+    assert '@ai_engine_router.post("/pdf-preview")' in ruta
+    assert "pdf_base64_to_png_base64(stripped, dpi=180, max_pages=1)" in ruta
+    assert "const [pdfComparePreview, setPdfComparePreview] = useState(null);" in ui
+    assert "body: JSON.stringify({ fileBase64: referencia })" in ui
+    assert "pdfComparePreview || originalRef || refImage" in ui
+    assert "setOriginalRef(prev => prev || b64)" in ui
+
+
+def test_acceso_a_la_prueba_es_neutral_y_solo_master():
+    ui = _leer(RENDER_STUDIO)
+    assert "{isMaster && (" in ui
+    assert "Probar mejoras" in ui
+    assert "Prueba activa" in ui
+    assert ">IA 7<" not in ui
+    assert ">Motor<" not in ui

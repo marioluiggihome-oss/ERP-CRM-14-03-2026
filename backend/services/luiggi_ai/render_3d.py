@@ -564,8 +564,11 @@ class Render3DService:
             space_type = self.detect_space_type(description)
         parsed_params["space_type"] = space_type
 
-        # Preparar la imagen de referencia (si es PDF, convertir 1ª página a PNG)
-        ref_b64, ref_mime = self._prepare_reference(reference_image, reference_mime)
+        # Preparar la referencia. IA0 conserva los 150 dpi históricos; IA7 usa
+        # más detalle para que cotas y trazos finos sobrevivan al rasterizado.
+        dpi_referencia = 280 if provider == "julio11_plus" else 150
+        ref_b64, ref_mime = self._prepare_reference(
+            reference_image, reference_mime, pdf_dpi=dpi_referencia)
         parsed_params["hasReference"] = bool(ref_b64)
 
         # ── CON REFERENCIA = edición / re-render FIEL ──────────────────────────
@@ -631,6 +634,29 @@ class Render3DService:
                 reference_image_base64=ref_b64, reference_mime=ref_mime,
                 provider=provider,
             )
+        # ── IA 7: IA0 + GEOMETRÍA/VANOS Y REFERENCIA DE MAYOR CALIDAD ────────
+        # IA0 permanece congelada. IA7 reutiliza su ampliación y constructor,
+        # añadiendo únicamente las reglas estructurales del 22/07.
+        if ref_b64 and is_sketch and provider == "julio11_plus":
+            from services.luiggi_ai.render_22jul import (
+                build_render_prompt as _brp_ia7, prompt_del_croquis_22jul)
+            parsed_params["motor"] = "IA 7 — IA0 con lectura mejorada"
+            parsed_params["fromSketch"] = bool(is_sketch)
+            _brief = await self._expand_brief(description, space_type)
+            parsed_params["briefExpanded"] = bool(_brief) and _brief != (description or "").strip()
+            _generico = _brp_ia7(
+                description=_brief or description,
+                style=parsed_params.get("style", "photorealistic"),
+                space_type=space_type,
+            )
+            task_prompt = prompt_del_croquis_22jul(
+                _generico, hay_referencia=True, es_croquis=True)
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                reference_image_base64=ref_b64, reference_mime=ref_mime,
+                provider="julio11_plus", reference_images=reference_images or None,
+            )
+
         # ── IA 0: EL CAMINO DEL 11 DE JULIO, TAL CUAL ─────────────────────────
         #
         # Botón de comparación histórica. Conserva el encargo de croquis anterior
@@ -1228,8 +1254,10 @@ class Render3DService:
         ref_lines = []    # descripción textual de cada imagen para el prompt
         hay_croquis = False  # ¿alguna de las que manda la geometría va a mano?
 
+        dpi_referencia = 280 if provider == "julio11_plus" else 150
         if floor_plan:
-            b64, mime = self._prepare_reference(floor_plan, None)
+            b64, mime = self._prepare_reference(
+                floor_plan, None, pdf_dpi=dpi_referencia)
             if b64:
                 images.append({"data": b64, "mime": mime})
                 ref_lines.append(
@@ -1242,7 +1270,8 @@ class Render3DService:
         for i, sk in enumerate(wall_sketches or []):
             if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
                 break
-            b64, mime = self._prepare_reference(sk, None)
+            b64, mime = self._prepare_reference(
+                sk, None, pdf_dpi=dpi_referencia)
             if b64:
                 images.append({"data": b64, "mime": mime})
                 ref_lines.append(
@@ -1259,7 +1288,8 @@ class Render3DService:
         for ref in (reference_images or []):
             if len(images) >= self.MAX_IMAGENES_COMPUESTAS:
                 break
-            b64, mime = self._prepare_reference(ref, None)
+            b64, mime = self._prepare_reference(
+                ref, None, pdf_dpi=dpi_referencia)
             if b64:
                 images.append({"data": b64, "mime": mime})
                 ref_lines.append(
@@ -1276,6 +1306,35 @@ class Render3DService:
                 "error": "Adjunta al menos el plano en planta o un boceto de pared.",
                 "engine": self.config.brand_name,
             }
+
+        # IA7 compuesta: base sencilla de julio, sin OCR ni lectura estructurada,
+        # más la regla estricta de geometría y vanos del 22/07.
+        if provider == "julio11_plus":
+            brief_txt = (description or "").strip()
+            refs_block = "\n".join(ref_lines)
+            task_prompt = (
+                "You are given technical drawings of ONE specific project. Recreate THAT SAME "
+                "project as a single photorealistic interior photograph. The drawings are the "
+                "ground truth for GEOMETRY, not decoration.\n"
+                + refs_block + "\n\nSTRICT STRUCTURE / PRECISE MODE:\n"
+                "- Preserve the EXACT shape, wall runs, corners, number and left-to-right order "
+                "of modules, appliances and tall columns.\n"
+                "- Preserve every window and door at the SAME position, width and height.\n"
+                "- Keep module widths and overall proportions to scale. Do not add, remove, resize, "
+                "merge, duplicate or rearrange any module or opening.\n"
+                + (f"- Take ONLY finishes, materials and colours from this written brief: {brief_txt}\n"
+                   if brief_txt else
+                   "- Keep the finishes, materials and colours shown in the references.\n")
+                + "- Geometry comes 100% from the drawings. Produce a clean photorealistic image "
+                "without text, dimensions, arrows, labels, watermarks or logos."
+            )
+            parsed_params["motor"] = "IA 7 — IA0 con lectura mejorada"
+            parsed_params["hasReference"] = True
+            parsed_params["referenceCount"] = len(images)
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                provider="julio11_plus", reference_images=images,
+            )
 
         # Si la referencia incluye croquis a mano, ejecutar transcripción Vision OCR preliminar
         sketch_transcription_block = ""
@@ -1610,9 +1669,12 @@ class Render3DService:
             pass
         return self._parece_dibujo_a_mano(raw)
 
-    def _prepare_reference(self, reference_image, reference_mime):
-        """Normaliza la referencia: quita el prefijo data:, y si es PDF convierte
-        la primera página a PNG para que el modelo de imagen la pueda usar."""
+    def _prepare_reference(self, reference_image, reference_mime, pdf_dpi: int = 150):
+        """Normaliza la referencia y rasteriza la primera página del PDF.
+
+        El perfil estable conserva 150 dpi. El perfil experimental puede pedir
+        más detalle sin modificar el comportamiento de IA0.
+        """
         if not reference_image:
             return None, "image/png"
         try:
@@ -1630,7 +1692,8 @@ class Render3DService:
                     mime = "image/jpeg"
             from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
             if mime == "application/pdf" or is_pdf_base64(raw):
-                pages = pdf_base64_to_png_base64(raw, dpi=150, max_pages=1) or []
+                pages = pdf_base64_to_png_base64(
+                    raw, dpi=max(150, min(int(pdf_dpi or 150), 300)), max_pages=1) or []
                 if pages:
                     p = pages[0]
                     if p.startswith("data:"):
@@ -1913,7 +1976,7 @@ class Render3DService:
             IA 1 -> gemini           el de producción, y el único que ve un
                                      usuario que no sea master
             IA 3 -> gemini_premium   (flux si hay clave de Replicate)
-            IA 7 -> banana_pro       motor Pro, cuesta 3,3x por render
+            IA 7 -> julio11_plus     IA0 + geometría/vanos y entrada de mayor detalle
             IA 2 -> manus            APAGADA (MOTOR_MANUS_ACTIVO)
             IA 4 -> gemini_flash     APAGADA (era el mismo modelo que la IA 1)
 
@@ -1956,6 +2019,17 @@ class Render3DService:
             logger.info(
                 "Se ha pedido el motor IA 2 (Manus), que está apagado "
                 "(MOTOR_MANUS_ACTIVO). Se rinde con el motor de siempre.")
+
+        # IA7 mejorada usa el mismo perfil visual que IA0; solo cambian el
+        # encargo estructural y la calidad de la referencia preparada antes.
+        if provider == "julio11_plus":
+            return await self._render_with_gemini(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64,
+                reference_mime=reference_mime,
+                reference_images=reference_images,
+                model_override="gemini-3-pro-image-preview",
+            )
 
         # IA 0: modelo de imagen que estaba primero el 11/07/2026. Este camino
         # se mantiene explícito y separado para que IA1 siga usando su cascada
@@ -2001,7 +2075,7 @@ class Render3DService:
                 prompt_prefix=_PREMIUM_PROMPT_PREFIX,
             )
 
-        # IA 7: NANO BANANA PRO (gemini-3-pro-image).
+        # Perfil legado de prueba de modelo, conservado para compatibilidad.
         #
         # El master: «ponlo en la IA 7 con banana pro». Viene de preguntar en
         # qué se diferencia el ERP de abrir AI Studio y darle el dibujo a mano.

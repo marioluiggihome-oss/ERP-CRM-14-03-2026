@@ -20,7 +20,7 @@ Mapa que se protege (frontend `providerOf()` -> backend `_render_dispatch`):
     IA 1 -> gemini          (Gemini estandar; el de siempre, y el UNICO que ve
                              un usuario que no sea master)
     IA 3 -> gemini_premium  (prompt ultra-fotorrealista)
-    IA 7 -> banana_pro      (motor Pro; mismo encargo que IA 1, cuesta 3,3x)
+    IA 7 -> julio11_plus    (IA0 + geometría/vanos y referencia de mayor detalle)
 
 TRES QUE NO ESTAN EN LA TABLA DE ARRIBA, Y POR QUE (puesto al dia el 23/08/2026,
 en una auditoria: la tabla llevaba desde el 18/08 diciendo algo que ya no era
@@ -67,13 +67,13 @@ import pytest
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Los motores que viajan TAL CUAL desde la pantalla hasta `_render_dispatch`.
-# IA 2 e IA 4 (apagadas) e IA 5 (que es un encargo, no un motor) tienen su
+# IA 2 e IA 4 (apagadas) e IA 5 (camino histórico alternativo) tienen su
 # propio candado; ver la nota de arriba.
 MOTORES = {
     "IA 0": "julio11",
     "IA 1": "gemini",
     "IA 3": "gemini_premium",
-    "IA 7": "banana_pro",
+    "IA 7": "julio11_plus",
 }
 
 # Los motores ya no se anuncian en la interfaz: se conserva un único flujo
@@ -85,7 +85,7 @@ MOTORES_INTERNOS = {
     "ia1": "gemini",
     "ia3": "gemini_premium",
     "ia5": "julio",
-    "ia7": "banana_pro",
+    "ia7": "julio11_plus",
 }
 
 
@@ -141,7 +141,7 @@ def _imagen():
 def test_el_render_compuesto_respeta_el_motor_elegido(servicio, etiqueta, provider):
     """CANDADO: generar con plano NO puede cambiarte de motor por su cuenta."""
     caja = _capturar_dispatch(servicio)
-    servicio._prepare_reference = lambda img, mime: ("iVBORw0KGgo=", "image/png")
+    servicio._prepare_reference = lambda img, mime, **kw: ("iVBORw0KGgo=", "image/png")
     asyncio.run(servicio.generate_render_composed(
         description="cocina blanca", floor_plan=_imagen(), provider=provider))
     assert caja.get("provider") == provider, (
@@ -166,7 +166,7 @@ def test_el_render_compuesto_pasa_por_el_repartidor_de_motores(servicio):
 def test_el_tipo_de_proyecto_lo_manda_la_pantalla(servicio):
     """Con el tipo delante no se adivina del texto: cocina es cocina."""
     caja = _capturar_dispatch(servicio)
-    servicio._prepare_reference = lambda img, mime: ("iVBORw0KGgo=", "image/png")
+    servicio._prepare_reference = lambda img, mime, **kw: ("iVBORw0KGgo=", "image/png")
     asyncio.run(servicio.generate_render_composed(
         description="mueble a medida", floor_plan=_imagen(), project_type="bano"))
     tipo = (caja.get("parsed_params") or {}).get("space_type") or ""
@@ -177,7 +177,7 @@ def test_el_tipo_de_proyecto_lo_manda_la_pantalla(servicio):
 def test_las_referencias_de_acabado_viajan_con_el_plano(servicio):
     """Habilidad adquirida: plano y referencia se usan A LA VEZ."""
     caja = _capturar_dispatch(servicio)
-    servicio._prepare_reference = lambda img, mime: ("iVBORw0KGgo=", "image/png")
+    servicio._prepare_reference = lambda img, mime, **kw: ("iVBORw0KGgo=", "image/png")
     asyncio.run(servicio.generate_render_composed(
         description="", floor_plan=_imagen(), wall_sketches=[_imagen()],
         reference_images=[_imagen()]))

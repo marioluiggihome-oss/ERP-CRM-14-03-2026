@@ -97,7 +97,7 @@ const MARK_TYPES = {
 // Reduce una imagen grande (foto de móvil) antes de guardarla/enviarla: evita
 // que un base64 enorme sature memoria y tumbe la pestaña al analizarla/renderizar.
 // Si el archivo no es una imagen rasterizable (p. ej. PDF), devuelve el original.
-const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((resolve, reject) => {
+const downscaleImage = (file, maxDim = 1600, quality = 0.85, outputType = 'image/jpeg') => new Promise((resolve, reject) => {
   const fr = new FileReader();
   fr.onload = () => {
     const original = fr.result;
@@ -106,12 +106,14 @@ const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((res
       img.onload = () => {
         try {
           const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          if (scale >= 1) { resolve(original); return; } // ya es pequeña
+          if (scale >= 1 && (!outputType || outputType === file.type)) { resolve(original); return; }
           const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          resolve(outputType === 'image/png'
+            ? canvas.toDataURL('image/png')
+            : canvas.toDataURL(outputType || 'image/jpeg', quality));
         } catch (_) { resolve(original); }
       };
       img.onerror = () => resolve(original); // no es imagen (PDF u otro) → original
@@ -441,7 +443,9 @@ export default function AIRenderStudio({ state, setState }) {
   const [description, setDescription] = useState('');
   const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) PRINCIPAL para que el modelo la "vea"
   const [refImages, setRefImages] = useState([]); // TODAS las referencias subidas (p.ej. una por pared) → un render por cada una
-  const [originalRef, setOriginalRef] = useState(null); // PRIMERA imagen subida: se conserva para "Comparar" pase lo que pase
+  const [originalRef, setOriginalRef] = useState(null); // PRIMERA referencia: se conserva para Comparar
+  const [pdfComparePreview, setPdfComparePreview] = useState(null);
+  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
   const [floorPlan, setFloorPlan] = useState(null);    // plano en planta (dataURL)
   const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
   const [isGenerating, setIsGenerating] = useState(false);
@@ -509,7 +513,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Se dice el NÚMERO y ya está. Esta tabla tiene que decir lo mismo que
   // `COSTE_POR_MOTOR` de `backend/services/ai_usage.py`, que es quien cobra de
   // verdad; hay un candado que compara las dos y se pone rojo si se separan.
-  const COSTE_CREDITOS = { julio11: 1, banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
+  const COSTE_CREDITOS = { julio11: 1, julio11_plus: 1, banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
   const creditosPorRender = () => Math.ceil((COSTE_CREDITOS[providerOf()] ?? 1));
   const creditosDeEstaTanda = (n = 1) => creditosPorRender() * Math.max(1, n);
 
@@ -580,10 +584,9 @@ export default function AIRenderStudio({ state, setState }) {
     // funcionaba mejor y con este botón se rinde el mismo croquis por los dos
     // caminos y se miran las dos imágenes, en vez de discutirlo.
     if (motor === 'ia5') return 'julio';
-    // IA 7: el motor Pro. MISMO encargo que IA 1 —con
-    // recorte y lectura a ficha—, solo cambia el modelo, para que lo que se vea
-    // en las dos imágenes sea el modelo y no otra cosa. Cuesta 3,3x por render.
-    if (motor === 'ia7') return 'banana_pro';
+    // IA 7: copia de IA0 con reglas estrictas de geometría/vanos y una
+    // referencia visual de mayor calidad. IA0 permanece congelada.
+    if (motor === 'ia7') return 'julio11_plus';
     return 'gemini';
   };
   const [attached, setAttached] = useState(false);
@@ -1131,6 +1134,31 @@ export default function AIRenderStudio({ state, setState }) {
     const token = getToken();
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
+
+  // El PDF original se conserva para generar. Comparar utiliza únicamente una
+  // copia PNG de la primera página, preparada por el backend.
+  useEffect(() => {
+    const referencia = originalRef || refImage;
+    const esPdf = typeof referencia === 'string'
+      && referencia.slice(0, 80).toLowerCase().startsWith('data:application/pdf');
+    if (!esPdf) {
+      setPdfComparePreview(null);
+      setPdfPreviewLoading(false);
+      return undefined;
+    }
+    let activa = true;
+    setPdfPreviewLoading(true);
+    fetch(`${API_URL}/api/ai-engine/pdf-preview`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64: referencia }),
+    })
+      .then(r => r.json())
+      .then(d => { if (activa) setPdfComparePreview(d.success ? d.image : null); })
+      .catch(() => { if (activa) setPdfComparePreview(null); })
+      .finally(() => { if (activa) setPdfPreviewLoading(false); });
+    return () => { activa = false; };
+  }, [originalRef, refImage]);
 
   // Créditos de IA del usuario: se consultan al montar y tras cada generación.
   // FALLAR EN SILENCIO NO ES LO MISMO QUE NO ROMPER NADA.
@@ -3305,7 +3333,9 @@ export default function AIRenderStudio({ state, setState }) {
       setProgresoRefs({ hechas: 0, total: files.length });
       let n = 0;
       for (const file of files) {
-        const b64 = await downscaleImage(file);
+        const b64 = motor === 'ia7'
+          ? await downscaleImage(file, 3000, 0.96, 'image/png')
+          : await downscaleImage(file);
         await addReference(b64, 'subida');
         n += 1;
         setProgresoRefs({ hechas: n, total: files.length });
@@ -3328,13 +3358,21 @@ export default function AIRenderStudio({ state, setState }) {
   const handleFloorPlanUpload = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    try { setFloorPlan(await fileToDataUrl(file)); } catch { setError('No se pudo leer el plano.'); }
+    try {
+      setFloorPlan(motor === 'ia7'
+        ? await downscaleImage(file, 3000, 0.96, 'image/png')
+        : await fileToDataUrl(file));
+    } catch { setError('No se pudo leer el plano.'); }
   };
   const handleAddWallSketch = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    try { const b64 = await fileToDataUrl(file); setWallSketches(prev => [...prev, b64]); }
-    catch { setError('No se pudo leer el boceto.'); }
+    try {
+      const b64 = motor === 'ia7'
+        ? await downscaleImage(file, 3000, 0.96, 'image/png')
+        : await fileToDataUrl(file);
+      setWallSketches(prev => [...prev, b64]);
+    } catch { setError('No se pudo leer el boceto.'); }
   };
   const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
   const handleGenerateComposed = async () => {
@@ -3586,6 +3624,20 @@ export default function AIRenderStudio({ state, setState }) {
                 className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-error-100 text-error-800">
                 <Sparkles size={12} /> Créditos: sin lectura
               </span>
+            )}
+            {isMaster && (
+              <button
+                type="button"
+                onClick={() => setMotor(actual => actual === 'ia7' ? 'ia0' : 'ia7')}
+                title="Alternar entre la configuración estable y la prueba de mayor detalle"
+                className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black transition-colors ${
+                  motor === 'ia7'
+                    ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-300'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}>
+                <Wand2 size={12} />
+                {motor === 'ia7' ? 'Prueba activa' : 'Probar mejoras'}
+              </button>
             )}
             {aiCredits && (
               isMaster && !aiCredits.ilimitado ? (
@@ -4674,13 +4726,16 @@ export default function AIRenderStudio({ state, setState }) {
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
                 <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 min-h-[45vh]">
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
-                    {(originalRef || refImage).startsWith('data:image') ? (
-                      <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
+                    {(pdfComparePreview || originalRef || refImage).startsWith('data:image') ? (
+                      <img src={pdfComparePreview || originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
                     ) : (
                       <div className="text-center p-4">
-                        <FileText size={40} className="text-slate-400 mx-auto mb-2" />
-                        <p className="text-xs text-slate-500 font-bold">Referencia (PDF)</p>
-                        <p className="text-[10px] text-slate-400 mt-1">No se puede previsualizar un PDF en la comparativa</p>
+                        {pdfPreviewLoading
+                          ? <Loader size={40} className="text-slate-400 mx-auto mb-2 animate-spin" />
+                          : <FileText size={40} className="text-slate-400 mx-auto mb-2" />}
+                        <p className="text-xs text-slate-500 font-bold">
+                          {pdfPreviewLoading ? 'Preparando vista previa…' : 'No se pudo mostrar la vista previa'}
+                        </p>
                       </div>
                     )}
                     <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">Referencia</span>

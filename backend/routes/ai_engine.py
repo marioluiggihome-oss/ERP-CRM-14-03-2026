@@ -1148,6 +1148,31 @@ def _recortar_si_es_una_pagina(b64: str, mime: str = "image/png") -> str:
     return b64
 
 
+@ai_engine_router.post("/pdf-preview")
+async def pdf_preview(payload: dict, user=Depends(require_auth)):
+    """Devuelve la primera página de un PDF como PNG para la vista Comparar."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+        if not (("pdf" in b64[:60].lower()) or is_pdf_base64(stripped)):
+            raise HTTPException(status_code=400, detail="El archivo no es un PDF válido")
+        pages = pdf_base64_to_png_base64(stripped, dpi=180, max_pages=1) or []
+        if not pages:
+            raise HTTPException(status_code=422, detail="No se pudo preparar la vista previa")
+        page = pages[0]
+        if not page.startswith("data:"):
+            page = f"data:image/png;base64,{page}"
+        return {"success": True, "image": page}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("No se pudo preparar la vista previa del PDF: %s", e)
+        raise HTTPException(status_code=422, detail="No se pudo preparar la vista previa")
+
+
 @ai_engine_router.post("/describe-reference")
 async def describe_reference(payload: dict, user=Depends(require_auth)):
     """Describe una imagen/PDF de referencia (base64) para el render 3D."""

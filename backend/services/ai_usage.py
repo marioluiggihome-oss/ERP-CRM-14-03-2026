@@ -386,16 +386,15 @@ async def añadir_saldo(user_id: str, renders: int) -> int:
 
 # ─── Lo que cuesta cada motor, en créditos ───────────────────────────────────
 #
-# Hasta el 25/08/2026 el contador cobraba por TIPO de llamada («render») y punto,
-# así que un render con la IA 7 descontaba lo mismo que uno con la IA 1 aunque
-# cueste 3,3 veces más de verdad (CLAUDE.md, regla 1). El contador decía que se
-# habían gastado 10 renders y en el proveedor se habían gastado 33.
+# El mapa admite factores diferentes por perfil. IA0 y la prueba mejorada
+# comparten coste; el factor 3,3 se conserva solo para el perfil legado Pro.
 #
 # Los números salen de la propia nota del repositorio: banana_pro es «3,3x por
 # render». Se redondea HACIA ARRIBA al descontar, que es como se cobra: nadie
 # regala el trozo suelto.
 COSTE_POR_MOTOR = {
     "julio11": 1.0,
+    "julio11_plus": 1.0,
     "banana_pro": 3.3,
     "flux": 1.0,
     "manus": 1.0,
@@ -431,7 +430,7 @@ async def consume_credits(user: dict, kind: str, motor=None) -> dict:
         cost = int(credits_per.get(kind, 0) or 0)
     except (TypeError, ValueError):
         cost = 0
-    # Un render de la IA 7 cuesta 3,3 veces más: el contador tiene que decirlo.
+    # Aplica el factor del perfil efectivo antes de descontar.
     cost = coste_de_motor(kind, cost, motor)
 
     if cost > 0:
