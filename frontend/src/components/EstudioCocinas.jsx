@@ -431,7 +431,7 @@ export default function EstudioCocinas({ state, setState }) {
   const defaultLogo = state?.logo || null;
 
   // ── Permisos ──
-  const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true;
+  const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
 
   // ── Motor IA (solo master ve los motores de prueba) ──
   // ia0=camino histórico del 11/07, ia1=Gemini actual, ia2=Manus,

@@ -395,6 +395,7 @@ async def añadir_saldo(user_id: str, renders: int) -> int:
 # render». Se redondea HACIA ARRIBA al descontar, que es como se cobra: nadie
 # regala el trozo suelto.
 COSTE_POR_MOTOR = {
+    "julio11": 1.0,
     "banana_pro": 3.3,
     "flux": 1.0,
     "manus": 1.0,

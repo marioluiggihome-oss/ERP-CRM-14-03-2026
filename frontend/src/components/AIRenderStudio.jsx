@@ -472,7 +472,8 @@ export default function AIRenderStudio({ state, setState }) {
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
-  // Motor de render: 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
+  // Motor de render: 'ia0' = camino histórico del 11/07/2026,
+  // 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
   // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro.
   // ('ia2' e 'ia4' están apagadas.)
   const [motor, setMotor] = useState('ia1');
@@ -487,7 +488,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Se dice el NÚMERO y ya está. Esta tabla tiene que decir lo mismo que
   // `COSTE_POR_MOTOR` de `backend/services/ai_usage.py`, que es quien cobra de
   // verdad; hay un candado que compara las dos y se pone rojo si se separan.
-  const COSTE_CREDITOS = { banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
+  const COSTE_CREDITOS = { julio11: 1, banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
   const creditosPorRender = () => Math.ceil((COSTE_CREDITOS[providerOf()] ?? 1));
   const creditosDeEstaTanda = (n = 1) => creditosPorRender() * Math.max(1, n);
 
@@ -541,6 +542,8 @@ export default function AIRenderStudio({ state, setState }) {
     // motor sigue en el backend detras de MOTOR_MANUS_ACTIVO por si algun dia
     // se quiere. Aqui ni se ofrece ni se puede pedir: si quedara un 'ia2'
     // guardado en una pestaña vieja, cae al motor de siempre y rinde igual.
+    // IA 0: prueba histórica del render usado el 11/07/2026.
+    if (motor === 'ia0') return 'julio11';
     if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
     // IA 4 APAGADA el 24/08/2026, a peticion del master. No era un motor: en
     // `_render_dispatch` hacia `model_override="gemini-2.5-flash-image"`, que es
@@ -3918,7 +3921,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
+                    {(isMaster ? [['ia0', 'IA 0', 'Camino histórico del 11/07/2026 — mismo encargo y modelo de imagen de esa fecha'], ['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
                       <button key={id} onClick={() => setMotor(id)} title={title}
                         className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
                     ))}

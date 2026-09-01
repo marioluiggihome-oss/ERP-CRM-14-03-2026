@@ -5,7 +5,7 @@
 """CANDADO del motor de render. NO se cambia sin permiso del master.
 
 Estas pruebas no comprueban un calculo: comprueban una PROMESA. El motor que se
-elige en pantalla (IA 1/2/3/4) es una habilidad ya adquirida del Estudio 3D, y
+elige en pantalla (IA 0/1/2/3/4/5/7) es una habilidad ya adquirida del Estudio 3D, y
 cambiarla en silencio significa que el usuario cree seguir en su motor y no lo
 esta. Paso el 03/08: al enrutar el boton principal por el render compuesto,
 este llamaba directamente a Gemini estandar y se saltaba el motor elegido.
@@ -16,6 +16,7 @@ falta pedirselo al master y actualizar tambien este fichero, a proposito y
 dejando constancia.
 
 Mapa que se protege (frontend `providerOf()` -> backend `_render_dispatch`):
+    IA 0 -> julio11         (camino histórico del 11/07/2026; solo master)
     IA 1 -> gemini          (Gemini estandar; el de siempre, y el UNICO que ve
                              un usuario que no sea master)
     IA 3 -> gemini_premium  (prompt ultra-fotorrealista)
@@ -69,6 +70,7 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # IA 2 e IA 4 (apagadas) e IA 5 (que es un encargo, no un motor) tienen su
 # propio candado; ver la nota de arriba.
 MOTORES = {
+    "IA 0": "julio11",
     "IA 1": "gemini",
     "IA 3": "gemini_premium",
     "IA 7": "banana_pro",
@@ -76,7 +78,7 @@ MOTORES = {
 
 # Lo que la pantalla del Estudio 3D ofrece de verdad, por rol. El usuario normal
 # solo tiene el motor de produccion; el resto son motores de pruebas del master.
-MOTORES_EN_PANTALLA_MASTER = {"ia1", "ia3", "ia5", "ia7"}
+MOTORES_EN_PANTALLA_MASTER = {"ia0", "ia1", "ia3", "ia5", "ia7"}
 MOTORES_EN_PANTALLA_USUARIO = {"ia1"}
 
 
@@ -241,7 +243,7 @@ def test_cada_motor_de_la_pantalla_tiene_a_donde_ir():
         if motor == "ia5":
             continue  # se intercepta antes del repartidor; ver test_calculo_ia5_22julio
         provider = re.search(
-            rf"motor === '{motor}'\) return '([a-z_]+)'", cuerpo).group(1)
+            rf"motor === '{motor}'\) return '([a-z0-9_]+)'", cuerpo).group(1)
         assert f'provider == "{provider}"' in dispatch, (
             f"{motor} pide el motor '{provider}' y `_render_dispatch` no sabe "
             f"que es: el render saldria por Gemini estandar sin avisar")

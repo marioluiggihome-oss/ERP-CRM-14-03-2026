@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RENDER = ROOT / "backend/services/luiggi_ai/render_3d.py"
 HISTORICAL = ROOT / "backend/services/luiggi_ai/render_11jul.py"
 ESTUDIO = ROOT / "frontend/src/components/EstudioCocinas.jsx"
+RENDER_STUDIO = ROOT / "frontend/src/components/AIRenderStudio.jsx"
 
 
 def _leer(path: Path) -> str:
@@ -53,3 +54,10 @@ def test_ia1_sigue_siendomotor_gemini_y_ia0_tiene_boton():
     assert "['ia0','IA 0'" in ui
     assert "const [motorIA, setMotorIA] = useState('ia1');" in ui
     assert "return 'gemini';" in ui
+
+
+def test_render_studio_visible_para_master_y_envia_ia0():
+    ui = _leer(RENDER_STUDIO)
+    assert "state?.currentUser?.isMaster === true" in ui
+    assert "if (motor === 'ia0') return 'julio11';" in ui
+    assert "['ia0', 'IA 0'" in ui
