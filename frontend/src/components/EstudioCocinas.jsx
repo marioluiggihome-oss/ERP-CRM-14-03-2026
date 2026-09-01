@@ -40,6 +40,14 @@ import { jsPDF } from 'jspdf';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
+const mensajePublico = (valor, fallback = 'No se pudo completar la operación. Inténtalo de nuevo.') => {
+  if (valor === null || valor === undefined || valor === '') return valor;
+  const texto = String(valor);
+  return /\b(?:IA|Gemini|Manus|OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider)\b/i.test(texto)
+    ? fallback
+    : texto;
+};
+
 // ─── Hook Web Speech API (voz que se AÑADE al texto, no lo pisa) ─────────────
 
 // ─── Temas ────────────────────────────────────────────────────────────────────
@@ -582,7 +590,7 @@ export default function EstudioCocinas({ state, setState }) {
       });
       setRender(s => ({ ...s, status: 'success', msg: 'Render guardado en galería' }));
     } catch (err) {
-      setRender(s => ({ ...s, status: 'error', msg: err.message }));
+      setRender(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
   }, [render.imageUrl, render.originalUrl, proy]);
 
@@ -650,7 +658,7 @@ export default function EstudioCocinas({ state, setState }) {
           setProy(p => ({ ...p, descripcion: p.descripcion ? `${p.descripcion} ${r.texto || ''}` : (r.texto || '') }));
           setRender(s => ({ ...s, status: 'success', msg: 'Audio transcrito' }));
         } catch (err) {
-          setRender(s => ({ ...s, status: 'error', msg: err.message }));
+          setRender(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
         }
       };
       mr.start();
@@ -710,11 +718,11 @@ export default function EstudioCocinas({ state, setState }) {
       if (!res.ok || !data.success) throw new Error(data.error || data.detail || 'No se pudo generar el render');
 
       const u = data.result?.images?.[0] || data.imageUrl;
-      if (!u) throw new Error('El motor no devolvió ninguna imagen');
+      if (!u) throw new Error('No se recibió ninguna imagen');
       const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
-      setRender(s => ({ ...s, status: 'success', msg: `Render generado [${motorIA.toUpperCase()}]`, imageUrl: shown, originalUrl: u }));
+      setRender(s => ({ ...s, status: 'success', msg: 'Render generado', imageUrl: shown, originalUrl: u }));
     } catch (err) {
-      setRender(s => ({ ...s, status: 'error', msg: err.message }));
+      setRender(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
     }, [proy, render.croquis, freeDesign, motorIA]);
   const editRender = useCallback(async () => {
@@ -740,11 +748,11 @@ export default function EstudioCocinas({ state, setState }) {
       const r = await res.json().catch(() => ({}));
       if (!res.ok || !r.success) throw new Error(r.error || r.detail || 'No se pudo editar el render');
       const u = r.result?.images?.[0] || r.imageUrl;
-      if (!u) throw new Error('El motor no devolvió ninguna imagen');
+      if (!u) throw new Error('No se recibió ninguna imagen');
       const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
       setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: shown, originalUrl: u, editMode: false, editTxt: '' }));
     } catch (err) {
-      setRender(s => ({ ...s, status: 'error', msg: err.message }));
+      setRender(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
   }, [render.imageUrl, render.originalUrl, render.editTxt]);
 
@@ -967,7 +975,7 @@ export default function EstudioCocinas({ state, setState }) {
       const r = await apiPost('/ficha-tecnica', { ...proy, distribucion_estructurada: distribucion });
       setFicha(s => ({ ...s, status: 'success', msg: `Ficha generada · ${r.referencia}`, md: r.fichaMarkdown, ref: r.referencia }));
     } catch (err) {
-      setFicha(s => ({ ...s, status: 'error', msg: err.message }));
+      setFicha(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
   }, [proy, distribucion]);
 
@@ -978,7 +986,7 @@ export default function EstudioCocinas({ state, setState }) {
       const r = await apiPost('/presentacion', { ...proy, distribucion_estructurada: distribucion });
       setPres(s => ({ ...s, status: 'success', msg: 'Presentación lista', html: r.presentacionHtml }));
     } catch (err) {
-      setPres(s => ({ ...s, status: 'error', msg: err.message }));
+      setPres(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
   }, [proy, distribucion]);
 
@@ -1003,7 +1011,7 @@ export default function EstudioCocinas({ state, setState }) {
       });
       setInst(s => ({ ...s, status: 'success', msg: 'Plan de instalaciones generado', data: r }));
     } catch (err) {
-      setInst(s => ({ ...s, status: 'error', msg: err.message }));
+      setInst(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
   }, [proy, distribucion]);
 
@@ -1265,7 +1273,7 @@ export default function EstudioCocinas({ state, setState }) {
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
                 rec ? 'bg-red-600 text-white animate-pulse' : t.micIdle
               }`}
-              title="Grabar audio y transcribir con IA"
+              title="Grabar audio y transcribir"
             >
               {rec ? <><MicOff size={12}/> Parar</> : <><Mic size={12}/> Grabar</>}
             </button>
@@ -1397,28 +1405,13 @@ export default function EstudioCocinas({ state, setState }) {
                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                       freeDesign ? 'bg-purple-600 text-white shadow-lg' : `${t.tabInactive}`
                     }`}>
-                    <Wand2 size={12}/> Diseño libre IA
+                    <Wand2 size={12}/> Diseño libre
                   </button>
                 </div>
                 {freeDesign && (
                   <p className="text-[10px] text-purple-500 font-medium px-1">
-                    La IA generará un diseño a su criterio sin seguir el plano adjunto
+                    Se generará un diseño a su criterio sin seguir el plano adjunto
                   </p>
-                )}
-
-                {/* Selector de motor IA — solo master */}
-                {isMaster && (
-                  <div className={`flex items-center gap-2 p-2 rounded-lg ${t.card}`}>
-                    <span className={`text-[9px] font-black uppercase tracking-widest ${t.motorText} whitespace-nowrap`}>Motor</span>
-                    <div className="flex bg-slate-100/10 rounded-lg p-0.5 gap-0.5 flex-1">
-                      {[['ia0','IA 0','Prueba histórica — camino del 11/07/2026'],['ia1','IA 1','Motor actual de producción (Gemini)'],['ia2','IA 2','Motor alternativo (Manus)'],['ia3','IA 3','Gemini premium'],['ia4','IA 4','Gemini flash']].map(([id,lbl,title]) => (
-                        <button key={id} onClick={() => setMotorIA(id)} title={title}
-                          className={`flex-1 py-1 rounded-md text-[9px] font-black transition-all ${
-                            motorIA === id ? 'bg-indigo-600 text-white' : `${t.tabInactive}`
-                          }`}>{lbl}</button>
-                      ))}
-                    </div>
-                  </div>
                 )}
 
                 <button onClick={genRender} disabled={render.status === 'loading'}
@@ -1498,7 +1491,7 @@ export default function EstudioCocinas({ state, setState }) {
                               if (!u) throw new Error('Sin imagen');
                               const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
                               setRenderB({ status: 'success', msg: 'Render B listo', imageUrl: shown });
-                            } catch (e) { setRenderB({ status: 'error', msg: e.message, imageUrl: null }); }
+                            } catch (e) { setRenderB({ status: 'error', msg: mensajePublico(e.message), imageUrl: null }); }
                           }} disabled={renderB.status === 'loading'}
                             className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-[9px] font-black uppercase">
                             {renderB.status === 'loading' ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10}/>} Generar B

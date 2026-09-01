@@ -64,6 +64,16 @@ import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Nunca se muestran en pantalla detalles del proveedor o del modelo, ni aunque
+// lleguen incluidos en un error técnico del servidor.
+const mensajePublico = (valor, fallback = 'No se pudo completar la operación. Inténtalo de nuevo.') => {
+  if (valor === null || valor === undefined || valor === '') return valor;
+  const texto = String(valor);
+  return /\b(?:IA|Gemini|Manus|OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider)\b/i.test(texto)
+    ? fallback
+    : texto;
+};
+
 // Tipos de marca de instalaciones para señalar sobre el render (gremios).
 // `h` = altura estándar de la instalación (cm desde el suelo), que se muestra
 // como COTA junto a cada punto. `Icon` = icono (no letras).
@@ -422,7 +432,7 @@ export default function AIRenderStudio({ state, setState }) {
   // se unifica todo en Estudio 3D + Agentes.
   const OTRAS_HERRAMIENTAS = [
     { tab: 'agentesDisenadores', label: 'Agentes' },
-    { tab: 'cocinasai', label: 'Cocinas IA 2' },
+    { tab: 'cocinasai', label: 'Cocinas 2' },
     { tab: 'kitchenDesigner', label: 'Diseñador 3D' },
     { tab: 'estudioCocinas', label: 'Estudio técnico' },
   ];
@@ -437,7 +447,13 @@ export default function AIRenderStudio({ state, setState }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderResult, setRenderResult] = useState(null);
   const [renderHistory, setRenderHistory] = useState([]);
-  const [error, setError] = useState(null);
+  const [error, setErrorInterno] = useState(null);
+  const setError = useCallback((valor) => {
+    setErrorInterno(anterior => {
+      const siguiente = typeof valor === 'function' ? valor(anterior) : valor;
+      return mensajePublico(siguiente);
+    });
+  }, []);
   // Avisos: la vista SÍ se generó, pero hubo que corregir algo (un ancho
   // ajustado, un relleno añadido). En rojo y con la palabra «Error» delante
   // parecía que había fallado, y no.
@@ -826,7 +842,7 @@ export default function AIRenderStudio({ state, setState }) {
         const validas = (d.marks || []).filter(m => MARK_TYPES[m.type]?.tipos?.includes(tipo3d));
         setMarks(validas); setMarkTool(null);
         if (validas.length) setSchematic(true);
-        else setError('La IA no localizó puntos claros; márcalos a mano.');
+        else setError('No se localizaron puntos claros; márcalos a mano.');
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
     } catch (e) { setError(`Error al detectar instalaciones: ${e?.message || 'fallo de conexión'}`); }
     finally { setDetecting(false); }
@@ -848,7 +864,7 @@ export default function AIRenderStudio({ state, setState }) {
         setOrbitFrames(d.images); setOrbitIndex(Math.floor(d.images.length / 2)); setOrbitOn(true);
         setInteractiveMode(false);
       } else if (r.status === 402) {
-        setError(d.detail || 'Sin créditos de IA para generar el giro 360º.');
+        setError(d.detail || 'Sin créditos disponibles para generar el giro 360º.');
       } else {
         setError(d.detail || d.error || 'No se pudo generar el giro. Inténtalo de nuevo.');
       }
@@ -975,7 +991,7 @@ export default function AIRenderStudio({ state, setState }) {
   // ─── PDF de ESQUEMA PARA EL GREMIO (fontanero/electricista) ─────────────────
   const esquemaGremioPDF = async () => {
     if (!currentImage()) return;
-    if (!marks.length) { setError('No hay tomas marcadas. Pulsa «Detectar auto (IA)» o márcalas a mano antes de generar el esquema.'); return; }
+    if (!marks.length) { setError('No hay tomas marcadas. Pulsa «Detectar automáticamente» o márcalas a mano antes de generar el esquema.'); return; }
     setDownloading(true);
     try {
       const img = await renderMarcadoDataUrl(2);
@@ -1039,7 +1055,7 @@ export default function AIRenderStudio({ state, setState }) {
         pdf.text(`x${n}  ·  h ${t.h} cm`, cx + 7, cy + 4);
       });
       pdf.setFontSize(7); pdf.setTextColor(150); pdf.setFont(undefined, 'normal');
-      pdf.text('Esquema orientativo generado por IA para coordinación con el gremio. Verificar in situ.', M, H - 4);
+      pdf.text('Esquema orientativo para coordinación con el gremio. Verificar in situ.', M, H - 4);
       pdf.save(`esquema_gremio_${(cliente || ref || 'cocina').replace(/\s+/g, '_')}.pdf`);
     } catch (e) { setError('No se pudo generar el esquema: ' + (e.message || '')); }
     finally { setDownloading(false); }
@@ -3406,7 +3422,7 @@ export default function AIRenderStudio({ state, setState }) {
           // 402 = sin créditos: se detiene y se muestra el mensaje del backend.
           if (response.status === 402) {
             const d = await response.json().catch(() => ({}));
-            noCreditsMsg = d.detail || 'Sin créditos de IA.';
+            noCreditsMsg = d.detail || 'Sin créditos disponibles.';
             break;
           }
           const data = await response.json();
@@ -3446,7 +3462,7 @@ export default function AIRenderStudio({ state, setState }) {
       // 402 = sin créditos de IA: propaga el detalle del backend.
       if (response.status === 402) {
         const d = await response.json().catch(() => ({}));
-        const e = new Error(d.detail || 'Sin créditos de IA.');
+        const e = new Error(d.detail || 'Sin créditos disponibles.');
         e.noCredits = true;
         throw e;
       }
@@ -3491,7 +3507,7 @@ export default function AIRenderStudio({ state, setState }) {
           referenceImages: (refImages && refImages.length > 1) ? refImages.slice(1) : undefined,
         }),
       });
-      if (response.status === 402) { const d = await response.json().catch(() => ({})); setError(d.detail || 'Sin créditos de IA.'); return; }
+      if (response.status === 402) { const d = await response.json().catch(() => ({})); setError(d.detail || 'Sin créditos disponibles.'); return; }
       const data = await response.json();
       if (data.success) {
         const merged = { ...data, description: 'Amueblado virtual sobre estancia real' };
@@ -3555,7 +3571,7 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
             <div>
               <h1 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide leading-tight whitespace-nowrap">Estudio 3D</h1>
-              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Motor de IA</p>
+              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Diseño y visualización</p>
             </div>
             {/* Créditos de IA del usuario (bolsa mensual).
                 Para el MASTER el contador es además el botón de recarga: el
@@ -3599,7 +3615,7 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
               ) : (
                 <span
-                  title="Créditos de IA disponibles este mes"
+                  title="Créditos disponibles este mes"
                   className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black ${
                     aiCredits.ilimitado
                       ? 'bg-indigo-100 text-indigo-700'
@@ -3939,17 +3955,8 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               )}
 
-              {/* Acción principal — barra fija siempre visible */}
+                {/* Acción principal — barra fija siempre visible */}
               <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
-                  <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia0', 'IA 0', 'Camino histórico del 11/07/2026 — mismo encargo y modelo de imagen de esa fecha'], ['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
-                      <button key={id} onClick={() => setMotor(id)} title={title}
-                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
-                    ))}
-                  </div>
-                </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
@@ -4080,7 +4087,7 @@ export default function AIRenderStudio({ state, setState }) {
               <button
                 onClick={handleGenerateParams}
                 disabled={isGenerating}
-                title="Generar el render 3D con los parámetros de arriba (consume créditos de IA)"
+                title="Generar el render 3D con los parámetros de arriba (consume créditos)"
                 className="w-full py-4 bg-gradient-to-r from-accion-600 to-accion-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shrink-0"
               >
                 {isGenerating ? (
@@ -4193,7 +4200,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <span>{pared.nombre}:</span>
                       <select value={pared.ancho} disabled={corrigiendo}
                         onChange={(ev) => cambiarAnchoPared(i, parseInt(ev.target.value, 10))}
-                        title="Ancho REAL de esta pared. Si lo cambias, manda sobre lo que haya leído la IA."
+                        title="Ancho REAL de esta pared. Si lo cambias, manda sobre la medida detectada."
                         className="px-1 py-0.5 rounded border border-dato-300 bg-white text-dato-900 font-black text-[12px] disabled:opacity-50">
                         {/* De 100 a 600 de 10 en 10, más el valor actual por si
                             viene de un croquis y no cae en la rejilla. */}
@@ -4203,7 +4210,7 @@ export default function AIRenderStudio({ state, setState }) {
                       </select>
                       <span className="font-normal">
                         ({pared.ancho_corregido ? 'corregida por ti'
-                          : pared.ancho_escrito ? 'medida real' : 'estimada por la IA'})
+                          : pared.ancho_escrito ? 'medida real' : 'estimada automáticamente'})
                       </span>
                       {/* La suma TIENE que cuadrar con la pared. El validador ya
                           la cuadra; enseñarlo es la red por si algún día no. */}
@@ -4221,7 +4228,7 @@ export default function AIRenderStudio({ state, setState }) {
                                 : 'bg-teal-100/60 border-teal-200 border-dashed'}`}
                           title={e.corregida ? 'Medida corregida por ti: se respeta tal cual'
                             : e.medida_escrita ? 'Medida escrita en tu croquis'
-                              : 'Medida deducida por la IA a ojo — compruébala'}>
+                              : 'Medida aproximada — compruébala'}>
                           <span className="truncate max-w-[110px]">{e.label}</span>
                           {esPiezaAMedida(e.id) ? (
                             <input type="number" step="0.1" min="0.1" max="200"
@@ -4251,7 +4258,7 @@ export default function AIRenderStudio({ state, setState }) {
                           if (m) añadirModulo(i, m);
                           ev.target.value = '';
                         }}
-                        title="Añadir un módulo que la IA no haya visto. Se pone al final de la pared."
+                        title="Añadir un módulo que no se haya detectado. Se pone al final de la pared."
                         className="rounded-lg border border-dashed border-accion-400 bg-white px-1.5 py-0.5 text-[11px] font-black text-accion-700 disabled:opacity-50">
                         <option value="">+ añadir…</option>
                         {MODULOS_PARA_AÑADIR.map(m => <option key={m.id} value={m.id}>{m.label} ({m.ancho})</option>)}
@@ -4264,7 +4271,7 @@ export default function AIRenderStudio({ state, setState }) {
                 {corrigiendo
                   ? 'Aplicando la corrección…'
                   : <>Las medidas SIN «~» están escritas en tu croquis o las has corregido tú. Las que
-                    llevan «~» las ha deducido la IA a ojo. <b>Cámbialas aquí</b> y se dibujará con lo que
+                    llevan «~» son aproximadas. <b>Cámbialas aquí</b> y se dibujará con lo que
                     tú digas: lo que corriges se respeta tal cual y el resto se cuadra alrededor.</>}
               </div>
               {(distDetectada.avisos || []).length > 0 && (
@@ -4490,7 +4497,7 @@ export default function AIRenderStudio({ state, setState }) {
                   </div>
                 </div>
                 <p className="text-lg font-black text-slate-700 uppercase tracking-wider">Generando render</p>
-                <p className="text-sm text-slate-500 mt-2">El motor de IA está creando tu diseño 3D...</p>
+                <p className="text-sm text-slate-500 mt-2">Preparando tu diseño 3D...</p>
                 <p className="text-xs text-slate-400 mt-1">Esto puede tardar hasta 30 segundos</p>
               </div>
             </div>
@@ -4622,7 +4629,7 @@ export default function AIRenderStudio({ state, setState }) {
                 ) : (
                   <button onClick={generarOrbita} disabled={orbitLoading}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors"
-                    title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos de IA)">
+                    title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos)">
                     {orbitLoading ? <Loader size={12} className="animate-spin" /> : <RotateCw size={12} />}
                     <span className="hidden sm:inline truncate">{orbitLoading ? 'Generando…' : '360º'}</span>
                   </button>
@@ -4700,7 +4707,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
                   <button onClick={() => detectInstalaciones()} disabled={detecting}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
-                    {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar auto (IA)'}
+                    {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar automáticamente'}
                   </button>
                   <button onClick={() => setSchematic(s => !s)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${schematic ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
@@ -4743,7 +4750,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <button onClick={alternarMedidas} disabled={editing || !renderResult}
                       title={vistaConCotas
                         ? 'Volver a la foto. Ahora estás viendo el plano acotado del MISMO diseño; el render sigue guardado.'
-                        : 'INTERRUPTOR: enseña el mismo diseño con las medidas puestas, y al volver a pulsar recupera la foto tal cual. No genera nada nuevo ni gasta créditos. Las cotas se dibujan desde las medidas reales: la IA nunca escribe cotas sobre la foto.'}
+                        : 'INTERRUPTOR: enseña el mismo diseño con las medidas puestas, y al volver a pulsar recupera la foto tal cual. No genera nada nuevo ni gasta créditos. Las cotas se dibujan desde las medidas reales y no se escriben sobre la foto.'}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-black disabled:opacity-50 flex items-center gap-1.5 ${
                         vistaConCotas
                           ? 'bg-ok-600 text-white hover:bg-ok-700'
@@ -4761,7 +4768,7 @@ export default function AIRenderStudio({ state, setState }) {
                       {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Plano CAD limpio
                     </button>
                     <button onClick={generarPerspectiva} disabled={editing}
-                      title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, no por una IA. Sin cotas: es de presentación."
+                      title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, sin regenerar la imagen. Sin cotas: es de presentación."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-stone-700 text-white hover:bg-stone-800 disabled:opacity-50 flex items-center gap-1.5">
                       {editing ? <Loader size={12} className="animate-spin" /> : <>✎</>} Boceto en perspectiva
                     </button>
@@ -4910,7 +4917,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="text-center p-8 max-w-sm">
                     <Image size={40} className="text-slate-500 mx-auto mb-3" />
                     <p className="text-slate-300 text-sm font-bold mb-1">No se pudo cargar la imagen del render</p>
-                    <p className="text-slate-500 text-xs">El motor devolvió el render pero la imagen no se pudo mostrar. Vuelve a generar; si persiste, avísanos para revisar el motor.</p>
+                    <p className="text-slate-500 text-xs">El render se generó pero la imagen no se pudo mostrar. Vuelve a generar; si persiste, avísanos para revisarlo.</p>
                   </div>
                 ) : (
                   <div className="text-center p-8">
@@ -4920,20 +4927,9 @@ export default function AIRenderStudio({ state, setState }) {
                         ? 'Render completado. La imagen se está procesando.'
                         : 'Render en proceso...'}
                     </p>
-                    {renderResult?.prompt_used && (
-                      <p className="text-slate-500 text-xs mt-4 max-w-md mx-auto italic">
-                        "{renderResult.prompt_used.substring(0, 200)}..."
-                      </p>
-                    )}
                   </div>
                 )}
 
-                {/* Badge del motor */}
-                <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg">
-                  <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">
-                    Render 3D IA
-                  </span>
-                </div>
               </div>
               </>
               )}
@@ -5063,32 +5059,9 @@ export default function AIRenderStudio({ state, setState }) {
                   {renderResult?.parsed_params?.layout && (
                     <span>Layout: {renderResult.parsed_params.layout}</span>
                   )}
-                  {/* El nombre del motor no se muestra: no aporta nada a quien
-                      mira el render y no tiene por qué salir en pantalla. El
-                      backend lo sigue devolviendo (`engine`) para el registro. */}
-                  {/* EL MODELO SÍ, PERO SOLO CUANDO NO ES EL DE SIEMPRE.
-                      Comparando dos motores hace falta saber cuál pintó cada
-                      imagen; el resto del tiempo es ruido. */}
-                  {isMaster && renderResult?.parsed_params?.motorUsado
-                    && renderResult.parsed_params.motorUsado !== 'Estándar' && (
-                    <span>Motor: {renderResult.parsed_params.motorUsado}</span>
-                  )}
                 </div>
               )}
 
-              {/* SI EL MODELO PEDIDO FALLÓ, SE DICE.
-                  La cascada de modelos existe para que un modelo retirado no
-                  deje al ERP sin renders, y está bien. Pero cuando se están
-                  comparando dos motores es una trampa: se pide Banana Pro,
-                  falla, pinta el pequeño, y sale una imagen con toda la pinta
-                  de ser la buena. Quien compara sacaría la conclusión al revés. */}
-              {renderResult?.parsed_params?.motorDeRespaldo && (
-                <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
-                  <span className="font-bold">⚠ Este render NO es del motor que pediste: </span>
-                  falló el motor <b>{renderResult.parsed_params.motorDeRespaldo}</b> y lo ha pintado el{' '}
-                  <b>{renderResult.parsed_params.motorUsado}</b>. No lo uses para comparar motores.
-                </div>
-              )}
 
               {/* LO QUE EL ERP HA LEÍDO DEL DIBUJO.
                   Cuando un render sale mal hay DOS culpables posibles: que se
@@ -5413,7 +5386,7 @@ export default function AIRenderStudio({ state, setState }) {
 
       {/* Saldo de renders: acceso siempre visible, para poder recargar
           sin salir del estudio cuando se agota el cupo. */}
-      <button onClick={() => setVerRecarga(true)} title="Tus renders de IA"
+      <button onClick={() => setVerRecarga(true)} title="Tus renders"
         className="fixed bottom-4 right-4 z-[60] px-3 py-2 rounded-full bg-accion-600 hover:bg-accion-700 text-white text-xs font-black shadow-lg flex items-center gap-1.5">
         <Zap size={14} /> Mis renders
       </button>

@@ -8,6 +8,7 @@ RENDER = ROOT / "backend/services/luiggi_ai/render_3d.py"
 HISTORICAL = ROOT / "backend/services/luiggi_ai/render_11jul.py"
 ESTUDIO = ROOT / "frontend/src/components/EstudioCocinas.jsx"
 RENDER_STUDIO = ROOT / "frontend/src/components/AIRenderStudio.jsx"
+AI_ENGINE_ROUTE = ROOT / "backend/routes/ai_engine.py"
 
 
 def _leer(path: Path) -> str:
@@ -48,20 +49,20 @@ def test_ia0_esta_aislada_y_fuerza_modelo_historico():
     assert 'parsed_params["motor"] = "IA 0 — camino del 11/07/2026"' in src
 
 
-def test_ia1_sigue_siendomotor_gemini_y_ia0_tiene_boton():
+def test_ia0_es_interna_y_predeterminada_en_estudio_cocinas():
     ui = _leer(ESTUDIO)
     assert "if (motorIA === 'ia0') return 'julio11';" in ui
-    assert "['ia0','IA 0'" in ui
     assert "const [motorIA, setMotorIA] = useState('ia0');" in ui
     assert "return 'gemini';" in ui
+    assert "['ia0','IA 0'" not in ui
 
 
-def test_render_studio_visible_para_master_y_envia_ia0():
+def test_ia0_es_interna_y_predeterminada_en_render_studio():
     ui = _leer(RENDER_STUDIO)
-    assert "state?.currentUser?.isMaster === true" in ui
     assert "const [motor, setMotor] = useState('ia0');" in ui
     assert "if (motor === 'ia0') return 'julio11';" in ui
-    assert "['ia0', 'IA 0'" in ui
+    assert "['ia0', 'IA 0'" not in ui
+    assert "Render 3D IA" not in ui
 
 
 def test_cambios_no_encadenan_renders_degradados():
@@ -71,3 +72,21 @@ def test_cambios_no_encadenan_renders_degradados():
     assert "const dataUrl = editBaseImage || await imageToDataUrl(baseImg);" in ui
     assert "CAMBIOS YA APLICADOS QUE DEBES CONSERVAR" in ui
     assert "setEditAppliedChanges(prev => [...prev, ...allLines]);" in ui
+
+
+def test_api_no_expone_metadatos_tecnicos_del_render():
+    src = _leer(AI_ENGINE_ROUTE)
+    for campo in ("engine", "provider", "prompt_used", "model", "motorUsado", "motorDeRespaldo"):
+        assert f'"{campo}"' in src
+    assert "def limpiar_respuesta_render" in src
+    assert src.count("return limpiar_respuesta_render(result)") >= 5
+    assert "return limpiar_respuesta_render(final)" in src
+
+
+def test_interfaz_filtra_errores_tecnicos_del_servidor():
+    studio = _leer(RENDER_STUDIO)
+    cocinas = _leer(ESTUDIO)
+    assert "const mensajePublico" in studio
+    assert "const mensajePublico" in cocinas
+    assert "OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider" in studio
+    assert "OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider" in cocinas

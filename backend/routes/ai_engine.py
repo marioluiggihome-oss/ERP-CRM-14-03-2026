@@ -47,6 +47,34 @@ logger = logging.getLogger("luiggi_ai.router")
 
 ai_engine_router = APIRouter(prefix="/ai-engine", tags=["LuiggiAI Engine"])
 
+# Metadatos útiles para diagnóstico interno que no deben viajar al navegador.
+# Se conservan en logs/servicios y se eliminan únicamente de la respuesta pública.
+_CAMPOS_TECNICOS_RENDER = {
+    "engine", "provider", "prompt_used", "model", "model_used",
+    "motor", "motorUsado", "motorDeRespaldo", "modelo_pedido",
+}
+
+
+def limpiar_respuesta_render(valor):
+    """Retira proveedor/modelo/prompt de una respuesta antes de exponerla."""
+    if isinstance(valor, list):
+        return [limpiar_respuesta_render(item) for item in valor]
+    if not isinstance(valor, dict):
+        return valor
+    limpia = {}
+    for clave, contenido in valor.items():
+        if clave in _CAMPOS_TECNICOS_RENDER:
+            continue
+        if clave in {"error", "detail", "message"} and isinstance(contenido, str):
+            if any(p in contenido.lower() for p in (
+                "gemini", "manus", "openai", "anthropic", "claude", "flux",
+                "banana", "motor", "modelo", "proveedor", "provider",
+            )):
+                limpia[clave] = "No se pudo completar la operación. Inténtalo de nuevo."
+                continue
+        limpia[clave] = limpiar_respuesta_render(contenido)
+    return limpia
+
 _db = _get_db()  # cliente MongoDB compartido (singleton)
 
 
@@ -506,8 +534,8 @@ async def get_engine_status(user=Depends(require_auth)):
     """Health check del motor LuiggiAI."""
     engine = get_engine()
     status = engine.get_status()
-    status["user"] = user.get("username", "unknown")
-    return status
+    disponible = bool(status) and str(status.get("status", "")).lower() not in {"error", "failed", "unavailable"}
+    return {"success": disponible, "status": "available" if disponible else "unavailable"}
 
 
 @ai_engine_router.get("/diagnostics")
@@ -554,28 +582,8 @@ async def engine_diagnostics(user=Depends(require_auth)):
     if manus_http_status is not None:
         manus_auth_ok = manus_http_status not in (401, 403)
 
-    return {
-        "render_provider_config": provider,
-        "effective_engine": effective,
-        "manus": {
-            "key_present": manus_present,
-            "key_length": len(manus_key) if manus_present else 0,
-            "reachable": manus_reachable,
-            "http_status": manus_http_status,
-            "auth_ok": manus_auth_ok,
-            "error": manus_error,
-        },
-        "gemini": {"key_present": gemini_present, "sdk_available": gemini_sdk},
-        "hint": (
-            "Falta configurar MANUS_API_KEY en el servidor: IA 2 caerá a Gemini."
-            if not manus_present
-            else "MANUS_API_KEY presente pero el proveedor la rechaza (401/403): "
-                 "IA 2 caerá a Gemini." if manus_auth_ok is False
-            else "El render usará MANUS." if effective == "manus"
-            else "El render usará GEMINI (respaldo)." if effective == "gemini"
-            else "Falta configurar la clave del motor de IA en el servidor."
-        ),
-    }
+    disponible = effective != "ninguno"
+    return {"success": disponible, "status": "available" if disponible else "unavailable"}
 
 
 @ai_engine_router.get("/materials")
@@ -659,7 +667,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")
-    return result
+    return limpiar_respuesta_render(result)
 
 
 # ─── El MOTOR de render lo elige el master, y se comprueba AQUÍ ──────────────
@@ -724,7 +732,7 @@ async def generate_render_compose(request: RenderComposeRequest, user=Depends(re
         f"plano={bool(request.floorPlan)} bocetos={len(request.wallSketches or [])} "
         f"referencias={len(request.referenceImages or [])}"
     )
-    return result
+    return limpiar_respuesta_render(result)
 
 
 class OrbitRequest(BaseModel):
@@ -754,7 +762,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
         if not credits.get("ilimitado"):
             restantes = int(credits.get("restantes", 0) or 0)
             if restantes <= 0:
-                raise HTTPException(status_code=402, detail="Sin créditos de IA para generar el giro 360º.")
+                raise HTTPException(status_code=402, detail="Sin créditos disponibles para generar el giro 360º.")
             n = min(n, restantes)
         for _ in range(n):
             await consume_credits(user, "render",
@@ -780,7 +788,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
         provider=motor_permitido(user, request.provider),
     )
     logger.info(f"Orbit 360º por {user.get('username')}: {result.get('count', 0)} vistas")
-    return result
+    return limpiar_respuesta_render(result)
 
 
 class UpscaleRequest(BaseModel):
@@ -859,7 +867,7 @@ async def generate_render_params(request: RenderParamsRequest, user=Depends(requ
     )
 
     logger.info(f"Render (params) solicitado por {user.get('username')}")
-    return result
+    return limpiar_respuesta_render(result)
 
 
 @ai_engine_router.post("/transcribe")
@@ -989,9 +997,10 @@ async def analyze_document(
         task_id = result["task_id"]
         final = await engine.wait_for_completion(task_id, timeout=120)
         logger.info(f"Análisis '{analysis_type}' solicitado por {user.get('username')}")
-        return final
+        return limpiar_respuesta_render(final)
 
-    raise HTTPException(status_code=500, detail=result.get("error", "Error al analizar"))
+    error = limpiar_respuesta_render({"error": result.get("error", "Error al analizar")})["error"]
+    raise HTTPException(status_code=500, detail=error)
 
 
 @ai_engine_router.get("/task/{task_id}")
@@ -999,7 +1008,7 @@ async def get_task_status(task_id: str, user=Depends(require_auth)):
     """Consulta el estado de una tarea en curso."""
     engine = get_engine()
     result = await engine.get_task_status(task_id)
-    return result
+    return limpiar_respuesta_render(result)
 
 
 # ─── Proxy de assets (white-label) ────────────────────────────────────────────

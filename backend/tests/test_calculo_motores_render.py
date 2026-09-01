@@ -76,10 +76,17 @@ MOTORES = {
     "IA 7": "banana_pro",
 }
 
-# Lo que la pantalla del Estudio 3D ofrece de verdad, por rol. El usuario normal
-# solo tiene el motor de produccion; el resto son motores de pruebas del master.
-MOTORES_EN_PANTALLA_MASTER = {"ia0", "ia1", "ia3", "ia5", "ia7"}
-MOTORES_EN_PANTALLA_USUARIO = {"ia1"}
+# Los motores ya no se anuncian en la interfaz: se conserva un único flujo
+# predeterminado y no se expone el proveedor al usuario.
+MOTORES_EN_PANTALLA_MASTER = set()
+MOTORES_EN_PANTALLA_USUARIO = set()
+MOTORES_INTERNOS = {
+    "ia0": "julio11",
+    "ia1": "gemini",
+    "ia3": "gemini_premium",
+    "ia5": "julio",
+    "ia7": "banana_pro",
+}
 
 
 @pytest.fixture()
@@ -189,36 +196,17 @@ ESTUDIO_3D = os.path.join(
     os.path.dirname(BACKEND), "frontend", "src", "components", "AIRenderStudio.jsx")
 
 
-def _selector_de_motores():
-    """El trozo de JSX donde se pintan los botones de motor, partido por rol."""
+def test_la_pantalla_no_expone_motores_ni_proveedores():
+    """CANDADO: la interfaz no revela la tecnología interna utilizada."""
     fuente = open(ESTUDIO_3D, encoding="utf-8").read()
-    ini = fuente.index("isMaster ? [[")
-    fin = fuente.index(".map(", ini)
-    bloque = fuente[ini:fin]
-    master, _, usuario = bloque.partition("] : [")
-    return set(re.findall(r"'(ia\d+)'", master)), set(re.findall(r"'(ia\d+)'", usuario))
-
-
-def test_la_pantalla_ofrece_exactamente_estos_motores():
-    """CANDADO: un motor no aparece ni desaparece de la pantalla en silencio.
-
-    Esta prueba existe porque el 18/08 IA 2 se apago y el 18/08 nacio IA 7, y
-    ni CLAUDE.md ni este fichero se enteraron: el mapa de arriba siguio tres
-    dias diciendo `IA 2 -> manus`, en verde, mientras la pantalla ya ofrecia
-    otra cosa. Un candado que puede quedarse antiguo sin ponerse rojo no es un
-    candado.
-
-    Si el master añade o quita un motor, esto se pone rojo A PROPOSITO: hay que
-    venir aqui, cambiar la lista y dejar dicho que fue una decision suya."""
-    master, usuario = _selector_de_motores()
-    assert master == MOTORES_EN_PANTALLA_MASTER, (
-        f"los motores del master han cambiado: ahora {sorted(master)} y estaban "
-        f"documentados {sorted(MOTORES_EN_PANTALLA_MASTER)}. Si es a proposito, "
-        f"actualiza este fichero Y la regla 1 de CLAUDE.md.")
-    assert usuario == MOTORES_EN_PANTALLA_USUARIO, (
-        f"un usuario que no es master ve ahora {sorted(usuario)} y solo deberia "
-        f"ver {sorted(MOTORES_EN_PANTALLA_USUARIO)}: los demas son motores de "
-        f"pruebas del master, y uno de ellos cuesta 3,3x por render.")
+    assert "Render 3D IA" not in fuente
+    assert ">Motor<" not in fuente
+    assert ">IA 0<" not in fuente
+    assert ">IA 1<" not in fuente
+    assert "Motor principal (Gemini)" not in fuente
+    assert "Motor Pro" not in fuente
+    assert "motorUsado" not in fuente
+    assert "motorDeRespaldo" not in fuente
 
 
 def test_cada_motor_de_la_pantalla_tiene_a_donde_ir():
@@ -228,22 +216,21 @@ def test_cada_motor_de_la_pantalla_tiene_a_donde_ir():
     reconoce. Esta bien como red —mejor un render que un error— pero significa
     que un motor mal escrito NO da error: da un render del motor de siempre con
     la etiqueta de otro. O sea, exactamente lo que paso el 03/08."""
-    master, _ = _selector_de_motores()
     fuente = open(os.path.join(ESTUDIO_3D), encoding="utf-8").read()
     ini = fuente.index("const providerOf = ()")
     cuerpo = fuente[ini:fuente.index("};", ini)]
     dispatch = open(os.path.join(
         BACKEND, "services", "luiggi_ai", "render_3d.py"), encoding="utf-8").read()
-    for motor in sorted(master):
+    for motor, expected in sorted(MOTORES_INTERNOS.items()):
         if motor == "ia1":
-            continue  # es el `return 'gemini'` del final, no lleva `if`
-        assert f"'{motor}'" in cuerpo, (
-            f"la pantalla ofrece {motor} pero `providerOf()` no lo traduce: "
-            f"ese boton rinde con Gemini estandar y el master no se entera")
-        if motor == "ia5":
-            continue  # se intercepta antes del repartidor; ver test_calculo_ia5_22julio
+            assert "return 'gemini';" in cuerpo
+            continue
+        assert f"motor === '{motor}'" in cuerpo, (
+            f"el motor interno {motor} ya no tiene traducción en providerOf()")
         provider = re.search(
             rf"motor === '{motor}'\) return '([a-z0-9_]+)'", cuerpo).group(1)
+        assert provider == expected
+        if motor == "ia5":
+            continue  # se intercepta antes del repartidor
         assert f'provider == "{provider}"' in dispatch, (
-            f"{motor} pide el motor '{provider}' y `_render_dispatch` no sabe "
-            f"que es: el render saldria por Gemini estandar sin avisar")
+            f"el provider interno '{provider}' no está contemplado en el backend")
