@@ -62,3 +62,12 @@ def test_render_studio_visible_para_master_y_envia_ia0():
     assert "const [motor, setMotor] = useState('ia0');" in ui
     assert "if (motor === 'ia0') return 'julio11';" in ui
     assert "['ia0', 'IA 0'" in ui
+
+
+def test_cambios_no_encadenan_renders_degradados():
+    ui = _leer(RENDER_STUDIO)
+    assert "const [editBaseImage, setEditBaseImage] = useState(null);" in ui
+    assert "const baseImg = editBaseImage || img;" in ui
+    assert "const dataUrl = editBaseImage || await imageToDataUrl(baseImg);" in ui
+    assert "CAMBIOS YA APLICADOS QUE DEBES CONSERVAR" in ui
+    assert "setEditAppliedChanges(prev => [...prev, ...allLines]);" in ui

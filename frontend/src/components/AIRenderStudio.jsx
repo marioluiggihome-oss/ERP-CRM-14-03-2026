@@ -466,6 +466,11 @@ export default function AIRenderStudio({ state, setState }) {
   const [editInstruction, setEditInstruction] = useState('');
   const [editLines, setEditLines] = useState([]); // multi-línea: instrucciones adicionales
   const [editing, setEditing] = useState(false);
+  // Cadena de edición sin degradación acumulativa: cada cambio se genera desde
+  // la imagen original de la sesión, incorporando las órdenes ya aplicadas en
+  // el prompt, en vez de volver a enviar el render regenerado anterior.
+  const [editBaseImage, setEditBaseImage] = useState(null);
+  const [editAppliedChanges, setEditAppliedChanges] = useState([]);
   // Imagen de un ELEMENTO a copiar (una puerta, un mueble…) para incorporarlo.
   const [editRefImage, setEditRefImage] = useState(null);
   // Electrodomésticos, cámara y nº de variaciones (Tanda 3).
@@ -2324,6 +2329,9 @@ export default function AIRenderStudio({ state, setState }) {
 
   const editRender = async () => {
     const img = currentImage();
+    // La referencia queda congelada en el primer cambio. Así la segunda y
+    // siguientes iteraciones no reciben una copia ya regenerada/comprimida.
+    const baseImg = editBaseImage || img;
     // Combina la instrucción principal + líneas adicionales (multi-línea).
     const allLines = [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
     if (!img || (!allLines.length && !editRefImage)) return;
@@ -2333,7 +2341,8 @@ export default function AIRenderStudio({ state, setState }) {
     const snapLines = [...editLines];
     setEditing(true); setError(null);
     try {
-      const dataUrl = await imageToDataUrl(img);
+      const dataUrl = editBaseImage || await imageToDataUrl(baseImg);
+      if (!editBaseImage) setEditBaseImage(dataUrl);
       // VARIAS ÓRDENES VAN COMO LISTA NUMERADA, NO PEGADAS CON PUNTOS.
       //
       // Se mandaban con `join('. ')`, o sea un párrafo corrido: «campana
@@ -2346,7 +2355,7 @@ export default function AIRenderStudio({ state, setState }) {
       // Numeradas y con el recuento delante, el encargo deja de ser una frase y
       // pasa a ser una lista de comprobación. No es magia y no garantiza las
       // ocho, pero es la diferencia entre pedirlo y mencionarlo.
-      const cambio = allLines.length > 1
+      const cambioNuevo = allLines.length > 1
         ? (`Aplica EXACTAMENTE estos ${allLines.length} cambios, TODOS, `
            + `sin dejarte ninguno:\n`
            + allLines.map((l, i) => `${i + 1}. ${l}`).join('\n')
@@ -2354,6 +2363,10 @@ export default function AIRenderStudio({ state, setState }) {
         : (allLines.length === 1
            ? allLines[0]
            : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : ''));
+      const historial = editAppliedChanges.length
+        ? `\n\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR EN EL RESULTADO:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`
+        : '';
+      const cambio = `${historial}\nNUEVO CAMBIO QUE DEBES APLICAR AHORA:\n${cambioNuevo}`;
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -2403,6 +2416,7 @@ export default function AIRenderStudio({ state, setState }) {
         const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
+        setEditAppliedChanges(prev => [...prev, ...allLines]);
         // Borra SOLO lo que se aplicó; conserva lo escrito después (órdenes en cola).
         setEditInstruction(prev => (prev === snapMain ? '' : prev));
         setEditLines(prev => {
@@ -2417,6 +2431,11 @@ export default function AIRenderStudio({ state, setState }) {
       } else setError(data.error || 'No se pudo editar el render');
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
+  };
+
+  const resetEditChain = () => {
+    setEditBaseImage(null);
+    setEditAppliedChanges([]);
   };
 
   const nombreArchivo = (ext) => {
@@ -3304,6 +3323,7 @@ export default function AIRenderStudio({ state, setState }) {
   const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
   const handleGenerateComposed = async () => {
     if (!floorPlan && wallSketches.length === 0) return;
+    resetEditChain();
     const err = guardTipo(description);
     if (err) { setError(err); return; }
     setIsGenerating(true);
@@ -3352,6 +3372,7 @@ export default function AIRenderStudio({ state, setState }) {
     const finalDesc = description.trim() || 'cocina moderna y funcional de alta calidad';
     const err = guardTipo(finalDesc);
     if (err) { setError(err); return; }
+    resetEditChain();
     // Si hay plano o bocetos, se usan SIEMPRE junto con el texto y la
     // referencia de acabado: son fuentes complementarias, no alternativas.
     if (floorPlan || wallSketches.length > 0) {
@@ -3457,6 +3478,7 @@ export default function AIRenderStudio({ state, setState }) {
   const amueblarEstanciaReal = async () => {
     if (!refImage) { setError('Sube primero la FOTO de la estancia real (botón «Subir imagen(es) de referencia»).'); return; }
     if (isGenerating) return;
+    resetEditChain();
     setIsGenerating(true); setError(null);
     try {
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
@@ -3485,6 +3507,7 @@ export default function AIRenderStudio({ state, setState }) {
   const handleGenerateParams = async () => {
     const err = guardTipo('cocina');
     if (err) { setError(err); return; }
+    resetEditChain();
     setIsGenerating(true);
     setError(null);
 
@@ -4612,7 +4635,7 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
                 {/* Separador + nuevo render */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
-                <button onClick={() => { setRenderResult(null); setDescription(''); }}
+                <button onClick={() => { resetEditChain(); setRenderResult(null); setDescription(''); }}
                   className="p-1.5 bg-slate-100 rounded-lg hover:bg-accion-50 hover:text-accion-500 transition-colors"
                   title="Nuevo render (limpia el resultado actual)">
                   <RotateCcw size={14} className="text-slate-500" />
