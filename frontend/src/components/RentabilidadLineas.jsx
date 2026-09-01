@@ -312,7 +312,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
         || currentUser?.isDirectorComercial || currentUser?.isResponsableDelegacion
         || currentUser?.isDirectorFabrica;
       const qs = (!elevated && currentUser?.id) ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
-      const r = await fetch(`${API_URL}/api/rentabilidad/fichas${qs}`);
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas${qs}`, { headers: authHeaders() });
       const d = await r.json();
       // Un error de la API devuelve {detail: "..."}, no una lista. Metiendo eso
       // en el estado, el primer `fichas.filter(...)` reventaba la pantalla
@@ -834,7 +834,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
   const openFicha = async (id) => {
     try {
-      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${id}`);
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${id}`, { headers: authHeaders() });
       setViewing(await r.json());
     } catch { /* noop */ }
   };
@@ -850,7 +850,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
   const viewDoc = async (fichaId, docId) => {
     try {
-      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${fichaId}/docs/${docId}`);
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${fichaId}/docs/${docId}`, { headers: authHeaders() });
       const d = await r.json();
       openDoc(d.dataBase64, d.mime);
     } catch { alert('No se pudo abrir el documento'); }

@@ -70,6 +70,13 @@ const RentabilidadPanel = ({ currentUser }) => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    if (soloLectura) {
+      setData([]);
+      setAnalytics(null);
+      setPeriodos([]);
+      setLoading(false);
+      return;
+    }
     try {
       const r = await fetch(`${API_URL}/api/rentabilidad`);
       if (r.ok) setData(await r.json());
@@ -79,7 +86,7 @@ const RentabilidadPanel = ({ currentUser }) => {
       if (per.ok) setPeriodos((await per.json()).periodos || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, []);
+  }, [soloLectura]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -153,7 +160,10 @@ const RentabilidadPanel = ({ currentUser }) => {
   // Visor del documento adjunto a un coste (factura de proveedor)
   const verCostDoc = async (docId) => {
     try {
-      const r = await fetch(`${API_URL}/api/project-costs/doc/${docId}`);
+      const tok = getToken();
+      const r = await fetch(`${API_URL}/api/project-costs/doc/${docId}`, {
+        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+      });
       if (!r.ok) { alert('Documento no disponible'); return; }
       const j = await r.json();
       const b64 = j.dataBase64 || '';
@@ -176,8 +186,8 @@ const RentabilidadPanel = ({ currentUser }) => {
       const tok = getToken();
       const authH = tok ? { Authorization: `Bearer ${tok}` } : {};
       const [ing, costs, cascos] = await Promise.all([
-        fetch(`${API_URL}/api/rentabilidad/ingresos`).then(r => r.ok ? r.json() : { items: [] }).catch(() => ({ items: [] })),
-        fetch(`${API_URL}/api/project-costs?projectRef=${encodeURIComponent(row.ref)}`).then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch(`${API_URL}/api/rentabilidad/ingresos`, { headers: authH }).then(r => r.ok ? r.json() : { items: [] }).catch(() => ({ items: [] })),
+        fetch(`${API_URL}/api/project-costs?projectRef=${encodeURIComponent(row.ref)}`, { headers: authH }).then(r => r.ok ? r.json() : []).catch(() => []),
         fetch(`${API_URL}/api/cascos/orders`, { headers: authH }).then(r => r.ok ? r.json() : { orders: [] }).catch(() => ({ orders: [] })),
       ]);
       const cuenta = (ing.items || []).filter(i => normRef(i.projectRef) === refN);
@@ -189,7 +199,10 @@ const RentabilidadPanel = ({ currentUser }) => {
   };
   const verIngresoDoc = async (docId) => {
     try {
-      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos/doc/${docId}`);
+      const tok = getToken();
+      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos/doc/${docId}`, {
+        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+      });
       if (!r.ok) { alert('Documento no disponible'); return; }
       const j = await r.json();
       const b64 = j.dataBase64 || '';
