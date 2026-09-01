@@ -93,8 +93,9 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   // guarda nada. El servidor ya rechaza cualquier escritura suya; aqui se
   // refleja en la pantalla para que no parezca editable y luego falle.
   const soloLectura = !!currentUser?.isController && !(currentUser?.isAdmin
-    || currentUser?.isGerente || currentUser?.isDirectorComercial
-    || currentUser?.isDirectorFabrica || currentUser?.isResponsableDelegacion);
+    || currentUser?.isMaster || currentUser?.isPrimaryAdmin || currentUser?.isGerente
+    || currentUser?.isDirectorComercial || currentUser?.isDirectorFabrica
+    || currentUser?.isResponsableDelegacion);
   const [masterUnlock, setMasterUnlock] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [parsingMulti, setParsingMulti] = useState(false);
@@ -1581,14 +1582,14 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                         ✅ {f.revisadaPor}{f.revisadaAt ? ` · ${String(f.revisadaAt).slice(0, 10)}` : ''}
                       </span>
                     )}
-                    {NEXT_DOC_TYPE[f.docType || 'factura'] && (
+                    {!soloLectura && NEXT_DOC_TYPE[f.docType || 'factura'] && (
                       <button onClick={() => convertFicha(f)} disabled={converting === f.id}
                         className="mr-2 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">
                         → {TABS.find(t => t.key === NEXT_DOC_TYPE[f.docType || 'factura'])?.label}
                       </button>
                     )}
                     {/* Botón de revisión de controller: ❓✔ = pendiente de revisar | ✅ = ya revisada */}
-                    {f.docType === 'factura' && (
+                    {!soloLectura && f.docType === 'factura' && (
                       <button
                         onClick={(e) => toggleRevision(e, f)}
                         disabled={togglingRevision === f.id}
@@ -1607,13 +1608,13 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                         {f.revisada ? 'Revisada' : 'Check Controller'}
                       </button>
                     )}
-                    {bloqueada(f) ? (
+                    {!soloLectura && (bloqueada(f) ? (
                       <span title="Factura con visto bueno del controller: bloqueada. Solo el master puede borrarla (mantén Shift ~2,5s)."
                         className="inline-flex text-slate-300 cursor-not-allowed"><Lock size={15} /></span>
                     ) : (
                       <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }}
                         title="Eliminar" className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
-                    )}
+                    ))}
                   </td>
                 </tr>
               );
@@ -1873,26 +1874,27 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               {/* Cabecera editable */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">N. / Ref</label>
-                  <input value={editor.ref} onChange={e => setEditor({ ...editor, ref: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
+                  <input value={editor.ref} disabled={soloLectura} onChange={e => setEditor({ ...editor, ref: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm disabled:bg-slate-50 disabled:text-slate-600" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Cliente</label>
-                  <input value={editor.cliente} onChange={e => setEditor({ ...editor, cliente: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
+                  <input value={editor.cliente} disabled={soloLectura} onChange={e => setEditor({ ...editor, cliente: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm disabled:bg-slate-50 disabled:text-slate-600" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Codigo cliente</label>
-                  <input value={editor.clienteCodigo || ''} onChange={e => setEditor({ ...editor, clienteCodigo: e.target.value })} placeholder="ej. 12345" className="w-full px-2 py-1.5 border rounded-lg text-sm" />
-                  {editor.cliente && (editor.clienteCodigo || '').trim() && (
+                  <input value={editor.clienteCodigo || ''} disabled={soloLectura} onChange={e => setEditor({ ...editor, clienteCodigo: e.target.value })} placeholder="ej. 12345" className="w-full px-2 py-1.5 border rounded-lg text-sm disabled:bg-slate-50 disabled:text-slate-600" />
+                  {!soloLectura && editor.cliente && (editor.clienteCodigo || '').trim() && (
                     <button type="button" onClick={aplicarCodigoATodas}
                       className="mt-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 underline">
                       Aplicar código a todas las fichas de {editor.cliente}
                     </button>
                   )}</div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Fecha</label>
-                  <input value={editor.fecha} onChange={e => setEditor({ ...editor, fecha: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
+                  <input value={editor.fecha} disabled={soloLectura} onChange={e => setEditor({ ...editor, fecha: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm disabled:bg-slate-50 disabled:text-slate-600" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Estado</label>
-                  <select value={editor.docType} onChange={e => setEditor({ ...editor, docType: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm font-bold">
+                  <select value={editor.docType} disabled={soloLectura} onChange={e => setEditor({ ...editor, docType: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm font-bold disabled:bg-slate-50 disabled:text-slate-600">
                     {TABS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
                   </select></div>
               </div>
 
-              {/* Acciones de coste */}
+              {/* Las herramientas que cambian datos no se montan en perfiles de consulta. */}
+              {!soloLectura && <>
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <label className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer ${matching ? 'bg-blue-200 text-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   <Sparkles size={14} className={matching ? 'animate-pulse' : ''} />
@@ -1920,6 +1922,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
                 />
               </div>
+              </>}
 
               {/* Tabla de lineas editable */}
               <div className="border border-slate-200 rounded-xl overflow-hidden">

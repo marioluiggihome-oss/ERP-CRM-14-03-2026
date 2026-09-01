@@ -25,51 +25,39 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# Seguridad: todo el módulo de Rentabilidad exige token válido y acceso al módulo
-# (rol elevado o permiso canAccessRentabilidad), igual que la UI. Cierra el acceso
-# anónimo a costes, ingresos, fichas, márgenes y documentos adjuntos.
-try:
-    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
+# Seguridad: todo el módulo exige autenticación y falla de forma cerrada si no
+# puede cargar su guardia. CONTROLLER puede consultar, pero nunca escribir.
+from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
 
-    async def require_rentabilidad(request: Request, user: dict = Depends(require_auth)):
-        if await tiene_acceso_rentabilidad(user):
-            return user
-        # Electros comparte históricamente dos rutas de lectura con Rentabilidad.
-        # Su permiso solo abre esas lecturas y nunca el resto del módulo ni sus
-        # mutaciones. El endpoint elimina además los campos de coste.
-        path = request.url.path.rstrip("/")
-        es_lectura_electros = request.method.upper() in ("GET", "HEAD") and (
-            (path.endswith("/rentabilidad/article-costs") and
-             request.query_params.get("electros", "").lower() == "true")
-            or path.endswith("/rentabilidad/bodegones")
-        )
-        if es_lectura_electros and user.get("canAccessElectros") is True:
-            return user
-        raise HTTPException(status_code=403, detail="Sin acceso al módulo solicitado")
 
-    async def solo_lectura_controller(request: Request, user: dict = Depends(require_auth)):
-        """El perfil CONTROLLER es de CONSULTA: puede leer el informe de
-        rentabilidad, pero no modificar nada. Se bloquea a nivel de método HTTP
-        (no solo ocultando botones), asi que ninguna llamada directa a la API
-        puede saltarselo."""
-        es_controller = bool(user.get("isController")) and not any(
-            user.get(f) for f in ADMIN_ROLE_FLAGS)
-        if es_controller and request.method.upper() not in ("GET", "HEAD", "OPTIONS"):
-            raise HTTPException(
-                status_code=403,
-                detail="Perfil de consulta: el controller puede ver el informe pero no modificar datos.")
+async def require_rentabilidad(request: Request, user: dict = Depends(require_auth)):
+    if await tiene_acceso_rentabilidad(user):
         return user
+    # Electros comparte históricamente dos rutas de lectura con Rentabilidad.
+    path = request.url.path.rstrip("/")
+    es_lectura_electros = request.method.upper() in ("GET", "HEAD") and (
+        (path.endswith("/rentabilidad/article-costs") and
+         request.query_params.get("electros", "").lower() == "true")
+        or path.endswith("/rentabilidad/bodegones")
+    )
+    if es_lectura_electros and user.get("canAccessElectros") is True:
+        return user
+    raise HTTPException(status_code=403, detail="Sin acceso al módulo solicitado")
 
-    _RENTA_DEPS = [Depends(require_rentabilidad), Depends(solo_lectura_controller)]
-except Exception:  # pragma: no cover - fallback si no hay jwt_service
-    ADMIN_ROLE_FLAGS = ()
 
-    async def require_rentabilidad():
-        return {}
+async def solo_lectura_controller(request: Request, user: dict = Depends(require_auth)):
+    """CONTROLLER puede ver informe y adjuntos, pero nunca modificar datos."""
+    es_elevado = any(user.get(f) for f in ADMIN_ROLE_FLAGS) or bool(
+        user.get("isMaster") or user.get("isPrimaryAdmin"))
+    es_controller = bool(user.get("isController")) and not es_elevado
+    if es_controller and request.method.upper() not in ("GET", "HEAD", "OPTIONS"):
+        raise HTTPException(
+            status_code=403,
+            detail="Perfil de consulta: solo se permite visualizar información y adjuntos.")
+    return user
 
-    async def solo_lectura_controller():
-        return {}
-    _RENTA_DEPS = []
+
+_RENTA_DEPS = [Depends(require_rentabilidad), Depends(solo_lectura_controller)]
 
 router = APIRouter(tags=["rentabilidad"], dependencies=_RENTA_DEPS)
 

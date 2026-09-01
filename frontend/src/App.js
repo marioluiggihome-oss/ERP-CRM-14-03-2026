@@ -899,8 +899,8 @@ const App = () => {
   );
   // CONTROLLER en modo consulta: SOLO el informe de rentabilidad, sin barra de
   // módulos ni acceso al resto de la aplicación.
-  const _soloControllerUI = !!_u.isController && !(_u.isAdmin || _u.isGerente
-    || _u.isDirectorComercial || _u.isDirectorFabrica || _u.isResponsableDelegacion) && !_hasOtherAccess;
+  const _soloControllerUI = !!_u.isController && !(_u.isAdmin || _u.isMaster || _u.isPrimaryAdmin
+    || _u.isGerente || _u.isDirectorComercial || _u.isDirectorFabrica || _u.isResponsableDelegacion);
   if (_soloControllerUI) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">

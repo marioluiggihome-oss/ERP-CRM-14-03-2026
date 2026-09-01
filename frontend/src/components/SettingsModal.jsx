@@ -35,6 +35,28 @@ const CAPABILITY_KEYS = [
   'canUseRender360', 'canUse4K', 'canUseAmueblado', 'canVolcarMV',
 ];
 
+const controllerOnlyForm = (form, checked) => {
+  if (!checked) return { ...form, isController: false };
+  const cleared = {};
+  CAPABILITY_KEYS.forEach((key) => { cleared[key] = false; });
+  [
+    'isAdmin', 'isPrimaryAdmin', 'isGerente', 'isDirectorComercial',
+    'isResponsableDelegacion', 'isDirectorFabrica', 'isRepresentative',
+    'isComercial', 'isPrescriptor', 'isTienda', 'isFabrica', 'isMontador',
+    'floorOnly', 'crmOnly', 'canManageCarpinteroUsers',
+  ].forEach((key) => { cleared[key] = false; });
+  return {
+    ...form,
+    ...cleared,
+    isController: true,
+    canAccessRentabilidad: true,
+    canViewAllDocuments: false,
+    allowedModules: [],
+    allowedLibraries: [],
+    allowedCatalogIds: [],
+  };
+};
+
 // Lista de provincias de España con sus códigos
 const PROVINCIAS_ESPANA = [
   { codigo: 'AL', nombre: 'Almería' },
@@ -3002,7 +3024,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors"
                               title="Perfil CONTROLLER: SOLO consulta del informe de rentabilidad. No puede modificar nada.">
                               <input type="checkbox" checked={userForm.isController === true}
-                                onChange={(e) => setUserForm({...userForm, isController: e.target.checked})}
+                                onChange={(e) => setUserForm(controllerOnlyForm(userForm, e.target.checked))}
                                 className="w-4 h-4 rounded accent-emerald-600" />
                               <span className="text-xs font-bold text-slate-700">📊 Controller (consulta)</span>
                             </label>

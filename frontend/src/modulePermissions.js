@@ -9,6 +9,11 @@ import { puedeEntrar as puedeEntrarPresupuestador } from '@/presupuestador';
 export const esMasterSistema = (u) =>
   !!(u && (u.isMaster === true || u.isPrimaryAdmin === true));
 
+export const esControllerExclusivo = (u) => !!u?.isController && !(
+  u.isAdmin || u.isMaster || u.isPrimaryAdmin || u.isGerente ||
+  u.isDirectorComercial || u.isDirectorFabrica || u.isResponsableDelegacion
+);
+
 const permiso = (u, key) => esMasterSistema(u) || u?.[key] === true;
 const noTienda = (u) => !!u && u.isTienda !== true;
 
@@ -45,6 +50,9 @@ export const TAB_PERMISSION_KEYS = Object.freeze({
 
 export const canAccessTab = (tab, u, settings = {}) => {
   if (!u) return false;
+  // CONTROLLER es un perfil exclusivo de consulta, incluso si la ficha conserva
+  // permisos comerciales antiguos de antes de asignarle este rol.
+  if (esControllerExclusivo(u)) return tab === 'rentabilidad';
   if (tab === 'welcome') return true;
 
   if (tab === 'crm-dashboard' || tab === 'crm-calendar') {

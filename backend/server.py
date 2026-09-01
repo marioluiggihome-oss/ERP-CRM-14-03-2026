@@ -2509,6 +2509,26 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Siembra de fábricas por defecto omitida: {e}")
 
+    # Perfil solicitado para Jenaro: CONTROLLER exclusivo y de solo consulta.
+    # La actualización es idempotente y limpia permisos comerciales heredados,
+    # pero no toca identidad, contraseña ni estado de la cuenta.
+    try:
+        from routes.users import controller_only_updates
+        _jenaro = await db.users.find_one(
+            {"username": {"$regex": "^JENARO$", "$options": "i"}},
+            {"_id": 0, "password": 0},
+        )
+        if _jenaro:
+            await db.users.update_one(
+                {"id": _jenaro["id"]},
+                {"$set": controller_only_updates(_jenaro)},
+            )
+            logger.info("Acceso CONTROLLER exclusivo aplicado a Jenaro")
+        else:
+            logger.warning("No se encontró la cuenta Jenaro para aplicar CONTROLLER")
+    except Exception as e:                                   # noqa: BLE001
+        logger.error(f"No se pudo normalizar el acceso CONTROLLER de Jenaro: {e}")
+
     # ¿QUEDA ALGUIEN QUE PUEDA VER EL DINERO? Se cuenta al arrancar.
     #
     # El 29/08 se quitó `isAdmin` de la lista del master. Lo mismo se intentó el

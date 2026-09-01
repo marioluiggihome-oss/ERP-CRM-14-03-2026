@@ -27,6 +27,11 @@ const projectLabel = (r) => {
 };
 
 const RentabilidadPanel = ({ currentUser }) => {
+  const soloLectura = !!currentUser?.isController && !(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.isPrimaryAdmin ||
+    currentUser?.isGerente || currentUser?.isDirectorComercial ||
+    currentUser?.isDirectorFabrica || currentUser?.isResponsableDelegacion
+  );
   const [view, setView] = useState('lineas'); // 'lineas' (por líneas/documentos) por defecto | 'proyecto' | 'informes'
   // Navegación desde el informe a un documento concreto (y botón de retroceso al informe).
   const [openRef, setOpenRef] = useState(null);
@@ -40,6 +45,10 @@ const RentabilidadPanel = ({ currentUser }) => {
   const [invoice, setInvoice] = useState(null);
   const [analytics, setAnalytics] = useState({ bySupplier: [], byCategory: [], byMonth: [] });
   const [periodos, setPeriodos] = useState([]);
+
+  useEffect(() => {
+    if (soloLectura && view !== 'lineas') setView('lineas');
+  }, [soloLectura, view]);
 
   // Filtros por columna
   const [columnFilters, setColumnFilters] = useState({
@@ -395,7 +404,7 @@ const RentabilidadPanel = ({ currentUser }) => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {view === 'proyecto' && (
+          {view === 'proyecto' && !soloLectura && (
             <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${importing ? 'bg-purple-200 text-purple-500' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
               <Sparkles size={16} className={importing ? 'animate-pulse' : ''} />
               {importing ? 'Leyendo factura de coste...' : 'Importar factura de coste (IA)'}
@@ -408,23 +417,21 @@ const RentabilidadPanel = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* Conmutador de vista - Por líneas (documentos) por defecto */}
-      <div className="flex gap-2 mb-5">
-        <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
-        {/* "Por proyecto" desactivada temporalmente: la tabla no cuadraba bien, se retoma mas adelante */}
-        <button onClick={() => setView('ingresos')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'ingresos' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ingresos a cuenta</button>
-        <button onClick={() => setView('saldo')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'saldo' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Saldo de cliente</button>
-        <button onClick={() => setView('informes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
-        <button onClick={() => setView('revision')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'revision' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>Revisión</button>
-      </div>
+      {/* Las vistas con operaciones se ocultan por completo en el perfil de consulta. */}
+      {!soloLectura && (
+        <div className="flex gap-2 mb-5 overflow-x-auto">
+          <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
+          <button onClick={() => setView('ingresos')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'ingresos' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ingresos a cuenta</button>
+          <button onClick={() => setView('saldo')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'saldo' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Saldo de cliente</button>
+          <button onClick={() => setView('informes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
+          <button onClick={() => setView('revision')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'revision' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>Revisión</button>
+        </div>
+      )}
 
-      {view === 'ingresos' && <IngresosACuenta currentUser={currentUser} />}
-
-      {view === 'saldo' && <SaldoCliente onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
-
-      {view === 'revision' && <RevisionFichas onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
-
-      {view === 'informes' && <ReportGenerator onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(true); setView('lineas'); }} />}
+      {!soloLectura && view === 'ingresos' && <IngresosACuenta currentUser={currentUser} />}
+      {!soloLectura && view === 'saldo' && <SaldoCliente onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
+      {!soloLectura && view === 'revision' && <RevisionFichas onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(false); setView('lineas'); }} />}
+      {!soloLectura && view === 'informes' && <ReportGenerator onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(true); setView('lineas'); }} />}
 
       {view === 'lineas' && <RentabilidadLineas currentUser={currentUser}
         openRef={openRef}
@@ -776,8 +783,8 @@ const RentabilidadPanel = ({ currentUser }) => {
               <button onClick={() => setCostModal(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
             </div>
             <div className="p-6 overflow-auto space-y-4">
-              {/* Formulario de alta de coste */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 items-end bg-slate-50 p-3 rounded-xl">
+              {/* Formulario de alta de coste: nunca se monta en perfiles de consulta. */}
+              {!soloLectura && <div className="grid grid-cols-2 md:grid-cols-5 gap-2 items-end bg-slate-50 p-3 rounded-xl">
                 <input value={form.proveedor} onChange={e => setForm({ ...form, proveedor: e.target.value })} placeholder="Proveedor" className="px-2 py-2 border rounded-lg text-sm" />
                 <input value={form.concepto} onChange={e => setForm({ ...form, concepto: e.target.value })} placeholder="Concepto" className="px-2 py-2 border rounded-lg text-sm" />
                 <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} className="px-2 py-2 border rounded-lg text-sm">
@@ -790,10 +797,10 @@ const RentabilidadPanel = ({ currentUser }) => {
                   <input type="file" accept="application/pdf,image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; setCostFile(f ? await readFile(f) : null); }} />
                   {costFile && <span className="text-emerald-700 font-bold truncate">{costFile.name} <button type="button" onClick={() => setCostFile(null)} className="text-red-400 ml-1">✕</button></span>}
                 </label>
-              </div>
+              </div>}
 
-              {/* Asociar una compra (pedido a proveedor de Cocina Desmontada) como coste por partida */}
-              <div className="border border-indigo-100 rounded-xl p-3 bg-indigo-50/40">
+              {/* Asociar una compra solo está disponible para perfiles con escritura. */}
+              {!soloLectura && <div className="border border-indigo-100 rounded-xl p-3 bg-indigo-50/40">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-indigo-800 uppercase">Asociar compra</span>
@@ -824,7 +831,7 @@ const RentabilidadPanel = ({ currentUser }) => {
                     })}
                   </div>
                 )}
-              </div>
+              </div>}
               {/* Lista de costes */}
               <table className="w-full text-sm">
                 <thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Proveedor</th><th className="text-left p-2 text-xs uppercase">Concepto</th><th className="text-left p-2 text-xs uppercase">Cat.</th><th className="text-right p-2 text-xs uppercase">Importe</th><th></th></tr></thead>
@@ -837,7 +844,7 @@ const RentabilidadPanel = ({ currentUser }) => {
                       <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td>
                       <td className="p-2 text-right whitespace-nowrap">
                         {c.docId && <button onClick={() => verCostDoc(c.docId)} title="Ver documento adjunto" className="text-slate-500 hover:text-indigo-600 mr-2">📎</button>}
-                        <button onClick={() => delCost(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                        {!soloLectura && <button onClick={() => delCost(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>}
                       </td>
                     </tr>
                   ))}

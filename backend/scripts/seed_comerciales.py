@@ -43,8 +43,8 @@ def hash_password(password: str) -> str:
 
 
 def build_user_doc(c):
-    """Construye el documento del usuario con permisos de Comercial standard."""
-    return {
+    """Construye el usuario; Jenaro conserva su perfil CONTROLLER exclusivo."""
+    doc = {
         "id": f"user-{uuid.uuid4().hex[:8]}",
         "username": c["username"],
         "clientName": c["clientName"],
@@ -94,6 +94,23 @@ def build_user_doc(c):
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
+    if c["username"].upper() == "JENARO":
+        for key in list(doc):
+            if key.startswith("can") or key in {
+                "isAdmin", "isGerente", "isDirectorComercial", "isResponsableDelegacion",
+                "isRepresentative", "isComercial", "isPrescriptor", "isTienda",
+                "isFabrica", "isMontador", "isDirectorFabrica", "isPrimaryAdmin",
+            }:
+                doc[key] = False
+        doc.update({
+            "isController": True,
+            "canAccessRentabilidad": True,
+            "canViewAllDocuments": False,
+            "allowedModules": [],
+            "allowedLibraries": [],
+            "allowedCatalogIds": [],
+        })
+    return doc
 
 
 async def main():
