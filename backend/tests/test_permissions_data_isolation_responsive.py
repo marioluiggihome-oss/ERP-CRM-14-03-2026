@@ -1,3 +1,7 @@
+# © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
+# Software propietario y confidencial. Ver LICENSE.
+# Prohibida su copia, distribución, modificación o uso sin autorización
+# escrita del titular.
 """Candados estáticos de permisos, aislamiento documental y responsive.
 
 No dependen de una base de datos activa: verifican contratos de seguridad que deben

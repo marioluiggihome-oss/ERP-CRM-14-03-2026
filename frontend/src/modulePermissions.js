@@ -1,4 +1,10 @@
 /*
+ * © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
+/*
  * © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados.
  * Matriz única de permisos de módulos. La interfaz debe consultar este fichero
  * en la bienvenida, la navegación y el contenido para no abrir puertas distintas.
