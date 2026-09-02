@@ -174,7 +174,12 @@ export const RULES = {
   ALTO_RINCON_CIEGO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
   ALTO_RINCON_ESCUADRA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
   ALTO_RINCON_CHAFLAN: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1 },
-  ALTO_ABATIBLE: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
+  // UN ABATIBLE LLEVA EL HERRAJE DE ELEVACIÓN, NO SOLO BISAGRAS (master, 31/08:
+  // «cuando meta un mueble abatible alto que meta el herraje hkt de Blum»). El
+  // frente de un AA80 no gira de lado: sube, y lo sube un Aventos HK top de
+  // Blum. Es la pieza cara del mueble y no estaba en el escandallo, así que el
+  // margen de todos los abatibles salía más alto que el real.
+  ALTO_ABATIBLE: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2, hkt: 1 },
   ALTO_COMBINADO: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
   ALTO_COMBINADO_PLUS: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
   ALTO_COMBINADO_PLUS_J: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 2 },
@@ -322,6 +327,13 @@ export const MV_COSTES_DEFAULT = {
   mano: MANO_DE_OBRA_POR_DEFECTO,
   cajon: 41.34,     // € por cajón
   gaveta: 54.37,    // € por gaveta
+  // EL AVENTOS HK TOP DE BLUM, para los altos abatibles. ARRANCA VACÍO A
+  // PROPÓSITO: no me lo sé y no se inventa un precio de proveedor (CLAUDE.md,
+  // regla 7). Vacío no cuesta nada Y SE MARCA en la línea, que es distinto de un
+  // número plausible puesto por rellenar — ese se queda para siempre, nadie lo
+  // vuelve a mirar, y el margen del abatible miente sin dar un error. En cuanto
+  // el master teclee la tarifa de Blum, el coste sale exacto.
+  hkt: '',
   dtoCascos1: DTO_CASCOS_PVP,  // % que deshace el ×2 del PVP (aritmética)
   dtoCascos2: 0,               // % de descuento de ACB — lo teclea el master
   dtoPuertas1: 0,   // % descuento 1 sobre tarifa de puertas MV
@@ -1154,11 +1166,18 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
   const altoFrente = R.altoCol ? altoMm : (R.altoSel ? altoMm : (altura === '70' ? 713 : 790));
   const areaP = (puertas > 0 || cajones > 0 || gavetas > 0) ? (w / 1000) * (altoFrente / 1000) : 0;
 
+  // El herraje de elevación de un abatible: uno por mueble.
+  const hkt = (R.hkt || 0) * (Number(p.hkt) || 0);
+  // Y SE DICE CUÁNDO FALTA SU PRECIO. Sin esto, un abatible con el campo vacío
+  // sale costando lo mismo que antes de que existiera el herraje: el número
+  // tiene la misma pinta de bueno y el margen sigue mintiendo.
+  const faltaHkt = !!R.hkt && !(Number(p.hkt) > 0);
   const costeHerrajes = Math.round((puertas * 2 * (Number(p.bisagra) || 0)
     + (R.patas ? (Number(p.pata4) || 0) : 0)
     + (R.colg ? 2 * (Number(p.colgador) || 0) : 0)
     + (cajones * (Number(p.cajon) || 0))
     + (gavetas * (Number(p.gaveta) || 0))
+    + hkt
     + (baldas * 4 * (Number(p.soporte) || 0))) * 100) / 100;
   // SOLO LOS MUEBLES LLEVAN MANO DE OBRA (master, 31/08: «la mano de obra sólo
   // tiene que ser de los muebles»). Una puerta suelta o un costado se piden al
@@ -1216,6 +1235,8 @@ export const despiece = (item, p, tariff = 'T1', pvCustom, acabadoCasco) => {
     caj: cajones * (Number(p.cajon) || 0), 
     gav: gavetas * (Number(p.gaveta) || 0),
     soportes: baldas * 4 * (Number(p.soporte) || 0),
+    hkt,
+    faltaHkt,
     mo: costeMo,
     costeTotal,
     factorDesmontada,

@@ -71,8 +71,29 @@ def test_LOS_HERRAJES_SE_SUMAN_IGUAL_QUE_EN_EL_CALCULO():
     rent = _lee(RENT)
     i = rent.index("const costeHerrajes")
     formula = rent[i:rent.index("const costeMo", i)]
-    # Los conceptos que entran en el coste, por el nombre con que se devuelven.
-    devueltos = ("bisagras", "patas", "colg", "caj", "gav", "soportes")
+    # LOS CONCEPTOS, Y POR DÓNDE ENTRA CADA UNO EN EL COSTE.
+    #
+    # La lista está escrita a mano a propósito: añadir un herraje nuevo obliga a
+    # tocar esta prueba, y al tocarla se comprueban las TRES puntas — que el
+    # cálculo lo suma, que `despiece` lo devuelve con ese nombre, y que la
+    # pantalla lo enseña. Antes solo se miraba la última, así que un herraje
+    # devuelto y no sumado (o al revés) pasaba sin que nada se pusiera rojo.
+    devueltos = {
+        "bisagras": "p.bisagra",
+        "patas": "p.pata4",
+        "colg": "p.colgador",
+        "caj": "p.cajon",
+        "gav": "p.gaveta",
+        "soportes": "p.soporte",
+        # El Aventos HK top de los altos abatibles (master, 31/08).
+        "hkt": "+ hkt",
+    }
+    for concepto, termino in devueltos.items():
+        assert termino in formula, (
+            f"«{concepto}» se devuelve como herraje y `costeHerrajes` NO lo suma: "
+            f"saldría en el desglose sin estar en el coste ({termino})")
+        assert re.search(rf"^\s*{concepto}[,:]", rent[rent.index("  return {", i):], re.M), (
+            f"`despiece` ya no devuelve «{concepto}»: la pantalla sumaría undefined")
     cm3 = _lee(CM3)
     j = cm3.index("export const herrajesDe")
     # Hasta el cierre DE LA FUNCIÓN (`\n};`), no hasta el primer `};` — que es

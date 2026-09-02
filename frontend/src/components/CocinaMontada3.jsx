@@ -79,6 +79,7 @@ export const TARIFAS_DE_PROVEEDOR = [
       { k: 'cajon', rot: 'Cajón', ud: '€/ud' },
       { k: 'gaveta', rot: 'Gaveta', ud: '€/ud' },
       { k: 'soporte', rot: 'Soporte de balda', ud: '€/ud', nota: '4 por balda' },
+      { k: 'hkt', rot: 'Aventos HKT (Blum)', ud: '€/ud', nota: 'altos abatibles: 1 por mueble' },
     ],
   },
   {
@@ -117,7 +118,7 @@ const pvpDeItem = (val, pv) => {
  *  que el total no cuadrara con lo que se veía. */
 export const herrajesDe = (m) => {
   const d = (m || {}).despiece || {};
-  return ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes']
+  return ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes', 'hkt']
     .reduce((t, k) => t + (Number(d[k]) || 0), 0);
 };
 
@@ -978,6 +979,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   // cero da un coste total más bajo que el real y un margen más alto, que es
   // exactamente el número por el que alguien fija un precio de venta.
   const sinCoste = filas.filter(m => m.coste == null);
+  /* LOS ABATIBLES A LOS QUE LES FALTA EL PRECIO DEL HERRAJE DE BLUM.
+     El campo arranca vacío porque no se inventa un precio de proveedor (regla
+     7), pero vacío el mueble sale costando lo mismo que antes de que el herraje
+     existiera: mismo número, misma pinta de bueno, y el margen mintiendo. Se
+     cuenta y se avisa al lado del coste, como las líneas sin casco. */
+  const sinHkt = filas.filter(m => m.despiece?.faltaHkt);
 
   /** LO QUE SUMA UN CONCEPTO, CONTANDO SOLO LAS LÍNEAS QUE TIENEN COSTE.
    *
@@ -3080,6 +3087,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       · {sinCoste.length} sin coste
                     </span>
                   )}
+                  {sinHkt.length > 0 && (
+                    <span className="ml-2 text-aviso-700 font-bold"
+                      data-testid="cm3-aviso-hkt"
+                      title="Un alto abatible lleva un Aventos HK top de Blum y todavía no tiene precio en «Proveedores». Sin él, esos muebles cuestan menos de lo que cuestan y su margen sale MÁS ALTO que el real.">
+                      · {sinHkt.length} abatible{sinHkt.length === 1 ? '' : 's'} sin precio del HKT
+                    </span>
+                  )}
                 </div>
               </>
             )}
@@ -3313,6 +3327,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   <th className="text-right py-2 px-2 font-black uppercase">Cajones</th>
                   <th className="text-right py-2 px-2 font-black uppercase">Gavetas</th>
                   <th className="text-right py-2 px-2 font-black uppercase">Soportes</th>
+                  <th className="text-right py-2 px-2 font-black uppercase"
+                    title="Aventos HK top de Blum: el herraje que sube el frente de un alto abatible.">HKT Blum</th>
                   <th className="text-right py-2 px-2 font-black uppercase">M. obra</th>
                   <th className="text-right py-2 px-2 font-black uppercase bg-slate-50">Coste ud.</th>
                   <th className="text-right py-2 px-2 font-black uppercase bg-slate-50">Coste × uds</th>
@@ -3390,7 +3406,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       que sí las excluye. Tres cifras del mismo dinero. */}
                   <td className="py-2 px-2 text-right text-dato-800">{eur(sumaConCoste('casco'))}</td>
                   <td className="py-2 px-2 text-right text-dato-800">{eur(sumaConCoste('puerta'))}</td>
-                  {['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes', 'mo'].map(k => (
+                  {['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes', 'hkt', 'mo'].map(k => (
                     <td key={k} className="py-2 px-2 text-right text-slate-700">
                       {eur(sumaConCoste(k))}
                     </td>
@@ -3421,7 +3437,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               mira lo que se gana, se mira en qué se gasta. */}
           {(() => {
             const suma = sumaConCoste;
-            const herr = ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes'];
+            const herr = ['bisagras', 'patas', 'colg', 'caj', 'gav', 'soportes', 'hkt'];
             /* CUÁNTOS MUEBLES PAGAN MONTAJE, escrito al lado del importe.
                La mano de obra es lo MISMO que cobra el montador (regla 16), así
                que este número tiene que poder compararse con su liquidación sin
@@ -3434,7 +3450,8 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               { n: 'Puertas y frentes MV', v: suma('puerta'), d: 'Se le pide a MV' },
               ...herr.map(k => ({
                 n: { bisagras: 'Bisagras', patas: 'Patas', colg: 'Colgadores',
-                     caj: 'Cajones', gav: 'Gavetas', soportes: 'Soportes de balda' }[k],
+                     caj: 'Cajones', gav: 'Gavetas', soportes: 'Soportes de balda',
+                     hkt: 'Elevación abatible (Blum HKT)' }[k],
                 v: suma(k), d: 'Herraje', herraje: true,
               })),
               { n: 'Mano de obra', v: suma('mo'),
