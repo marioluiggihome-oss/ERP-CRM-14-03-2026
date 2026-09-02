@@ -9,7 +9,7 @@ import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
   ScanLine, Wrench, Factory, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap, Users } from 'lucide-react';
-import { puedeEntrar as puedeEntrarPresupuestador } from '@/presupuestador';
+import { canAccessTab } from '@/modulePermissions';
 
 // Módulos para los accesos rápidos. Las condiciones `can` replican EXACTAMENTE
 // las del menú lateral, para no mostrar accesos a los que el usuario no tiene
@@ -102,7 +102,7 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
   // Saludo con el NOMBRE de la persona (clientName), no con el usuario/email.
   const name = currentUser?.clientName || currentUser?.name || currentUser?.username || '';
   const modules = MODULES.filter((m) => {
-    try { return !!m.can(currentUser, settings); } catch { return false; }
+    try { return canAccessTab(m.tab, currentUser, settings); } catch { return false; }
   });
   const groupedModules = GROUPS
     .map((g) => ({ ...g, items: modules.filter((m) => m.group === g.id) }))

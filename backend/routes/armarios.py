@@ -26,14 +26,8 @@ logger = logging.getLogger(__name__)
 
 # Autenticación: todos los endpoints exigen token. Los proyectos se filtran por
 # el usuario autenticado (no por un userId de query manipulable). Admin ve todo.
-try:
-    from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
-    _DEPS = [Depends(require_auth)]
-except Exception:  # pragma: no cover - fallback si el servicio no está disponible
-    async def get_current_user():
-        return None
-    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
-    _DEPS = []
+from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS, require_module_access
+_DEPS = [Depends(require_module_access("canAccessArmarios"))]
 
 def _is_admin(user) -> bool:
     return bool(user) and any(user.get(f) for f in ADMIN_ROLE_FLAGS)

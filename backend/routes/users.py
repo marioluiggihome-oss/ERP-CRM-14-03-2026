@@ -43,6 +43,15 @@ class UserCreate(BaseModel):
     isDirectorFabrica: bool = False
     canSeeCost: bool = False
     canAccessCRM: bool = False
+    canAccessInvoices: bool = False
+    canAccessElectros: bool = False
+    canAccessExpediente: bool = False
+    canAccessAlmacen: bool = False
+    canAccessBackup: bool = False
+    canAccessPlanificacion: bool = False
+    canAccessRentabilidad: bool = False
+    isController: bool = False
+    canViewAllDocuments: bool = False
     canUseAIAnalysis: bool = False
     canUseKitchenDesigner: bool = False
     allowedModules: List[str] = []
@@ -68,6 +77,15 @@ class UserUpdate(BaseModel):
     isDirectorFabrica: Optional[bool] = None
     canSeeCost: Optional[bool] = None
     canAccessCRM: Optional[bool] = None
+    canAccessInvoices: Optional[bool] = None
+    canAccessElectros: Optional[bool] = None
+    canAccessExpediente: Optional[bool] = None
+    canAccessAlmacen: Optional[bool] = None
+    canAccessBackup: Optional[bool] = None
+    canAccessPlanificacion: Optional[bool] = None
+    canAccessRentabilidad: Optional[bool] = None
+    isController: Optional[bool] = None
+    canViewAllDocuments: Optional[bool] = None
     canUseAIAnalysis: Optional[bool] = None
     canUseKitchenDesigner: Optional[bool] = None
     allowedModules: Optional[List[str]] = None
@@ -91,6 +109,15 @@ class UserResponse(BaseModel):
     isDirectorFabrica: bool = False
     canSeeCost: bool = False
     canAccessCRM: bool = False
+    canAccessInvoices: bool = False
+    canAccessElectros: bool = False
+    canAccessExpediente: bool = False
+    canAccessAlmacen: bool = False
+    canAccessBackup: bool = False
+    canAccessPlanificacion: bool = False
+    canAccessRentabilidad: bool = False
+    isController: bool = False
+    canViewAllDocuments: bool = False
     canUseAIAnalysis: bool = False
     canUseKitchenDesigner: bool = False
     allowedModules: List[str] = []
@@ -111,6 +138,43 @@ def user_to_response(user_data: dict) -> dict:
     """Convert user dict to response (remove password and Mongo _id)"""
     response = {k: v for k, v in user_data.items() if k not in ("password", "_id")}
     return response
+
+
+_CONTROLLER_ROLE_FIELDS = {
+    "isAdmin", "isPrimaryAdmin", "isGerente", "isDirectorComercial",
+    "isResponsableDelegacion", "isDirectorFabrica", "isRepresentative",
+    "isComercial", "isPrescriptor", "isTienda", "isFabrica", "isMontador",
+    "floorOnly", "crmOnly", "canManageCarpinteroUsers",
+}
+
+
+def enforce_controller_only(data: dict) -> dict:
+    """Normaliza CONTROLLER para que solo consulte Rentabilidad y adjuntos."""
+    if data.get("isController") is not True:
+        return data
+    for key in list(data):
+        if key.startswith("can") or key in _CONTROLLER_ROLE_FIELDS:
+            data[key] = False
+    data.update({
+        "isController": True,
+        "canAccessRentabilidad": True,
+        "canViewAllDocuments": False,
+        "allowedModules": [],
+        "allowedLibraries": [],
+        "allowedCatalogIds": [],
+    })
+    return data
+
+
+def controller_only_updates(existing: dict) -> dict:
+    """Devuelve únicamente campos de acceso mutables para persistir el perfil."""
+    normalized = enforce_controller_only({**existing, "isController": True})
+    array_fields = {"allowedModules", "allowedLibraries", "allowedCatalogIds"}
+    return {
+        key: value for key, value in normalized.items()
+        if key.startswith("can") or key in _CONTROLLER_ROLE_FIELDS
+        or key == "isController" or key in array_fields
+    }
 
 # Authentication dependency
 from services.jwt_service import get_current_user as _get_current_user, ADMIN_ROLE_FLAGS
@@ -197,7 +261,7 @@ async def create_user(user: UserCreate, current_user: dict = Depends(require_use
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
 
-    user_data = user.model_dump()
+    user_data = enforce_controller_only(user.model_dump())
 
     # SEGURIDAD: Si no hay JWT (modo compat), forzar a usuario sin privilegios elevados
     if current_user.get("_compat_mode"):
@@ -239,6 +303,8 @@ async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depen
         raise HTTPException(status_code=403, detail="Modificar admin principal requiere autenticación")
 
     update_data = {k: v for k, v in user.model_dump().items() if v is not None}
+    if update_data.get("isController") is True:
+        update_data.update(controller_only_updates({**existing, **update_data}))
 
     # SEGURIDAD: sin JWT, bloquear elevación de permisos
     if current_user.get("_compat_mode"):

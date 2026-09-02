@@ -25,49 +25,103 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# Seguridad: todo el módulo de Rentabilidad exige token válido y acceso al módulo
-# (rol elevado o permiso canAccessRentabilidad), igual que la UI. Cierra el acceso
-# anónimo a costes, ingresos, fichas, márgenes y documentos adjuntos.
-try:
-    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
+# Seguridad: todo el módulo exige autenticación y falla de forma cerrada si no
+# puede cargar su guardia. CONTROLLER puede consultar, pero nunca escribir.
+from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS, tiene_acceso_rentabilidad
 
-    async def require_rentabilidad(user: dict = Depends(require_auth)):
-        if await tiene_acceso_rentabilidad(user):
-            return user
-        raise HTTPException(status_code=403, detail="Sin acceso al módulo de Rentabilidad")
 
-    async def solo_lectura_controller(request: Request, user: dict = Depends(require_auth)):
-        """El perfil CONTROLLER es de CONSULTA: puede leer el informe de
-        rentabilidad, pero no modificar nada. Se bloquea a nivel de método HTTP
-        (no solo ocultando botones), asi que ninguna llamada directa a la API
-        puede saltarselo."""
-        es_controller = bool(user.get("isController")) and not any(
-            user.get(f) for f in ADMIN_ROLE_FLAGS)
-        if es_controller and request.method.upper() not in ("GET", "HEAD", "OPTIONS"):
-            raise HTTPException(
-                status_code=403,
-                detail="Perfil de consulta: el controller puede ver el informe pero no modificar datos.")
+async def require_rentabilidad(request: Request, user: dict = Depends(require_auth)):
+    if await tiene_acceso_rentabilidad(user):
         return user
+    # Electros comparte históricamente dos rutas de lectura con Rentabilidad.
+    path = request.url.path.rstrip("/")
+    es_lectura_electros = request.method.upper() in ("GET", "HEAD") and (
+        (path.endswith("/rentabilidad/article-costs") and
+         request.query_params.get("electros", "").lower() == "true")
+        or path.endswith("/rentabilidad/bodegones")
+    )
+    if es_lectura_electros and user.get("canAccessElectros") is True:
+        return user
+    raise HTTPException(status_code=403, detail="Sin acceso al módulo solicitado")
 
-    _RENTA_DEPS = [Depends(require_rentabilidad), Depends(solo_lectura_controller)]
-except Exception:  # pragma: no cover - fallback si no hay jwt_service
-    ADMIN_ROLE_FLAGS = ()
 
-    async def require_rentabilidad():
-        return {}
+async def solo_lectura_controller(request: Request, user: dict = Depends(require_auth)):
+    """CONTROLLER puede ver informe y adjuntos, pero nunca modificar datos."""
+    es_elevado = any(user.get(f) for f in ADMIN_ROLE_FLAGS) or bool(
+        user.get("isMaster") or user.get("isPrimaryAdmin"))
+    es_controller = bool(user.get("isController")) and not es_elevado
+    if es_controller and request.method.upper() not in ("GET", "HEAD", "OPTIONS"):
+        raise HTTPException(
+            status_code=403,
+            detail="Perfil de consulta: solo se permite visualizar información y adjuntos.")
+    return user
 
-    async def solo_lectura_controller():
-        return {}
-    _RENTA_DEPS = []
+
+_RENTA_DEPS = [Depends(require_rentabilidad), Depends(solo_lectura_controller)]
 
 router = APIRouter(tags=["rentabilidad"], dependencies=_RENTA_DEPS)
 
 
 MAX_DOC_SIZE_MB = 15
+CONTROLLER_INVOICE_FROM = "2025-10-01"
 
 
 def _is_elevated(user: dict) -> bool:
     return any((user or {}).get(f) for f in ADMIN_ROLE_FLAGS)
+
+
+def _is_master_user(user: dict) -> bool:
+    return bool((user or {}).get("isMaster") or (user or {}).get("isPrimaryAdmin"))
+
+
+async def _master_reviewer_identities():
+    masters = await _get_db().users.find(
+        {"$or": [{"isMaster": True}, {"isPrimaryAdmin": True}]},
+        {"_id": 0, "id": 1, "username": 1, "name": 1, "clientName": 1, "email": 1},
+    ).to_list(100)
+    ids = {str(u.get("id") or "") for u in masters if u.get("id")}
+    names = {
+        str(value).strip().casefold()
+        for u in masters
+        for value in (u.get("username"), u.get("name"), u.get("clientName"), u.get("email"))
+        if value
+    }
+    return ids, names
+
+
+def _reviewed_by_master(ficha: dict, master_ids: set, master_names: set) -> bool:
+    if not ficha.get("revisada"):
+        return False
+    if ficha.get("revisadaPorMaster") is True:
+        return True
+    reviewer_id = str(ficha.get("revisadaPorUserId") or "")
+    reviewer_name = str(ficha.get("revisadaPor") or "").strip().casefold()
+    return bool((reviewer_id and reviewer_id in master_ids) or
+                (reviewer_name and reviewer_name in master_names))
+
+
+async def _controller_visible_invoice_scope():
+    """Ids y referencias de facturas MASTER desde el 01/10/2025."""
+    candidates = await _get_db().sale_fichas.find(
+        {
+            "docType": "factura",
+            "revisada": True,
+            "fecha": {"$gte": CONTROLLER_INVOICE_FROM},
+        },
+        {"_id": 0, "id": 1, "ref": 1, "projectRef": 1, "fecha": 1,
+         "revisada": 1, "revisadaPor": 1, "revisadaPorUserId": 1,
+         "revisadaPorMaster": 1},
+    ).to_list(2000)
+    master_ids, master_names = await _master_reviewer_identities()
+    visible = [f for f in candidates if _reviewed_by_master(f, master_ids, master_names)]
+    ids = {str(f.get("id")) for f in visible if f.get("id")}
+    refs = {
+        _normalize_ref(value)
+        for f in visible
+        for value in (f.get("ref"), f.get("projectRef"))
+        if value and _normalize_ref(value)
+    }
+    return ids, refs
 
 
 def _check_doc_size(b64: str, max_mb: int = MAX_DOC_SIZE_MB):
@@ -205,11 +259,16 @@ async def add_project_cost(cost: dict):
 
 
 @router.get("/project-costs")
-async def list_project_costs(projectRef: Optional[str] = None):
-    """Listar costes; si se pasa projectRef, solo los de ese proyecto."""
+async def list_project_costs(projectRef: Optional[str] = None, user: dict = Depends(require_rentabilidad)):
+    """Lista costes; CONTROLLER solo recibe los de sus facturas MASTER visibles."""
     try:
         query = {"projectRef": projectRef} if projectRef else {}
         costs = await _get_db().project_costs.find(query, {"_id": 0}).sort("fecha", -1).to_list(2000)
+        es_controller = bool(user.get("isController")) and not (
+            _is_elevated(user) or _is_master_user(user))
+        if es_controller:
+            _, visible_refs = await _controller_visible_invoice_scope()
+            costs = [c for c in costs if _normalize_ref(c.get("projectRef")) in visible_refs]
         return costs
     except Exception as e:
         logger.error(f"List project costs error: {e}")
@@ -217,11 +276,19 @@ async def list_project_costs(projectRef: Optional[str] = None):
 
 
 @router.get("/project-costs/doc/{doc_id}")
-async def get_project_cost_doc(doc_id: str):
-    """Devuelve el documento adjunto de un coste (factura del proveedor)."""
+async def get_project_cost_doc(doc_id: str, user: dict = Depends(require_rentabilidad)):
+    """Devuelve un adjunto de coste dentro del ámbito visible."""
     d = await _get_db().project_cost_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+    es_controller = bool(user.get("isController")) and not (
+        _is_elevated(user) or _is_master_user(user))
+    if es_controller:
+        cost = await _get_db().project_costs.find_one(
+            {"id": d.get("costId")}, {"_id": 0, "projectRef": 1})
+        _, visible_refs = await _controller_visible_invoice_scope()
+        if not cost or _normalize_ref(cost.get("projectRef")) not in visible_refs:
+            raise HTTPException(status_code=404, detail="Documento no disponible")
     return d
 
 
@@ -1272,7 +1339,8 @@ async def _article_costs_map() -> Dict[str, Any]:
 
 
 @router.get("/rentabilidad/article-costs")
-async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False, electros: bool = False):
+async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False,
+                        electros: bool = False, user: dict = Depends(require_auth)):
     """Lista/busca el catalogo de costes unitarios por articulo (desde MongoDB)."""
     await _seed_article_costs_if_empty()
     query: Dict[str, Any] = {}
@@ -1288,6 +1356,10 @@ async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar:
         ]
     total = await _get_db().article_costs.count_documents(query)
     items = await _get_db().article_costs.find(query, {"_id": 0}).sort("codigo", 1).to_list(max(1, min(limit, 5000)))
+    puede_ver_coste = _is_elevated(user) or user.get("isMaster") or user.get("isPrimaryAdmin") or user.get("canAccessRentabilidad")
+    if electros and not puede_ver_coste:
+        campos_coste = {"costeUnitario", "costeTotal", "precioCoste", "margen"}
+        items = [{k: v for k, v in item.items() if k not in campos_coste} for item in items]
     return {"total": total, "items": items}
 
 
@@ -1639,7 +1711,7 @@ async def tag_electros(payload: Optional[dict] = None, user: dict = Depends(requ
 # puede estar en varios bodegones. tipo: 'bodegon' (suma PVP) u 'oferta'
 # (valores individuales, no suma). Coleccion: electro_bodegones.
 # ---------------------------------------------------------------------------
-async def _resolve_bodegon(b: dict) -> dict:
+async def _resolve_bodegon(b: dict, include_cost: bool = False) -> dict:
     """Anade a un bodegon el detalle de sus articulos desde article_costs y el
     total de PVP (solo suma si tipo == 'bodegon')."""
     codes = b.get("articleCodes") or []
@@ -1650,7 +1722,8 @@ async def _resolve_bodegon(b: dict) -> dict:
             arts.append({
                 "codigo": a.get("codigo"), "codigoNorm": a.get("codigoNorm"),
                 "nombre": a.get("nombre"), "marca": a.get("marca"),
-                "costeUnitario": a.get("costeUnitario"), "pvp": a.get("pvp"),
+                **({"costeUnitario": a.get("costeUnitario")} if include_cost else {}),
+                "pvp": a.get("pvp"),
             })
     # Ordena los articulos segun el orden guardado en articleCodes.
     order = {c: i for i, c in enumerate(codes)}
@@ -1663,11 +1736,12 @@ async def _resolve_bodegon(b: dict) -> dict:
 
 
 @router.get("/rentabilidad/bodegones")
-async def list_bodegones():
-    """Lista los bodegones de electros con el detalle de sus articulos."""
+async def list_bodegones(user: dict = Depends(require_auth)):
+    """Lista los bodegones de electros con el detalle autorizado."""
     out = []
+    puede_ver_coste = _is_elevated(user) or user.get("isMaster") or user.get("isPrimaryAdmin") or user.get("canAccessRentabilidad")
     async for b in _get_db().electro_bodegones.find({}, {"_id": 0}).sort("createdAt", 1):
-        out.append(await _resolve_bodegon(b))
+        out.append(await _resolve_bodegon(b, include_cost=puede_ver_coste))
     return {"total": len(out), "items": out}
 
 
@@ -1752,11 +1826,31 @@ async def apply_article_costs(payload: dict):
 # ----------------------------- FICHAS (guardado) -----------------------------
 
 @router.get("/rentabilidad/fichas")
-async def list_fichas(userId: Optional[str] = None):
-    """Lista las fichas de rentabilidad por lineas (resumen)."""
+async def list_fichas(userId: Optional[str] = None, user: dict = Depends(require_rentabilidad)):
+    """Lista fichas; CONTROLLER recibe solo facturas revisadas por MASTER."""
     try:
-        query = {"createdBy": userId} if userId else {}
-        fichas = await _get_db().sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+        es_controller = bool(user.get("isController")) and not (
+            _is_elevated(user) or _is_master_user(user))
+        query = {"createdBy": userId} if userId and not es_controller else {}
+        if es_controller:
+            query.update({
+                "docType": "factura",
+                "revisada": True,
+                "fecha": {"$gte": CONTROLLER_INVOICE_FROM},
+            })
+        cursor = _get_db().sale_fichas.find(query, {"_id": 0})
+        if es_controller:
+            cursor = cursor.sort([("fecha", 1), ("ref", 1)])
+        else:
+            cursor = cursor.sort("createdAt", -1)
+        fichas = await cursor.to_list(2000)
+        if es_controller:
+            master_ids, master_names = await _master_reviewer_identities()
+            visibles = []
+            for ficha in fichas:
+                if _reviewed_by_master(ficha, master_ids, master_names):
+                    visibles.append(ficha)
+            fichas = visibles
         cobrado_map = await _cobrado_por_ficha_map()
         costes_map = await _costes_proyecto_map()
         for f in fichas:
@@ -1770,11 +1864,19 @@ async def list_fichas(userId: Optional[str] = None):
 
 
 @router.get("/rentabilidad/fichas/{ficha_id}")
-async def get_ficha(ficha_id: str):
-    """Detalle de una ficha + metadatos de sus documentos (sin el base64)."""
+async def get_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)):
+    """Detalle autorizado de una ficha y metadatos de sus adjuntos."""
     f = await _get_db().sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
     if not f:
         raise HTTPException(status_code=404, detail="Ficha no encontrada")
+    es_controller = bool(user.get("isController")) and not (
+        _is_elevated(user) or _is_master_user(user))
+    if es_controller:
+        master_ids, master_names = await _master_reviewer_identities()
+        fecha_factura = str(f.get("fecha") or "")[:10]
+        if (fecha_factura < CONTROLLER_INVOICE_FROM or
+                not _reviewed_by_master(f, master_ids, master_names)):
+            raise HTTPException(status_code=404, detail="Ficha no disponible")
     f["totals"] = _ficha_totals(f.get("lines", []))
     cobrado_map = await _cobrado_por_ficha_map()
     costes_map = await _costes_proyecto_map()
@@ -2002,6 +2104,8 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
                 (user or {}).get("username") or
                 (user or {}).get("email") or ""
             ) if revisada else "",
+            "revisadaPorUserId": (user or {}).get("id", "") if revisada else "",
+            "revisadaPorMaster": _is_master_user(user) if revisada else False,
             "revisadaAt": now if revisada else "",
             "updatedAt": now,
         }
@@ -2099,8 +2203,17 @@ async def add_ficha_doc(ficha_id: str, payload: dict):
 
 
 @router.get("/rentabilidad/fichas/{ficha_id}/docs/{doc_id}")
-async def get_ficha_doc(ficha_id: str, doc_id: str):
-    """Devuelve el documento (base64) para consultarlo/descargarlo."""
+async def get_ficha_doc(ficha_id: str, doc_id: str, user: dict = Depends(require_rentabilidad)):
+    """Devuelve un adjunto solo si la ficha es visible para el usuario."""
+    ficha = await _get_db().sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
+    if not ficha:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    es_controller = bool(user.get("isController")) and not (
+        _is_elevated(user) or _is_master_user(user))
+    if es_controller:
+        master_ids, master_names = await _master_reviewer_identities()
+        if not _reviewed_by_master(ficha, master_ids, master_names):
+            raise HTTPException(status_code=404, detail="Documento no disponible")
     d = await _get_db().sale_ficha_docs.find_one({"id": doc_id, "fichaId": ficha_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
@@ -2402,10 +2515,19 @@ async def parse_ingresos(payload: dict):
 
 
 @router.get("/rentabilidad/ingresos")
-async def list_ingresos(userId: Optional[str] = None):
-    """Lista los ingresos a cuenta (cada usuario los suyos si se pasa userId)."""
-    query = {"createdBy": userId} if userId else {}
+async def list_ingresos(userId: Optional[str] = None, user: dict = Depends(require_rentabilidad)):
+    """Lista ingresos; CONTROLLER solo recibe los ligados a facturas MASTER visibles."""
+    es_controller = bool(user.get("isController")) and not (
+        _is_elevated(user) or _is_master_user(user))
+    query = {"createdBy": userId} if userId and not es_controller else {}
     items = await _get_db().ingresos_cuenta.find(query, {"_id": 0}).sort("fecha", -1).to_list(3000)
+    if es_controller:
+        visible_ids, visible_refs = await _controller_visible_invoice_scope()
+        items = [i for i in items if (
+            str(i.get("targetId") or "") in visible_ids
+            or _normalize_ref(i.get("targetRef")) in visible_refs
+            or _normalize_ref(i.get("projectRef")) in visible_refs
+        )]
     total = round(sum(float(i.get("importe", 0) or 0) for i in items), 2)
     return {"items": items, "total": total}
 
@@ -2677,11 +2799,24 @@ async def create_ingreso(payload: dict):
 
 
 @router.get("/rentabilidad/ingresos/doc/{doc_id}")
-async def get_ingreso_doc(doc_id: str):
-    """Devuelve el documento archivado de un ingreso (para consultarlo)."""
+async def get_ingreso_doc(doc_id: str, user: dict = Depends(require_rentabilidad)):
+    """Devuelve un adjunto de ingreso dentro del ámbito visible."""
     d = await _get_db().ingreso_docs.find_one({"id": doc_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+    es_controller = bool(user.get("isController")) and not (
+        _is_elevated(user) or _is_master_user(user))
+    if es_controller:
+        ingreso = await _get_db().ingresos_cuenta.find_one(
+            {"id": d.get("ingresoId")}, {"_id": 0})
+        visible_ids, visible_refs = await _controller_visible_invoice_scope()
+        autorizado = ingreso and (
+            str(ingreso.get("targetId") or "") in visible_ids
+            or _normalize_ref(ingreso.get("targetRef")) in visible_refs
+            or _normalize_ref(ingreso.get("projectRef")) in visible_refs
+        )
+        if not autorizado:
+            raise HTTPException(status_code=404, detail="Documento no disponible")
     return d
 
 

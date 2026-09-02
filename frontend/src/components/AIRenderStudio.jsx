@@ -64,6 +64,16 @@ import BotonPantallaCompleta from './BotonPantallaCompleta';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Nunca se muestran en pantalla detalles del proveedor o del modelo, ni aunque
+// lleguen incluidos en un error técnico del servidor.
+const mensajePublico = (valor, fallback = 'No se pudo completar la operación. Inténtalo de nuevo.') => {
+  if (valor === null || valor === undefined || valor === '') return valor;
+  const texto = String(valor);
+  return /\b(?:IA|Gemini|Manus|OpenAI|Anthropic|Claude|Flux|Banana|motor|modelo|proveedor|provider)\b/i.test(texto)
+    ? fallback
+    : texto;
+};
+
 // Tipos de marca de instalaciones para señalar sobre el render (gremios).
 // `h` = altura estándar de la instalación (cm desde el suelo), que se muestra
 // como COTA junto a cada punto. `Icon` = icono (no letras).
@@ -87,7 +97,7 @@ const MARK_TYPES = {
 // Reduce una imagen grande (foto de móvil) antes de guardarla/enviarla: evita
 // que un base64 enorme sature memoria y tumbe la pestaña al analizarla/renderizar.
 // Si el archivo no es una imagen rasterizable (p. ej. PDF), devuelve el original.
-const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((resolve, reject) => {
+const downscaleImage = (file, maxDim = 1600, quality = 0.85, outputType = 'image/jpeg') => new Promise((resolve, reject) => {
   const fr = new FileReader();
   fr.onload = () => {
     const original = fr.result;
@@ -96,12 +106,14 @@ const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((res
       img.onload = () => {
         try {
           const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          if (scale >= 1) { resolve(original); return; } // ya es pequeña
+          if (scale >= 1 && (!outputType || outputType === file.type)) { resolve(original); return; }
           const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          resolve(outputType === 'image/png'
+            ? canvas.toDataURL('image/png')
+            : canvas.toDataURL(outputType || 'image/jpeg', quality));
         } catch (_) { resolve(original); }
       };
       img.onerror = () => resolve(original); // no es imagen (PDF u otro) → original
@@ -422,7 +434,7 @@ export default function AIRenderStudio({ state, setState }) {
   // se unifica todo en Estudio 3D + Agentes.
   const OTRAS_HERRAMIENTAS = [
     { tab: 'agentesDisenadores', label: 'Agentes' },
-    { tab: 'cocinasai', label: 'Cocinas IA 2' },
+    { tab: 'cocinasai', label: 'Cocinas 2' },
     { tab: 'kitchenDesigner', label: 'Diseñador 3D' },
     { tab: 'estudioCocinas', label: 'Estudio técnico' },
   ];
@@ -431,13 +443,21 @@ export default function AIRenderStudio({ state, setState }) {
   const [description, setDescription] = useState('');
   const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) PRINCIPAL para que el modelo la "vea"
   const [refImages, setRefImages] = useState([]); // TODAS las referencias subidas (p.ej. una por pared) → un render por cada una
-  const [originalRef, setOriginalRef] = useState(null); // PRIMERA imagen subida: se conserva para "Comparar" pase lo que pase
+  const [originalRef, setOriginalRef] = useState(null); // PRIMERA referencia: se conserva para Comparar
+  const [pdfComparePreview, setPdfComparePreview] = useState(null);
+  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
   const [floorPlan, setFloorPlan] = useState(null);    // plano en planta (dataURL)
   const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderResult, setRenderResult] = useState(null);
   const [renderHistory, setRenderHistory] = useState([]);
-  const [error, setError] = useState(null);
+  const [error, setErrorInterno] = useState(null);
+  const setError = useCallback((valor) => {
+    setErrorInterno(anterior => {
+      const siguiente = typeof valor === 'function' ? valor(anterior) : valor;
+      return mensajePublico(siguiente);
+    });
+  }, []);
   // Avisos: la vista SÍ se generó, pero hubo que corregir algo (un ancho
   // ajustado, un relleno añadido). En rojo y con la palabra «Error» delante
   // parecía que había fallado, y no.
@@ -466,16 +486,22 @@ export default function AIRenderStudio({ state, setState }) {
   const [editInstruction, setEditInstruction] = useState('');
   const [editLines, setEditLines] = useState([]); // multi-línea: instrucciones adicionales
   const [editing, setEditing] = useState(false);
+  // Cadena de edición sin degradación acumulativa: cada cambio se genera desde
+  // la imagen original de la sesión, incorporando las órdenes ya aplicadas en
+  // el prompt, en vez de volver a enviar el render regenerado anterior.
+  const [editBaseImage, setEditBaseImage] = useState(null);
+  const [editAppliedChanges, setEditAppliedChanges] = useState([]);
   // Imagen de un ELEMENTO a copiar (una puerta, un mueble…) para incorporarlo.
   const [editRefImage, setEditRefImage] = useState(null);
   // Electrodomésticos, cámara y nº de variaciones (Tanda 3).
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
-  // Motor de render: 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
+  // Motor de render: 'ia0' = camino histórico del 11/07/2026,
+  // 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
   // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro.
   // ('ia2' e 'ia4' están apagadas.)
-  const [motor, setMotor] = useState('ia1');
+  const [motor, setMotor] = useState('ia0');
   // ─── LO QUE VA A COSTAR, ANTES DE PULSAR ─────────────────────────────────
   //
   // El coste en créditos depende del motor (25/08). Pero el aviso NO PUEDE
@@ -487,7 +513,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Se dice el NÚMERO y ya está. Esta tabla tiene que decir lo mismo que
   // `COSTE_POR_MOTOR` de `backend/services/ai_usage.py`, que es quien cobra de
   // verdad; hay un candado que compara las dos y se pone rojo si se separan.
-  const COSTE_CREDITOS = { banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
+  const COSTE_CREDITOS = { julio11: 1, julio11_plus: 1, banana_pro: 3.3, flux: 1, manus: 1, gemini: 1, gemini_premium: 1 };
   const creditosPorRender = () => Math.ceil((COSTE_CREDITOS[providerOf()] ?? 1));
   const creditosDeEstaTanda = (n = 1) => creditosPorRender() * Math.max(1, n);
 
@@ -541,6 +567,8 @@ export default function AIRenderStudio({ state, setState }) {
     // motor sigue en el backend detras de MOTOR_MANUS_ACTIVO por si algun dia
     // se quiere. Aqui ni se ofrece ni se puede pedir: si quedara un 'ia2'
     // guardado en una pestaña vieja, cae al motor de siempre y rinde igual.
+    // IA 0: prueba histórica del render usado el 11/07/2026.
+    if (motor === 'ia0') return 'julio11';
     if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
     // IA 4 APAGADA el 24/08/2026, a peticion del master. No era un motor: en
     // `_render_dispatch` hacia `model_override="gemini-2.5-flash-image"`, que es
@@ -556,10 +584,9 @@ export default function AIRenderStudio({ state, setState }) {
     // funcionaba mejor y con este botón se rinde el mismo croquis por los dos
     // caminos y se miran las dos imágenes, en vez de discutirlo.
     if (motor === 'ia5') return 'julio';
-    // IA 7: el motor Pro. MISMO encargo que IA 1 —con
-    // recorte y lectura a ficha—, solo cambia el modelo, para que lo que se vea
-    // en las dos imágenes sea el modelo y no otra cosa. Cuesta 3,3x por render.
-    if (motor === 'ia7') return 'banana_pro';
+    // IA 7: copia de IA0 con reglas estrictas de geometría/vanos y una
+    // referencia visual de mayor calidad. IA0 permanece congelada.
+    if (motor === 'ia7') return 'julio11_plus';
     return 'gemini';
   };
   const [attached, setAttached] = useState(false);
@@ -818,7 +845,7 @@ export default function AIRenderStudio({ state, setState }) {
         const validas = (d.marks || []).filter(m => MARK_TYPES[m.type]?.tipos?.includes(tipo3d));
         setMarks(validas); setMarkTool(null);
         if (validas.length) setSchematic(true);
-        else setError('La IA no localizó puntos claros; márcalos a mano.');
+        else setError('No se localizaron puntos claros; márcalos a mano.');
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
     } catch (e) { setError(`Error al detectar instalaciones: ${e?.message || 'fallo de conexión'}`); }
     finally { setDetecting(false); }
@@ -840,7 +867,7 @@ export default function AIRenderStudio({ state, setState }) {
         setOrbitFrames(d.images); setOrbitIndex(Math.floor(d.images.length / 2)); setOrbitOn(true);
         setInteractiveMode(false);
       } else if (r.status === 402) {
-        setError(d.detail || 'Sin créditos de IA para generar el giro 360º.');
+        setError(d.detail || 'Sin créditos disponibles para generar el giro 360º.');
       } else {
         setError(d.detail || d.error || 'No se pudo generar el giro. Inténtalo de nuevo.');
       }
@@ -967,7 +994,7 @@ export default function AIRenderStudio({ state, setState }) {
   // ─── PDF de ESQUEMA PARA EL GREMIO (fontanero/electricista) ─────────────────
   const esquemaGremioPDF = async () => {
     if (!currentImage()) return;
-    if (!marks.length) { setError('No hay tomas marcadas. Pulsa «Detectar auto (IA)» o márcalas a mano antes de generar el esquema.'); return; }
+    if (!marks.length) { setError('No hay tomas marcadas. Pulsa «Detectar automáticamente» o márcalas a mano antes de generar el esquema.'); return; }
     setDownloading(true);
     try {
       const img = await renderMarcadoDataUrl(2);
@@ -1031,7 +1058,7 @@ export default function AIRenderStudio({ state, setState }) {
         pdf.text(`x${n}  ·  h ${t.h} cm`, cx + 7, cy + 4);
       });
       pdf.setFontSize(7); pdf.setTextColor(150); pdf.setFont(undefined, 'normal');
-      pdf.text('Esquema orientativo generado por IA para coordinación con el gremio. Verificar in situ.', M, H - 4);
+      pdf.text('Esquema orientativo para coordinación con el gremio. Verificar in situ.', M, H - 4);
       pdf.save(`esquema_gremio_${(cliente || ref || 'cocina').replace(/\s+/g, '_')}.pdf`);
     } catch (e) { setError('No se pudo generar el esquema: ' + (e.message || '')); }
     finally { setDownloading(false); }
@@ -1107,6 +1134,31 @@ export default function AIRenderStudio({ state, setState }) {
     const token = getToken();
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
+
+  // El PDF original se conserva para generar. Comparar utiliza únicamente una
+  // copia PNG de la primera página, preparada por el backend.
+  useEffect(() => {
+    const referencia = originalRef || refImage;
+    const esPdf = typeof referencia === 'string'
+      && referencia.slice(0, 80).toLowerCase().startsWith('data:application/pdf');
+    if (!esPdf) {
+      setPdfComparePreview(null);
+      setPdfPreviewLoading(false);
+      return undefined;
+    }
+    let activa = true;
+    setPdfPreviewLoading(true);
+    fetch(`${API_URL}/api/ai-engine/pdf-preview`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64: referencia }),
+    })
+      .then(r => r.json())
+      .then(d => { if (activa) setPdfComparePreview(d.success ? d.image : null); })
+      .catch(() => { if (activa) setPdfComparePreview(null); })
+      .finally(() => { if (activa) setPdfPreviewLoading(false); });
+    return () => { activa = false; };
+  }, [originalRef, refImage]);
 
   // Créditos de IA del usuario: se consultan al montar y tras cada generación.
   // FALLAR EN SILENCIO NO ES LO MISMO QUE NO ROMPER NADA.
@@ -2321,6 +2373,9 @@ export default function AIRenderStudio({ state, setState }) {
 
   const editRender = async () => {
     const img = currentImage();
+    // La referencia queda congelada en el primer cambio. Así la segunda y
+    // siguientes iteraciones no reciben una copia ya regenerada/comprimida.
+    const baseImg = editBaseImage || img;
     // Combina la instrucción principal + líneas adicionales (multi-línea).
     const allLines = [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
     if (!img || (!allLines.length && !editRefImage)) return;
@@ -2330,7 +2385,8 @@ export default function AIRenderStudio({ state, setState }) {
     const snapLines = [...editLines];
     setEditing(true); setError(null);
     try {
-      const dataUrl = await imageToDataUrl(img);
+      const dataUrl = editBaseImage || await imageToDataUrl(baseImg);
+      if (!editBaseImage) setEditBaseImage(dataUrl);
       // VARIAS ÓRDENES VAN COMO LISTA NUMERADA, NO PEGADAS CON PUNTOS.
       //
       // Se mandaban con `join('. ')`, o sea un párrafo corrido: «campana
@@ -2343,7 +2399,7 @@ export default function AIRenderStudio({ state, setState }) {
       // Numeradas y con el recuento delante, el encargo deja de ser una frase y
       // pasa a ser una lista de comprobación. No es magia y no garantiza las
       // ocho, pero es la diferencia entre pedirlo y mencionarlo.
-      const cambio = allLines.length > 1
+      const cambioNuevo = allLines.length > 1
         ? (`Aplica EXACTAMENTE estos ${allLines.length} cambios, TODOS, `
            + `sin dejarte ninguno:\n`
            + allLines.map((l, i) => `${i + 1}. ${l}`).join('\n')
@@ -2351,6 +2407,10 @@ export default function AIRenderStudio({ state, setState }) {
         : (allLines.length === 1
            ? allLines[0]
            : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : ''));
+      const historial = editAppliedChanges.length
+        ? `\n\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR EN EL RESULTADO:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`
+        : '';
+      const cambio = `${historial}\nNUEVO CAMBIO QUE DEBES APLICAR AHORA:\n${cambioNuevo}`;
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -2400,6 +2460,7 @@ export default function AIRenderStudio({ state, setState }) {
         const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
+        setEditAppliedChanges(prev => [...prev, ...allLines]);
         // Borra SOLO lo que se aplicó; conserva lo escrito después (órdenes en cola).
         setEditInstruction(prev => (prev === snapMain ? '' : prev));
         setEditLines(prev => {
@@ -2414,6 +2475,11 @@ export default function AIRenderStudio({ state, setState }) {
       } else setError(data.error || 'No se pudo editar el render');
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
+  };
+
+  const resetEditChain = () => {
+    setEditBaseImage(null);
+    setEditAppliedChanges([]);
   };
 
   const nombreArchivo = (ext) => {
@@ -3267,7 +3333,9 @@ export default function AIRenderStudio({ state, setState }) {
       setProgresoRefs({ hechas: 0, total: files.length });
       let n = 0;
       for (const file of files) {
-        const b64 = await downscaleImage(file);
+        const b64 = motor === 'ia7'
+          ? await downscaleImage(file, 3000, 0.96, 'image/png')
+          : await downscaleImage(file);
         await addReference(b64, 'subida');
         n += 1;
         setProgresoRefs({ hechas: n, total: files.length });
@@ -3290,17 +3358,26 @@ export default function AIRenderStudio({ state, setState }) {
   const handleFloorPlanUpload = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    try { setFloorPlan(await fileToDataUrl(file)); } catch { setError('No se pudo leer el plano.'); }
+    try {
+      setFloorPlan(motor === 'ia7'
+        ? await downscaleImage(file, 3000, 0.96, 'image/png')
+        : await fileToDataUrl(file));
+    } catch { setError('No se pudo leer el plano.'); }
   };
   const handleAddWallSketch = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    try { const b64 = await fileToDataUrl(file); setWallSketches(prev => [...prev, b64]); }
-    catch { setError('No se pudo leer el boceto.'); }
+    try {
+      const b64 = motor === 'ia7'
+        ? await downscaleImage(file, 3000, 0.96, 'image/png')
+        : await fileToDataUrl(file);
+      setWallSketches(prev => [...prev, b64]);
+    } catch { setError('No se pudo leer el boceto.'); }
   };
   const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
   const handleGenerateComposed = async () => {
     if (!floorPlan && wallSketches.length === 0) return;
+    resetEditChain();
     const err = guardTipo(description);
     if (err) { setError(err); return; }
     setIsGenerating(true);
@@ -3349,6 +3426,7 @@ export default function AIRenderStudio({ state, setState }) {
     const finalDesc = description.trim() || 'cocina moderna y funcional de alta calidad';
     const err = guardTipo(finalDesc);
     if (err) { setError(err); return; }
+    resetEditChain();
     // Si hay plano o bocetos, se usan SIEMPRE junto con el texto y la
     // referencia de acabado: son fuentes complementarias, no alternativas.
     if (floorPlan || wallSketches.length > 0) {
@@ -3382,7 +3460,7 @@ export default function AIRenderStudio({ state, setState }) {
           // 402 = sin créditos: se detiene y se muestra el mensaje del backend.
           if (response.status === 402) {
             const d = await response.json().catch(() => ({}));
-            noCreditsMsg = d.detail || 'Sin créditos de IA.';
+            noCreditsMsg = d.detail || 'Sin créditos disponibles.';
             break;
           }
           const data = await response.json();
@@ -3422,7 +3500,7 @@ export default function AIRenderStudio({ state, setState }) {
       // 402 = sin créditos de IA: propaga el detalle del backend.
       if (response.status === 402) {
         const d = await response.json().catch(() => ({}));
-        const e = new Error(d.detail || 'Sin créditos de IA.');
+        const e = new Error(d.detail || 'Sin créditos disponibles.');
         e.noCredits = true;
         throw e;
       }
@@ -3454,6 +3532,7 @@ export default function AIRenderStudio({ state, setState }) {
   const amueblarEstanciaReal = async () => {
     if (!refImage) { setError('Sube primero la FOTO de la estancia real (botón «Subir imagen(es) de referencia»).'); return; }
     if (isGenerating) return;
+    resetEditChain();
     setIsGenerating(true); setError(null);
     try {
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
@@ -3466,7 +3545,7 @@ export default function AIRenderStudio({ state, setState }) {
           referenceImages: (refImages && refImages.length > 1) ? refImages.slice(1) : undefined,
         }),
       });
-      if (response.status === 402) { const d = await response.json().catch(() => ({})); setError(d.detail || 'Sin créditos de IA.'); return; }
+      if (response.status === 402) { const d = await response.json().catch(() => ({})); setError(d.detail || 'Sin créditos disponibles.'); return; }
       const data = await response.json();
       if (data.success) {
         const merged = { ...data, description: 'Amueblado virtual sobre estancia real' };
@@ -3482,6 +3561,7 @@ export default function AIRenderStudio({ state, setState }) {
   const handleGenerateParams = async () => {
     const err = guardTipo('cocina');
     if (err) { setError(err); return; }
+    resetEditChain();
     setIsGenerating(true);
     setError(null);
 
@@ -3529,7 +3609,7 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
             <div>
               <h1 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide leading-tight whitespace-nowrap">Estudio 3D</h1>
-              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Motor de IA</p>
+              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Diseño y visualización</p>
             </div>
             {/* Créditos de IA del usuario (bolsa mensual).
                 Para el MASTER el contador es además el botón de recarga: el
@@ -3573,7 +3653,7 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
               ) : (
                 <span
-                  title="Créditos de IA disponibles este mes"
+                  title="Créditos disponibles este mes"
                   className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black ${
                     aiCredits.ilimitado
                       ? 'bg-indigo-100 text-indigo-700'
@@ -3913,17 +3993,27 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               )}
 
-              {/* Acción principal — barra fija siempre visible */}
+                {/* Acción principal — barra fija siempre visible */}
               <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
-                  <div className="flex bg-slate-100 rounded-lg p-1">
-                    {(isMaster ? [['ia1', 'IA 1', 'Motor principal (Gemini)'], ['ia3', 'IA 3', 'Gemini ultra-fotorrealista — prompt premium'], ['ia5', 'IA 5', 'Camino del 22/07/2026 — mismo motor, el encargo de entonces: modo estructura estricta y vanos (sin recorte ni lectura a ficha)'], ['ia7', 'IA 7', 'Motor Pro — mismo encargo que IA 1, solo cambia el motor. Cuesta 3,3x por render']] : [['ia1', 'IA 1', 'Motor principal']]).map(([id, lbl, title]) => (
-                      <button key={id} onClick={() => setMotor(id)} title={title}
-                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
-                    ))}
+                {isMaster && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">IA</span>
+                    <div className="flex bg-slate-100 rounded-lg p-1">
+                      {[
+                        ['ia0', 'IA0', 'Configuración estable'],
+                        ['ia1', 'IA1', 'Configuración estándar'],
+                        ['ia3', 'IA3', 'Configuración alternativa'],
+                        ['ia5', 'IA5', 'Configuración histórica alternativa'],
+                        ['ia7', 'IA7', 'Configuración mejorada de prueba'],
+                      ].map(([id, label, title]) => (
+                        <button key={id} type="button" onClick={() => setMotor(id)} title={title}
+                          className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">
@@ -4054,7 +4144,7 @@ export default function AIRenderStudio({ state, setState }) {
               <button
                 onClick={handleGenerateParams}
                 disabled={isGenerating}
-                title="Generar el render 3D con los parámetros de arriba (consume créditos de IA)"
+                title="Generar el render 3D con los parámetros de arriba (consume créditos)"
                 className="w-full py-4 bg-gradient-to-r from-accion-600 to-accion-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shrink-0"
               >
                 {isGenerating ? (
@@ -4167,7 +4257,7 @@ export default function AIRenderStudio({ state, setState }) {
                       <span>{pared.nombre}:</span>
                       <select value={pared.ancho} disabled={corrigiendo}
                         onChange={(ev) => cambiarAnchoPared(i, parseInt(ev.target.value, 10))}
-                        title="Ancho REAL de esta pared. Si lo cambias, manda sobre lo que haya leído la IA."
+                        title="Ancho REAL de esta pared. Si lo cambias, manda sobre la medida detectada."
                         className="px-1 py-0.5 rounded border border-dato-300 bg-white text-dato-900 font-black text-[12px] disabled:opacity-50">
                         {/* De 100 a 600 de 10 en 10, más el valor actual por si
                             viene de un croquis y no cae en la rejilla. */}
@@ -4177,7 +4267,7 @@ export default function AIRenderStudio({ state, setState }) {
                       </select>
                       <span className="font-normal">
                         ({pared.ancho_corregido ? 'corregida por ti'
-                          : pared.ancho_escrito ? 'medida real' : 'estimada por la IA'})
+                          : pared.ancho_escrito ? 'medida real' : 'estimada automáticamente'})
                       </span>
                       {/* La suma TIENE que cuadrar con la pared. El validador ya
                           la cuadra; enseñarlo es la red por si algún día no. */}
@@ -4195,7 +4285,7 @@ export default function AIRenderStudio({ state, setState }) {
                                 : 'bg-teal-100/60 border-teal-200 border-dashed'}`}
                           title={e.corregida ? 'Medida corregida por ti: se respeta tal cual'
                             : e.medida_escrita ? 'Medida escrita en tu croquis'
-                              : 'Medida deducida por la IA a ojo — compruébala'}>
+                              : 'Medida aproximada — compruébala'}>
                           <span className="truncate max-w-[110px]">{e.label}</span>
                           {esPiezaAMedida(e.id) ? (
                             <input type="number" step="0.1" min="0.1" max="200"
@@ -4225,7 +4315,7 @@ export default function AIRenderStudio({ state, setState }) {
                           if (m) añadirModulo(i, m);
                           ev.target.value = '';
                         }}
-                        title="Añadir un módulo que la IA no haya visto. Se pone al final de la pared."
+                        title="Añadir un módulo que no se haya detectado. Se pone al final de la pared."
                         className="rounded-lg border border-dashed border-accion-400 bg-white px-1.5 py-0.5 text-[11px] font-black text-accion-700 disabled:opacity-50">
                         <option value="">+ añadir…</option>
                         {MODULOS_PARA_AÑADIR.map(m => <option key={m.id} value={m.id}>{m.label} ({m.ancho})</option>)}
@@ -4238,7 +4328,7 @@ export default function AIRenderStudio({ state, setState }) {
                 {corrigiendo
                   ? 'Aplicando la corrección…'
                   : <>Las medidas SIN «~» están escritas en tu croquis o las has corregido tú. Las que
-                    llevan «~» las ha deducido la IA a ojo. <b>Cámbialas aquí</b> y se dibujará con lo que
+                    llevan «~» son aproximadas. <b>Cámbialas aquí</b> y se dibujará con lo que
                     tú digas: lo que corriges se respeta tal cual y el resto se cuadra alrededor.</>}
               </div>
               {(distDetectada.avisos || []).length > 0 && (
@@ -4464,7 +4554,7 @@ export default function AIRenderStudio({ state, setState }) {
                   </div>
                 </div>
                 <p className="text-lg font-black text-slate-700 uppercase tracking-wider">Generando render</p>
-                <p className="text-sm text-slate-500 mt-2">El motor de IA está creando tu diseño 3D...</p>
+                <p className="text-sm text-slate-500 mt-2">Preparando tu diseño 3D...</p>
                 <p className="text-xs text-slate-400 mt-1">Esto puede tardar hasta 30 segundos</p>
               </div>
             </div>
@@ -4596,7 +4686,7 @@ export default function AIRenderStudio({ state, setState }) {
                 ) : (
                   <button onClick={generarOrbita} disabled={orbitLoading}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors"
-                    title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos de IA)">
+                    title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos)">
                     {orbitLoading ? <Loader size={12} className="animate-spin" /> : <RotateCw size={12} />}
                     <span className="hidden sm:inline truncate">{orbitLoading ? 'Generando…' : '360º'}</span>
                   </button>
@@ -4609,7 +4699,7 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
                 {/* Separador + nuevo render */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
-                <button onClick={() => { setRenderResult(null); setDescription(''); }}
+                <button onClick={() => { resetEditChain(); setRenderResult(null); setDescription(''); }}
                   className="p-1.5 bg-slate-100 rounded-lg hover:bg-accion-50 hover:text-accion-500 transition-colors"
                   title="Nuevo render (limpia el resultado actual)">
                   <RotateCcw size={14} className="text-slate-500" />
@@ -4641,13 +4731,16 @@ export default function AIRenderStudio({ state, setState }) {
               {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
                 <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 min-h-[45vh]">
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
-                    {(originalRef || refImage).startsWith('data:image') ? (
-                      <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
+                    {(pdfComparePreview || originalRef || refImage).startsWith('data:image') ? (
+                      <img src={pdfComparePreview || originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
                     ) : (
                       <div className="text-center p-4">
-                        <FileText size={40} className="text-slate-400 mx-auto mb-2" />
-                        <p className="text-xs text-slate-500 font-bold">Referencia (PDF)</p>
-                        <p className="text-[10px] text-slate-400 mt-1">No se puede previsualizar un PDF en la comparativa</p>
+                        {pdfPreviewLoading
+                          ? <Loader size={40} className="text-slate-400 mx-auto mb-2 animate-spin" />
+                          : <FileText size={40} className="text-slate-400 mx-auto mb-2" />}
+                        <p className="text-xs text-slate-500 font-bold">
+                          {pdfPreviewLoading ? 'Preparando vista previa…' : 'No se pudo mostrar la vista previa'}
+                        </p>
                       </div>
                     )}
                     <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">Referencia</span>
@@ -4674,7 +4767,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
                   <button onClick={() => detectInstalaciones()} disabled={detecting}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
-                    {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar auto (IA)'}
+                    {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar automáticamente'}
                   </button>
                   <button onClick={() => setSchematic(s => !s)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${schematic ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
@@ -4717,7 +4810,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <button onClick={alternarMedidas} disabled={editing || !renderResult}
                       title={vistaConCotas
                         ? 'Volver a la foto. Ahora estás viendo el plano acotado del MISMO diseño; el render sigue guardado.'
-                        : 'INTERRUPTOR: enseña el mismo diseño con las medidas puestas, y al volver a pulsar recupera la foto tal cual. No genera nada nuevo ni gasta créditos. Las cotas se dibujan desde las medidas reales: la IA nunca escribe cotas sobre la foto.'}
+                        : 'INTERRUPTOR: enseña el mismo diseño con las medidas puestas, y al volver a pulsar recupera la foto tal cual. No genera nada nuevo ni gasta créditos. Las cotas se dibujan desde las medidas reales y no se escriben sobre la foto.'}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-black disabled:opacity-50 flex items-center gap-1.5 ${
                         vistaConCotas
                           ? 'bg-ok-600 text-white hover:bg-ok-700'
@@ -4735,7 +4828,7 @@ export default function AIRenderStudio({ state, setState }) {
                       {editing ? <Loader size={12} className="animate-spin" /> : <Box size={12} />} Plano CAD limpio
                     </button>
                     <button onClick={generarPerspectiva} disabled={editing}
-                      title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, no por una IA. Sin cotas: es de presentación."
+                      title="Boceto a lápiz EN PERSPECTIVA, con profundidad y punto de fuga. Dibujado desde las medidas reales, sin regenerar la imagen. Sin cotas: es de presentación."
                       className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-stone-700 text-white hover:bg-stone-800 disabled:opacity-50 flex items-center gap-1.5">
                       {editing ? <Loader size={12} className="animate-spin" /> : <>✎</>} Boceto en perspectiva
                     </button>
@@ -4884,7 +4977,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <div className="text-center p-8 max-w-sm">
                     <Image size={40} className="text-slate-500 mx-auto mb-3" />
                     <p className="text-slate-300 text-sm font-bold mb-1">No se pudo cargar la imagen del render</p>
-                    <p className="text-slate-500 text-xs">El motor devolvió el render pero la imagen no se pudo mostrar. Vuelve a generar; si persiste, avísanos para revisar el motor.</p>
+                    <p className="text-slate-500 text-xs">El render se generó pero la imagen no se pudo mostrar. Vuelve a generar; si persiste, avísanos para revisarlo.</p>
                   </div>
                 ) : (
                   <div className="text-center p-8">
@@ -4894,20 +4987,9 @@ export default function AIRenderStudio({ state, setState }) {
                         ? 'Render completado. La imagen se está procesando.'
                         : 'Render en proceso...'}
                     </p>
-                    {renderResult?.prompt_used && (
-                      <p className="text-slate-500 text-xs mt-4 max-w-md mx-auto italic">
-                        "{renderResult.prompt_used.substring(0, 200)}..."
-                      </p>
-                    )}
                   </div>
                 )}
 
-                {/* Badge del motor */}
-                <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg">
-                  <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">
-                    Render 3D IA
-                  </span>
-                </div>
               </div>
               </>
               )}
@@ -5037,32 +5119,9 @@ export default function AIRenderStudio({ state, setState }) {
                   {renderResult?.parsed_params?.layout && (
                     <span>Layout: {renderResult.parsed_params.layout}</span>
                   )}
-                  {/* El nombre del motor no se muestra: no aporta nada a quien
-                      mira el render y no tiene por qué salir en pantalla. El
-                      backend lo sigue devolviendo (`engine`) para el registro. */}
-                  {/* EL MODELO SÍ, PERO SOLO CUANDO NO ES EL DE SIEMPRE.
-                      Comparando dos motores hace falta saber cuál pintó cada
-                      imagen; el resto del tiempo es ruido. */}
-                  {isMaster && renderResult?.parsed_params?.motorUsado
-                    && renderResult.parsed_params.motorUsado !== 'Estándar' && (
-                    <span>Motor: {renderResult.parsed_params.motorUsado}</span>
-                  )}
                 </div>
               )}
 
-              {/* SI EL MODELO PEDIDO FALLÓ, SE DICE.
-                  La cascada de modelos existe para que un modelo retirado no
-                  deje al ERP sin renders, y está bien. Pero cuando se están
-                  comparando dos motores es una trampa: se pide Banana Pro,
-                  falla, pinta el pequeño, y sale una imagen con toda la pinta
-                  de ser la buena. Quien compara sacaría la conclusión al revés. */}
-              {renderResult?.parsed_params?.motorDeRespaldo && (
-                <div className="shrink-0 mt-2 text-[11px] leading-relaxed text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
-                  <span className="font-bold">⚠ Este render NO es del motor que pediste: </span>
-                  falló el motor <b>{renderResult.parsed_params.motorDeRespaldo}</b> y lo ha pintado el{' '}
-                  <b>{renderResult.parsed_params.motorUsado}</b>. No lo uses para comparar motores.
-                </div>
-              )}
 
               {/* LO QUE EL ERP HA LEÍDO DEL DIBUJO.
                   Cuando un render sale mal hay DOS culpables posibles: que se
@@ -5387,7 +5446,7 @@ export default function AIRenderStudio({ state, setState }) {
 
       {/* Saldo de renders: acceso siempre visible, para poder recargar
           sin salir del estudio cuando se agota el cupo. */}
-      <button onClick={() => setVerRecarga(true)} title="Tus renders de IA"
+      <button onClick={() => setVerRecarga(true)} title="Tus renders"
         className="fixed bottom-4 right-4 z-[60] px-3 py-2 rounded-full bg-accion-600 hover:bg-accion-700 text-white text-xs font-black shadow-lg flex items-center gap-1.5">
         <Zap size={14} /> Mis renders
       </button>

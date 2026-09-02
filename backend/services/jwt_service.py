@@ -350,7 +350,18 @@ def require_module_access(flag_name: str):
     que se le haya dado ese permiso especifico.
     """
     async def _dep(user: dict = Depends(require_auth)) -> Dict[str, Any]:
-        if any(user.get(f) for f in ADMIN_ROLE_FLAGS):
+        es_elevado = any(user.get(f) for f in ADMIN_ROLE_FLAGS) or user.get("isMaster") or user.get("isPrimaryAdmin")
+        es_controller_exclusivo = bool(user.get("isController")) and not es_elevado
+        if es_controller_exclusivo:
+            if flag_name == "canAccessRentabilidad":
+                return user
+            raise HTTPException(status_code=403, detail="Perfil de consulta sin acceso a este módulo")
+        if es_elevado:
+            return user
+        # `require_auth` ya devuelve la ficha actual de Mongo. Comprobarla aquí
+        # hace que quitar un permiso tenga efecto inmediato y evita depender de
+        # que el campo estuviera incluido en el JWT emitido al iniciar sesión.
+        if user.get(flag_name) is True:
             return user
         uid = user.get("id")
         if uid:

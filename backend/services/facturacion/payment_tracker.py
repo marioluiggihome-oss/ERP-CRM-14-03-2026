@@ -28,7 +28,8 @@ class PaymentTracker:
         amount: float,
         payment_method: str = "transferencia",
         reference: Optional[str] = None,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
+        invoice_filter: Optional[Dict] = None,
     ) -> dict:
         """
         Registra un cobro parcial o total para una factura.
@@ -43,7 +44,8 @@ class PaymentTracker:
         Returns:
             Documento del pago registrado
         """
-        invoice = await self.db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+        invoice_query = {"id": invoice_id, **(invoice_filter or {})}
+        invoice = await self.db.invoices.find_one(invoice_query, {"_id": 0})
         if not invoice:
             raise ValueError("Factura no encontrada")
 
@@ -69,6 +71,7 @@ class PaymentTracker:
         payment = {
             "id": f"pay-{uuid.uuid4().hex[:8]}",
             "invoiceId": invoice_id,
+            "ownerUserId": invoice.get("ownerUserId") or invoice.get("userId"),
             "invoiceNumber": invoice.get("invoiceNumber", ""),
             "clientName": invoice.get("clientName", ""),
             "amount": round(amount, 2),
@@ -88,7 +91,7 @@ class PaymentTracker:
         if new_total_paid >= invoice_total - 0.01:
             # Factura completamente pagada
             await self.db.invoices.update_one(
-                {"id": invoice_id},
+                invoice_query,
                 {"$set": {
                     "status": "paid",
                     "paidAt": now.isoformat(),
@@ -99,7 +102,7 @@ class PaymentTracker:
         else:
             # Pago parcial
             await self.db.invoices.update_one(
-                {"id": invoice_id},
+                invoice_query,
                 {"$set": {
                     "status": "partial",
                     "totalPaid": round(new_total_paid, 2),
@@ -117,9 +120,10 @@ class PaymentTracker:
         ).sort("paidAt", -1).to_list(100)
         return payments
 
-    async def get_balance(self, invoice_id: str) -> dict:
+    async def get_balance(self, invoice_id: str, invoice_filter: Optional[Dict] = None) -> dict:
         """Calcula el balance de una factura (total, pagado, pendiente)"""
-        invoice = await self.db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+        invoice = await self.db.invoices.find_one(
+            {"id": invoice_id, **(invoice_filter or {})}, {"_id": 0})
         if not invoice:
             raise ValueError("Factura no encontrada")
 
@@ -142,10 +146,16 @@ class PaymentTracker:
             "payments": payments
         }
 
-    async def cancel_payment(self, payment_id: str, reason: str = "") -> dict:
-        """Anula un pago registrado"""
+    async def cancel_payment(self, payment_id: str, reason: str = "",
+                             invoice_filter: Optional[Dict] = None) -> dict:
+        """Anula un pago registrado dentro del ámbito documental autorizado."""
         payment = await self.db.payments.find_one({"id": payment_id}, {"_id": 0})
         if not payment:
+            raise ValueError("Pago no encontrado")
+        invoice_id = payment.get("invoiceId")
+        invoice_query = {"id": invoice_id, **(invoice_filter or {})}
+        invoice = await self.db.invoices.find_one(invoice_query, {"_id": 0})
+        if not invoice:
             raise ValueError("Pago no encontrado")
 
         now = datetime.now(timezone.utc)
@@ -159,14 +169,12 @@ class PaymentTracker:
         )
 
         # Recalcular estado de la factura
-        invoice_id = payment.get("invoiceId")
         confirmed = await self.db.payments.find(
             {"invoiceId": invoice_id, "status": "confirmed"}
         ).to_list(100)
         total_paid = sum(p.get("amount", 0) for p in confirmed)
 
-        invoice = await self.db.invoices.find_one({"id": invoice_id}, {"_id": 0})
-        invoice_total = invoice.get("total", 0) if invoice else 0
+        invoice_total = invoice.get("total", 0)
 
         if total_paid <= 0:
             new_status = "issued"
@@ -176,13 +184,13 @@ class PaymentTracker:
             new_status = "partial"
 
         await self.db.invoices.update_one(
-            {"id": invoice_id},
+            invoice_query,
             {"$set": {"status": new_status, "totalPaid": round(total_paid, 2), "updatedAt": now.isoformat()}}
         )
 
         return {"message": "Pago anulado", "newInvoiceStatus": new_status}
 
-    async def check_overdue_invoices(self) -> List[dict]:
+    async def check_overdue_invoices(self, invoice_filter: Optional[Dict] = None) -> List[dict]:
         """
         Detecta y marca facturas vencidas.
         Debe ejecutarse periódicamente (cron diario).
@@ -193,7 +201,8 @@ class PaymentTracker:
         # Buscar facturas emitidas o parciales con fecha vencimiento pasada
         overdue_filter = {
             "status": {"$in": ["issued", "partial"]},
-            "dueDate": {"$lt": today}
+            "dueDate": {"$lt": today},
+            **(invoice_filter or {}),
         }
 
         overdue_invoices = await self.db.invoices.find(
@@ -210,7 +219,7 @@ class PaymentTracker:
 
         return overdue_invoices
 
-    async def get_aging_report(self) -> dict:
+    async def get_aging_report(self, invoice_filter: Optional[Dict] = None) -> dict:
         """
         Genera informe de antigüedad de deuda (aging report).
         Clasifica facturas pendientes por tramos de vencimiento.
@@ -218,7 +227,7 @@ class PaymentTracker:
         now = datetime.now(timezone.utc)
         today = now.date()
 
-        pending_filter = {"status": {"$in": ["issued", "partial", "overdue"]}}
+        pending_filter = {"status": {"$in": ["issued", "partial", "overdue"]}, **(invoice_filter or {})}
         invoices = await self.db.invoices.find(pending_filter, {"_id": 0}).to_list(1000)
 
         aging = {

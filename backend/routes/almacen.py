@@ -33,14 +33,8 @@ from services.db_client import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
-try:
-    from services.jwt_service import require_auth, get_current_user
-    _DEPS = [Depends(require_auth)]
-except Exception:  # pragma: no cover - entorno de pruebas sin auth
-    _DEPS = []
-
-    async def get_current_user():
-        return None
+from services.jwt_service import get_current_user, require_module_access
+_DEPS = [Depends(require_module_access("canAccessAlmacen"))]
 
 router = APIRouter(prefix="/almacen", tags=["almacen"], dependencies=_DEPS)
 
