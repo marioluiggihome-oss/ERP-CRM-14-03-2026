@@ -49,9 +49,9 @@ const CarpBrand = ({ big = false }) => (
     <img
       src="/carpinter-logo.webp"
       alt="carpinter.io"
-      style={{ height: big ? 64 : 40, width: 'auto', objectFit: 'contain' }}
+      style={{ height: big ? 80 : 40, width: 'auto', objectFit: 'contain' }}
     />
-    <span className={`${big ? 'text-[10px] mt-2' : 'text-[8px] mt-1'} font-bold tracking-[0.4em] text-[#aa7257]`}>CARPINTEROS · EBANISTAS</span>
+    <span className={`${big ? 'text-[11px] mt-2.5' : 'text-[8px] mt-1'} font-bold tracking-[0.4em] text-[#aa7257]`}>CARPINTEROS · EBANISTAS</span>
   </div>
 );
 
