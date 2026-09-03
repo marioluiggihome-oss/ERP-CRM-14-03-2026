@@ -731,6 +731,50 @@ async def studio3k_stats(current_user: dict = Depends(require_studio3k_admin), a
     return await _platform_stats(STUDIO3K, current_user, admin_id=adminId)
 
 
+@router.post("/studio3k/create-admin")
+async def studio3k_create_admin(payload: dict, current_user: dict = Depends(require_studio3k_admin)):
+    """Crea la primera organización administradora Studio3K.
+
+    Solo MASTER puede usar esta ruta. La organización se identifica con el id
+    del administrador raíz y no se permite declarar un vínculo externo desde
+    el cliente.
+    """
+    if not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo MASTER puede crear organizaciones Studio3K")
+    username = str((payload or {}).get("username", "")).strip()
+    password = str((payload or {}).get("password", ""))
+    client_name = str((payload or {}).get("clientName", "")).strip()
+    if not username or not password or not client_name:
+        raise HTTPException(status_code=400, detail="Usuario, contraseña y nombre de organización son obligatorios")
+    existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    admin_id = f"user-{uuid.uuid4().hex[:8]}"
+    doc = {
+        "id": admin_id,
+        "username": username,
+        "password": hash_password(password),
+        "clientName": client_name,
+        "isActive": True,
+        "isStudio3k": True,
+        "plataforma": STUDIO3K,
+        "canManageStudio3kUsers": True,
+        "linkedStudio3kAdminId": None,
+        "organizationId": admin_id,
+        "canUseKitchenDesigner": True,
+        "canUseCocinasAI": True,
+        "canUseAIAnalysis": True,
+        "allowedModules": [],
+        "estudio3dTipos": [],
+        "subscriptionPlan": str((payload or {}).get("subscriptionPlan") or "").strip(),
+        "aiCreditsMonthly": int((payload or {}).get("aiCreditsMonthly") or 0),
+        "accessExpirationDate": payload.get("accessExpirationDate"),
+    }
+    await _get_db().users.insert_one(doc)
+    logger.info("Studio3K organization created: %s (by MASTER %s)", username, current_user.get("username"))
+    return {k: v for k, v in doc.items() if k != "password"}
+
+
 @router.post("/studio3k/create")
 async def studio3k_create_user(payload: dict, current_user: dict = Depends(require_studio3k_admin)):
     """Crea un usuario del estudio vinculado a su administrador Studio3K."""

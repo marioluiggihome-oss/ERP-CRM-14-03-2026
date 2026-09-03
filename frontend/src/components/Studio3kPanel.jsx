@@ -62,20 +62,26 @@ function PanelUsuarios({ currentUser }) {
 
   const crear = async () => {
     setError('');
+    const firstOrganization = isMaster && organizations.length === 0;
     if (!nuevo.username.trim() || !nuevo.password) {
       setError('Usuario y contraseña son obligatorios');
       return;
     }
-    if (isMaster && !selectedAdminId) {
+    if (firstOrganization && !nuevo.clientName.trim()) {
+      setError('Indica el nombre de la organización');
+      return;
+    }
+    if (isMaster && !firstOrganization && !selectedAdminId) {
       setError('Selecciona primero la organización administradora');
       return;
     }
     setCreating(true);
     try {
-      const r = await fetch(`${BASE}/api/users/studio3k/create`, {
+      const endpoint = firstOrganization ? 'create-admin' : 'create';
+      const r = await fetch(`${BASE}/api/users/studio3k/${endpoint}`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...nuevo, adminId: selectedAdminId || undefined }),
+        body: JSON.stringify({ ...nuevo, ...(firstOrganization ? {} : { adminId: selectedAdminId }) }),
       });
       const data = await r.json();
       if (!r.ok) { setError(data.detail || 'No se pudo crear el usuario'); return; }
@@ -117,7 +123,7 @@ function PanelUsuarios({ currentUser }) {
       {/* Formulario de alta */}
       <div className="p-5 bg-indigo-50 border-b border-indigo-100">
         <p className="text-[11px] font-black text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-          <Plus size={12} /> Nuevo usuario / cliente
+          <Plus size={12} /> {isMaster && organizations.length === 0 ? 'Primera organización administradora' : 'Nuevo usuario / cliente'}
         </p>
         {isMaster && (
           <label className="block mb-3">
@@ -127,7 +133,7 @@ function PanelUsuarios({ currentUser }) {
               onChange={(event) => setSelectedAdminId(event.target.value)}
               className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500"
             >
-              <option value="">Todas las organizaciones</option>
+              <option value="">{organizations.length ? 'Todas las organizaciones' : 'Se creará la primera organización'}</option>
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>
                   {organization.clientName || organization.username}
@@ -165,7 +171,7 @@ function PanelUsuarios({ currentUser }) {
             value={nuevo.clientName}
             onChange={e => setNuevo({ ...nuevo, clientName: e.target.value })}
             onKeyDown={e => e.key === 'Enter' && crear()}
-            placeholder="Nombre / empresa (opcional)"
+            placeholder={isMaster && organizations.length === 0 ? 'Nombre de la organización' : 'Nombre / empresa (opcional)'}
             className="px-3 py-2 border border-indigo-200 rounded-lg text-sm flex-1 min-w-[160px] bg-white focus:outline-none focus:border-indigo-500"
           />
           <button
@@ -178,7 +184,9 @@ function PanelUsuarios({ currentUser }) {
           </button>
         </div>
         <p className="text-[10px] text-indigo-500 mt-2">
-          El usuario hereda tu marca, tu web de inicio y los permisos de la plataforma Studio3K.
+          {isMaster && organizations.length === 0
+            ? 'Este primer registro será el administrador de la organización STUDIO3K.IO.'
+            : 'El usuario hereda tu marca, tu web de inicio y los permisos de la plataforma Studio3K.'}
         </p>
         {error && (
           <p className="text-xs text-red-600 font-bold mt-2 flex items-center gap-1">
