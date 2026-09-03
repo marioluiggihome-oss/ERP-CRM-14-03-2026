@@ -66,6 +66,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.rate_limiter import limiter, get_limit
 from services.activity_tracker import get_tracker, ActivityType
 from services.audit_service import audit, AuditAction
+from services.plataformas import entrada_permitida, plataforma_de, suscripcion_permitida
 
 
 @router.post("/auth/login")
@@ -103,30 +104,22 @@ async def login(request: Request, credentials: dict):
         audit.log_login_failed(username, request, "account_disabled")
         raise HTTPException(status_code=401, detail="Cuenta desactivada")
 
-    # ─── Restricción de dominio: división Carpinteros ────────────────────────────
-    # Los usuarios isCarpintero (o canManageCarpinteroUsers sin isAdmin) solo
-    # pueden autenticarse desde los dominios oficiales de Carpinter.io.
-    # Si intentan entrar desde erp.luiggihome.es u otro dominio, se rechaza
-    # con un error genérico (no revela que el usuario existe).
-    _is_carp_user = user.get("isCarpintero") or (
-        user.get("canManageCarpinteroUsers") and not user.get("isAdmin")
-    )
-    if _is_carp_user:
-        _origin = (
-            request.headers.get("origin") or
-            request.headers.get("referer") or
-            ""
-        ).lower()
-        _allowed_carp_domains = ("carpinter.io", "carpenter.io")
-        _origin_ok = any(d in _origin for d in _allowed_carp_domains)
-        if not _origin_ok:
-            # Registrar intento en auditoría pero devolver error genérico
-            audit.log_login_failed(username, request, "domain_restricted")
-            logger.warning(
-                f"[DOMAIN-RESTRICT] Usuario carpintero '{username}' intentó login "
-                f"desde dominio no autorizado: origin='{_origin}'"
-            )
-            raise HTTPException(status_code=401, detail="Credenciales no válidas")
+    # ─── Restricción por acceso de plataforma ──────────────────────────────────
+    # Los suscriptores comerciales solo pueden entrar desde la marca a la que
+    # pertenecen. El identificador procede de la ruta/dominio público y no concede
+    # permisos: únicamente reduce el ámbito. MASTER conserva acceso global.
+    _platform_entry = credentials.get("platformEntry")
+    if not entrada_permitida(user, _platform_entry):
+        audit.log_login_failed(username, request, "platform_restricted")
+        logger.warning(
+            "[PLATFORM-RESTRICT] Usuario '%s' de plataforma '%s' intentó acceso por '%s'",
+            username, plataforma_de(user), _platform_entry or "sin-plataforma",
+        )
+        raise HTTPException(status_code=401, detail="Credenciales no válidas")
+
+    if not suscripcion_permitida(user):
+        audit.log_login_failed(username, request, "subscription_inactive")
+        raise HTTPException(status_code=401, detail="Suscripción no activa. Contacta con el administrador.")
 
     # Verificar fecha de caducidad del acceso
     expiration_date = user.get("accessExpirationDate")

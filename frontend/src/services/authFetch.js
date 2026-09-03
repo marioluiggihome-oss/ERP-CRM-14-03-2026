@@ -4,6 +4,8 @@
  * Prohibida su copia, distribución, modificación o uso sin autorización
  * escrita del titular.
  */
+import { platformEntryKey } from '../platformEntry';
+
 // Interceptor global de `fetch`: adjunta el JWT a TODAS las peticiones al backend
 // propio. Así la app sigue funcionando cuando el backend exija autenticación de
 // forma global (Fase 2), sin tener que tocar las ~300 llamadas una por una.
@@ -39,16 +41,20 @@ if (typeof window !== 'undefined' && window.fetch && !window.__luiggiAuthFetch) 
       const url = typeof input === 'string' ? input : (input && input.url) || '';
       if (isBackendUrl(url)) {
         const token = getToken();
-        if (token) {
+        const platform = platformEntryKey();
+        if (token || platform) {
           const base =
             (init && init.headers) ||
             (typeof input !== 'string' && input && input.headers) ||
             {};
           const headers = new Headers(base);
-          if (!headers.has('Authorization')) {
+          if (token && !headers.has('Authorization')) {
             headers.set('Authorization', `Bearer ${token}`);
-            init = { ...(init || {}), headers };
           }
+          if (platform && !headers.has('X-Platform-Entry')) {
+            headers.set('X-Platform-Entry', platform);
+          }
+          init = { ...(init || {}), headers };
         }
       }
     } catch {

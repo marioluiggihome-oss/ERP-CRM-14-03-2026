@@ -9,6 +9,8 @@
  * Maneja tokens JWT, almacenamiento seguro y renovación automática
  */
 
+import { platformEntryKey, platformLoginPayload } from '../platformEntry';
+
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Claves de localStorage
@@ -95,9 +97,13 @@ export const refreshAccessToken = async () => {
     throw new Error('No refresh token available');
   }
   
+  const platform = platformEntryKey();
   const response = await fetch(`${API_URL}/api/auth/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(platform ? { 'X-Platform-Entry': platform } : {})
+    },
     body: JSON.stringify({ refresh_token: refreshToken })
   });
   
@@ -146,6 +152,8 @@ export const authFetch = async (url, options = {}) => {
     ...options.headers,
     'Authorization': `Bearer ${token}`
   };
+  const platform = platformEntryKey();
+  if (platform) headers['X-Platform-Entry'] = platform;
   
   const response = await fetch(url, { ...options, headers });
   
@@ -173,7 +181,7 @@ export const login = async (username, password) => {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, ...platformLoginPayload() })
     });
     
     const text = await response.text();
@@ -212,7 +220,8 @@ export const logout = async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          ...(platformEntryKey() ? { 'X-Platform-Entry': platformEntryKey() } : {})
         }
       });
     }

@@ -11,6 +11,7 @@ import CarpinterLogo from './CarpinterLogo';
 import { login } from '../services/authService';
 import { settingsAPI } from '../services/api';
 import RegisterForm from './RegisterForm';
+import { applyPlatformDocumentIdentity, detectPlatformEntry, platformLoginPayload } from '../platformEntry';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -56,27 +57,11 @@ const CarpBrand = ({ big = false }) => (
 
 // ¿Acceso directo a la división Carpinteros? ?brand=carpinteros, ?carpinteros,
 // #carpinteros o #carpenter — enlace directo con SU marca (p.ej. carpenter.io).
-const isCarpDirect = () => {
-  try {
-    const host = (window.location.hostname || '').toLowerCase();
-    const sp = new URLSearchParams(window.location.search);
-    const hash = (window.location.hash || '').toLowerCase();
-    return host.includes('carpenter.io') || host.includes('carpinter.io')
-      || sp.get('brand') === 'carpinteros' || sp.has('carpinteros') || hash === '#carpinteros' || hash === '#carpenter';
-  } catch { return false; }
-};
+const isCarpDirect = () => detectPlatformEntry()?.key === 'carpinter';
 
 // Acceso privado desde la landing Studio3K: studio3k.io o el enlace
 // erp.luiggihome.es/?brand=studio3k conservan la identidad de la marca.
-const isStudio3kDirect = () => {
-  try {
-    const host = (window.location.hostname || '').toLowerCase();
-    const sp = new URLSearchParams(window.location.search);
-    const hash = (window.location.hash || '').toLowerCase();
-    return host.includes('studio3k.io') || host.includes('estudio3k.io')
-      || sp.get('brand') === 'studio3k' || sp.has('studio3k') || hash === '#studio3k';
-  } catch { return false; }
-};
+const isStudio3kDirect = () => detectPlatformEntry()?.key === 'studio3k';
 
 const Studio3kBrand = ({ big = false }) => (
   <div className={`inline-flex items-baseline font-bold tracking-tight ${big ? 'text-5xl' : 'text-2xl'}`}>
@@ -89,7 +74,12 @@ const Login = ({ onLogin, customLogo }) => {
   // La marca la decide CÓMO se entra: cada división tiene su enlace directo con
   // SU marca (floor, carpinteros, Studio3K...); el resto ve la corporativa.
   const brand = floorDirect ? 'floor' : (isCarpDirect() ? 'carpinteros' : (isStudio3kDirect() ? 'studio3k' : 'home'));
-  const [mode, setMode] = useState('login'); // 'login', 'register', 'registerEmail', 'distributor'
+  const [mode, setMode] = useState('login');
+  useEffect(() => {
+    if (brand === 'carpinteros' || brand === 'studio3k') {
+      applyPlatformDocumentIdentity(detectPlatformEntry());
+    }
+  }, [brand]); // 'login', 'register', 'registerEmail', 'distributor'
   const [floorLogo, setFloorLogo] = useState(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -147,7 +137,8 @@ const Login = ({ onLogin, customLogo }) => {
           body: JSON.stringify({
             username: username.trim(),
             password: password.trim(),
-            totpCode: totpCode.trim()
+            totpCode: totpCode.trim(),
+            ...platformLoginPayload()
           })
         });
         
@@ -198,7 +189,8 @@ const Login = ({ onLogin, customLogo }) => {
           
           xhr.send(JSON.stringify({
             username: username.trim(),
-            password: password.trim()
+            password: password.trim(),
+            ...platformLoginPayload()
           }));
         });
         
@@ -403,6 +395,13 @@ const Login = ({ onLogin, customLogo }) => {
                   Acceso Carpinteros & Ebanistas
                 </p>
               </div>
+            ) : brand === 'studio3k' ? (
+              <div className="flex flex-col items-center">
+                <div className="rounded-2xl bg-[#0b0b14] px-7 py-5 shadow-lg"><Studio3kBrand big /></div>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-3">
+                  Acceso profesional
+                </p>
+              </div>
             ) : (
               <>
                 <Logo variant="dark" customLogo={customLogo || publicLogo} marcaBlanca={marcaBlanca} companyName={companyName} className="h-16 sm:h-20 lg:h-24 [@media(max-height:600px)]:!h-12 mb-2 sm:mb-3" />
@@ -489,7 +488,7 @@ const Login = ({ onLogin, customLogo }) => {
                       try {
                         const resp = await fetch(`${API_URL}/api/auth/force-login`, {
                           method: 'POST', headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ username: username.trim(), password: password.trim(), force: true })
+                          body: JSON.stringify({ username: username.trim(), password: password.trim(), force: true, ...platformLoginPayload() })
                         });
                         const data = await resp.json();
                         if (data.success && data.user) {
@@ -689,7 +688,9 @@ const Login = ({ onLogin, customLogo }) => {
               {brand === 'floor'
                 ? '© 2026 FLOOR · Suelo SPC porcelánico'
                 : brand === 'carpinteros'
-                ? '© 2026 carpinter.io · Carpinteros & Ebanistas'
+                ? '© 2026 CARPINTER.IO · Carpinteros & Ebanistas'
+                : brand === 'studio3k'
+                ? '© 2026 STUDIO3K.IO · Plataforma profesional'
                 : '© 2026 · Sistema Profesional de Presupuestos'}
             </p>
           </div>

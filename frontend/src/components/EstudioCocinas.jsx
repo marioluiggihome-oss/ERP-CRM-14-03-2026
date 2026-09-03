@@ -37,6 +37,7 @@ import {
 import FichaFabricacion from './FichaFabricacion';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { jsPDF } from 'jspdf';
+import { authHeaders } from '../services/api';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -192,7 +193,7 @@ function getToken() {
 async function apiPost(endpoint, body) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
@@ -202,7 +203,7 @@ async function apiPost(endpoint, body) {
 
 async function apiGet(endpoint) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders(),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
@@ -212,7 +213,7 @@ async function apiGet(endpoint) {
 async function apiPostForm(endpoint, formData) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders(),
     body: formData,
   });
   const data = await res.json().catch(() => ({}));
@@ -597,7 +598,7 @@ export default function EstudioCocinas({ state, setState }) {
   const toggleFavorito = useCallback(async (id) => {
     try {
       const res = await fetch(`${API}/api/estudio-cocinas/galeria/${id}/favorito`, {
-        method: 'PATCH', headers: { Authorization: `Bearer ${getToken()}` },
+        method: 'PATCH', headers: authHeaders(),
       });
       if (res.ok) loadGaleria(galeria.page);
     } catch {}
@@ -607,7 +608,7 @@ export default function EstudioCocinas({ state, setState }) {
     if (!window.confirm('¿Eliminar este render de la galería?')) return;
     try {
       const res = await fetch(`${API}/api/estudio-cocinas/galeria/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+        method: 'DELETE', headers: authHeaders(),
       });
       if (res.ok) loadGaleria(galeria.page);
     } catch {}
@@ -706,7 +707,7 @@ export default function EstudioCocinas({ state, setState }) {
       const descFinal = promptExtraMotor(descripcion);
       const res = await fetch(`${API}/api/ai-engine/render`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           description: descFinal,
           style: proy.estilo || undefined,
@@ -738,7 +739,7 @@ export default function EstudioCocinas({ state, setState }) {
       const prevB64 = await imageToDataUrl(render.imageUrl).catch(() => null);
       const res = await fetch(`${API}/api/ai-engine/render`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           description: `Modifica el render adjunto manteniendo EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación. Cambio solicitado: ${render.editTxt.trim()}. No cambies nada más.`,
           provider: 'gemini',
@@ -786,7 +787,7 @@ export default function EstudioCocinas({ state, setState }) {
       const images = render.originalUrl ? [render.originalUrl] : [];
       const res = await fetch(`${API}/api/ai-engine/designs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           id: savedId || undefined,
           cliente: proy.nombre_cliente,
@@ -813,7 +814,7 @@ export default function EstudioCocinas({ state, setState }) {
   const openProjectList = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/ai-engine/designs`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders(),
       });
       const d = await res.json();
       setSavedList(d.designs || []);
@@ -843,7 +844,7 @@ export default function EstudioCocinas({ state, setState }) {
     try {
       await fetch(`${API}/api/ai-engine/designs/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders(),
       });
       setSavedList(prev => (prev || []).filter(x => x.id !== id));
       if (savedId === id) setSavedId(null);
@@ -1482,7 +1483,7 @@ export default function EstudioCocinas({ state, setState }) {
                               const descB = promptExtraMotor(desc);
                               const r = await fetch(`${API}/api/ai-engine/render`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                headers: authHeaders({ 'Content-Type': 'application/json' }),
                                 body: JSON.stringify({ description: descB, style: proy.estilo || undefined, provider: providerDeMotor(), referenceImage: conCroquis ? render.croquis : undefined }),
                               });
                               const d = await r.json().catch(() => ({}));
@@ -1655,7 +1656,7 @@ export default function EstudioCocinas({ state, setState }) {
                     try {
                       const res = await fetch(`${API}/api/estudio-cocinas/exportar-dxf`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                        headers: authHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ distribucion: { tipo: proy.tipo_distribucion || 'L', paredes: [{ id: 1, ancho: proy.ancho_estancia || 360, elementos: [] }] }, cliente: proy.nombre_cliente || 'Cliente' }),
                       });
                       const data = await res.json();

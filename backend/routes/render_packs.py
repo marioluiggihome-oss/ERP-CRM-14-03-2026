@@ -59,7 +59,7 @@ async def catalogo(user: dict = Depends(require_auth)):
 
 
 @router.post("/render-packs/comprar")
-async def comprar(payload: dict, user: dict = Depends(require_auth)):
+async def comprar(request: Request, payload: dict, user: dict = Depends(require_auth)):
     """Abre la pasarela de pago para el pack pedido y devuelve la URL.
 
     No se abona nada aqui: los renders se suman cuando Stripe confirma el cobro
@@ -74,7 +74,15 @@ async def comprar(payload: dict, user: dict = Depends(require_auth)):
             status_code=503,
             detail="El pago con tarjeta todavia no esta activado. Pide la recarga al administrador.",
         )
+    from services.plataformas import plataforma_entrada, plataforma_de, organizacion_de
+    entry = plataforma_entrada(request.headers.get("x-platform-entry"))
+    plataforma = entry if entry in {"carpinter", "studio3k"} else plataforma_de(user)
+    organization_id = organizacion_de(user)
     base = _url_base_front()
+    if plataforma == "carpinter":
+        base = base.rstrip("/") + "/carp/app"
+    elif plataforma == "studio3k":
+        base = base.rstrip("/") + "/s3k/app"
     try:
         sesion = stripe_pagos.crear_checkout(
             pack_id=pack_id,
@@ -82,6 +90,8 @@ async def comprar(payload: dict, user: dict = Depends(require_auth)):
             email=user.get("email") or "",
             url_ok=f"{base}/?recarga=ok",
             url_ko=f"{base}/?recarga=cancelada",
+            plataforma=plataforma,
+            organization_id=organization_id,
         )
     except Exception as e:
         logger.error("render-packs comprar: %s", e)
@@ -127,6 +137,8 @@ async def webhook(request: Request):
         "email": datos.get("email", ""),
         "origen": "stripe",
         "grantedBy": "",
+        "plataforma": datos.get("plataforma") or "cooperativa",
+        "organizationId": datos.get("organization_id") or "",
         "createdAt": datetime.now(timezone.utc).isoformat(),
     })
     logger.info("render-packs: abonados %d renders a %s (saldo %d)",

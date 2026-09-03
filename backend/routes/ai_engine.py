@@ -126,7 +126,7 @@ async def exigir_tipo_estudio3d(user: dict, project_type: Optional[str]) -> str:
 
 # ─── Proyectos de render 3D (guardar / historial persistente) ─────────────────
 @ai_engine_router.post("/designs")
-async def save_render_design(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+async def save_render_design(payload: dict, current_user: dict = Depends(require_auth)):
     """Guarda (o actualiza) un proyecto de render 3D del usuario."""
     p = payload or {}
     oid = p.get("id") or f"r3d-{uuid.uuid4().hex[:10]}"
@@ -136,14 +136,21 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
     # quitan de aquí, la conservación de abajo lee `None` y las borra siempre.
     existing = await _db.render3d_designs.find_one(
         {"id": oid},
-        {"_id": 0, "createdAt": 1, "userId": 1,
+        {"_id": 0, "createdAt": 1, "userId": 1, "plataforma": 1, "organizationId": 1,
          "medidas": 1, "distribucion": 1, "tipo3d": 1, "relacionMV": 1})
-    if existing and existing.get("userId") and current_user and current_user.get("id") \
-       and existing["userId"] != current_user["id"] and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+    from services.master import es_master
+    from services.plataformas import organizacion_de, plataforma_de
+    if existing and existing.get("userId") and existing["userId"] != current_user.get("id") and not es_master(current_user):
         raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
+    owner_id = (existing or {}).get("userId") or current_user.get("id")
+    owner = current_user
+    if owner_id != current_user.get("id"):
+        owner = await _db.users.find_one({"id": owner_id}, {"_id": 0}) or current_user
     doc = {
         "id": oid,
-        "userId": (existing or {}).get("userId") or (current_user or {}).get("id") or "anonymous",
+        "userId": owner_id,
+        "plataforma": (existing or {}).get("plataforma") or plataforma_de(owner),
+        "organizationId": (existing or {}).get("organizationId") or organizacion_de(owner),
         "cliente": str(p.get("cliente") or ""),
         "ref": str(p.get("ref") or ""),
         "description": str(p.get("description") or ""),
@@ -201,10 +208,9 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
 
 
 @ai_engine_router.get("/designs")
-async def list_render_designs(current_user: Optional[dict] = Depends(get_current_user)):
-    query = {}
-    if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
-        query["userId"] = current_user["id"]
+async def list_render_designs(current_user: dict = Depends(require_auth)):
+    from services.master import es_master
+    query = {} if es_master(current_user) else {"userId": current_user.get("id")}
     # La lista NO devuelve imágenes: cada diseño guarda su render/referencia como
     # base64 (cientos de KB cada uno); devolver una imagen por 300 diseños disparaba
     # el payload a cientos de MB y la petición se caía ("Failed to fetch"/timeout).
@@ -219,8 +225,9 @@ async def list_render_designs(current_user: Optional[dict] = Depends(get_current
 
 
 @ai_engine_router.get("/designs/{design_id}")
-async def get_render_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    """Detalle completo de un diseño (incluye referenceImage) para abrir/comparar."""
+async def get_render_design(design_id: str, current_user: dict = Depends(require_auth)):
+    """Detalle completo de un diseño propio; MASTER conserva soporte global."""
+    await _design_accesible(design_id, current_user)
     doc = await _db.render3d_designs.find_one({"id": design_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
@@ -241,17 +248,19 @@ MAX_BYTES_IMAGEN = 6_000_000  # una sola imagen no puede pasar de ~6 MB
 
 
 async def _design_accesible(design_id: str, current_user: Optional[dict]) -> dict:
-    """Devuelve el proyecto o lanza 404/403. Solo el dueño o un admin entran."""
+    """Devuelve el proyecto o lanza 404/403. Solo dueño o MASTER entran."""
     doc = await _db.render3d_designs.find_one(
         {"id": design_id},
-        {"_id": 0, "userId": 1, "id": 1, "cliente": 1, "ref": 1, "driveFolderId": 1})
+        {"_id": 0, "userId": 1, "id": 1, "cliente": 1, "ref": 1, "driveFolderId": 1,
+         "plataforma": 1, "organizationId": 1})
     if not doc:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    if current_user and current_user.get("id") and doc.get("userId"):
-        es_dueno = doc["userId"] == current_user["id"]
-        es_admin = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
-        if not es_dueno and not es_admin:
-            raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
+    if not current_user or not current_user.get("id"):
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
+    from services.master import es_master
+    es_dueno = doc.get("userId") == current_user.get("id")
+    if not es_dueno and not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
     return doc
 
 
@@ -294,7 +303,7 @@ async def _carpeta_drive_del_proyecto(doc: dict) -> Optional[str]:
 
 @ai_engine_router.post("/designs/{design_id}/imagenes")
 async def add_design_images(design_id: str, payload: dict,
-                            current_user: Optional[dict] = Depends(get_current_user)):
+                            current_user: dict = Depends(require_auth)):
     """Añade imágenes al historial del proyecto. Repetir una imagen no la duplica."""
     doc = await _design_accesible(design_id, current_user)
     entrantes = (payload or {}).get("imagenes") or []
@@ -333,7 +342,9 @@ async def add_design_images(design_id: str, payload: dict,
         img = {
             "id": f"img-{uuid.uuid4().hex[:12]}",
             "designId": design_id,
-            "userId": doc.get("userId") or (current_user or {}).get("id") or "anonymous",
+            "userId": doc.get("userId") or current_user.get("id"),
+            "plataforma": doc.get("plataforma"),
+            "organizationId": doc.get("organizationId"),
             "hash": h,
             "dataUrl": src,
             "descripcion": str((item or {}).get("descripcion") or "")[:400],
@@ -379,7 +390,7 @@ async def add_design_images(design_id: str, payload: dict,
 
 @ai_engine_router.get("/designs/{design_id}/imagenes")
 async def list_design_images(design_id: str, desde: int = 0, limite: int = 12,
-                             current_user: Optional[dict] = Depends(get_current_user)):
+                             current_user: dict = Depends(require_auth)):
     """Historial de imágenes del proyecto, de la más nueva a la más antigua.
 
     Se pagina porque devolver 40 imágenes de golpe son decenas de MB y la
@@ -433,7 +444,7 @@ async def get_design_image_file(design_id: str, imagen_id: str, t: Optional[str]
 
 @ai_engine_router.delete("/designs/{design_id}/imagenes/{imagen_id}")
 async def delete_design_image(design_id: str, imagen_id: str,
-                              current_user: Optional[dict] = Depends(get_current_user)):
+                              current_user: dict = Depends(require_auth)):
     """Quita UNA imagen del historial guardado del proyecto."""
     await _design_accesible(design_id, current_user)
     img = await _db.render3d_images.find_one({"designId": design_id, "id": imagen_id},
@@ -450,16 +461,8 @@ async def delete_design_image(design_id: str, imagen_id: str,
 
 
 @ai_engine_router.delete("/designs/{design_id}")
-async def delete_render_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
-    # Validar propiedad: solo el dueño o un admin puede borrar
-    doc = await _db.render3d_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    if current_user and current_user.get("id") and doc.get("userId"):
-        is_owner = doc["userId"] == current_user["id"]
-        is_admin = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
-        if not is_owner and not is_admin:
-            raise HTTPException(status_code=403, detail="Sin permiso para eliminar este proyecto")
+async def delete_render_design(design_id: str, current_user: dict = Depends(require_auth)):
+    await _design_accesible(design_id, current_user)
     await _db.render3d_designs.delete_one({"id": design_id})
     # El historial de imágenes vive en otra colección: si no se borra aquí, se
     # queda ocupando espacio para siempre sin proyecto al que pertenecer.

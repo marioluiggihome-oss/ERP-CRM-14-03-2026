@@ -6,7 +6,7 @@
  */
 /**
  * SubscriptionTab — Panel de Suscripciones SaaS
- * Gestión de planes y créditos de IA por usuario (solo Admin/Master)
+ * Gestión de planes, cuotas y consumo por usuario (solo MASTER)
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -47,7 +47,7 @@ const CreditBar = ({ consumed, assigned, pct, over }) => {
       </div>
       {over && (
         <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-          <AlertTriangle size={10} /> Créditos agotados
+          <AlertTriangle size={10} /> Cuota agotada
         </p>
       )}
     </div>
@@ -70,6 +70,8 @@ const AssignModal = ({ users, plans, onClose, onAssigned }) => {
   const [selectedPlan, setSelectedPlan] = useState('');
   const [customCredits, setCustomCredits] = useState('');
   const [notes, setNotes] = useState('');
+  const [subscriptionStatus, setSubscriptionStatus] = useState('active');
+  const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -91,6 +93,8 @@ const AssignModal = ({ users, plans, onClose, onAssigned }) => {
         user_ids: selectedUsers,
         plan_id: selectedPlan,
         notes,
+        subscription_status: subscriptionStatus,
+        access_expiration_date: expirationDate || null,
       };
       if (selectedPlan === 'custom' && customCredits !== '') {
         body.custom_credits = parseInt(customCredits, 10) || 0;
@@ -156,7 +160,7 @@ const AssignModal = ({ users, plans, onClose, onAssigned }) => {
                         )}
                       </div>
                       <p className={`text-xs truncate ${isSelected ? 'text-white/70' : 'text-slate-500'}`}>
-                        {plan.aiCreditsMonthly > 0 ? `${plan.aiCreditsMonthly} renders IA/mes` : 'Créditos personalizados'} · {plan.description}
+                        {plan.aiCreditsMonthly > 0 ? `${plan.aiCreditsMonthly} usos/mes` : 'Cuota personalizada'} · {plan.description}
                       </p>
                     </div>
                     {isSelected && <Check size={16} className="text-white flex-shrink-0" />}
@@ -166,11 +170,11 @@ const AssignModal = ({ users, plans, onClose, onAssigned }) => {
             </div>
           </div>
 
-          {/* Créditos personalizados (solo plan Custom) */}
+          {/* Cuota personalizada (solo plan Custom) */}
           {selectedPlan === 'custom' && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Créditos de IA mensuales (renders)
+                Usos mensuales incluidos
               </label>
               <input
                 type="number"
@@ -182,6 +186,31 @@ const AssignModal = ({ users, plans, onClose, onAssigned }) => {
               />
             </div>
           )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label>
+              <span className="block text-sm font-semibold text-slate-700 mb-1">Estado</span>
+              <select
+                value={subscriptionStatus}
+                onChange={(event) => setSubscriptionStatus(event.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="active">Activa</option>
+                <option value="suspended">Suspendida</option>
+                <option value="cancelled">Cancelada</option>
+                <option value="expired">Vencida</option>
+              </select>
+            </label>
+            <label>
+              <span className="block text-sm font-semibold text-slate-700 mb-1">Válida hasta</span>
+              <input
+                type="date"
+                value={expirationDate}
+                onChange={(event) => setExpirationDate(event.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+            </label>
+          </div>
 
           {/* Notas */}
           <div>
@@ -258,6 +287,8 @@ const SubscriptionTab = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [activeView, setActiveView] = useState('users'); // 'users' | 'plans'
   const [searchQ, setSearchQ] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [organizationFilter, setOrganizationFilter] = useState('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -287,7 +318,24 @@ const SubscriptionTab = () => {
     return { ...u, ...credit };
   });
 
-  const filteredUsers = enrichedUsers.filter(u =>
+  const organizationOptions = Array.from(new Set(
+    enrichedUsers
+      .filter((u) => platformFilter === 'all' || u.plataforma === platformFilter)
+      .map((u) => u.organizationId)
+      .filter(Boolean)
+  )).map((id) => ({
+    id,
+    label: enrichedUsers.find((user) => user.id === id)?.clientName
+      || enrichedUsers.find((user) => user.id === id)?.username
+      || id,
+  }));
+
+  const scopedUsers = enrichedUsers.filter((u) =>
+    (platformFilter === 'all' || u.plataforma === platformFilter)
+    && (organizationFilter === 'all' || u.organizationId === organizationFilter)
+  );
+
+  const filteredUsers = scopedUsers.filter(u =>
     !searchQ ||
     u.username?.toLowerCase().includes(searchQ.toLowerCase()) ||
     u.clientName?.toLowerCase().includes(searchQ.toLowerCase()) ||
@@ -306,20 +354,20 @@ const SubscriptionTab = () => {
 
   const handleAssigned = (result) => {
     setShowAssignModal(false);
-    setSuccessMsg(`✓ Plan "${result.plan}" asignado a ${result.updated} usuario(s) con ${result.aiCreditsMonthly} créditos/mes`);
+    setSuccessMsg(`Plan "${result.plan}" asignado a ${result.updated} usuario(s) con ${result.aiCreditsMonthly} usos/mes`);
     setTimeout(() => setSuccessMsg(''), 5000);
     load();
   };
 
   // Estadísticas resumen
   const stats = {
-    total: enrichedUsers.length,
-    conPlan: enrichedUsers.filter(u => u.subscriptionPlan).length,
-    sinPlan: enrichedUsers.filter(u => !u.subscriptionPlan).length,
-    agotados: enrichedUsers.filter(u => u.over).length,
+    total: scopedUsers.length,
+    conPlan: scopedUsers.filter(u => u.subscriptionPlan).length,
+    sinPlan: scopedUsers.filter(u => !u.subscriptionPlan).length,
+    agotados: scopedUsers.filter(u => u.over).length,
     ingresos: plans.reduce((acc, p) => {
       if (p.price === 0) return acc;
-      const count = enrichedUsers.filter(u => u.subscriptionPlan === p.id).length;
+      const count = scopedUsers.filter(u => u.subscriptionPlan === p.id).length;
       return acc + count * p.price;
     }, 0),
   };
@@ -340,9 +388,9 @@ const SubscriptionTab = () => {
         <div>
           <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
             <CreditCard size={22} className="text-indigo-500" />
-            Suscripciones y Créditos IA
+            Suscripciones, cuotas y consumo
           </h2>
-          <p className="text-sm text-slate-500 mt-0.5">Gestiona los planes de suscripción y el consumo de créditos de IA por usuario</p>
+          <p className="text-sm text-slate-500 mt-0.5">Control global por plataforma, organización, plan, vigencia y usuario</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -359,6 +407,38 @@ const SubscriptionTab = () => {
             <CreditCard size={15} /> Asignar plan
           </button>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-slate-200 rounded-2xl p-4">
+        <label>
+          <span className="block text-xs font-black uppercase tracking-wide text-slate-500 mb-1">Plataforma</span>
+          <select
+            value={platformFilter}
+            onChange={(event) => {
+              setPlatformFilter(event.target.value);
+              setOrganizationFilter('all');
+            }}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700"
+          >
+            <option value="all">Todas</option>
+            <option value="cooperativa">Red de distribución</option>
+            <option value="carpinter">CARPINTER.IO</option>
+            <option value="studio3k">STUDIO3K.IO</option>
+          </select>
+        </label>
+        <label>
+          <span className="block text-xs font-black uppercase tracking-wide text-slate-500 mb-1">Organización</span>
+          <select
+            value={organizationFilter}
+            onChange={(event) => setOrganizationFilter(event.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700"
+          >
+            <option value="all">Todas las organizaciones</option>
+            {organizationOptions.map((organization) => (
+              <option key={organization.id} value={organization.id}>{organization.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Mensaje de éxito */}
@@ -386,7 +466,7 @@ const SubscriptionTab = () => {
           <p className="text-2xl font-black text-indigo-600 mt-1">{stats.conPlan}</p>
         </div>
         <div className={`bg-white border rounded-2xl p-4 shadow-sm ${stats.agotados > 0 ? 'border-red-200' : 'border-slate-200'}`}>
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Créditos agotados</p>
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Cuotas agotadas</p>
           <p className={`text-2xl font-black mt-1 ${stats.agotados > 0 ? 'text-red-600' : 'text-slate-400'}`}>
             {stats.agotados}
           </p>
@@ -438,8 +518,8 @@ const SubscriptionTab = () => {
                 <tr className="bg-slate-50 border-b border-slate-100">
                   <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Usuario</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Plan</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide min-w-[160px]">Créditos IA este mes</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Inicio</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide min-w-[160px]">Consumo este mes</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Estado / vigencia</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -456,6 +536,9 @@ const SubscriptionTab = () => {
                     <td className="px-4 py-3">
                       <div className="font-semibold text-slate-900">{u.username}</div>
                       {u.clientName && <div className="text-xs text-slate-400">{u.clientName}</div>}
+                      <div className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                        {u.plataforma === 'carpinter' ? 'CARPINTER.IO' : u.plataforma === 'studio3k' ? 'STUDIO3K.IO' : 'Red de distribución'}
+                      </div>
                       {!u.isActive && (
                         <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600 font-medium">Inactivo</span>
                       )}
@@ -476,8 +559,17 @@ const SubscriptionTab = () => {
                         over={u.over || false}
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-400">
-                      {u.subscriptionStartDate || '—'}
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full font-bold ${
+                        u.subscriptionStatus === 'active'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : u.subscriptionStatus === 'unconfigured'
+                            ? 'bg-slate-100 text-slate-600'
+                            : 'bg-red-100 text-red-700'
+                      }`}>
+                        {u.subscriptionStatus === 'active' ? 'Activa' : u.subscriptionStatus === 'unconfigured' ? 'Sin configurar' : u.subscriptionStatus}
+                      </span>
+                      <div className="mt-1 text-slate-400">{u.accessExpirationDate || 'Sin vencimiento'}</div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -501,7 +593,7 @@ const SubscriptionTab = () => {
           {plans.map(plan => {
             const meta = PLAN_META[plan.id] || PLAN_META.custom;
             const Icon = meta.icon;
-            const usersOnPlan = enrichedUsers.filter(u => u.subscriptionPlan === plan.id);
+            const usersOnPlan = scopedUsers.filter(u => u.subscriptionPlan === plan.id);
             return (
               <div
                 key={plan.id}
@@ -531,11 +623,11 @@ const SubscriptionTab = () => {
                   <p className="text-white/70 text-xs mt-2">{plan.description}</p>
                 </div>
 
-                {/* Créditos IA */}
+                {/* Cuota mensual */}
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                   <Zap size={14} className="text-amber-500" />
                   <span className="text-sm font-semibold text-slate-700">
-                    {plan.aiCreditsMonthly > 0 ? `${plan.aiCreditsMonthly} renders IA/mes` : 'Créditos personalizados'}
+                    {plan.aiCreditsMonthly > 0 ? `${plan.aiCreditsMonthly} usos/mes` : 'Cuota personalizada'}
                   </span>
                 </div>
 
@@ -571,7 +663,7 @@ const SubscriptionTab = () => {
                 <div className="px-4 pb-4">
                   <button
                     onClick={() => {
-                      setAssignTarget(enrichedUsers);
+                      setAssignTarget(scopedUsers);
                       setShowAssignModal(true);
                     }}
                     className={`w-full py-2 rounded-xl text-sm font-bold bg-gradient-to-r ${meta.gradient} text-white hover:opacity-90 transition-opacity shadow-sm`}
@@ -589,15 +681,14 @@ const SubscriptionTab = () => {
       <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
         <Info size={14} className="mt-0.5 flex-shrink-0 text-blue-500" />
         <span>
-          Los administradores y gerentes tienen <strong>créditos ilimitados</strong> independientemente del plan asignado.
-          Los créditos se reinician el primer día de cada mes. El coste estimado por render es de <strong>~0,20€</strong> (Gemini Pro Image).
+          El plan, la cuota y la vigencia se administran desde esta única ficha. Las cuotas mensuales se renuevan al iniciar cada mes y los saldos adquiridos permanecen disponibles hasta consumirse.
         </span>
       </div>
 
       {/* Modal de asignación */}
       {showAssignModal && (
         <AssignModal
-          users={assignTarget || enrichedUsers}
+          users={assignTarget || scopedUsers}
           plans={plans}
           onClose={() => setShowAssignModal(false)}
           onAssigned={handleAssigned}

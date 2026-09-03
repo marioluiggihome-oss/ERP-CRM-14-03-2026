@@ -95,7 +95,7 @@ export const canAccessTab = (tab, u, settings = {}) => {
     return esMasterSistema(u) || u.isAdmin === true || esCooperativista(u);
   }
   if (tab === 'miArea') return esCooperativista(u);
-  if (tab === 'planNegocio' || tab === 'carpinter' || tab === 'landingStudio') {
+  if (tab === 'planNegocio' || tab === 'carpinter' || tab === 'studio3k' || tab === 'landingStudio') {
     return esMasterSistema(u);
   }
   if (tab === 'estudioCocinas' || tab === 'cocinasai') return false;

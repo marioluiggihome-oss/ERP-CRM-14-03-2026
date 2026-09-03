@@ -18,7 +18,8 @@ import uuid
 
 from services.backup_service import get_backup_service
 from services.activity_tracker import get_tracker, ActivityType
-from services.jwt_service import require_admin
+from services.jwt_service import require_admin, require_master
+from services.plataformas import TODAS, organizacion_de, plataforma_de
 
 logger = logging.getLogger(__name__)
 
@@ -398,26 +399,26 @@ SUBSCRIPTION_PLANS = {
     "starter": {
         "id": "starter", "name": "Starter", "price": 79, "color": "#6366f1",
         "aiCreditsMonthly": 10,
-        "description": "Autónomos y carpinteros. 10 renders/mes.",
-        "features": ["CRM ilimitado", "Presupuestador", "Pedidos y Albaranes", "Rentabilidad básica", "10 renders IA/mes", "30 bocetos IA/mes", "50 docs clasificación IA/mes"],
+        "description": "Autónomos y carpinteros. 10 visualizaciones/mes.",
+        "features": ["CRM ilimitado", "Presupuestador", "Pedidos y Albaranes", "Rentabilidad básica", "10 visualizaciones/mes", "30 bocetos/mes", "50 documentos clasificados/mes"],
     },
     "profesional": {
         "id": "profesional", "name": "Profesional", "price": 179, "color": "#0891b2",
         "aiCreditsMonthly": 40,
         "description": "Tiendas de cocinas y estudios de interiorismo.",
-        "features": ["Todo Starter", "Estudio 3D completo", "Armarios IA", "Digitalizador OCR", "Obra Nueva IA", "40 renders IA/mes", "150 bocetos IA/mes", "200 docs clasificación IA/mes", "Panel de Mando"],
+        "features": ["Todo Starter", "Estudio 3D completo", "Armarios avanzados", "Digitalizador", "Obra Nueva", "40 visualizaciones/mes", "150 bocetos/mes", "200 documentos clasificados/mes", "Panel de Mando"],
     },
     "business": {
         "id": "business", "name": "Business", "price": 349, "color": "#059669",
         "aiCreditsMonthly": 120,
         "description": "Fabricantes y tiendas grandes.",
-        "features": ["Todo Profesional", "Fábrica y Producción", "Agentes IA", "120 renders IA/mes", "500 bocetos IA/mes", "Clasificación ilimitada", "Marca blanca", "Soporte prioritario"],
+        "features": ["Todo Profesional", "Fábrica y Producción", "Procesos en paralelo", "120 visualizaciones/mes", "500 bocetos/mes", "Clasificación ilimitada", "Marca blanca", "Soporte prioritario"],
     },
     "enterprise": {
         "id": "enterprise", "name": "Enterprise", "price": 699, "color": "#7c3aed",
         "aiCreditsMonthly": 400,
         "description": "Grandes superficies y franquicias.",
-        "features": ["Todo Business", "400 renders IA/mes", "IA sin límites prácticos", "API propia", "Onboarding dedicado", "SLA garantizado", "Usuarios ilimitados"],
+        "features": ["Todo Business", "400 visualizaciones/mes", "Capacidad ampliada", "Integración propia", "Onboarding dedicado", "SLA garantizado", "Usuarios ilimitados"],
     },
     "custom": {
         "id": "custom", "name": "Personalizado", "price": 0, "color": "#64748b",
@@ -438,12 +439,12 @@ RENDER_PACKS = {
 
 
 @router.get("/render-packs")
-async def get_render_packs(user=Depends(require_admin)):
+async def get_render_packs(user=Depends(require_master)):
     return {"success": True, "packs": list(RENDER_PACKS.values())}
 
 
 @router.post("/render-packs/grant")
-async def grant_render_pack(payload: dict, user=Depends(require_admin)):
+async def grant_render_pack(payload: dict, user=Depends(require_master)):
     """Añade un pack de renders (créditos extra) al cupo del mes del usuario.
     payload: {user_id, pack_id} o {user_id, renders} para una cantidad libre."""
     from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
@@ -451,6 +452,9 @@ async def grant_render_pack(payload: dict, user=Depends(require_admin)):
     uid = str((payload or {}).get("user_id", "")).strip()
     if not uid:
         raise HTTPException(status_code=400, detail="Falta user_id")
+    target_user = await main_db.users.find_one({"id": uid}, {"_id": 0, "password": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     pack_id = (payload or {}).get("pack_id")
     if pack_id:
         pack = RENDER_PACKS.get(pack_id)
@@ -477,6 +481,8 @@ async def grant_render_pack(payload: dict, user=Depends(require_admin)):
         "user_id": uid, "month": month, "renders": renders, "pack": pack_id or "manual",
         "price": price, "name": name,
         "grantedBy": (user or {}).get("username", ""),
+        "plataforma": plataforma_de(target_user),
+        "organizationId": organizacion_de(target_user),
         "createdAt": datetime.now(timezone.utc).isoformat(),
     })
     doc = await main_db.ai_credits.find_one({"user_id": uid, "month": month}, {"_id": 0})
@@ -489,7 +495,7 @@ async def grant_render_pack(payload: dict, user=Depends(require_admin)):
 
 
 @router.get("/ai-usage/clients")
-async def ai_usage_clients(user=Depends(require_admin)):
+async def ai_usage_clients(platform: Optional[str] = None, organizationId: Optional[str] = None, user=Depends(require_master)):
     """Medidor de consumo IA por cliente (mes en curso): renders del plan,
     packs extra, consumidos, restantes y coste estimado. Ordenado por % de uso."""
     from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
@@ -503,6 +509,13 @@ async def ai_usage_clients(user=Depends(require_admin)):
     out = []
     users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
     for u in users:
+        effective_platform = plataforma_de(u)
+        effective_organization = organizacion_de(u)
+        normalized_filter = str(platform or '').strip().lower()
+        if platform and effective_platform != normalized_filter:
+            continue
+        if organizationId and effective_organization != organizationId:
+            continue
         uid = str(u.get("id") or "")
         plan_id = u.get("subscriptionPlan", "")
         plan = SUBSCRIPTION_PLANS.get(plan_id, {})
@@ -528,6 +541,9 @@ async def ai_usage_clients(user=Depends(require_admin)):
             "isCarpintero": bool(u.get("isCarpintero")),
             "isAdmin": is_admin,
             "linkedCarpinteroAdminId": u.get("linkedCarpinteroAdminId", ""),
+            "linkedStudio3kAdminId": u.get("linkedStudio3kAdminId", ""),
+            "plataforma": effective_platform,
+            "organizationId": effective_organization,
             "planName": plan.get("name") or ("Enterprise" if is_admin else "—"),
             "asignados": assigned if not (is_admin and assigned == 0) else -1,
             "extra": extra, "total": total if not (is_admin and assigned == 0) else -1,
@@ -540,69 +556,125 @@ async def ai_usage_clients(user=Depends(require_admin)):
 
 
 @router.get("/subscription/plans")
-async def get_subscription_plans(user=Depends(require_admin)):
-    return {"success": True, "plans": list(SUBSCRIPTION_PLANS.values())}
+async def get_subscription_plans(platform: Optional[str] = None, user=Depends(require_master)):
+    normalized = str(platform or "").strip().lower()
+    if normalized and normalized not in TODAS:
+        raise HTTPException(status_code=400, detail="Plataforma no válida")
+    return {"success": True, "platform": normalized or "all", "plans": list(SUBSCRIPTION_PLANS.values())}
+
 
 @router.get("/subscription/users")
-async def get_subscription_users(user=Depends(require_admin)):
+async def get_subscription_users(
+    platform: Optional[str] = None,
+    organizationId: Optional[str] = None,
+    user=Depends(require_master),
+):
     from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
+    normalized = str(platform or "").strip().lower()
+    if normalized and normalized not in TODAS:
+        raise HTTPException(status_code=400, detail="Plataforma no válida")
     users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
     result = []
     for u in users:
+        effective_platform = plataforma_de(u)
+        effective_organization = organizacion_de(u)
+        if normalized and effective_platform != normalized:
+            continue
+        if organizationId and effective_organization != organizationId:
+            continue
         plan_id = u.get("subscriptionPlan", "")
         plan = SUBSCRIPTION_PLANS.get(plan_id, {})
         result.append({
             "id": u.get("id"), "username": u.get("username"),
             "clientName": u.get("clientName", ""), "isActive": u.get("isActive", True),
+            "plataforma": effective_platform, "organizationId": effective_organization,
             "subscriptionPlan": plan_id, "planName": plan.get("name", "Sin plan"),
             "planColor": plan.get("color", "#64748b"),
             "aiCreditsMonthly": u.get("aiCreditsMonthly", 0),
+            "subscriptionStatus": u.get("subscriptionStatus", "active" if plan_id else "unconfigured"),
             "subscriptionStartDate": u.get("subscriptionStartDate", ""),
+            "accessExpirationDate": u.get("accessExpirationDate", ""),
             "subscriptionNotes": u.get("subscriptionNotes", ""),
         })
-    return {"success": True, "users": result}
+    return {"success": True, "platform": normalized or "all", "organizationId": organizationId or "all", "users": result}
+
 
 @router.post("/subscription/assign")
-async def assign_subscription(payload: dict, user=Depends(require_admin)):
-    """Asigna un plan a uno o varios usuarios. payload: {user_ids, plan_id, custom_credits?, notes?}"""
+async def assign_subscription(payload: dict, user=Depends(require_master)):
+    """Asigna plan, cuota y vigencia usando la infraestructura única existente."""
     from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
-    user_ids = payload.get("user_ids", [])
-    plan_id = payload.get("plan_id", "")
+    user_ids = [str(uid) for uid in (payload.get("user_ids", []) or []) if str(uid).strip()]
+    plan_id = str(payload.get("plan_id", "") or "")
     custom_credits = payload.get("custom_credits", None)
-    notes = payload.get("notes", "")
+    notes = str(payload.get("notes", "") or "")
     if not user_ids:
         raise HTTPException(status_code=400, detail="Se requiere al menos un user_id")
     plan = SUBSCRIPTION_PLANS.get(plan_id)
     if not plan and plan_id not in ("", "custom"):
         raise HTTPException(status_code=400, detail=f"Plan '{plan_id}' no existe")
     credits = custom_credits if custom_credits is not None else (plan.get("aiCreditsMonthly", 0) if plan else 0)
+    try:
+        credits = max(int(credits or 0), 0)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="La cuota mensual no es válida")
+    subscription_status = str(payload.get("subscription_status") or ("active" if plan_id else "unconfigured")).strip().lower()
+    allowed_statuses = {"active", "unconfigured", "suspended", "cancelled", "expired"}
+    if subscription_status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail="Estado de suscripción no válido")
     update_fields = {
-        "subscriptionPlan": plan_id, "aiCreditsMonthly": credits,
-        "subscriptionStartDate": datetime.utcnow().strftime("%Y-%m-%d"),
+        "subscriptionPlan": plan_id,
+        "aiCreditsMonthly": credits,
+        "subscriptionStatus": subscription_status,
+        "subscriptionStartDate": str(payload.get("start_date") or datetime.utcnow().strftime("%Y-%m-%d")),
     }
+    if "access_expiration_date" in payload:
+        update_fields["accessExpirationDate"] = payload.get("access_expiration_date") or None
     if notes:
         update_fields["subscriptionNotes"] = notes
-    updated = 0
-    for uid in user_ids:
-        res = await main_db.users.update_one({"id": uid}, {"$set": update_fields})
-        if res.modified_count:
-            updated += 1
-    return {"success": True, "updated": updated, "plan": plan.get("name", plan_id) if plan else plan_id, "aiCreditsMonthly": credits}
+    targets = await main_db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "id": 1}).to_list(None)
+    found_ids = {str(target.get("id")) for target in targets}
+    missing = [uid for uid in user_ids if uid not in found_ids]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Usuarios no encontrados: {', '.join(missing)}")
+    result = await main_db.users.update_many({"id": {"$in": user_ids}}, {"$set": update_fields})
+    return {
+        "success": True,
+        "updated": result.modified_count,
+        "plan": plan.get("name", plan_id) if plan else plan_id,
+        "aiCreditsMonthly": credits,
+        "subscriptionStatus": update_fields["subscriptionStatus"],
+        "accessExpirationDate": update_fields.get("accessExpirationDate"),
+    }
+
 
 @router.get("/subscription/credits-usage")
-async def get_credits_usage(user=Depends(require_admin)):
-    """Consumo de créditos de IA de todos los usuarios en el mes actual."""
+async def get_credits_usage(
+    platform: Optional[str] = None,
+    organizationId: Optional[str] = None,
+    user=Depends(require_master),
+):
+    """Consumo mensual filtrable por plataforma y organización."""
     from services.db_client import get_db as _get_db_admin; main_db = _get_db_admin()
     from services.ai_usage import _month
+    normalized = str(platform or "").strip().lower()
+    if normalized and normalized not in TODAS:
+        raise HTTPException(status_code=400, detail="Plataforma no válida")
     month = _month()
     credits_docs = await main_db.ai_credits.find({"month": month}, {"_id": 0}).to_list(None)
-    credits_map = {d["user_id"]: d.get("consumed", 0) for d in credits_docs}
+    credits_map = {str(d.get("user_id")): d for d in credits_docs}
     users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
     result = []
     for u in users:
+        effective_platform = plataforma_de(u)
+        effective_organization = organizacion_de(u)
+        if normalized and effective_platform != normalized:
+            continue
+        if organizationId and effective_organization != organizationId:
+            continue
         uid = str(u.get("id", ""))
         assigned = int(u.get("aiCreditsMonthly", 0) or 0)
-        consumed = int(credits_map.get(uid, 0))
+        credit_doc = credits_map.get(uid, {})
+        consumed = int(credit_doc.get("consumed", 0) or 0)
         plan_id = u.get("subscriptionPlan", "")
         plan = SUBSCRIPTION_PLANS.get(plan_id, {})
         if assigned <= 0:
@@ -611,9 +683,10 @@ async def get_credits_usage(user=Depends(require_admin)):
         pct = round(consumed / assigned * 100, 1) if assigned > 0 else 0
         result.append({
             "id": uid, "username": u.get("username"), "clientName": u.get("clientName", ""),
+            "plataforma": effective_platform, "organizationId": effective_organization,
             "subscriptionPlan": plan_id, "planName": plan.get("name", "Sin plan"),
             "planColor": plan.get("color", "#64748b"),
             "assigned": assigned, "consumed": consumed, "remaining": remaining,
             "pct": pct, "over": assigned > 0 and consumed >= assigned,
         })
-    return {"success": True, "month": month, "users": result}
+    return {"success": True, "platform": normalized or "all", "organizationId": organizationId or "all", "month": month, "users": result}
