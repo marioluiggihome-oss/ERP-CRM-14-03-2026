@@ -88,6 +88,11 @@ async def login(request: Request, credentials: dict):
             {"_id": 0}
         )
     
+    if not user and "@" in username:
+        # Las cuentas antiguas pueden tener un username corto y el correo como
+        # identificador de contacto. Permitir ambos evita que el acceso comercial
+        # dependa de conocer el alias interno de la cuenta.
+        user = await db.users.find_one({"email": username.lower()}, {"_id": 0})
     if not user:
         # Auditoría: login fallido
         audit.log_login_failed(username, request, "user_not_found")
