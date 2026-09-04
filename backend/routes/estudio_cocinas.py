@@ -2430,6 +2430,7 @@ async def detect_distribucion(payload: dict):
     # Medidas REALES que ha introducido el usuario (ancla de escala). Sin esto, la IA
     # solo puede estimar por proporción visual y las medidas salen imprecisas.
     medidas = (payload or {}).get("medidas") or {}
+    contexto_usuario = str((payload or {}).get("contexto") or "").strip()
     def _num(v):
         try:
             n = float(str(v).replace(",", "."));  return n if n > 0 else 0
@@ -2451,6 +2452,7 @@ async def detect_distribucion(payload: dict):
         prompt = (
             "Eres proyectista de cocinas experto. Analiza esta imagen (render o croquis de cocina) y deduce su "
             "DISTRIBUCIÓN REAL. Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, "
+            "Si una línea de muebles termina en un retorno perpendicular, una esquina dibujada o una puerta abatible de esquina, la distribución es EN L y debes devolver dos paredes; nunca la reduzcas a lineal. "
             "en cada pared, la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho en cm "
             "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles "
             "cuentan como módulos (frigorífico, columna horno/microondas, lavavajillas, fregadero, "
@@ -2473,6 +2475,8 @@ async def detect_distribucion(payload: dict):
             "\nREGLA DE FORMA — ESQUINAS Y FORMA EN L / U / LINEAL:\n"
             "- Si el croquis o render muestra elementos en DOS paredes formando una esquina de 90° (por ejemplo, placa/fregadero en un frente y columna/horno/micro/lavadora/pilar en la pared lateral), EL TIPO ES OBLIGATORIAMENTE \"l\" Y DEBES DEVOLVER 2 PAREDES (Pared 1 y Pared 2). NUNCA devuelvas \"lineal\" si ves muebles dispuestos en dos paredes en esquina.\n"
             "- Si ves 3 paredes con muebles, el tipo es \"u\". Si solo hay muebles a lo largo de una única línea recta de pared, el tipo es \"lineal\".\n"
+            "- Un arco de apertura en el extremo de una pared representa una puerta o retorno de esquina; no lo conviertas en un frigorífico o despensero salvo que esté rotulado. Devuélvelo como elemento de esquina pendiente de confirmar.\n"
+            + (f"\nCONTEXTO ESCRITO DEL USUARIO (comprueba las etiquetas, pero no inventes elementos que no estén dibujados):\\n{contexto_usuario}\\n" if contexto_usuario else "")
             + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"
             "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared 1 (Frente Placa/Fregadero)\",\"ancho\":370,\"alto\":240,\"ancho_escrito\":false},{\"nombre\":\"Pared 2 (Frente Columnas/Lavadora)\",\"ancho\":210,\"alto\":240,\"ancho_escrito\":false}],"

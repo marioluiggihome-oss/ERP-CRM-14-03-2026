@@ -201,10 +201,10 @@ async function apiPost(endpoint, body) {
   return data;
 }
 
-async function detectarDistribucionPlano(imageBase64, medidas = {}) {
+async function detectarDistribucionPlano(imageBase64, medidas = {}, contexto = '') {
   if (!imageBase64) return null;
   try {
-    const data = await apiPost('/detect-distribucion', { imageBase64, medidas });
+    const data = await apiPost('/detect-distribucion', { imageBase64, medidas, contexto });
     return data?.success ? (data.distribucion || null) : null;
   } catch {
     // El render debe poder continuar si el detector no responde; la referencia
@@ -708,7 +708,7 @@ export default function EstudioCocinas({ state, setState }) {
       // Recuperamos esa distribución estructurada para que la imagen no sea la
       // única fuente de interpretación del diseño.
       const distribucionPlano = conCroquis
-        ? await detectarDistribucionPlano(render.croquis)
+        ? await detectarDistribucionPlano(render.croquis, {}, proy.descripcion)
         : null;
       // Construimos una descripción única y usamos el MISMO pipeline que la sección
 
