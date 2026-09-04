@@ -371,13 +371,23 @@ async def reiniciar_consumo_mes(user_id: str) -> bool:
 
 
 async def añadir_saldo(user_id: str, renders: int) -> int:
-    """Suma renders comprados al saldo permanente. Devuelve el saldo resultante."""
+    """Suma saldo permanente conservando marca/tenant en la misma contabilidad."""
     if db is None or not user_id or renders <= 0:
         return await get_saldo_comprado(user_id)
+    metadata = {}
+    try:
+        from services.plataformas import organizacion_de, plataforma_de
+        owner = await db.users.find_one({"id": str(user_id)}, {"_id": 0}) or {}
+        metadata = {
+            "plataforma": plataforma_de(owner),
+            "organizationId": organizacion_de(owner),
+        }
+    except Exception:
+        metadata = {}
     await db.ai_credit_balance.update_one(
         {"user_id": str(user_id)},
         {"$inc": {"saldo": int(renders)},
-         "$set": {"updatedAt": datetime.now(timezone.utc).isoformat()},
+         "$set": {"updatedAt": datetime.now(timezone.utc).isoformat(), **metadata},
          "$setOnInsert": {"user_id": str(user_id)}},
         upsert=True,
     )
@@ -448,9 +458,18 @@ async def consume_credits(user: dict, kind: str, motor=None) -> dict:
             inc = {"consumed": cost}
             if del_saldo > 0:
                 inc["gastado_saldo"] = del_saldo
+            from services.plataformas import organizacion_de, plataforma_de
             await db.ai_credits.update_one(
                 {"user_id": uid, "month": _month()},
-                {"$inc": inc, "$setOnInsert": {"user_id": uid, "month": _month()}},
+                {
+                    "$inc": inc,
+                    "$set": {
+                        "plataforma": plataforma_de(user),
+                        "organizationId": organizacion_de(user),
+                        "updatedAt": datetime.now(timezone.utc).isoformat(),
+                    },
+                    "$setOnInsert": {"user_id": uid, "month": _month()},
+                },
                 upsert=True,
             )
             if del_saldo > 0:

@@ -9,7 +9,7 @@ import GlobalEventReminder from './components/GlobalEventReminder';
 import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap, ClipboardList, Boxes, Calculator, Wallet } from 'lucide-react';
 import { NOMBRE_MODULO, irA, volver as volverAtras, limpiarVuelta } from '@/services/navegacion';
 import { MONTADA as PRE_MONTADA, DESMONTADA as PRE_DESMONTADA } from '@/presupuestador';
-import { canAccessTab } from '@/modulePermissions';
+import { canAccessTab, esMasterSistema } from '@/modulePermissions';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -42,8 +42,9 @@ const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
 const CarpinterosUsers = lazy(() => import('./components/CarpinterosUsers')); // Gestión de usuarios de la división carpinteros
-const Studio3kUsers = lazy(() => import('./components/Studio3kUsers')); // Gestión de usuarios de cada estudio Studio3K
+const Studio3kUsers = lazy(() => import('./components/Studio3kUsers')); // Gestión global de usuarios Studio3K para MASTER
 const CarpinterPanel = lazy(() => import('./components/CarpinterPanel')); // Panel independiente admin Carpinter.io (reemplaza SettingsModal)
+const Studio3kPanel = lazy(() => import('./components/Studio3kPanel')); // Panel independiente admin STUDIO3K.IO
 const Studio3kLanding = lazy(() => import('./components/Studio3kLanding')); // Landing pública studio3k.io / estudio3k.io
 const CarpinterosLanding = lazy(() => import('./components/CarpinterosLanding')); // Landing propia carpinteros (carpenter.io)
 const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
@@ -73,6 +74,7 @@ import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './s
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 import { initSecurityGuard } from './utils/securityGuard';
 import { VALOR_PUNTO_CASCOS } from '@/utils/valorPuntoCascos';
+import { applyPlatformDocumentIdentity, detectPlatformEntry } from '@/platformEntry';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -749,18 +751,13 @@ const App = () => {
     }
   };
 
+  const _platformEntry = detectPlatformEntry();
+  if (_platformEntry) applyPlatformDocumentIdentity(_platformEntry);
+
   // Loading screen
   if (isLoading) {
-    // Detectar marca por dominio o parámetro de URL para colorear la pantalla de carga
-    const _lHost = (window.location.hostname || '').toLowerCase();
-    const _lParams = new URLSearchParams(window.location.search);
-    const _lIsS3k = _lHost.includes('studio3k') || _lHost.includes('estudio3k') || _lParams.has('s3k') || _lParams.get('brand') === 'studio3k';
-    const _lIsCarp = _lHost.includes('carpinter') || _lHost.includes('carpenter') || _lParams.has('carp') || _lParams.get('brand') === 'carpinteros';
-    // Studio3K: fondo navy oscuro + spinner azul índigo
-    // Carpinter.io: fondo beige oscuro + spinner naranja corporativo
-    // Luiggi Home (default): fondo slate-900 + spinner naranja
-    const _lBg = _lIsS3k ? '#0b0b14' : _lIsCarp ? '#17130F' : '#111726';
-    const _lSpinner = _lIsS3k ? '#4e66ad' : '#aa7257';
+    const _lBg = _platformEntry?.background || '#111726';
+    const _lSpinner = _platformEntry?.color || '#aa7257';
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ background: _lBg }}>
         <div className="text-center">
@@ -777,14 +774,7 @@ const App = () => {
   // Marca Carpinteros: entrando por carpenter.io / carpinter.io (o ?brand=carpinteros)
   // el visitante ve primero la LANDING comercial de la división; el botón de
   // acceso lleva al login con la marca carpinteros.
-  const _isCarpBrandEntry = (() => {
-    try {
-      const host = (window.location.hostname || '').toLowerCase();
-      const sp = new URLSearchParams(window.location.search);
-      const path = (window.location.pathname || '').toLowerCase();
-      return host.includes('carpenter.io') || host.includes('carpinter.io') || sp.get('brand') === 'carpinteros' || sp.has('carp') || path === '/carp' || path.endsWith('/carp');
-    } catch { return false; }
-  })();
+  const _isCarpBrandEntry = _platformEntry?.key === 'carpinter';
 
   // Acceso directo al programa saltando la landing: ?entrar / ?app / ?login
   const _skipLanding = (() => {
@@ -815,16 +805,7 @@ const App = () => {
 
   // ── Studio3K: entrando por studio3k.io / estudio3k.io (o ?brand=studio3k)
   // muestra la landing comercial de Studio3K. Publicada por defecto.
-  const _isStudio3kEntry = (() => {
-    try {
-      const host = (window.location.hostname || '').toLowerCase();
-      const sp = new URLSearchParams(window.location.search);
-      const path = (window.location.pathname || '').toLowerCase();
-      return host.includes('studio3k.io') || host.includes('estudio3k.io')
-        || sp.get('brand') === 'studio3k' || sp.has('s3k')
-        || path === '/s3k' || path.endsWith('/s3k');
-    } catch { return false; }
-  })();
+  const _isStudio3kEntry = _platformEntry?.key === 'studio3k';
   const STUDIO3K_LANDING_PUBLISHED = false;
   const _studio3kPreview = (() => {
     try {
@@ -1038,7 +1019,11 @@ const App = () => {
         <style>{`:root { --brand-primary: #5f78ca; }`}</style>
         {state.showStudio3kUsers && (
           <Suspense fallback={null}>
-            <Studio3kUsers onClose={() => setState(prev => ({ ...prev, showStudio3kUsers: false }))} />
+            <Studio3kPanel
+              isOpen
+              currentUser={state.currentUser}
+              onClose={() => setState(prev => ({ ...prev, showStudio3kUsers: false }))}
+            />
           </Suspense>
         )}
         <div className="flex items-center justify-between px-4 py-2 bg-[#101420] border-b border-white/10 shrink-0">
@@ -1177,8 +1162,10 @@ const App = () => {
               data-testid="sidebar-toggle"
               title="Mostrar menú"
             >
-              {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers) && _isCarpBrandEntry ? (
+              {_isCarpBrandEntry ? (
                 <img src="/carpinter-logo-icon.png" alt="carpinter.io" className="w-full h-full object-contain p-1" />
+              ) : _isStudio3kEntry ? (
+                <div className="w-full h-full bg-[#0b0b14] flex items-center justify-center font-black text-[#5f78ca] text-sm">S3K</div>
               ) : state.logo ? (
                 <img src={state.logo} alt="logo" className="w-full h-full object-contain p-1" />
               ) : state.marcaBlanca ? (
@@ -1232,8 +1219,10 @@ const App = () => {
               title="Toca para ocultar el menú"
               data-testid="sidebar-logo-toggle"
             >
-              {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers) && _isCarpBrandEntry ? (
+              {_isCarpBrandEntry ? (
                 <img src="/carpinter-logo-icon.png" alt="carpinter.io" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
+              ) : _isStudio3kEntry ? (
+                <div className="w-full h-full bg-[#0b0b14] flex items-center justify-center font-black text-[#5f78ca] text-sm group-hover:opacity-60 transition-opacity">S3K</div>
               ) : state.logo ? (
                 <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
               ) : (
@@ -1710,7 +1699,7 @@ const App = () => {
                   fabrica/tienda). Un Comercial lo ve si no es Tienda ni solo Fabrica.
                   El admin de la división carpinteros (canManageCarpinteroUsers) también
                   lo ve para poder gestionar su cuenta y usuarios. */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canManageCarpinteroUsers || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && state.currentUser?.canAccessMaster !== false)) && (
+              {(state.currentUser?.isAdmin || state.currentUser?.canManageCarpinteroUsers || state.currentUser?.canManageStudio3kUsers || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && state.currentUser?.canAccessMaster !== false)) && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
                     className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1990,7 +1979,21 @@ const App = () => {
               </ErrorBoundary>
             )}
 
-            {/* Landing Comercial Studio3K */}
+            {/* STUDIO3K.IO — administración de plataforma, exclusivamente MASTER. */}
+            {state.currentTab === 'studio3k'
+              && canOpenTab('studio3k') && (
+              <ErrorBoundary>
+                <div className="h-full overflow-y-auto">
+                  <Studio3kPanel
+                    isOpen
+                    onClose={() => setState(p => ({ ...p, currentTab: 'welcome' }))}
+                    currentUser={state.currentUser}
+                  />
+                </div>
+              </ErrorBoundary>
+            )}
+
+            {/* Landing comercial histórica: se conserva como ruta interna compatible. */}
             {state.currentTab === 'landingStudio'
               && canOpenTab('landingStudio') && (
               <ErrorBoundary>
@@ -2005,9 +2008,11 @@ const App = () => {
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
                <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">
-                 {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers)
-                   ? 'CARPINTER.IO ERP v4.1'
-                   : 'ERP v4.1'}
+                 {(state.currentUser?.isStudio3k || state.currentUser?.linkedStudio3kAdminId || state.currentUser?.canManageStudio3kUsers)
+                   ? 'STUDIO3K.IO v4.1'
+                   : (state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers)
+                     ? 'CARPINTER.IO v4.1'
+                     : 'ERP v4.1'}
                </span>
             </div>
           </main>
@@ -2022,8 +2027,14 @@ const App = () => {
                 red, un fallo aquí no se queda en «no se abre el panel» — se
                 lleva por delante el ERP entero y hay que recargar. */}
             <ErrorBoundary>
-            {state.currentUser?.canManageCarpinteroUsers && !state.currentUser?.isAdmin ? (
+            {state.currentUser?.canManageCarpinteroUsers && !esMasterSistema(state.currentUser) ? (
               <CarpinterPanel
+                isOpen={state.showSettings || false}
+                onClose={() => setState(p => ({...p, showSettings: false}))}
+                currentUser={state.currentUser}
+              />
+            ) : state.currentUser?.canManageStudio3kUsers && !esMasterSistema(state.currentUser) ? (
+              <Studio3kPanel
                 isOpen={state.showSettings || false}
                 onClose={() => setState(p => ({...p, showSettings: false}))}
                 currentUser={state.currentUser}

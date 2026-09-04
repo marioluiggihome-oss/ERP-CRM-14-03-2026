@@ -5,11 +5,11 @@
  * escrita del titular.
  */
 /**
- * CarpinterPanel — Panel de gestión independiente para el admin de la división
- * Carpinter.io (canManageCarpinteroUsers && !isAdmin).
+ * Studio3kPanel — Panel de gestión independiente para el admin de la división
+ * STUDIO3K.IO (canManageStudio3kUsers && !isAdmin).
  *
  * Este panel REEMPLAZA completamente al SettingsModal cuando el usuario es
- * el administrador de la división carpinteros. No muestra NADA de Luiggi Home:
+ * el administrador de la plataforma Studio3K. No muestra NADA de Luiggi Home:
  * ni logos, ni tabs de Fábrica, Inventario, Red Distribución, etc.
  *
  * Secciones:
@@ -23,10 +23,14 @@ import {
   BarChart3, Zap, Clock, User, Key, Save, Eye, EyeOff,
   CheckCircle2, AlertCircle, ChevronRight
 } from 'lucide-react';
-import CarpinterLogo, { CarpinterMark } from './CarpinterLogo';
 import { authHeaders } from '../services/api';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
+const Studio3kMark = ({ size = 32 }) => (
+  <div className="rounded-lg bg-[#5f78ca] text-white font-black flex items-center justify-center" style={{ width: size, height: size }}>
+    3K
+  </div>
+);
 const fechaCorta = (s) =>
   s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
 
@@ -44,7 +48,7 @@ function PanelUsuarios({ currentUser }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${BASE}/api/users/carpinteros/mine`, { headers: authHeaders() });
+      const r = await fetch(`${BASE}/api/users/studio3k/mine`, { headers: authHeaders() });
       const data = await r.json();
       setUsers(Array.isArray(data) ? data : []);
     } catch {
@@ -58,20 +62,26 @@ function PanelUsuarios({ currentUser }) {
 
   const crear = async () => {
     setError('');
+    const firstOrganization = isMaster && organizations.length === 0;
     if (!nuevo.username.trim() || !nuevo.password) {
       setError('Usuario y contraseña son obligatorios');
       return;
     }
-    if (isMaster && !selectedAdminId) {
+    if (firstOrganization && !nuevo.clientName.trim()) {
+      setError('Indica el nombre de la organización');
+      return;
+    }
+    if (isMaster && !firstOrganization && !selectedAdminId) {
       setError('Selecciona primero la organización administradora');
       return;
     }
     setCreating(true);
     try {
-      const r = await fetch(`${BASE}/api/users/carpinteros/create`, {
+      const endpoint = firstOrganization ? 'create-admin' : 'create';
+      const r = await fetch(`${BASE}/api/users/studio3k/${endpoint}`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...nuevo, adminId: selectedAdminId || undefined }),
+        body: JSON.stringify({ ...nuevo, ...(firstOrganization ? {} : { adminId: selectedAdminId }) }),
       });
       const data = await r.json();
       if (!r.ok) { setError(data.detail || 'No se pudo crear el usuario'); return; }
@@ -86,7 +96,7 @@ function PanelUsuarios({ currentUser }) {
 
   const toggle = async (u) => {
     try {
-      await fetch(`${BASE}/api/users/carpinteros/toggle/${encodeURIComponent(u.id)}`, {
+      await fetch(`${BASE}/api/users/studio3k/toggle/${encodeURIComponent(u.id)}`, {
         method: 'PUT', headers: authHeaders(),
       });
       await load();
@@ -96,34 +106,34 @@ function PanelUsuarios({ currentUser }) {
   const borrar = async (u) => {
     if (!window.confirm(`¿Eliminar al usuario "${u.username}"? Esta acción no se puede deshacer.`)) return;
     try {
-      await fetch(`${BASE}/api/users/carpinteros/remove/${encodeURIComponent(u.id)}`, {
+      await fetch(`${BASE}/api/users/studio3k/remove/${encodeURIComponent(u.id)}`, {
         method: 'DELETE', headers: authHeaders(),
       });
       await load();
     } catch { setError('Error al eliminar'); }
   };
 
-  const organizations = users.filter((user) => user.canManageCarpinteroUsers);
+  const organizations = users.filter((user) => user.canManageStudio3kUsers);
   const visibleUsers = isMaster && selectedAdminId
-    ? users.filter((user) => user.id === selectedAdminId || user.linkedCarpinteroAdminId === selectedAdminId || user.organizationId === selectedAdminId)
+    ? users.filter((user) => user.id === selectedAdminId || user.linkedStudio3kAdminId === selectedAdminId || user.organizationId === selectedAdminId)
     : users;
 
   return (
     <div className="flex flex-col h-full">
       {/* Formulario de alta */}
-      <div className="p-5 bg-orange-50 border-b border-orange-100">
-        <p className="text-[11px] font-black text-orange-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-          <Plus size={12} /> Nuevo usuario / cliente
+      <div className="p-5 bg-indigo-50 border-b border-indigo-100">
+        <p className="text-[11px] font-black text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <Plus size={12} /> {isMaster && organizations.length === 0 ? 'Primera organización administradora' : 'Nuevo usuario / cliente'}
         </p>
         {isMaster && (
           <label className="block mb-3">
-            <span className="block text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Organización administradora</span>
+            <span className="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Organización administradora</span>
             <select
               value={selectedAdminId}
               onChange={(event) => setSelectedAdminId(event.target.value)}
-              className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white focus:outline-none focus:border-orange-500"
+              className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500"
             >
-              <option value="">Todas las organizaciones</option>
+              <option value="">{organizations.length ? 'Todas las organizaciones' : 'Se creará la primera organización'}</option>
               {organizations.map((organization) => (
                 <option key={organization.id} value={organization.id}>
                   {organization.clientName || organization.username}
@@ -138,7 +148,7 @@ function PanelUsuarios({ currentUser }) {
             onChange={e => setNuevo({ ...nuevo, username: e.target.value })}
             onKeyDown={e => e.key === 'Enter' && crear()}
             placeholder="Usuario (login)"
-            className="px-3 py-2 border border-orange-200 rounded-lg text-sm w-36 bg-white focus:outline-none focus:border-orange-500"
+            className="px-3 py-2 border border-indigo-200 rounded-lg text-sm w-36 bg-white focus:outline-none focus:border-indigo-500"
           />
           <div className="relative">
             <input
@@ -147,7 +157,7 @@ function PanelUsuarios({ currentUser }) {
               onKeyDown={e => e.key === 'Enter' && crear()}
               type={showPass ? 'text' : 'password'}
               placeholder="Contraseña"
-              className="px-3 py-2 pr-9 border border-orange-200 rounded-lg text-sm w-36 bg-white focus:outline-none focus:border-orange-500"
+              className="px-3 py-2 pr-9 border border-indigo-200 rounded-lg text-sm w-36 bg-white focus:outline-none focus:border-indigo-500"
             />
             <button
               type="button"
@@ -161,20 +171,22 @@ function PanelUsuarios({ currentUser }) {
             value={nuevo.clientName}
             onChange={e => setNuevo({ ...nuevo, clientName: e.target.value })}
             onKeyDown={e => e.key === 'Enter' && crear()}
-            placeholder="Nombre / empresa (opcional)"
-            className="px-3 py-2 border border-orange-200 rounded-lg text-sm flex-1 min-w-[160px] bg-white focus:outline-none focus:border-orange-500"
+            placeholder={isMaster && organizations.length === 0 ? 'Nombre de la organización' : 'Nombre / empresa (opcional)'}
+            className="px-3 py-2 border border-indigo-200 rounded-lg text-sm flex-1 min-w-[160px] bg-white focus:outline-none focus:border-indigo-500"
           />
           <button
             onClick={crear}
             disabled={creating}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-black flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black flex items-center gap-1.5 disabled:opacity-50 transition-colors"
           >
             {creating ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
             Crear
           </button>
         </div>
-        <p className="text-[10px] text-orange-500 mt-2">
-          El usuario hereda tu marca, tu web de inicio y los permisos de la división carpinteros.
+        <p className="text-[10px] text-indigo-500 mt-2">
+          {isMaster && organizations.length === 0
+            ? 'Este primer registro será el administrador de la organización STUDIO3K.IO.'
+            : 'El usuario hereda tu marca, tu web de inicio y los permisos de la plataforma Studio3K.'}
         </p>
         {error && (
           <p className="text-xs text-red-600 font-bold mt-2 flex items-center gap-1">
@@ -194,13 +206,13 @@ function PanelUsuarios({ currentUser }) {
             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
             title="Actualizar"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-500' : 'text-slate-500'} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-500' : 'text-slate-500'} />
           </button>
         </div>
 
         {loading && visibleUsers.length === 0 && (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw size={20} className="animate-spin text-orange-400" />
+            <RefreshCw size={20} className="animate-spin text-indigo-400" />
           </div>
         )}
 
@@ -219,11 +231,11 @@ function PanelUsuarios({ currentUser }) {
               className={`flex items-center gap-3 border rounded-xl px-4 py-3 transition-colors ${
                 u.isActive === false
                   ? 'border-slate-200 bg-slate-50 opacity-60'
-                  : 'border-orange-100 bg-white hover:border-orange-200'
+                  : 'border-indigo-100 bg-white hover:border-indigo-200'
               }`}
             >
-              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                <span className="text-xs font-black text-orange-600">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                <span className="text-xs font-black text-indigo-600">
                   {(u.clientName || u.username || '?').charAt(0).toUpperCase()}
                 </span>
               </div>
@@ -233,12 +245,12 @@ function PanelUsuarios({ currentUser }) {
                   {u.clientName || '—'}
                   {u.isActive === false && <span className="text-red-400 ml-1">· desactivado</span>}
                 </p>
-                <p className="text-[10px] text-orange-500 truncate">
+                <p className="text-[10px] text-indigo-500 truncate">
                   {u.subscriptionPlan ? `Plan ${u.subscriptionPlan}` : 'Plan sin configurar'}
                   {' · '}{Number(u.aiCreditsMonthly || 0)} usos/mes
                 </p>
               </div>
-              {!u.canManageCarpinteroUsers && <button
+              {!u.canManageStudio3kUsers && <button
                 onClick={() => toggle(u)}
                 title={u.isActive === false ? 'Activar usuario' : 'Desactivar usuario'}
                 className={`p-2 rounded-lg transition-colors ${
@@ -249,7 +261,7 @@ function PanelUsuarios({ currentUser }) {
               >
                 {u.isActive === false ? <UserCheck size={15} /> : <UserX size={15} />}
               </button>}
-              {!u.canManageCarpinteroUsers && <button
+              {!u.canManageStudio3kUsers && <button
                 onClick={() => borrar(u)}
                 title="Eliminar usuario"
                 className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
@@ -276,7 +288,7 @@ function PanelEstadisticas({ currentUser }) {
     setLoading(true);
     try {
       const query = adminId ? `?adminId=${encodeURIComponent(adminId)}` : '';
-      const r = await fetch(`${BASE}/api/users/carpinteros/stats${query}`, { headers: authHeaders() });
+      const r = await fetch(`${BASE}/api/users/studio3k/stats${query}`, { headers: authHeaders() });
       const d = await r.json();
       if (d.success) {
         setStats(d);
@@ -291,7 +303,7 @@ function PanelEstadisticas({ currentUser }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <RefreshCw size={24} className="animate-spin text-orange-400" />
+        <RefreshCw size={24} className="animate-spin text-indigo-400" />
       </div>
     );
   }
@@ -304,9 +316,9 @@ function PanelEstadisticas({ currentUser }) {
           <select
             value={selectedAdminId}
             onChange={(event) => setSelectedAdminId(event.target.value)}
-            className="mt-1 w-full sm:max-w-md px-3 py-2 rounded-lg border border-orange-200 bg-white text-sm font-bold text-slate-700"
+            className="mt-1 w-full sm:max-w-md px-3 py-2 rounded-lg border border-indigo-200 bg-white text-sm font-bold text-slate-700"
           >
-            <option value="">Toda CARPINTER.IO</option>
+            <option value="">Toda STUDIO3K.IO</option>
             {organizations.map((organization) => (
               <option key={organization.id} value={organization.id}>{organization.clientName || organization.username}</option>
             ))}
@@ -315,8 +327,8 @@ function PanelEstadisticas({ currentUser }) {
       )}
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
-        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
-          <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest flex items-center gap-1">
+        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+          <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1">
             <Users size={11} /> Usuarios
           </div>
           <div className="text-3xl font-black text-slate-800 mt-1">{stats?.total ?? '—'}</div>
@@ -337,9 +349,9 @@ function PanelEstadisticas({ currentUser }) {
           <div className="text-[10px] font-black text-sky-600 uppercase tracking-widest">Cuota total</div>
           <div className="text-3xl font-black text-sky-700 mt-1">{stats?.cuotaTotal ?? '—'}</div>
         </div>
-        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
-          <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Disponible</div>
-          <div className="text-3xl font-black text-orange-700 mt-1">{stats?.restantesTotal ?? '—'}</div>
+        <div className="bg-violet-50 border border-violet-100 rounded-xl p-4">
+          <div className="text-[10px] font-black text-violet-600 uppercase tracking-widest">Disponible</div>
+          <div className="text-3xl font-black text-violet-700 mt-1">{stats?.restantesTotal ?? '—'}</div>
         </div>
       </div>
 
@@ -363,14 +375,14 @@ function PanelEstadisticas({ currentUser }) {
                 <tr key={it.id} className={`border-t border-slate-100 ${it.isActive === false ? 'opacity-50' : ''}`}>
                   <td className="p-3">
                     <span className="font-bold text-slate-700 text-xs">{it.clientName || it.username}</span>
-                    {it.esAdmin && <span className="ml-1 text-[9px] text-orange-600 font-black">admin</span>}
+                    {it.esAdmin && <span className="ml-1 text-[9px] text-indigo-600 font-black">admin</span>}
                   </td>
                   <td className="p-3 text-xs text-slate-400">{fechaCorta(it.ultimoLogin)}</td>
                   <td className="p-3 text-right text-xs text-slate-600 font-bold">{it.logins}</td>
-                  <td className="p-3 text-xs text-orange-600 font-bold">{it.subscriptionPlan || 'Sin configurar'}</td>
+                  <td className="p-3 text-xs text-indigo-600 font-bold">{it.subscriptionPlan || 'Sin configurar'}</td>
                   <td className="p-3 text-right text-xs text-sky-600 font-bold">{it.cuotaMensual}</td>
                   <td className="p-3 text-right text-xs text-amber-600 font-bold">{it.rendersMes}</td>
-                  <td className="p-3 text-right text-xs text-orange-600 font-bold">{it.restantes}</td>
+                  <td className="p-3 text-right text-xs text-violet-600 font-bold">{it.restantes}</td>
                 </tr>
               ))}
             </tbody>
@@ -436,15 +448,15 @@ function PanelPerfil({ currentUser }) {
     <div className="p-6 overflow-y-auto h-full">
       <div className="max-w-md mx-auto space-y-6">
         {/* Avatar / info */}
-        <div className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-100 rounded-xl">
-          <div className="w-14 h-14 rounded-2xl bg-orange-600 flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center shrink-0">
             <span className="text-2xl font-black text-white">
               {(currentUser?.clientName || currentUser?.username || '?').charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
             <p className="font-black text-slate-800">{currentUser?.username}</p>
-            <p className="text-xs text-orange-600 font-bold">Admin de división · Carpinter.io</p>
+            <p className="text-xs text-indigo-600 font-bold">Administrador de plataforma · STUDIO3K.IO</p>
           </div>
         </div>
 
@@ -457,7 +469,7 @@ function PanelPerfil({ currentUser }) {
             value={clientName}
             onChange={e => setClientName(e.target.value)}
             placeholder="Tu nombre o empresa"
-            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-orange-400 transition-colors"
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-indigo-400 transition-colors"
           />
         </div>
 
@@ -473,7 +485,7 @@ function PanelPerfil({ currentUser }) {
                 onChange={e => setNewPass(e.target.value)}
                 type={showNew ? 'text' : 'password'}
                 placeholder="Nueva contraseña"
-                className="w-full px-4 py-2.5 pr-10 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-orange-400 transition-colors"
+                className="w-full px-4 py-2.5 pr-10 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-indigo-400 transition-colors"
               />
               <button
                 type="button"
@@ -488,7 +500,7 @@ function PanelPerfil({ currentUser }) {
               onChange={e => setConfirmPass(e.target.value)}
               type="password"
               placeholder="Repetir nueva contraseña"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-orange-400 transition-colors"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-indigo-400 transition-colors"
             />
           </div>
           <p className="text-[10px] text-slate-400 mt-1.5">Deja en blanco si no quieres cambiar la contraseña.</p>
@@ -510,7 +522,7 @@ function PanelPerfil({ currentUser }) {
         <button
           onClick={saveProfile}
           disabled={saving}
-          className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
         >
           {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
           Guardar cambios
@@ -521,7 +533,7 @@ function PanelPerfil({ currentUser }) {
 }
 
 /* ─── Panel principal ─────────────────────────────────────────────────────── */
-export default function CarpinterPanel({ isOpen, onClose, currentUser }) {
+export default function Studio3kPanel({ isOpen, onClose, currentUser }) {
   const [tab, setTab] = useState('usuarios');
 
   if (!isOpen) return null;
@@ -541,13 +553,13 @@ export default function CarpinterPanel({ isOpen, onClose, currentUser }) {
         className="bg-white rounded-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header con branding Carpinter */}
+        {/* Cabecera propia de STUDIO3K.IO */}
         <div className="bg-slate-950 px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <CarpinterMark size={32} />
+            <Studio3kMark size={32} />
             <div>
               <p className="text-white font-black text-sm leading-none">
-                carpinter<span className="text-orange-500">.io</span>
+                studio<span className="text-indigo-400">3k</span><span className="text-white">.io</span>
               </p>
               <p className="text-slate-400 text-[10px] font-medium mt-0.5 uppercase tracking-widest">
                 Panel de administración
@@ -572,7 +584,7 @@ export default function CarpinterPanel({ isOpen, onClose, currentUser }) {
                 onClick={() => setTab(t.id)}
                 className={`flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
                   tab === t.id
-                    ? 'border-orange-500 text-orange-600 bg-white'
+                    ? 'border-indigo-500 text-indigo-600 bg-white'
                     : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -593,7 +605,7 @@ export default function CarpinterPanel({ isOpen, onClose, currentUser }) {
         {/* Footer */}
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
           <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
-            CARPINTER.IO ERP · División Carpinteros & Ebanistas
+            STUDIO3K.IO · Panel profesional
           </p>
           <button
             onClick={onClose}

@@ -37,6 +37,7 @@ import {
 import FichaFabricacion from './FichaFabricacion';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { jsPDF } from 'jspdf';
+import { authHeaders } from '../services/api';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -192,7 +193,7 @@ function getToken() {
 async function apiPost(endpoint, body) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
@@ -200,9 +201,21 @@ async function apiPost(endpoint, body) {
   return data;
 }
 
+async function detectarDistribucionPlano(imageBase64, medidas = {}, contexto = '') {
+  if (!imageBase64) return null;
+  try {
+    const data = await apiPost('/detect-distribucion', { imageBase64, medidas, contexto });
+    return data?.success ? (data.distribucion || null) : null;
+  } catch {
+    // El render debe poder continuar si el detector no responde; la referencia
+    // original sigue viajando al perfil elegido.
+    return null;
+  }
+}
+
 async function apiGet(endpoint) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders(),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
@@ -212,7 +225,7 @@ async function apiGet(endpoint) {
 async function apiPostForm(endpoint, formData) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders(),
     body: formData,
   });
   const data = await res.json().catch(() => ({}));
@@ -421,7 +434,7 @@ export default function EstudioCocinas({ state, setState }) {
     setDistribucion(d => ({ ...d, elementos: d.elementos.filter((_, i) => i !== idx) }));
   }, []);
 
-  const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
+  const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', editHistory: [], fs: false });
   const [freeDesign, setFreeDesign] = useState(false);
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
   // Vista alámbrica (alzados acotados por pared) para el dossier técnico.
@@ -447,6 +460,7 @@ export default function EstudioCocinas({ state, setState }) {
   const [motorIA, setMotorIA] = useState('ia0');
   const providerDeMotor = () => {
     if (motorIA === 'ia0') return 'julio11';
+    if (motorIA === 'ia7') return 'julio11_plus';
     if (motorIA === 'ia2') return 'manus';
     return 'gemini';
   };
@@ -597,7 +611,7 @@ export default function EstudioCocinas({ state, setState }) {
   const toggleFavorito = useCallback(async (id) => {
     try {
       const res = await fetch(`${API}/api/estudio-cocinas/galeria/${id}/favorito`, {
-        method: 'PATCH', headers: { Authorization: `Bearer ${getToken()}` },
+        method: 'PATCH', headers: authHeaders(),
       });
       if (res.ok) loadGaleria(galeria.page);
     } catch {}
@@ -607,7 +621,7 @@ export default function EstudioCocinas({ state, setState }) {
     if (!window.confirm('¿Eliminar este render de la galería?')) return;
     try {
       const res = await fetch(`${API}/api/estudio-cocinas/galeria/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+        method: 'DELETE', headers: authHeaders(),
       });
       if (res.ok) loadGaleria(galeria.page);
     } catch {}
@@ -690,14 +704,25 @@ export default function EstudioCocinas({ state, setState }) {
         .filter(s => s && !/^(isla|island|ventanal?|window)\b/i.test(s))
         .join('. ');
       const conCroquis = !!render.croquis && !freeDesign;
-
+      // El flujo histórico leía primero el plano y después generaba el render.
+      // Recuperamos esa distribución estructurada para que la imagen no sea la
+      // única fuente de interpretación del diseño.
+      const distribucionPlano = conCroquis
+        ? await detectarDistribucionPlano(render.croquis, {}, proy.descripcion)
+        : null;
       // Construimos una descripción única y usamos el MISMO pipeline que la sección
+
       // "Estudio 3D" (endpoint /api/ai-engine/render, motor Gemini), que sí funciona.
       const partes = [];
       partes.push(conCroquis ? stripLayout(proy.descripcion) : proy.descripcion);
       const mats = conCroquis ? stripLayout(proy.notas) : proy.notas;
       if (mats && mats.trim()) partes.push(`Materiales y acabados: ${mats.trim()}`);
       if (!conCroquis && proy.medidas && proy.medidas.trim()) partes.push(`Distribución y medidas: ${proy.medidas.trim()}`);
+      if (distribucionPlano) {
+        const paredes = (distribucionPlano.paredes || []).map(p => `${p.nombre || 'Pared'} ${p.ancho || '?'} cm`).join('; ');
+        const elementos = (distribucionPlano.elementos || []).map(e => `${e.label || e.id || 'módulo'} en pared ${Number(e.pared_idx || 0) + 1}${e.ancho ? `, ${e.ancho} cm` : ''}`).join('; ');
+        partes.push(`Lectura estructurada del plano (fuente prioritaria): tipo ${distribucionPlano.tipo || 'no indicado'}; paredes: ${paredes || 'según plano'}; módulos: ${elementos || 'según plano'}. Respeta esta distribución y no inventes módulos.`);
+      }
       let descripcion = partes.filter(Boolean).join('. ');
       if (conCroquis) {
         descripcion = `Genera un render 3D fotorrealista RESPETANDO FIELMENTE el croquis/plano adjunto: misma distribución, mismos módulos (altos, bajos, columnas), mismas proporciones y posiciones. No añadas ni quites muebles, no añadas isla ni ventanas que no estén en el croquis. ${descripcion}`;
@@ -706,12 +731,13 @@ export default function EstudioCocinas({ state, setState }) {
       const descFinal = promptExtraMotor(descripcion);
       const res = await fetch(`${API}/api/ai-engine/render`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           description: descFinal,
           style: proy.estilo || undefined,
           provider: providerDeMotor(),
           referenceImage: conCroquis ? render.croquis : undefined,
+          referenceIsSketch: conCroquis,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -733,16 +759,24 @@ export default function EstudioCocinas({ state, setState }) {
     }
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
-      // Mismo pipeline que "Estudio 3D": mandamos la imagen actual como referencia
-      // (en base64) y una instrucción de edición fiel al motor Gemini.
-      const prevB64 = await imageToDataUrl(render.imageUrl).catch(() => null);
+      // Cada modificación parte siempre del PRIMER render, no del último
+      // resultado. Así se evita acumular pixelado y deformaciones. Las órdenes
+      // anteriores viajan como historial para conservar los cambios ya aprobados.
+      const baseB64 = await imageToDataUrl(render.originalUrl || render.imageUrl).catch(() => null);
+      const cambioActual = render.editTxt.trim();
+      const historial = (render.editHistory || []).filter(Boolean);
+      const historialTxt = historial.length
+        ? `\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR:\n${historial.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`
+        : '';
       const res = await fetch(`${API}/api/ai-engine/render`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          description: `Modifica el render adjunto manteniendo EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación. Cambio solicitado: ${render.editTxt.trim()}. No cambies nada más.`,
-          provider: 'gemini',
-          referenceImage: prevB64 || undefined,
+          description: `Modifica el render original manteniendo EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación.${historialTxt}\nNUEVO CAMBIO SOLICITADO:\n${cambioActual}\nNo cambies nada más.`,
+          provider: providerDeMotor(),
+          referenceImage: baseB64 || undefined,
+          referenceIsSketch: false,
+          editingRender: true,
         }),
       });
       const r = await res.json().catch(() => ({}));
@@ -750,13 +784,23 @@ export default function EstudioCocinas({ state, setState }) {
       const u = r.result?.images?.[0] || r.imageUrl;
       if (!u) throw new Error('No se recibió ninguna imagen');
       const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
-      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: shown, originalUrl: u, editMode: false, editTxt: '' }));
+      setRender(s => ({
+        ...s,
+        status: 'success',
+        msg: 'Render editado',
+        imageUrl: shown,
+        // El original solo se fija en la primera generación y nunca se pisa.
+        originalUrl: s.originalUrl || u,
+        editHistory: [...(s.editHistory || []), cambioActual],
+        editMode: false,
+        editTxt: '',
+      }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
-  }, [render.imageUrl, render.originalUrl, render.editTxt]);
-
+    }, [render.imageUrl, render.originalUrl, render.editTxt, render.editHistory, motorIA]);
   // ── MIGRADO: Adjuntar render al presupuesto ──
+
   const attachToBudget = useCallback(async () => {
     if (!render.imageUrl) return;
     try {
@@ -786,7 +830,7 @@ export default function EstudioCocinas({ state, setState }) {
       const images = render.originalUrl ? [render.originalUrl] : [];
       const res = await fetch(`${API}/api/ai-engine/designs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           id: savedId || undefined,
           cliente: proy.nombre_cliente,
@@ -813,7 +857,7 @@ export default function EstudioCocinas({ state, setState }) {
   const openProjectList = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/ai-engine/designs`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders(),
       });
       const d = await res.json();
       setSavedList(d.designs || []);
@@ -843,7 +887,7 @@ export default function EstudioCocinas({ state, setState }) {
     try {
       await fetch(`${API}/api/ai-engine/designs/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders(),
       });
       setSavedList(prev => (prev || []).filter(x => x.id !== id));
       if (savedId === id) setSavedId(null);
@@ -1482,8 +1526,8 @@ export default function EstudioCocinas({ state, setState }) {
                               const descB = promptExtraMotor(desc);
                               const r = await fetch(`${API}/api/ai-engine/render`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-                                body: JSON.stringify({ description: descB, style: proy.estilo || undefined, provider: providerDeMotor(), referenceImage: conCroquis ? render.croquis : undefined }),
+                                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                                body: JSON.stringify({ description: descB, style: proy.estilo || undefined, provider: providerDeMotor(), referenceImage: conCroquis ? render.croquis : undefined, referenceIsSketch: conCroquis }),
                               });
                               const d = await r.json().catch(() => ({}));
                               if (!r.ok || !d.success) throw new Error(d.error || 'Error en render B');
@@ -1655,7 +1699,7 @@ export default function EstudioCocinas({ state, setState }) {
                     try {
                       const res = await fetch(`${API}/api/estudio-cocinas/exportar-dxf`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                        headers: authHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ distribucion: { tipo: proy.tipo_distribucion || 'L', paredes: [{ id: 1, ancho: proy.ancho_estancia || 360, elementos: [] }] }, cliente: proy.nombre_cliente || 'Cliente' }),
                       });
                       const data = await res.json();
@@ -1919,7 +1963,7 @@ export default function EstudioCocinas({ state, setState }) {
                     {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>}
                     {savedId ? 'Guardado' : 'Guardar proyecto'}
                   </button>
-                  <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }}
+                  <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', editHistory: [], fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }}
                     className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
                     <Plus size={12}/> Nuevo proyecto
                   </button>

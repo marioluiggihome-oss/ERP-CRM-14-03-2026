@@ -15,6 +15,7 @@ import {
   Sparkles, Plus, Trash2, Play, RefreshCw, Download, CheckCircle,
   AlertCircle, Clock, Loader, X, ChevronDown, ChevronUp, ZoomIn, Upload, Image
 } from 'lucide-react';
+import { authHeaders } from '../services/api';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -56,7 +57,7 @@ async function downloadImg(url, filename) {
 async function apiPost(endpoint, body) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
@@ -66,7 +67,7 @@ async function apiPost(endpoint, body) {
 
 async function apiGet(endpoint) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: authHeaders(),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);

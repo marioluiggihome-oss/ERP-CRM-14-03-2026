@@ -105,7 +105,7 @@ function Nav({ onEnter }) {
   return (
     <header className={`nav ${scrolled ? "nav-solid" : ""}`}>
       <div className="wrap nav-inner">
-        <a href="#top" className="nav-logo"><CarpinterLogo height={48} tone="dark" /></a>
+        <a href="#top" className="nav-logo"><CarpinterLogo height={56} tone="dark" /></a>
         <nav className="nav-links">
           {NAV_LINKS.map((l) => (
             <a key={l.label} href={l.href} style={{ color: "#574f46" }}>{l.label}</a>
@@ -299,7 +299,7 @@ function AISection() {
             <span style={{ color: "#d3a98b" }}>prompt&gt;</span> cocina en roble natural, isla central, tiradores negros…
           </div>
           <div className="ia-render">
-            <CarpinterMark size={88} orange="#aa7257" />
+            <CarpinterMark size={100} orange="#aa7257" />
             <div className="ia-render-lbl mono">render_ia · 4s</div>
           </div>
         </div>
@@ -481,7 +481,7 @@ function CTASection({ onEnter }) {
   return (
     <section className="sec cta" id="contacto">
       <div className="wrap cta-inner" data-reveal>
-        <CarpinterMark size={64} orange="#F5F0E7" />
+        <CarpinterMark size={72} orange="#F5F0E7" />
         <h2 className="cta-h2">Hablemos de tu taller.<br /><span className="accent">Te respondemos en 24h.</span></h2>
         <p className="cta-sub">Cuéntanos tu proyecto y te ayudamos a encontrar la mejor solución.</p>
         <CarpinterContactForm />
@@ -495,7 +495,7 @@ function Footer() {
     <footer className="footer">
       <div className="wrap footer-grid">
         <div className="footer-brand">
-          <CarpinterLogo height={52} tone="dark" />
+          <CarpinterLogo height={58} tone="dark" />
           <p>El ERP para carpinteros y ebanistas que gestionan su negocio con la misma precisión con la que trabajan la madera.</p>
         </div>
         <div className="footer-col">

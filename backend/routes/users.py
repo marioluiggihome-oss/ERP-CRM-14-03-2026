@@ -17,6 +17,15 @@ import re
 import bcrypt
 
 from dotenv import load_dotenv
+from services.master import es_master
+from services.plataformas import (
+    CARPINTER,
+    COOPERATIVA,
+    STUDIO3K,
+    normalizar_usuario_plataforma,
+    organizacion_de,
+    plataforma_de,
+)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -185,9 +194,42 @@ def _is_user_manager(user: dict) -> bool:
     """True si el usuario puede gestionar usuarios (rol elevado o permiso explícito)."""
     if not user or user.get("_compat_mode"):
         return False
+    if es_master(user):
+        return True
     if any(user.get(f) for f in ADMIN_ROLE_FLAGS):
         return True
     return bool(user.get("canManageUsers") or user.get("canAuthorizePermissions"))
+
+
+def _es_admin_delegado(user: dict) -> bool:
+    plataforma = plataforma_de(user)
+    if plataforma == CARPINTER:
+        return bool(user.get("canManageCarpinteroUsers"))
+    if plataforma == STUDIO3K:
+        return bool(user.get("canManageStudio3kUsers"))
+    return False
+
+
+def _puede_ver_usuario(current_user: dict, target: dict) -> bool:
+    """Scope del directorio: MASTER todo; plataformas comerciales, solo tenant.
+
+    La red histórica conserva su comportamiento para no romper asignaciones y
+    agendas. Una cuenta comercial normal solo recibe su propia ficha; su gestor
+    delegado recibe únicamente las cuentas de su organización y marca.
+    """
+    if es_master(current_user):
+        return True
+    current_platform = plataforma_de(current_user)
+    target_platform = plataforma_de(target)
+    if current_platform in (CARPINTER, STUDIO3K):
+        if target_platform != current_platform:
+            return False
+        if _es_admin_delegado(current_user):
+            return organizacion_de(target) == organizacion_de(current_user)
+        return str(target.get("id") or "") == str(current_user.get("id") or "")
+    if _is_user_manager(current_user):
+        return target_platform == COOPERATIVA
+    return target_platform == COOPERATIVA
 
 
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
@@ -200,19 +242,30 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
     return user
 
 
-async def require_authenticated_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    """JWT obligatorio para escrituras (POST/PUT/DELETE). Lanza 401 si no hay token válido."""
+async def require_authenticated_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+):
+    """JWT obligatorio y coherente con la entrada pública de plataforma."""
     if not credentials:
         raise HTTPException(status_code=401, detail="Autenticación requerida")
     user = await _get_current_user(credentials)
     if not user:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    from services.plataformas import entrada_permitida, suscripcion_permitida
+    if not entrada_permitida(user, request.headers.get("x-platform-entry")):
+        raise HTTPException(status_code=403, detail="Sesión no válida para este acceso")
+    if not suscripcion_permitida(user):
+        raise HTTPException(status_code=403, detail="Suscripción no activa")
     return user
 
 
-async def require_user_manager(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+async def require_user_manager(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+):
     """Gestión de usuarios: exige token válido y rol/permiso de administración."""
-    user = await require_authenticated_user(credentials)
+    user = await require_authenticated_user(request, credentials)
     if not _is_user_manager(user):
         raise HTTPException(status_code=403, detail="Se requiere rol de administrador para gestionar usuarios")
     return user
@@ -231,21 +284,22 @@ def filter_sensitive_user_fields(user_data: dict) -> dict:
 
 
 @router.get("")
-async def get_users(current_user: dict = Depends(get_current_user)):
-    """Obtener todos los usuarios (sin passwords). Si no hay JWT, oculta campos sensibles."""
+async def get_users(current_user: dict = Depends(require_authenticated_user)):
+    """Directorio filtrado por alcance; nunca expone usuarios de otra plataforma."""
     users = await _get_db().users.find({}, {"_id": 0, "password": 0}).to_list(1000)
-    if not _is_user_manager(current_user):
+    users = [u for u in users if _puede_ver_usuario(current_user, u)]
+    if not (_is_user_manager(current_user) or _es_admin_delegado(current_user)):
         users = [filter_sensitive_user_fields(u) for u in users]
     return users
 
 
 @router.get("/{user_id}")
-async def get_user(user_id: str, current_user: dict = Depends(get_current_user)):
-    """Obtener un usuario por ID (sin password). Si no hay JWT, oculta campos sensibles."""
+async def get_user(user_id: str, current_user: dict = Depends(require_authenticated_user)):
+    """Obtiene una ficha solo cuando pertenece al alcance del solicitante."""
     user = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "password": 0})
-    if not user:
+    if not user or not _puede_ver_usuario(current_user, user):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    if not _is_user_manager(current_user):
+    if not (_is_user_manager(current_user) or _es_admin_delegado(current_user)):
         user = filter_sensitive_user_fields(user)
     return user
 
@@ -280,6 +334,9 @@ async def create_user(user: UserCreate, current_user: dict = Depends(require_use
     user_data["username"] = user_data["username"]  # Keep original case for email-style usernames
     user_data["password"] = hash_password(user_data["password"])
     user_data["isActive"] = True
+    user_data.update(normalizar_usuario_plataforma(user_data))
+    if plataforma_de(user_data) in (CARPINTER, STUDIO3K) and not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo MASTER puede crear cuentas raíz de plataforma")
     
     await _get_db().users.insert_one(user_data)
     
@@ -303,6 +360,10 @@ async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depen
         raise HTTPException(status_code=403, detail="Modificar admin principal requiere autenticación")
 
     update_data = {k: v for k, v in user.model_dump().items() if v is not None}
+    target_platform = plataforma_de({**existing, **update_data})
+    if (plataforma_de(existing) in (CARPINTER, STUDIO3K) or target_platform in (CARPINTER, STUDIO3K)) and not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo MASTER puede editar cuentas comerciales desde la gestión global")
+    update_data.update(normalizar_usuario_plataforma(update_data, existing))
     if update_data.get("isController") is True:
         update_data.update(controller_only_updates({**existing, **update_data}))
 
@@ -342,7 +403,9 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_user_ma
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
 
     # Get user info before deletion
-    user_to_delete = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "username": 1, "isAdmin": 1, "isGerente": 1})
+    user_to_delete = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    if user_to_delete and plataforma_de(user_to_delete) in (CARPINTER, STUDIO3K) and not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo MASTER puede eliminar cuentas comerciales desde la gestión global")
 
     # SEGURIDAD: sin JWT no se puede borrar usuarios con rol admin/gerente
     if current_user.get("_compat_mode") and user_to_delete:
@@ -358,6 +421,172 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_user_ma
     return {"message": "Usuario eliminado"}
 
 
+def _linked_admin_field(plataforma: str) -> str:
+    return "linkedStudio3kAdminId" if plataforma == STUDIO3K else "linkedCarpinteroAdminId"
+
+
+def _manager_flag(plataforma: str) -> str:
+    return "canManageStudio3kUsers" if plataforma == STUDIO3K else "canManageCarpinteroUsers"
+
+
+async def _platform_users(plataforma: str, current_user: dict, admin_id: Optional[str] = None, include_root: bool = True) -> list[dict]:
+    """Usuarios del tenant delegado o, para MASTER, de toda la plataforma."""
+    linked_field = _linked_admin_field(plataforma)
+    if es_master(current_user):
+        users = await _get_db().users.find({}, {"_id": 0, "password": 0}).to_list(2000)
+        users = [u for u in users if plataforma_de(u) == plataforma]
+        if admin_id:
+            users = [u for u in users if str(u.get("id") or "") == admin_id
+                     or str(u.get(linked_field) or "") == admin_id
+                     or str(u.get("organizationId") or "") == admin_id]
+        return users
+
+    organization_id = organizacion_de(current_user)
+    users = await _get_db().users.find(
+        {"$or": [
+            {linked_field: current_user.get("id")},
+            {"organizationId": organization_id},
+            {"id": current_user.get("id")},
+        ]},
+        {"_id": 0, "password": 0},
+    ).to_list(1000)
+    users = [u for u in users if plataforma_de(u) == plataforma and organizacion_de(u) == organization_id]
+    if not include_root:
+        users = [u for u in users if str(u.get("id") or "") != str(current_user.get("id") or "")]
+    return users
+
+
+def _subscription_status(user: dict) -> str:
+    if not user.get("isActive", True):
+        return "inactive"
+    expiration = user.get("accessExpirationDate")
+    if expiration:
+        try:
+            from datetime import datetime, timezone
+            value = datetime.fromisoformat(str(expiration).replace("Z", "+00:00"))
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            if value.date() < datetime.now(timezone.utc).date():
+                return "expired"
+        except (TypeError, ValueError):
+            return "invalid_expiration"
+    return "active" if user.get("subscriptionPlan") else "unconfigured"
+
+
+async def _platform_stats(plataforma: str, current_user: dict, admin_id: Optional[str] = None) -> dict:
+    """Actividad y cuota mensual filtradas por marca y organización."""
+    from datetime import datetime, timezone
+
+    users = await _platform_users(plataforma, current_user, admin_id=admin_id, include_root=True)
+    ids = [str(u.get("id")) for u in users if u.get("id")]
+    logins_count, last_login, credits_by_user, balance_by_user = {}, {}, {}, {}
+
+    try:
+        cursor = _get_db().user_activity.find(
+            {"userId": {"$in": ids}, "activityType": "login"},
+            {"_id": 0, "userId": 1, "timestamp": 1},
+        )
+        async for activity in cursor:
+            uid = str(activity.get("userId") or "")
+            logins_count[uid] = logins_count.get(uid, 0) + 1
+            timestamp = activity.get("timestamp")
+            timestamp = timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp or "")
+            if uid not in last_login or timestamp > last_login[uid]:
+                last_login[uid] = timestamp
+    except Exception as exc:
+        logger.warning("platform stats logins: %s", exc)
+
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    try:
+        cursor = _get_db().ai_credits.find(
+            {"user_id": {"$in": ids}, "month": month},
+            {"_id": 0},
+        )
+        async for credit in cursor:
+            credits_by_user[str(credit.get("user_id") or "")] = credit
+        cursor = _get_db().ai_credit_balance.find(
+            {"user_id": {"$in": ids}},
+            {"_id": 0, "user_id": 1, "saldo": 1},
+        )
+        async for balance in cursor:
+            balance_by_user[str(balance.get("user_id") or "")] = max(int(balance.get("saldo", 0) or 0), 0)
+    except Exception as exc:
+        logger.warning("platform stats credits: %s", exc)
+
+    items = []
+    for user in users:
+        uid = str(user.get("id") or "")
+        credit = credits_by_user.get(uid, {})
+        consumed = int(credit.get("consumed", 0) or 0)
+        extra_month = int(credit.get("extra", 0) or 0)
+        spent_balance = int(credit.get("gastado_saldo", 0) or 0)
+        assigned = max(int(user.get("aiCreditsMonthly", 0) or 0), 0)
+        balance = balance_by_user.get(uid, 0)
+        consumed_plan = max(consumed - spent_balance, 0)
+        remaining = max(assigned + extra_month - consumed_plan, 0) + balance
+        total_available = assigned + extra_month + balance
+        percent = round(consumed / total_available * 100, 1) if total_available > 0 else 0
+        items.append({
+            "id": uid,
+            "username": user.get("username"),
+            "clientName": user.get("clientName", ""),
+            "isActive": user.get("isActive", True),
+            "esAdmin": bool(user.get(_manager_flag(plataforma))),
+            "plataforma": plataforma,
+            "organizationId": organizacion_de(user),
+            "linkedAdminId": user.get(_linked_admin_field(plataforma), ""),
+            "subscriptionPlan": user.get("subscriptionPlan", ""),
+            "subscriptionStatus": _subscription_status(user),
+            "subscriptionStartDate": user.get("subscriptionStartDate", ""),
+            "accessExpirationDate": user.get("accessExpirationDate", ""),
+            "cuotaMensual": assigned,
+            "saldoComprado": balance,
+            "restantes": remaining,
+            "porcentaje": percent,
+            "logins": logins_count.get(uid, 0),
+            "ultimoLogin": last_login.get(uid, ""),
+            "rendersMes": consumed,
+        })
+    items.sort(key=lambda item: item.get("ultimoLogin") or "", reverse=True)
+    return {
+        "success": True,
+        "platform": plataforma,
+        "organizationId": "all" if es_master(current_user) and not admin_id else (admin_id or organizacion_de(current_user)),
+        "month": month,
+        "total": len(items),
+        "activos": sum(1 for item in items if item["isActive"]),
+        "conActividad": sum(1 for item in items if item["rendersMes"] > 0 or item["logins"] > 0),
+        "rendersTotales": sum(item["rendersMes"] for item in items),
+        "cuotaTotal": sum(item["cuotaMensual"] + item["saldoComprado"] for item in items),
+        "restantesTotal": sum(item["restantes"] for item in items),
+        "items": items,
+    }
+
+
+async def _platform_target(user_id: str, plataforma: str, current_user: dict) -> dict:
+    target = await _get_db().users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    if not target or plataforma_de(target) != plataforma:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en esta plataforma")
+    if not es_master(current_user):
+        linked_field = _linked_admin_field(plataforma)
+        if str(target.get(linked_field) or "") != str(current_user.get("id") or ""):
+            raise HTTPException(status_code=404, detail="Usuario no encontrado en tu organización")
+    return target
+
+
+async def _delegated_owner(payload: dict, plataforma: str, current_user: dict) -> dict:
+    """Administrador raíz bajo el que se crea una cuenta delegada."""
+    if not es_master(current_user):
+        return current_user
+    admin_id = str((payload or {}).get("adminId") or "").strip()
+    if not admin_id:
+        raise HTTPException(status_code=400, detail="MASTER debe seleccionar una organización administradora")
+    owner = await _get_db().users.find_one({"id": admin_id}, {"_id": 0, "password": 0})
+    if not owner or plataforma_de(owner) != plataforma or not owner.get(_manager_flag(plataforma)):
+        raise HTTPException(status_code=400, detail="La organización administradora no es válida para esta plataforma")
+    return owner
+
+
 # ---------------------------------------------------------------------------
 # Division Carpinteros & Ebanistas: el admin de la division (isCarpintero +
 # canManageCarpinteroUsers) puede crear y gestionar UNICAMENTE los usuarios
@@ -365,16 +594,18 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_user_ma
 # perfil carpintero, su landing y los permisos por defecto de la division.
 # Rutas con dos segmentos para no chocar con /{user_id}.
 # ---------------------------------------------------------------------------
-async def require_carpintero_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+async def require_carpintero_admin(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+):
     """Admin de la division carpinteros (o gestor de usuarios global).
     El JWT no lleva los flags de carpintero, asi que se cargan de la BD."""
-    user = await require_authenticated_user(credentials)
-    if _is_user_manager(user):
+    user = await require_authenticated_user(request, credentials)
+    if es_master(user):
         return user
     full = await _get_db().users.find_one(
         {"id": user.get("id")},
-        {"_id": 0, "id": 1, "username": 1, "isCarpintero": 1, "canManageCarpinteroUsers": 1,
-         "carpinteroLandingUrl": 1, "canUseCascos": 1},
+        {"_id": 0, "password": 0},
     ) or {}
     if full.get("isCarpintero") and full.get("canManageCarpinteroUsers"):
         # Fusiona los flags reales para que los endpoints tengan id + landing + permisos.
@@ -383,76 +614,20 @@ async def require_carpintero_admin(credentials: Optional[HTTPAuthorizationCreden
 
 
 @router.get("/carpinteros/mine")
-async def carpintero_users(current_user: dict = Depends(require_carpintero_admin)):
-    """Usuarios vinculados al admin carpintero autenticado."""
-    users = await _get_db().users.find(
-        {"linkedCarpinteroAdminId": current_user.get("id")},
-        {"_id": 0, "password": 0},
-    ).to_list(500)
-    return users
+async def carpintero_users(current_user: dict = Depends(require_carpintero_admin), adminId: Optional[str] = None):
+    """Usuarios CARPINTER.IO: global para MASTER, tenant propio para el gestor."""
+    return await _platform_users(
+        CARPINTER,
+        current_user,
+        admin_id=adminId,
+        include_root=es_master(current_user),
+    )
 
 
 @router.get("/carpinteros/stats")
 async def carpintero_stats(current_user: dict = Depends(require_carpintero_admin), adminId: Optional[str] = None):
-    """Estadisticas de la division carpinteros. El master (gestor global) ve
-    TODOS los carpinteros (o los de un adminId concreto); el admin de division
-    solo los suyos. Por usuario: ultimo login, nº de accesos y renders del mes."""
-    from datetime import datetime, timezone
-    # Ambito
-    if _is_user_manager(current_user):
-        q = {"isCarpintero": True}
-        if adminId:
-            q["linkedCarpinteroAdminId"] = adminId
-    else:
-        q = {"$or": [{"linkedCarpinteroAdminId": current_user.get("id")}, {"id": current_user.get("id")}]}
-    users = await _get_db().users.find(q, {"_id": 0, "password": 0}).to_list(1000)
-    ids = [u.get("id") for u in users if u.get("id")]
-
-    # Logins (colección user_activity, activityType=login)
-    logins_count = {}
-    last_login = {}
-    try:
-        cur = _get_db().user_activity.find({"userId": {"$in": ids}, "activityType": "login"}, {"_id": 0, "userId": 1, "timestamp": 1})
-        async for a in cur:
-            uid = a.get("userId")
-            logins_count[uid] = logins_count.get(uid, 0) + 1
-            ts = a.get("timestamp")
-            ts = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
-            if uid not in last_login or ts > last_login[uid]:
-                last_login[uid] = ts
-    except Exception as e:
-        logger.warning("stats logins: %s", e)
-
-    # Renders del mes en curso (ai_credits)
-    month = datetime.now(timezone.utc).strftime("%Y-%m")
-    renders = {}
-    try:
-        cur = _get_db().ai_credits.find({"user_id": {"$in": [str(i) for i in ids]}, "month": month}, {"_id": 0})
-        async for c in cur:
-            renders[str(c.get("user_id"))] = int(c.get("consumed", 0) or 0)
-    except Exception as e:
-        logger.warning("stats renders: %s", e)
-
-    items = []
-    for u in users:
-        uid = u.get("id")
-        items.append({
-            "id": uid, "username": u.get("username"), "clientName": u.get("clientName", ""),
-            "isActive": u.get("isActive", True),
-            "esAdmin": bool(u.get("canManageCarpinteroUsers")),
-            "logins": logins_count.get(uid, 0),
-            "ultimoLogin": last_login.get(uid, ""),
-            "rendersMes": renders.get(str(uid), 0),
-        })
-    items.sort(key=lambda x: x.get("ultimoLogin") or "", reverse=True)
-    activos_mes = sum(1 for i in items if i["rendersMes"] > 0 or i["logins"] > 0)
-    return {
-        "success": True, "month": month, "total": len(items),
-        "activos": sum(1 for i in items if i["isActive"]),
-        "conActividad": activos_mes,
-        "rendersTotales": sum(i["rendersMes"] for i in items),
-        "items": items,
-    }
+    """Actividad, suscripción y consumo CARPINTER.IO dentro del scope autorizado."""
+    return await _platform_stats(CARPINTER, current_user, admin_id=adminId)
 
 
 @router.post("/carpinteros/create")
@@ -466,6 +641,7 @@ async def carpintero_create_user(payload: dict, current_user: dict = Depends(req
     existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    owner = await _delegated_owner(payload, CARPINTER, current_user)
     doc = {
         "id": f"user-{uuid.uuid4().hex[:8]}",
         "username": username,
@@ -474,9 +650,14 @@ async def carpintero_create_user(payload: dict, current_user: dict = Depends(req
         "isActive": True,
         # Herencia de la division (el admin define los permisos por defecto):
         "isCarpintero": True,
-        "linkedCarpinteroAdminId": current_user.get("id"),
-        "carpinteroLandingUrl": str(payload.get("carpinteroLandingUrl") or current_user.get("carpinteroLandingUrl") or ""),
-        "canUseCascos": bool(current_user.get("canUseCascos")),
+        "plataforma": "carpinter",
+        "linkedCarpinteroAdminId": owner.get("id"),
+        "organizationId": organizacion_de(owner),
+        "carpinteroLandingUrl": str(payload.get("carpinteroLandingUrl") or owner.get("carpinteroLandingUrl") or ""),
+        "canUseCascos": bool(owner.get("canUseCascos")),
+        "subscriptionPlan": owner.get("subscriptionPlan", ""),
+        "aiCreditsMonthly": int(owner.get("aiCreditsMonthly", 0) or 0),
+        "accessExpirationDate": owner.get("accessExpirationDate"),
     }
     await _get_db().users.insert_one(doc)
     logger.info("Carpintero user created: %s (by %s)", username, current_user.get("username"))
@@ -486,9 +667,7 @@ async def carpintero_create_user(payload: dict, current_user: dict = Depends(req
 @router.put("/carpinteros/toggle/{user_id}")
 async def carpintero_toggle_user(user_id: str, current_user: dict = Depends(require_carpintero_admin)):
     """Activa/desactiva un usuario de la division (solo los vinculados al admin)."""
-    u = await _get_db().users.find_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")}, {"_id": 0})
-    if not u:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
+    u = await _platform_target(user_id, CARPINTER, current_user)
     new_active = not bool(u.get("isActive", True))
     await _get_db().users.update_one({"id": user_id}, {"$set": {"isActive": new_active}})
     return {"success": True, "isActive": new_active}
@@ -497,9 +676,10 @@ async def carpintero_toggle_user(user_id: str, current_user: dict = Depends(requ
 @router.delete("/carpinteros/remove/{user_id}")
 async def carpintero_delete_user(user_id: str, current_user: dict = Depends(require_carpintero_admin)):
     """Elimina un usuario de la division (solo los vinculados al admin)."""
-    res = await _get_db().users.delete_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")})
+    await _platform_target(user_id, CARPINTER, current_user)
+    res = await _get_db().users.delete_one({"id": user_id})
     if res.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en esta plataforma")
     return {"success": True}
 
 
@@ -518,16 +698,16 @@ def _tipos_estudio3d(value) -> list[str]:
     return [str(tipo).strip().lower() for tipo in value if str(tipo).strip().lower() in ESTUDIO3D_TIPOS_VALIDOS]
 
 
-async def require_studio3k_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    user = await require_authenticated_user(credentials)
-    if _is_user_manager(user):
+async def require_studio3k_admin(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+):
+    user = await require_authenticated_user(request, credentials)
+    if es_master(user):
         return user
     full = await _get_db().users.find_one(
         {"id": user.get("id")},
-        {"_id": 0, "id": 1, "username": 1, "isStudio3k": 1,
-         "canManageStudio3kUsers": 1, "studio3kLandingUrl": 1,
-         "canUseKitchenDesigner": 1, "canUseCocinasAI": 1,
-         "canUseAIAnalysis": 1, "estudio3dTipos": 1},
+        {"_id": 0, "password": 0},
     ) or {}
     if full.get("isStudio3k") and full.get("canManageStudio3kUsers"):
         return {**user, **full}
@@ -535,13 +715,64 @@ async def require_studio3k_admin(credentials: Optional[HTTPAuthorizationCredenti
 
 
 @router.get("/studio3k/mine")
-async def studio3k_users(current_user: dict = Depends(require_studio3k_admin)):
-    """Usuarios vinculados al administrador Studio3K autenticado."""
-    users = await _get_db().users.find(
-        {"linkedStudio3kAdminId": current_user.get("id")},
-        {"_id": 0, "password": 0},
-    ).to_list(500)
-    return users
+async def studio3k_users(current_user: dict = Depends(require_studio3k_admin), adminId: Optional[str] = None):
+    """Usuarios STUDIO3K.IO: global para MASTER, tenant propio para el gestor."""
+    return await _platform_users(
+        STUDIO3K,
+        current_user,
+        admin_id=adminId,
+        include_root=es_master(current_user),
+    )
+
+
+@router.get("/studio3k/stats")
+async def studio3k_stats(current_user: dict = Depends(require_studio3k_admin), adminId: Optional[str] = None):
+    """Actividad, suscripción y consumo STUDIO3K.IO dentro del scope autorizado."""
+    return await _platform_stats(STUDIO3K, current_user, admin_id=adminId)
+
+
+@router.post("/studio3k/create-admin")
+async def studio3k_create_admin(payload: dict, current_user: dict = Depends(require_studio3k_admin)):
+    """Crea la primera organización administradora Studio3K.
+
+    Solo MASTER puede usar esta ruta. La organización se identifica con el id
+    del administrador raíz y no se permite declarar un vínculo externo desde
+    el cliente.
+    """
+    if not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Solo MASTER puede crear organizaciones Studio3K")
+    username = str((payload or {}).get("username", "")).strip()
+    password = str((payload or {}).get("password", ""))
+    client_name = str((payload or {}).get("clientName", "")).strip()
+    if not username or not password or not client_name:
+        raise HTTPException(status_code=400, detail="Usuario, contraseña y nombre de organización son obligatorios")
+    existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    admin_id = f"user-{uuid.uuid4().hex[:8]}"
+    doc = {
+        "id": admin_id,
+        "username": username,
+        "password": hash_password(password),
+        "clientName": client_name,
+        "isActive": True,
+        "isStudio3k": True,
+        "plataforma": STUDIO3K,
+        "canManageStudio3kUsers": True,
+        "linkedStudio3kAdminId": None,
+        "organizationId": admin_id,
+        "canUseKitchenDesigner": True,
+        "canUseCocinasAI": True,
+        "canUseAIAnalysis": True,
+        "allowedModules": [],
+        "estudio3dTipos": [],
+        "subscriptionPlan": str((payload or {}).get("subscriptionPlan") or "").strip(),
+        "aiCreditsMonthly": int((payload or {}).get("aiCreditsMonthly") or 0),
+        "accessExpirationDate": payload.get("accessExpirationDate"),
+    }
+    await _get_db().users.insert_one(doc)
+    logger.info("Studio3K organization created: %s (by MASTER %s)", username, current_user.get("username"))
+    return {k: v for k, v in doc.items() if k != "password"}
 
 
 @router.post("/studio3k/create")
@@ -554,6 +785,7 @@ async def studio3k_create_user(payload: dict, current_user: dict = Depends(requi
     existing = await _get_db().users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    owner = await _delegated_owner(payload, STUDIO3K, current_user)
     doc = {
         "id": f"user-{uuid.uuid4().hex[:8]}",
         "username": username,
@@ -561,14 +793,19 @@ async def studio3k_create_user(payload: dict, current_user: dict = Depends(requi
         "clientName": str(payload.get("clientName", "")).strip(),
         "isActive": True,
         "isStudio3k": True,
-        "linkedStudio3kAdminId": current_user.get("id"),
-        "studio3kLandingUrl": str(payload.get("studio3kLandingUrl") or current_user.get("studio3kLandingUrl") or ""),
-        "canUseKitchenDesigner": bool(current_user.get("canUseKitchenDesigner")),
-        "canUseCocinasAI": bool(current_user.get("canUseCocinasAI")),
-        "canUseAIAnalysis": bool(current_user.get("canUseAIAnalysis")),
+        "plataforma": "studio3k",
+        "linkedStudio3kAdminId": owner.get("id"),
+        "organizationId": organizacion_de(owner),
+        "studio3kLandingUrl": str(payload.get("studio3kLandingUrl") or owner.get("studio3kLandingUrl") or ""),
+        "canUseKitchenDesigner": bool(owner.get("canUseKitchenDesigner")),
+        "canUseCocinasAI": bool(owner.get("canUseCocinasAI")),
+        "canUseAIAnalysis": bool(owner.get("canUseAIAnalysis")),
+        "subscriptionPlan": owner.get("subscriptionPlan", ""),
+        "aiCreditsMonthly": int(owner.get("aiCreditsMonthly", 0) or 0),
+        "accessExpirationDate": owner.get("accessExpirationDate"),
         # Los usuarios del estudio heredan los tipos contratados por su admin.
         # Vacío mantiene la compatibilidad de "todos los tipos".
-        "estudio3dTipos": _tipos_estudio3d(current_user.get("estudio3dTipos")),
+        "estudio3dTipos": _tipos_estudio3d(owner.get("estudio3dTipos")),
         # El acceso al Estudio 3D lo dan los permisos específicos. Dejar la
         # lista vacía mantiene al usuario dentro del portal privado Studio3K.
         "allowedModules": [],
@@ -581,12 +818,7 @@ async def studio3k_create_user(payload: dict, current_user: dict = Depends(requi
 @router.put("/studio3k/toggle/{user_id}")
 async def studio3k_toggle_user(user_id: str, current_user: dict = Depends(require_studio3k_admin)):
     """Activa o desactiva un usuario únicamente dentro de su estudio Studio3K."""
-    u = await _get_db().users.find_one(
-        {"id": user_id, "linkedStudio3kAdminId": current_user.get("id")},
-        {"_id": 0, "id": 1, "isActive": 1},
-    )
-    if not u:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu estudio")
+    u = await _platform_target(user_id, STUDIO3K, current_user)
     new_active = not bool(u.get("isActive", True))
     await _get_db().users.update_one({"id": user_id}, {"$set": {"isActive": new_active}})
     return {"success": True, "isActive": new_active}
@@ -595,9 +827,8 @@ async def studio3k_toggle_user(user_id: str, current_user: dict = Depends(requir
 @router.delete("/studio3k/remove/{user_id}")
 async def studio3k_delete_user(user_id: str, current_user: dict = Depends(require_studio3k_admin)):
     """Elimina un usuario únicamente dentro de su estudio Studio3K."""
-    res = await _get_db().users.delete_one(
-        {"id": user_id, "linkedStudio3kAdminId": current_user.get("id")}
-    )
+    await _platform_target(user_id, STUDIO3K, current_user)
+    res = await _get_db().users.delete_one({"id": user_id})
     if res.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu estudio")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en esta plataforma")
     return {"success": True}

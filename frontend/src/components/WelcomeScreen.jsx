@@ -91,8 +91,8 @@ const MODULES = [
   // carpinter.io y Studio3K: SOLO EL MASTER (30/08, sus palabras: «la puerta de
   // carpinter y studio3k, sólo la veo yo»). Son negocios de suscripción, y por
   // ahí se entra a su administración y a su landing comercial.
-  { tab: 'carpinter',       label: 'carpinter.io',    desc: 'Plataforma de suscripción para carpinteros', icon: Hammer, color: 'bg-amber-700', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin },
-  { tab: 'landingStudio',   label: 'Studio3K',        desc: 'Plataforma de suscripción de render con IA', icon: Sparkles, color: 'bg-violet-700', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin },
+  { tab: 'carpinter',       label: 'CARPINTER.IO',     desc: 'Usuarios, organizaciones, actividad y consumo', icon: Hammer, color: 'bg-amber-700', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin },
+  { tab: 'studio3k',        label: 'STUDIO3K.IO',      desc: 'Usuarios, organizaciones, actividad y consumo', icon: Sparkles, color: 'bg-violet-700', group: 'plataformas', can: (u) => u?.isMaster || u?.isPrimaryAdmin },
 
   // Administración
   { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },

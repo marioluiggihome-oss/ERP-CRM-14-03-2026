@@ -286,7 +286,8 @@ async def get_current_user(
 
 
 async def require_auth(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request = None,
 ) -> Dict[str, Any]:
     """
     Dependency que REQUIERE autenticación (lanza error si no hay token)
@@ -309,17 +310,42 @@ async def require_auth(
             detail="Tu sesión se ha cerrado desde el Panel Maestro. Vuelve a entrar.")
     # La ficha, no el token: los permisos se deciden con lo que hay HOY en el
     # usuario, no con lo que se firmó al entrar. Ver `_usuario_del_token`.
-    return await _usuario_del_token(payload)
+    user = await _usuario_del_token(payload)
+
+    # El acceso de plataforma reduce el ámbito durante TODA la sesión, no solo
+    # en el formulario de entrada. Así una sesión guardada en el navegador no
+    # puede reutilizarse desde la otra marca.
+    if request is not None:
+        from services.plataformas import entrada_permitida, suscripcion_permitida
+        entry = request.headers.get("x-platform-entry")
+        if not entrada_permitida(user, entry):
+            raise HTTPException(status_code=403, detail="Sesión no válida para este acceso")
+        if not suscripcion_permitida(user):
+            raise HTTPException(status_code=403, detail="Suscripción no activa")
+    return user
+
+
+async def require_master(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request = None,
+) -> Dict[str, Any]:
+    """Dependency exclusiva para el control económico y multi-plataforma MASTER."""
+    user = await require_auth(credentials, request)
+    from services.master import es_master
+    if not es_master(user):
+        raise HTTPException(status_code=403, detail="Acceso reservado a MASTER")
+    return user
 
 
 async def require_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request = None,
 ) -> Dict[str, Any]:
     """
     Dependency que requiere un rol elevado (admin, responsable de delegación,
     gerente, director comercial o director de fábrica).
     """
-    user = await require_auth(credentials)
+    user = await require_auth(credentials, request)
     if not any(user.get(flag) for flag in ADMIN_ROLE_FLAGS):
         raise HTTPException(status_code=403, detail="Acceso denegado: se requiere rol de administrador")
     return user

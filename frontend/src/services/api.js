@@ -6,6 +6,7 @@
  */
 // API Service for LUIGGI HOME
 import axios from 'axios';
+import { platformEntryKey, platformLoginPayload } from '../platformEntry';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // ÚNICA fuente de verdad para leer el token JWT (las claves legacy 'token' y
@@ -24,10 +25,10 @@ export const getToken = () => {
 // llamada (p.ej. guardar presupuesto) por olvidar la cabecera Authorization.
 axios.interceptors.request.use((config) => {
   const t = getToken();
-  if (t) {
-    config.headers = config.headers || {};
-    if (!config.headers.Authorization) config.headers.Authorization = `Bearer ${t}`;
-  }
+  config.headers = config.headers || {};
+  if (t && !config.headers.Authorization) config.headers.Authorization = `Bearer ${t}`;
+  const platform = platformEntryKey();
+  if (platform && !config.headers['X-Platform-Entry']) config.headers['X-Platform-Entry'] = platform;
   return config;
 });
 
@@ -37,6 +38,8 @@ export const authHeaders = (extra = {}) => {
   const token = getToken();
   const h = { ...extra };
   if (token) h['Authorization'] = `Bearer ${token}`;
+  const platform = platformEntryKey();
+  if (platform) h['X-Platform-Entry'] = platform;
   return h;
 };
 
@@ -49,7 +52,7 @@ export const authAPI = {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, ...platformLoginPayload() })
     });
     const data = await response.json();
     if (!response.ok) {
@@ -210,6 +213,7 @@ export const clientsAPI = {
       xhr.open('DELETE', url, true);
       const _auth = authHeaders();
       if (_auth['Authorization']) xhr.setRequestHeader('Authorization', _auth['Authorization']);
+      if (_auth['X-Platform-Entry']) xhr.setRequestHeader('X-Platform-Entry', _auth['X-Platform-Entry']);
 
       xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
@@ -705,13 +709,7 @@ export const settingsAPI = {
 // ============================================
 
 export const projectsAPI = {
-  _headers: () => {
-    const token = getToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-  },
+  _headers: () => authHeaders({ 'Content-Type': 'application/json' }),
 
   getAll: async (userId = null) => {
     const url = userId
@@ -829,8 +827,7 @@ export const misObrasAPI = {
 
 export const expedienteAPI = {
   _h: () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return authHeaders({ 'Content-Type': 'application/json' });
   },
 
   get: async (projectId, origen = 'proj') => {
@@ -872,8 +869,7 @@ export const expedienteAPI = {
 
 export const medidasAPI = {
   _h: () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return authHeaders({ 'Content-Type': 'application/json' });
   },
 
   listar: async (projectId, origen = 'proj') => {
@@ -918,8 +914,7 @@ export const medidasAPI = {
 
 export const proformaAPI = {
   _h: () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return authHeaders({ 'Content-Type': 'application/json' });
   },
 
   listar: async () => {
@@ -957,8 +952,7 @@ export const proformaAPI = {
 
 export const almacenAPI = {
   _h: () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return authHeaders({ 'Content-Type': 'application/json' });
   },
 
   listarStock: async () => {
@@ -1023,8 +1017,7 @@ export const almacenAPI = {
 
 export const invoicesAPI = {
   _h: () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return authHeaders({ 'Content-Type': 'application/json' });
   },
   getAll: async (status = null, search = null) => {
     const params = new URLSearchParams();
@@ -1201,8 +1194,7 @@ export const backupAPI = {
 
 export const crmContactsAPI = {
   _h: () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return authHeaders({ 'Content-Type': 'application/json' });
   },
 
   getAll: async (status = null, search = null, options = {}) => {

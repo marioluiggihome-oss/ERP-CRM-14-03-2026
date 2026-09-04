@@ -442,7 +442,8 @@ export default function AIRenderStudio({ state, setState }) {
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
   const [description, setDescription] = useState('');
   const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) PRINCIPAL para que el modelo la "vea"
-  const [refImages, setRefImages] = useState([]); // TODAS las referencias subidas (p.ej. una por pared) → un render por cada una
+  const [refImages, setRefImages] = useState([]); // Referencias subidas para el proyecto actual.
+  const [sameProjectRefs, setSameProjectRefs] = useState(false); // Varias vistas de una misma cocina → un único render.
   const [originalRef, setOriginalRef] = useState(null); // PRIMERA referencia: se conserva para Comparar
   const [pdfComparePreview, setPdfComparePreview] = useState(null);
   const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
@@ -1389,7 +1390,7 @@ export default function AIRenderStudio({ state, setState }) {
     setCamera(p.camera);
     setElectros(p.electros || []);
     setTipo3d('cocina');
-    setRefImage(null); setRefImages([]); setEditRefImage(null); setOriginalRef(null);
+    setRefImage(null); setRefImages([]); setSameProjectRefs(false); setEditRefImage(null); setOriginalRef(null);
   };
   // Añade una frase rápida al final de la descripción.
   const addPhrase = (t) => setDescription(prev => {
@@ -3236,7 +3237,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   const nuevoProyecto = () => {
     setCliente(''); setRef(''); setSavedId(null); setRenderResult(null); setRenderHistory([]);
-    setDescription(''); setRefImage(null); setRefImages([]); setOriginalRef(null); setFloorPlan(null); setWallSketches([]);
+    setDescription(''); setRefImage(null); setRefImages([]); setSameProjectRefs(false); setOriginalRef(null); setFloorPlan(null); setWallSketches([]);
     setEditInstruction(''); setEditLines([]); setEditRefImage(null);
     setMarks([]); setMarkTool(null); setSchematic(false);
     setOrbitFrames([]); setOrbitOn(false); setOrbitIndex(0);
@@ -3320,6 +3321,7 @@ export default function AIRenderStudio({ state, setState }) {
   const removeReference = (i) => setRefImages(prev => {
     const next = prev.filter((_, idx) => idx !== i);
     setRefImage(next[next.length - 1] || null);
+    if (next.length < 2) setSameProjectRefs(false);
     return next;
   });
 
@@ -3327,6 +3329,7 @@ export default function AIRenderStudio({ state, setState }) {
     const files = Array.from(e.target.files || []); // MÚLTIPLES: una imagen por pared, etc.
     e.target.value = '';
     if (!files.length) return;
+    if (refImages.length + files.length > 1) setSameProjectRefs(true);
     setAnalyzingRef(true);
     setError(null);
     try {
@@ -3440,8 +3443,40 @@ export default function AIRenderStudio({ state, setState }) {
       setPanelHidden(true);
       setTimeout(() => renderPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
-    // ── VARIAS REFERENCIAS → un render por cada imagen ────────────────────
+    // ── VARIAS REFERENCIAS ────────────────────────────────────────────────
     const refs = refImages.length ? refImages : (refImage ? [refImage] : []);
+    if (refs.length > 1 && sameProjectRefs) {
+      try {
+        const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+          method: 'POST', headers: getAuthHeaders(),
+          body: JSON.stringify({
+            description: `${conMedidas(description.trim())}\nEstas referencias pertenecen a la MISMA cocina y deben interpretarse conjuntamente. Usa la primera como referencia principal y las demás como vistas complementarias del mismo proyecto. No generes cocinas separadas ni mezcles distribuciones incompatibles.`,
+            style: params.style,
+            provider: providerOf(),
+            projectType: tipo3d,
+            referenceImage: refs[0],
+            referenceImages: refs.slice(1, 3),
+          }),
+        });
+        if (response.status === 402) {
+          const d = await response.json().catch(() => ({}));
+          setError(d.detail || 'Sin créditos disponibles.');
+        } else {
+          const data = await response.json();
+          if (data?.success) {
+            setRenderResult(data);
+            setRenderHistory(prev => [{ ...data, description, timestamp: new Date() }, ...prev].slice(0, 12));
+          } else setError(data?.error || 'Error al generar el render');
+        }
+      } catch {
+        setError('Error de conexión. Verifique su conexión a internet.');
+      } finally {
+        setIsGenerating(false);
+        fetchCredits();
+      }
+      return;
+    }
+    // Si no se agrupan, cada imagen sigue produciendo un render independiente.
     if (refs.length > 1) {
       try {
         const outputs = [];
@@ -3820,15 +3855,18 @@ export default function AIRenderStudio({ state, setState }) {
                       <CheckCircle size={13} />
                       {refImages.length === 1
                         ? 'Referencia adjunta — el render la respetará'
-                        : `${refImages.length} referencias — se generará un render por cada una`}
+                        : sameProjectRefs
+                          ? `${refImages.length} referencias de la misma cocina — se generará un único render`
+                          : `${refImages.length} referencias — se generará un render por cada una`}
                     </div>
                     {refImages.length > 1 && (
-                      <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mb-1.5">
-                        Aquí cada imagen es una cocina <b>distinta</b> y sale un render por cada
-                        una. Si lo que subes son <b>el plano y las paredes del MISMO proyecto</b>,
-                        dile a cada una lo que es con el desplegable de abajo: se juntarán en un
-                        solo render.
-                      </p>
+                      <div className="text-[10px] text-slate-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mb-1.5">
+                        <label className="flex items-start gap-2 cursor-pointer font-bold">
+                          <input type="checkbox" checked={sameProjectRefs} onChange={e => setSameProjectRefs(e.target.checked)} className="mt-0.5 accent-indigo-600" />
+                          <span>Son varias vistas, planos o paredes de la <b>misma cocina</b> (generar un único render).</span>
+                        </label>
+                        <p className="mt-1 text-slate-500">Desmárcalo solo si cada imagen corresponde a una cocina diferente.</p>
+                      </div>
                     )}
                     <div className="flex flex-wrap gap-2">
                       {refImages.map((img, i) => (

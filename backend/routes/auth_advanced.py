@@ -40,6 +40,7 @@ from services.jwt_service import (
     security
 )
 from services.rate_limiter import limiter, get_limit
+from services.plataformas import entrada_permitida, plataforma_de, suscripcion_permitida
 
 logger = logging.getLogger(__name__)
 
@@ -534,6 +535,16 @@ async def login_with_email(request: Request, data: Login2FARequest):
         if not user.get("isEmailVerified", False):
             raise HTTPException(status_code=401, detail="Por favor verifica tu email primero")
         raise HTTPException(status_code=401, detail="Cuenta desactivada")
+
+    if not entrada_permitida(user, data.platformEntry):
+        logger.warning(
+            "[PLATFORM-RESTRICT] Usuario '%s' de plataforma '%s' intentó acceso 2FA por '%s'",
+            email, plataforma_de(user), data.platformEntry or "sin-plataforma",
+        )
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+
+    if not suscripcion_permitida(user):
+        raise HTTPException(status_code=401, detail="Suscripción no activa. Contacta con el administrador.")
     
     # Verificar 2FA si está habilitado
     if user.get("twoFactorEnabled"):

@@ -64,7 +64,8 @@ def precio_con_iva(pack: dict) -> float:
     return round(float(pack["price"]) * (1 + IVA_PCT / 100), 2)
 
 
-def crear_checkout(pack_id: str, user_id: str, email: str, url_ok: str, url_ko: str) -> dict:
+def crear_checkout(pack_id: str, user_id: str, email: str, url_ok: str, url_ko: str,
+                    plataforma: str = "cooperativa", organization_id: str = "") -> dict:
     """Abre una sesion de pago y devuelve la URL a la que mandar al cliente.
 
     En los metadatos van el usuario y el pack para que el webhook sepa a quien
@@ -95,7 +96,13 @@ def crear_checkout(pack_id: str, user_id: str, email: str, url_ok: str, url_ko: 
         success_url=url_ok,
         cancel_url=url_ko,
         customer_email=email or None,
-        metadata={"user_id": str(user_id), "pack_id": pack["id"], "renders": str(pack["renders"])},
+        metadata={
+            "user_id": str(user_id),
+            "pack_id": pack["id"],
+            "renders": str(pack["renders"]),
+            "plataforma": str(plataforma or "cooperativa"),
+            "organization_id": str(organization_id or ""),
+        },
         # Un mismo usuario comprando el mismo pack dos veces SI son dos compras
         # distintas, asi que no se fija clave de idempotencia aqui: la
         # proteccion contra duplicados va en el webhook, por id de sesion.
@@ -135,4 +142,6 @@ def datos_de_pago(evento: dict) -> dict:
         "renders": renders,
         "importe": round(float(sesion.get("amount_total") or 0) / 100, 2),
         "email": sesion.get("customer_email") or "",
+        "plataforma": str(meta.get("plataforma") or "cooperativa"),
+        "organization_id": str(meta.get("organization_id") or ""),
     }

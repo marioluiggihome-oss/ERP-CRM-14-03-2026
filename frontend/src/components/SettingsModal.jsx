@@ -22,6 +22,20 @@ const ESTUDIO_3D_TIPOS = [
   { id: 'otro', label: 'Otro mueble' },
 ];
 
+const plataformaEfectivaUsuario = (user) => {
+  const value = String(user?.plataforma || '').trim().toLowerCase();
+  if (PLATAFORMAS.includes(value)) return value;
+  if (user?.isStudio3k || user?.linkedStudio3kAdminId || user?.canManageStudio3kUsers) return 'studio3k';
+  if (user?.isCarpintero || user?.linkedCarpinteroAdminId || user?.canManageCarpinteroUsers) return 'carpinter';
+  return PLATAFORMA_COOPERATIVA;
+};
+
+const ESTILO_PLATAFORMA = {
+  cooperativa: 'bg-slate-100 text-slate-700 border-slate-200',
+  carpinter: 'bg-amber-50 text-amber-800 border-amber-200',
+  studio3k: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+};
+
 // Capacidades técnicas (checkboxes del panel de permisos) para los botones
 // "Marcar todo / Desmarcar todo". Solo capacidades, NO roles ni modos "solo".
 const CAPABILITY_KEYS = [
@@ -43,7 +57,7 @@ const controllerOnlyForm = (form, checked) => {
     'isAdmin', 'isPrimaryAdmin', 'isGerente', 'isDirectorComercial',
     'isResponsableDelegacion', 'isDirectorFabrica', 'isRepresentative',
     'isComercial', 'isPrescriptor', 'isTienda', 'isFabrica', 'isMontador',
-    'floorOnly', 'crmOnly', 'canManageCarpinteroUsers',
+    'floorOnly', 'crmOnly', 'canManageCarpinteroUsers', 'canManageStudio3kUsers',
   ].forEach((key) => { cleared[key] = false; });
   return {
     ...form,
@@ -141,6 +155,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [fichasMontador, setFichasMontador] = useState([]);
   const [isFullScreen, setIsFullScreen] = useState(false); // Estado para pantalla completa
   const [userRoleFilter, setUserRoleFilter] = useState('all'); // Filtro por rol de usuario
+  const [userPlatformFilter, setUserPlatformFilter] = useState('all'); // Alcance consolidado MASTER
   
   // Inventory states
   const [inventoryModule, setInventoryModule] = useState('montada');
@@ -726,9 +741,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const filteredUsers = useMemo(() => {
     const query = userSearch.toLowerCase();
     return visibleUsers.filter(u => {
-      // Filtro por búsqueda
+      // Filtro por búsqueda y plataforma
       const matchesSearch = (u.username || '').toLowerCase().includes(query) ||
         (u.clientName || '').toLowerCase().includes(query);
+      const matchesPlatform = userPlatformFilter === 'all' || plataformaEfectivaUsuario(u) === userPlatformFilter;
+      if (!matchesPlatform) return false;
       
       // Filtro por rol
       if (userRoleFilter === 'all') return matchesSearch;
@@ -743,7 +760,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       
       return false;
     });
-  }, [visibleUsers, userSearch, userRoleFilter]);
+  }, [visibleUsers, userSearch, userRoleFilter, userPlatformFilter]);
 
   // Product management - Usar inventoryCatalogs para tener TODOS los productos
   const currentCatalog = useMemo(() => {
@@ -1677,6 +1694,44 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     );
                   })()}
 
+                  {/* Filtro consolidado por plataforma. MASTER conserva "Todas" y
+                      puede aislar cada negocio sin perder la vista global. */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span className="text-xs font-black text-slate-500 uppercase whitespace-nowrap">Plataforma:</span>
+                      <div className="grid grid-cols-2 sm:flex gap-1 bg-slate-100 rounded-xl p-1 w-full sm:w-auto">
+                        {[
+                          ['all', 'Todas'],
+                          [PLATAFORMA_COOPERATIVA, 'Red distribución'],
+                          ['carpinter', 'CARPINTER.IO'],
+                          ['studio3k', 'STUDIO3K.IO'],
+                        ].map(([value, label]) => {
+                          const count = value === 'all'
+                            ? visibleUsers.length
+                            : visibleUsers.filter((u) => plataformaEfectivaUsuario(u) === value).length;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setUserPlatformFilter(value)}
+                              className={`px-3 py-2 rounded-lg text-[11px] font-black uppercase whitespace-nowrap transition-all ${
+                                userPlatformFilter === value
+                                  ? value === 'carpinter'
+                                    ? 'bg-amber-700 text-white shadow'
+                                    : value === 'studio3k'
+                                      ? 'bg-indigo-700 text-white shadow'
+                                      : 'bg-slate-700 text-white shadow'
+                                  : 'text-slate-600 hover:bg-white'
+                              }`}
+                            >
+                              {label} ({count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Filtro por rol - Deslizable */}
                   <div className="flex items-center gap-2 overflow-x-auto pb-2">
                     <span className="text-xs font-black text-slate-500 uppercase whitespace-nowrap">Filtrar por rol:</span>
@@ -1775,6 +1830,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <div>
                                 <h3 className="text-lg font-black text-slate-900">{user.clientName}</h3>
                                 <p className="text-xs text-slate-500 font-bold uppercase">@{user.username}</p>
+                                <span className={`inline-flex mt-1 px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wide ${ESTILO_PLATAFORMA[plataformaEfectivaUsuario(user)]}`}>
+                                  {NOMBRES_PLATAFORMA[plataformaEfectivaUsuario(user)]}
+                                </span>
                               </div>
                               <div className={`px-3 py-1 rounded-lg text-xs font-black ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                 {user.isActive ? 'ACTIVO' : 'INACTIVO'}
@@ -2386,7 +2444,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       </p>
                       <select
                         value={userForm.plataforma || PLATAFORMA_COOPERATIVA}
-                        onChange={(e) => setUserForm({...userForm, plataforma: e.target.value})}
+                        onChange={(e) => {
+                          const plataforma = e.target.value;
+                          setUserForm({
+                            ...userForm,
+                            plataforma,
+                            isCarpintero: plataforma === 'carpinter',
+                            isStudio3k: plataforma === 'studio3k',
+                            canManageCarpinteroUsers: plataforma === 'carpinter' ? userForm.canManageCarpinteroUsers : false,
+                            canManageStudio3kUsers: plataforma === 'studio3k' ? userForm.canManageStudio3kUsers : false,
+                          });
+                        }}
                         className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold text-slate-800 bg-white"
                         data-testid="user-plataforma-select"
                       >
@@ -2643,8 +2711,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
                                 type="checkbox"
-                                checked={!!userForm.isCarpintero}
-                                onChange={(e) => setUserForm({...userForm, isCarpintero: e.target.checked})}
+                                checked={(userForm.plataforma || plataformaEfectivaUsuario(userForm)) === 'carpinter'}
+                                onChange={(e) => setUserForm({
+                                  ...userForm,
+                                  plataforma: e.target.checked ? 'carpinter' : PLATAFORMA_COOPERATIVA,
+                                  isCarpintero: e.target.checked,
+                                  isStudio3k: false,
+                                  canManageStudio3kUsers: false,
+                                })}
                                 className="w-4 h-4 rounded accent-amber-700"
                               />
                               <span title="Perfil Carpintero/Ebanista: al entrar ve su portal con la web de inicio configurada." className="text-xs font-bold text-slate-700">Carpintero/Ebanista</span>
@@ -2672,10 +2746,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
                                 type="checkbox"
-                                checked={!!userForm.isStudio3k}
+                                checked={(userForm.plataforma || plataformaEfectivaUsuario(userForm)) === 'studio3k'}
                                 onChange={(e) => setUserForm({
                                   ...userForm,
+                                  plataforma: e.target.checked ? 'studio3k' : PLATAFORMA_COOPERATIVA,
                                   isStudio3k: e.target.checked,
+                                  isCarpintero: false,
+                                  canManageCarpinteroUsers: false,
                                   canUseKitchenDesigner: e.target.checked ? true : userForm.canUseKitchenDesigner,
                                   canUseCocinasAI: e.target.checked ? true : userForm.canUseCocinasAI,
                                   canUseAIAnalysis: e.target.checked ? true : userForm.canUseAIAnalysis,

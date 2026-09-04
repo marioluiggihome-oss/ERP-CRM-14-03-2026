@@ -1237,6 +1237,7 @@ class Login2FARequest(BaseModel):
     email: str
     password: str
     totpCode: str = ""
+    platformEntry: Optional[str] = None
 
 
 class PasswordResetRequest(BaseModel):

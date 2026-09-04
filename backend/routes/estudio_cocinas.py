@@ -56,6 +56,37 @@ from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAG
 
 _DEPS = [Depends(require_auth)]
 
+from services.db_client import get_db as _get_estudio_db
+_task_owners_db = _get_estudio_db()["estudio3d_task_owners"]
+
+
+async def _registrar_tarea(task_id: str, current_user: dict) -> None:
+    if not task_id:
+        return
+    from services.plataformas import organizacion_de, plataforma_de
+    await _task_owners_db.update_one(
+        {"taskId": str(task_id)},
+        {"$set": {
+            "userId": str(current_user.get("id") or ""),
+            "plataforma": plataforma_de(current_user),
+            "organizationId": organizacion_de(current_user),
+            "updatedAt": datetime.datetime.now(datetime.timezone.utc),
+        }},
+        upsert=True,
+    )
+
+
+async def _exigir_tarea_propia(task_id: str, current_user: dict) -> None:
+    from services.master import es_master
+    doc = await _task_owners_db.find_one({"taskId": str(task_id)}, {"_id": 0, "userId": 1})
+    if not doc:
+        if es_master(current_user):
+            return
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    if str(doc.get("userId") or "") != str(current_user.get("id") or "") and not es_master(current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a esta tarea")
+
+
 router = APIRouter(
     prefix="/estudio-cocinas",
     tags=["3D Estudio"],
@@ -216,7 +247,7 @@ async def estado_modulo():
 
 
 @router.post("/render")
-async def generar_render(payload: RenderInput):
+async def generar_render(payload: RenderInput, current_user: dict = Depends(require_auth)):
     """
     Genera un render fotorrealista de cocina usando Manus API (LuiggiAI).
     Combina la descripción del usuario con la skill kitchen-3d-render
@@ -472,6 +503,7 @@ async def generar_render(payload: RenderInput):
         raise HTTPException(status_code=502, detail=task.get("error", "Error al crear tarea"))
 
     task_id = task["task_id"]
+    await _registrar_tarea(task_id, current_user)
 
     if payload.modo_async:
         return {"task_id": task_id, "status": "running", "motor": task.get("engine")}
@@ -497,7 +529,7 @@ async def generar_render(payload: RenderInput):
 
 
 @router.post("/render/editar")
-async def editar_render(payload: EditarRenderInput):
+async def editar_render(payload: EditarRenderInput, current_user: dict = Depends(require_auth)):
     """
     Edita un render existente en lenguaje natural usando Manus API.
     Acepta la URL del render anterior o su base64.
@@ -560,6 +592,7 @@ async def editar_render(payload: EditarRenderInput):
         raise HTTPException(status_code=502, detail=task.get("error"))
 
     task_id = task["task_id"]
+    await _registrar_tarea(task_id, current_user)
 
     if payload.modo_async:
         return {"task_id": task_id, "status": "running"}
@@ -578,7 +611,7 @@ async def editar_render(payload: EditarRenderInput):
 
 
 @router.post("/transcribir")
-async def transcribir_audio(audio: UploadFile = File(...)):
+async def transcribir_audio(audio: UploadFile = File(...), current_user: dict = Depends(require_auth)):
     """
     Transcribe un audio (nota de voz del diseñador o del cliente) a texto
     usando Manus API. Soporta mp3, wav, m4a, webm, ogg.
@@ -609,6 +642,7 @@ async def transcribir_audio(audio: UploadFile = File(...)):
     if not task.get("success"):
         raise HTTPException(status_code=502, detail=task.get("error"))
 
+    await _registrar_tarea(task["task_id"], current_user)
     resultado = await engine.wait_for_completion(task["task_id"], timeout=120, poll_interval=3)
     if not resultado.get("success"):
         raise HTTPException(status_code=502, detail=resultado.get("error"))
@@ -630,8 +664,9 @@ async def transcribir_audio(audio: UploadFile = File(...)):
 
 
 @router.get("/tarea/{task_id}")
-async def consultar_tarea(task_id: str):
-    """Consulta el estado de una tarea asíncrona."""
+async def consultar_tarea(task_id: str, current_user: dict = Depends(require_auth)):
+    """Consulta el estado de una tarea asíncrona propia."""
+    await _exigir_tarea_propia(task_id, current_user)
     engine = _get_engine()
     if not engine:
         raise HTTPException(status_code=503, detail="Motor no disponible.")
@@ -640,8 +675,9 @@ async def consultar_tarea(task_id: str):
 
 
 @router.get("/tarea/{task_id}/resultado")
-async def obtener_resultado(task_id: str):
-    """Obtiene el resultado completo de una tarea completada."""
+async def obtener_resultado(task_id: str, current_user: dict = Depends(require_auth)):
+    """Obtiene el resultado de una tarea propia completada."""
+    await _exigir_tarea_propia(task_id, current_user)
     engine = _get_engine()
     if not engine:
         raise HTTPException(status_code=503, detail="Motor no disponible.")
@@ -1231,9 +1267,10 @@ class GaleriaGuardarPayload(BaseModel):
 
 
 @router.post("/galeria/guardar")
-async def galeria_guardar(payload: GaleriaGuardarPayload, current_user: Optional[dict] = Depends(get_current_user)):
+async def galeria_guardar(payload: GaleriaGuardarPayload, current_user: dict = Depends(require_auth)):
     """Guarda un render generado en la galería MongoDB."""
-    user_id = (current_user or {}).get("id")
+    from services.plataformas import organizacion_de, plataforma_de
+    user_id = str((current_user or {}).get("id") or "")
     doc = {
         "image_url": payload.image_url,
         "cliente": payload.cliente,
@@ -1244,6 +1281,8 @@ async def galeria_guardar(payload: GaleriaGuardarPayload, current_user: Optional
         "fecha": datetime.datetime.utcnow(),
         "favorito": False,
         "userId": user_id,
+        "plataforma": plataforma_de(current_user),
+        "organizationId": organizacion_de(current_user),
     }
     result = await _galeria_db.insert_one(doc)
     return {"ok": True, "id": str(result.inserted_id)}
@@ -1255,9 +1294,11 @@ async def galeria_listar(
     estilo: str = "",
     page: int = 1,
     limit: int = 20,
+    current_user: dict = Depends(require_auth),
 ):
-    """Lista los renders guardados en la galería con paginación."""
-    query: dict = {}
+    """Lista la galería propia; MASTER conserva alcance global de soporte."""
+    from services.master import es_master
+    query: dict = {} if es_master(current_user) else {"userId": str(current_user.get("id") or "")}
     if cliente:
         query["cliente"] = {"$regex": cliente, "$options": "i"}
     if estilo:
@@ -1280,30 +1321,38 @@ async def galeria_listar(
 
 
 @router.delete("/galeria/{render_id}")
-async def galeria_eliminar(render_id: str):
+async def galeria_eliminar(render_id: str, current_user: dict = Depends(require_auth)):
     """Elimina un render de la galería."""
     try:
         oid = _ObjectId(render_id)
     except Exception:
         raise HTTPException(status_code=400, detail="ID inválido")
-    result = await _galeria_db.delete_one({"_id": oid})
+    from services.master import es_master
+    query = {"_id": oid}
+    if not es_master(current_user):
+        query["userId"] = str(current_user.get("id") or "")
+    result = await _galeria_db.delete_one(query)
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Render no encontrado")
     return {"ok": True}
 
 
 @router.patch("/galeria/{render_id}/favorito")
-async def galeria_favorito(render_id: str):
+async def galeria_favorito(render_id: str, current_user: dict = Depends(require_auth)):
     """Alterna el estado de favorito de un render."""
     try:
         oid = _ObjectId(render_id)
     except Exception:
         raise HTTPException(status_code=400, detail="ID inválido")
-    doc = await _galeria_db.find_one({"_id": oid})
+    from services.master import es_master
+    query = {"_id": oid}
+    if not es_master(current_user):
+        query["userId"] = str(current_user.get("id") or "")
+    doc = await _galeria_db.find_one(query)
     if not doc:
         raise HTTPException(status_code=404, detail="Render no encontrado")
     nuevo_fav = not doc.get("favorito", False)
-    await _galeria_db.update_one({"_id": oid}, {"$set": {"favorito": nuevo_fav}})
+    await _galeria_db.update_one(query, {"$set": {"favorito": nuevo_fav}})
     return {"ok": True, "favorito": nuevo_fav}
 
 
@@ -1400,7 +1449,7 @@ async def _lanzar_manus(engine, proyecto) -> dict:
 
 
 @router.post("/agentes/lanzar")
-async def lanzar_agentes(payload: AgentesLoteInput):
+async def lanzar_agentes(payload: AgentesLoteInput, current_user: dict = Depends(require_auth)):
     """
     Lanza múltiples agentes diseñadores en paralelo (1-7 proyectos).
     Crea las tareas de forma CONCURRENTE y con tiempo límite para responder rápido
@@ -1423,6 +1472,10 @@ async def lanzar_agentes(payload: AgentesLoteInput):
             _lanzar_manus(engine, p) for p in payload.proyectos
         ])
 
+    for agente in agentes:
+        if agente.get("task_id"):
+            await _registrar_tarea(agente["task_id"], current_user)
+
     return {
         "ok": True,
         "total": len(agentes),
@@ -1432,11 +1485,12 @@ async def lanzar_agentes(payload: AgentesLoteInput):
 
 
 @router.get("/agentes/{task_id}/estado")
-async def estado_agente(task_id: str):
+async def estado_agente(task_id: str, current_user: dict = Depends(require_auth)):
     """
     Consulta el estado de un agente diseñador individual.
     Devuelve status + imageUrl si está completado.
     """
+    await _exigir_tarea_propia(task_id, current_user)
     engine = _get_engine()
     if not engine:
         raise HTTPException(status_code=503, detail="Motor no disponible.")
@@ -1468,7 +1522,7 @@ async def estado_agente(task_id: str):
 
 
 @router.post("/agentes/lote-estado")
-async def estado_lote_agentes(body: dict):
+async def estado_lote_agentes(body: dict, current_user: dict = Depends(require_auth)):
     """
     Consulta el estado de múltiples agentes a la vez.
     Recibe {"task_ids": ["id1", "id2", ...]} y devuelve el estado de cada uno.
@@ -1483,6 +1537,7 @@ async def estado_lote_agentes(body: dict):
 
     resultados = []
     for task_id in task_ids:
+        await _exigir_tarea_propia(task_id, current_user)
         status_resp = await engine.get_task_status(task_id)
         task_status = status_resp.get("status", "unknown")
 
@@ -2375,6 +2430,7 @@ async def detect_distribucion(payload: dict):
     # Medidas REALES que ha introducido el usuario (ancla de escala). Sin esto, la IA
     # solo puede estimar por proporción visual y las medidas salen imprecisas.
     medidas = (payload or {}).get("medidas") or {}
+    contexto_usuario = str((payload or {}).get("contexto") or "").strip()
     def _num(v):
         try:
             n = float(str(v).replace(",", "."));  return n if n > 0 else 0
@@ -2396,6 +2452,7 @@ async def detect_distribucion(payload: dict):
         prompt = (
             "Eres proyectista de cocinas experto. Analiza esta imagen (render o croquis de cocina) y deduce su "
             "DISTRIBUCIÓN REAL. Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, "
+            "Si una línea de muebles termina en un retorno perpendicular, una esquina dibujada o una puerta abatible de esquina, la distribución es EN L y debes devolver dos paredes; nunca la reduzcas a lineal. "
             "en cada pared, la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho en cm "
             "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles "
             "cuentan como módulos (frigorífico, columna horno/microondas, lavavajillas, fregadero, "
@@ -2418,6 +2475,8 @@ async def detect_distribucion(payload: dict):
             "\nREGLA DE FORMA — ESQUINAS Y FORMA EN L / U / LINEAL:\n"
             "- Si el croquis o render muestra elementos en DOS paredes formando una esquina de 90° (por ejemplo, placa/fregadero en un frente y columna/horno/micro/lavadora/pilar en la pared lateral), EL TIPO ES OBLIGATORIAMENTE \"l\" Y DEBES DEVOLVER 2 PAREDES (Pared 1 y Pared 2). NUNCA devuelvas \"lineal\" si ves muebles dispuestos en dos paredes en esquina.\n"
             "- Si ves 3 paredes con muebles, el tipo es \"u\". Si solo hay muebles a lo largo de una única línea recta de pared, el tipo es \"lineal\".\n"
+            "- Un arco de apertura en el extremo de una pared representa una puerta o retorno de esquina; no lo conviertas en un frigorífico o despensero salvo que esté rotulado. Devuélvelo como elemento de esquina pendiente de confirmar.\n"
+            + (f"\nCONTEXTO ESCRITO DEL USUARIO (comprueba las etiquetas, pero no inventes elementos que no estén dibujados):\\n{contexto_usuario}\\n" if contexto_usuario else "")
             + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"
             "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared 1 (Frente Placa/Fregadero)\",\"ancho\":370,\"alto\":240,\"ancho_escrito\":false},{\"nombre\":\"Pared 2 (Frente Columnas/Lavadora)\",\"ancho\":210,\"alto\":240,\"ancho_escrito\":false}],"
