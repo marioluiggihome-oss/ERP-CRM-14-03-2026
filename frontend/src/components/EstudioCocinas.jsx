@@ -448,6 +448,7 @@ export default function EstudioCocinas({ state, setState }) {
   const [motorIA, setMotorIA] = useState('ia0');
   const providerDeMotor = () => {
     if (motorIA === 'ia0') return 'julio11';
+    if (motorIA === 'ia7') return 'julio11_plus';
     if (motorIA === 'ia2') return 'manus';
     return 'gemini';
   };
