@@ -201,6 +201,18 @@ async function apiPost(endpoint, body) {
   return data;
 }
 
+async function detectarDistribucionPlano(imageBase64, medidas = {}) {
+  if (!imageBase64) return null;
+  try {
+    const data = await apiPost('/detect-distribucion', { imageBase64, medidas });
+    return data?.success ? (data.distribucion || null) : null;
+  } catch {
+    // El render debe poder continuar si el detector no responde; la referencia
+    // original sigue viajando al perfil elegido.
+    return null;
+  }
+}
+
 async function apiGet(endpoint) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     headers: authHeaders(),
@@ -692,14 +704,25 @@ export default function EstudioCocinas({ state, setState }) {
         .filter(s => s && !/^(isla|island|ventanal?|window)\b/i.test(s))
         .join('. ');
       const conCroquis = !!render.croquis && !freeDesign;
-
+      // El flujo histórico leía primero el plano y después generaba el render.
+      // Recuperamos esa distribución estructurada para que la imagen no sea la
+      // única fuente de interpretación del diseño.
+      const distribucionPlano = conCroquis
+        ? await detectarDistribucionPlano(render.croquis)
+        : null;
       // Construimos una descripción única y usamos el MISMO pipeline que la sección
+
       // "Estudio 3D" (endpoint /api/ai-engine/render, motor Gemini), que sí funciona.
       const partes = [];
       partes.push(conCroquis ? stripLayout(proy.descripcion) : proy.descripcion);
       const mats = conCroquis ? stripLayout(proy.notas) : proy.notas;
       if (mats && mats.trim()) partes.push(`Materiales y acabados: ${mats.trim()}`);
       if (!conCroquis && proy.medidas && proy.medidas.trim()) partes.push(`Distribución y medidas: ${proy.medidas.trim()}`);
+      if (distribucionPlano) {
+        const paredes = (distribucionPlano.paredes || []).map(p => `${p.nombre || 'Pared'} ${p.ancho || '?'} cm`).join('; ');
+        const elementos = (distribucionPlano.elementos || []).map(e => `${e.label || e.id || 'módulo'} en pared ${Number(e.pared_idx || 0) + 1}${e.ancho ? `, ${e.ancho} cm` : ''}`).join('; ');
+        partes.push(`Lectura estructurada del plano (fuente prioritaria): tipo ${distribucionPlano.tipo || 'no indicado'}; paredes: ${paredes || 'según plano'}; módulos: ${elementos || 'según plano'}. Respeta esta distribución y no inventes módulos.`);
+      }
       let descripcion = partes.filter(Boolean).join('. ');
       if (conCroquis) {
         descripcion = `Genera un render 3D fotorrealista RESPETANDO FIELMENTE el croquis/plano adjunto: misma distribución, mismos módulos (altos, bajos, columnas), mismas proporciones y posiciones. No añadas ni quites muebles, no añadas isla ni ventanas que no estén en el croquis. ${descripcion}`;
