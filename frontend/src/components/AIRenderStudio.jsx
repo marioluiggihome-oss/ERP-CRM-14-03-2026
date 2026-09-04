@@ -596,7 +596,9 @@ export default function AIRenderStudio({ state, setState }) {
   const [markTool, setMarkTool] = useState(null);   // 'enchufe'|'agua'|'desague'|'gas'|null
   const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
   const [detecting, setDetecting] = useState(false);
-  const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
+  const [schematic, setSchematic] = useState(false); // vista B/N de líneas sobre la imagen actual
+  const [bnImage, setBnImage] = useState(null);
+  const [bnProcessing, setBnProcessing] = useState(false);
   // Interruptor MEDIDAS del render. Alterna entre la foto y el alzado acotado.
   // Las cotas NO se las pinta la IA encima de la foto: un modelo de imagen no
   // sabe escribir medidas, escribe números plausibles, y eso puede acabar en
@@ -1320,6 +1322,10 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   const currentImage = () => renderResult?.result?.images?.[0] || null;
+  useEffect(() => {
+    setSchematic(false);
+    setBnImage(null);
+  }, [renderResult?.result?.images?.[0]]);
 
   // Construye una frase con las medidas de la estancia para dar escala real al
   // render (proporción de muebles, altura de altos, pasillos, etc.).
@@ -3351,6 +3357,64 @@ export default function AIRenderStudio({ state, setState }) {
     }
   };
 
+  // Convierte la imagen actual en una lámina de líneas negras sobre fondo blanco.
+  // Es local y determinista: no vuelve a interpretar ni rediseñar la cocina.
+  const convertirABnLineal = (src) => new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const max = 2400;
+      const scale = Math.min(1, max / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+      const w = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+      const h = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      const data = ctx.getImageData(0, 0, w, h);
+      const srcPx = data.data;
+      const gray = new Float32Array(w * h);
+      for (let i = 0, p = 0; i < srcPx.length; i += 4, p += 1) {
+        gray[p] = 0.299 * srcPx[i] + 0.587 * srcPx[i + 1] + 0.114 * srcPx[i + 2];
+      }
+      const out = new Uint8ClampedArray(srcPx.length);
+      const at = (x, y) => gray[y * w + x];
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const p = y * w + x;
+          const i = p * 4;
+          if (x === 0 || y === 0 || x === w - 1 || y === h - 1) {
+            out[i] = out[i + 1] = out[i + 2] = 255;
+          } else {
+            const gx = -at(x - 1, y - 1) + at(x + 1, y - 1) - 2 * at(x - 1, y) + 2 * at(x + 1, y) - at(x - 1, y + 1) + at(x + 1, y + 1);
+            const gy = -at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1) + at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1);
+            const strength = Math.max(0, Math.min(255, (Math.sqrt(gx * gx + gy * gy) - 18) * 2.4));
+            const v = 255 - strength;
+            out[i] = out[i + 1] = out[i + 2] = v;
+          }
+          out[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(new ImageData(out, w, h), 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+
+  const alternarBn = async () => {
+    if (schematic) { setSchematic(false); return; }
+    const src = currentImage();
+    if (!src) return;
+    setBnProcessing(true); setError(null);
+    try {
+      const converted = await convertirABnLineal(assetSrc(src));
+      setBnImage(converted);
+      setSchematic(true);
+    } catch {
+      setError('No se pudo convertir la imagen a B/N.');
+    } finally { setBnProcessing(false); }
+  };
+
   // ─── Plano en planta + bocetos por pared → render fiel ───────────────────
   const fileToDataUrl = (file) => new Promise((res, rej) => {
     const fr = new FileReader();
@@ -4699,11 +4763,11 @@ export default function AIRenderStudio({ state, setState }) {
                   {attached ? <><CheckCircle size={12} /> <span className="hidden sm:inline truncate">Adjuntado</span></> : <><Send size={12} /> <span className="hidden sm:inline truncate">{tipo3d === 'armario' ? 'Armarios' : 'Presup.'}</span></>}
                 </button>
                 {/* Botón Blanco y Negro / Modo Taller para imprimir y anotar */}
-                <button onClick={() => setSchematic(s => !s)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black transition-colors ${schematic ? 'bg-zinc-900 text-white ring-2 ring-zinc-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                  title="Modo Taller: convierte la imagen a blanco y negro de alto contraste con fondo claro, ideal para imprimir y anotar medidas a mano">
-                  <Printer size={12} />
-                  <span className="hidden sm:inline truncate">{schematic ? 'Color' : 'B/N Taller'}</span>
+                <button onClick={alternarBn} disabled={bnProcessing || !currentImage()}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black transition-colors ${schematic ? 'bg-zinc-900 text-white ring-2 ring-zinc-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'} disabled:opacity-50`}
+                  title="Convierte el dibujo actual en líneas negras sobre fondo blanco, conservando su distribución">
+                  {bnProcessing ? <Loader size={12} className="animate-spin" /> : <Printer size={12} />}
+                  <span className="hidden sm:inline truncate">{schematic ? 'Color' : 'B/N'}</span>
                 </button>
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
@@ -4807,9 +4871,9 @@ export default function AIRenderStudio({ state, setState }) {
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700 disabled:opacity-50 flex items-center gap-1.5">
                     {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar automáticamente'}
                   </button>
-                  <button onClick={() => setSchematic(s => !s)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${schematic ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    ▦ Esquema
+                  <button onClick={alternarBn} disabled={bnProcessing || !currentImage()}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${schematic ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} disabled:opacity-50`}>
+                    {bnProcessing ? <Loader size={12} className="animate-spin" /> : '▦'} {schematic ? 'Color' : 'B/N'}
                   </button>
                   <button onClick={generarFichaTecnica} disabled={editing}
                     title={tipo3d === 'cocina'
@@ -4948,12 +5012,11 @@ export default function AIRenderStudio({ state, setState }) {
                   <div ref={capaMarcasRef} className="relative flex items-center justify-center max-w-full max-h-full overflow-hidden" style={{ aspectRatio: String(ratioRender) }} onClick={placeMark}>
                   <img
                     id="render-annot-img"
-                    src={assetSrc(renderResult.result.images[0])}
+                    src={schematic && bnImage ? bnImage : assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
                     className="w-full h-full object-contain transition-transform block"
                     style={{
                       ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
-                      ...(schematic ? { filter: 'grayscale(100%) contrast(115%) brightness(88%)' } : {}),
                     }}
                     onLoad={(e) => {
                       const w = e.target?.naturalWidth, h = e.target?.naturalHeight;
