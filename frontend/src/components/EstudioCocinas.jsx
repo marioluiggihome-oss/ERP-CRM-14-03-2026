@@ -434,7 +434,7 @@ export default function EstudioCocinas({ state, setState }) {
     setDistribucion(d => ({ ...d, elementos: d.elementos.filter((_, i) => i !== idx) }));
   }, []);
 
-  const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
+  const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', editHistory: [], fs: false });
   const [freeDesign, setFreeDesign] = useState(false);
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
   // Vista alámbrica (alzados acotados por pared) para el dossier técnico.
@@ -759,16 +759,24 @@ export default function EstudioCocinas({ state, setState }) {
     }
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
-      // Mismo pipeline que "Estudio 3D": mandamos la imagen actual como referencia
-      // (en base64) y una instrucción de edición fiel al motor Gemini.
-      const prevB64 = await imageToDataUrl(render.imageUrl).catch(() => null);
+      // Cada modificación parte siempre del PRIMER render, no del último
+      // resultado. Así se evita acumular pixelado y deformaciones. Las órdenes
+      // anteriores viajan como historial para conservar los cambios ya aprobados.
+      const baseB64 = await imageToDataUrl(render.originalUrl || render.imageUrl).catch(() => null);
+      const cambioActual = render.editTxt.trim();
+      const historial = (render.editHistory || []).filter(Boolean);
+      const historialTxt = historial.length
+        ? `\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR:\n${historial.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`
+        : '';
       const res = await fetch(`${API}/api/ai-engine/render`, {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          description: `Modifica el render adjunto manteniendo EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación. Cambio solicitado: ${render.editTxt.trim()}. No cambies nada más.`,
-          provider: 'gemini',
-          referenceImage: prevB64 || undefined,
+          description: `Modifica el render original manteniendo EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación.${historialTxt}\nNUEVO CAMBIO SOLICITADO:\n${cambioActual}\nNo cambies nada más.`,
+          provider: providerDeMotor(),
+          referenceImage: baseB64 || undefined,
+          referenceIsSketch: false,
+          editingRender: true,
         }),
       });
       const r = await res.json().catch(() => ({}));
@@ -776,13 +784,23 @@ export default function EstudioCocinas({ state, setState }) {
       const u = r.result?.images?.[0] || r.imageUrl;
       if (!u) throw new Error('No se recibió ninguna imagen');
       const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
-      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: shown, originalUrl: u, editMode: false, editTxt: '' }));
+      setRender(s => ({
+        ...s,
+        status: 'success',
+        msg: 'Render editado',
+        imageUrl: shown,
+        // El original solo se fija en la primera generación y nunca se pisa.
+        originalUrl: s.originalUrl || u,
+        editHistory: [...(s.editHistory || []), cambioActual],
+        editMode: false,
+        editTxt: '',
+      }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: mensajePublico(err.message) }));
     }
-  }, [render.imageUrl, render.originalUrl, render.editTxt]);
-
+    }, [render.imageUrl, render.originalUrl, render.editTxt, render.editHistory, motorIA]);
   // ── MIGRADO: Adjuntar render al presupuesto ──
+
   const attachToBudget = useCallback(async () => {
     if (!render.imageUrl) return;
     try {
@@ -1945,7 +1963,7 @@ export default function EstudioCocinas({ state, setState }) {
                     {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>}
                     {savedId ? 'Guardado' : 'Guardar proyecto'}
                   </button>
-                  <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }}
+                  <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', editHistory: [], fs: false }); setDistribucion(null); setSelectedStyle(null); setAttached(false); setCompareOn(false); setFreeDesign(false); setTranscrito(''); setBusySave(false); setWatermark({ mode: 'default', customLogo: null, customLogoPreview: null }); }}
                     className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
                     <Plus size={12}/> Nuevo proyecto
                   </button>
