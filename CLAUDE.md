@@ -111,8 +111,37 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 
 1. **Motor de render del Estudio 3D.** El motor elegido en pantalla manda
    siempre, por cualquier camino (texto, referencia, plano+bocetos):
-   `IA 1 → gemini` · `IA 3 → gemini_premium` · `IA 7 → banana_pro`. Todo
-   render pasa por `_render_dispatch`; nadie llama directo a un motor.
+   `IA 0 → julio11` · `IA 1 → gemini` · `IA 3 → gemini_premium` ·
+   `IA 7 → julio11_plus`. Todo render pasa por `_render_dispatch`; nadie llama
+   directo a un motor.
+   - **EL ESTUDIO 3D ESTÁ CONGELADO desde el 04/09/2026.** El master, viendo
+     los renders: «me gusta cómo está renderizando ahora, los últimos cambios
+     realizados están perfectos en Estudio 3D, los ha realizado MANUS... eso no
+     se toca ya, para nada». Lo que hay ahí dentro no se mejora, no se limpia y
+     no se refactoriza «de paso»: se le pide permiso.
+   - **IA 0** es el camino histórico de julio de 2026 (`render_11jul.py`) y es
+     el motor que la pantalla trae elegido. **IA 7** es IA 0 con un encargo
+     estricto de geometría y vanos y la referencia preparada a 280 dpi en vez
+     de 150. Los dos piden el modelo `Pro`.
+   - **IA 7 ERA `banana_pro` HASTA ESE DÍA.** `banana_pro` se queda en el
+     backend como camino antiguo: borrarlo no arregla nada y rompería los
+     proyectos guardados que lo pidan. Su candado se renombró a
+     `test_calculo_ia7_modelo_pro.py`, porque un candado con el nombre de un
+     motor que ya no usa es un candado que el siguiente que pase se cree y no
+     comprueba.
+   - **PENDIENTE DE DECIDIR, Y ES DINERO:** `julio11` y `julio11_plus` cobran
+     **1 crédito** en `COSTE_POR_MOTOR`, y usan el mismo modelo que
+     `banana_pro`, que cobra **3,3**. El propio código dice que ese modelo
+     cuesta 0,12 $ por imagen frente a 0,036 $. O sea que hoy el contador dice
+     1 y la factura del proveedor dice 3,3. No se ha tocado porque el Estudio
+     3D está congelado y porque cuánto se cobra por un render lo decide el
+     master. A los usuarios que no son master NO les afecta: el servidor los
+     sigue forzando a `gemini` (regla 11).
+   - **SE PERDIÓ EL AVISO DE MOTOR DE RESPALDO.** Hasta el 04/09 la pantalla
+     decía en ámbar «lo ha pintado un modelo de respaldo, no lo uses para
+     comparar motores». El Estudio congelado ya no lo enseña; el dato sigue
+     viajando desde el backend (`motorUsado` / `motorDeRespaldo`). Comparar dos
+     motores sin ese aviso da la conclusión al revés, así que conviene saberlo.
    - **IA 1 es la de producción y es la única que ve un usuario que no sea
      master.** Las demás son motores de pruebas del master (IA 7 cuesta 3,3x
      por render).

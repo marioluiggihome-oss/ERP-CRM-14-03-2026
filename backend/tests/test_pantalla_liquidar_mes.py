@@ -15,6 +15,8 @@ quedaba deshabilitado para siempre — sin ningún error en consola, sin build
 roto, sin nada. Se cazó leyendo la respuesta del backend en vez de suponerla.
 """
 import os
+
+import permisos_de_pestana as P
 import re
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -109,10 +111,15 @@ def test_la_pantalla_SE_ABRE_desde_COOP_y_solo_para_el_master():
     # siguiera siendo solo del master, el cooperativista se quedaría sin ella—,
     # así que lo que se comprueba ya no es la puerta sino LA PESTAÑA: liquidar
     # sigue siendo del master y de nadie más.
-    i = cuerpo.index("['coop', 'miArea']")
-    trozo = cuerpo[i:i + 500]
-    assert "isMaster" in trozo, (
-        f"el panel COOP ya no comprueba nada: {trozo[:120]}")
+    # QUIÉN ENTRA EN COOP, EJECUTANDO LA REGLA. Antes se buscaba `isMaster`
+    # escrito dentro del bloque de `App.js`; desde el 04/09/2026 lo decide
+    # `canAccessTab`, así que buscar el texto se ponía rojo sin que la puerta
+    # hubiera cambiado.
+    abre = P.puertas({"master": P.MASTER, "gerente": P.GERENTE}, ["coop"])
+    assert abre["master"] == ["coop"], "el master ya no entra en COOP"
+    assert abre["gerente"] == [], (
+        "COOP se abre a quien no debe: por ahí se cierra el mes y se congelan "
+        "las comisiones")
 
     panel_ = _lee(os.path.join(RAIZ, "frontend", "src", "components", "CoopPanel.jsx"))
     j = panel_.index("id: 'liquidar'")

@@ -61,6 +61,46 @@ MODELO_FLUX = "black-forest-labs/flux-1.1-pro"
 # por eso hay abajo una prueba que la vigila.
 MODELO_IA7_PRO = "gemini-3-pro-image-preview"
 
+# LOS MOTORES QUE PUEDEN USAR EL MODELO «PRO», Y NADIE MÁS.
+#
+# Eran uno solo —IA 7, que entonces era `banana_pro`—. El 04/09/2026 el master
+# congeló el Estudio 3D tal como lo dejó MANUS: «me gusta cómo está
+# renderizando ahora... eso no se toca ya, para nada». Con ese Estudio, IA 0
+# (`julio11`, el camino histórico) e IA 7 (`julio11_plus`) también lo usan, y
+# `banana_pro` se queda como camino antiguo.
+#
+# LO QUE SE PROTEGE NO ES EL NÚMERO DE APARICIONES, ES DÓNDE ESTÁN. Contar
+# apariciones fue la primera versión y era un candado de mentira en las dos
+# direcciones: se ponía rojo por un motor nuevo perfectamente legítimo, y se
+# habría quedado verde si alguien MOVÍA la única aparición al camino por
+# defecto. Ahora se mira, para cada aparición, bajo qué `if provider == ...`
+# está. Si una se queda sin `if`, está en el camino de IA 1 — el único motor
+# que ve un cliente que no sea el master (CLAUDE.md, regla 1) — y eso es
+# exactamente lo que la regla 10 prohíbe.
+MOTORES_CON_PRO = {"julio11", "julio11_plus", "banana_pro"}
+
+
+def _motor_que_manda(lineas, n):
+    """El motor del `if provider == "..."` que gobierna la línea `n`.
+
+    Se sube hasta encontrar el `if` más cercano con MENOS sangría que la línea
+    del modelo. `None` = no hay ninguno, o sea que la línea se ejecuta siempre.
+    """
+    import re as _re
+    sangria = len(lineas[n]) - len(lineas[n].lstrip())
+    for k in range(n - 1, -1, -1):
+        l = lineas[k]
+        if not l.strip():
+            continue
+        s_k = len(l) - len(l.lstrip())
+        if s_k >= sangria:
+            continue
+        m = _re.match(r'\s*if provider == "([a-z0-9_]+)"', l)
+        if m:
+            return m.group(1)
+        sangria = s_k
+    return None
+
 
 def _leer(ruta):
     with open(ruta, encoding="utf-8") as f:
@@ -129,17 +169,21 @@ def test_el_modelo_pro_no_se_escapa_de_IA_7():
     `model_override` al render de IA 1 «para probar»: las dos pruebas seguirían
     en verde y producción se habría movido de modelo."""
     fuente = _leer(RENDER)
-    apariciones = re.findall(rf'"{re.escape(MODELO_IA7_PRO)}"', fuente)
-    assert len(apariciones) == 1, (
-        f"{MODELO_IA7_PRO} aparece {len(apariciones)} veces en render_3d.py y "
-        f"solo puede aparecer UNA, la de IA 7. Cada copia extra es un camino "
-        f"por el que el modelo creativo llega a un cliente.")
-    # Y en el trozo de IA 7, no en el de otro.
-    ini = fuente.index('if provider == "banana_pro"')
-    fin = fuente.index("if provider ==", ini + 10)
-    assert MODELO_IA7_PRO in fuente[ini:fin], (
-        f"{MODELO_IA7_PRO} ya no está dentro de la rama de IA 7: se ha movido "
-        f"a otro motor")
+    lineas = fuente.splitlines()
+    sitios = [n for n, l in enumerate(lineas) if f'"{MODELO_IA7_PRO}"' in l]
+    assert sitios, (
+        f"{MODELO_IA7_PRO} ha desaparecido de render_3d.py: los motores que lo "
+        f"usan ({', '.join(sorted(MOTORES_CON_PRO))}) renderizarían con otro modelo")
+    for n in sitios:
+        motor = _motor_que_manda(lineas, n)
+        assert motor is not None, (
+            f"{MODELO_IA7_PRO} aparece en la línea {n + 1} SIN un `if provider "
+            f"== ...` por encima: está en el camino por defecto, o sea en el de "
+            f"IA 1, que es el único motor que ve un cliente.")
+        assert motor in MOTORES_CON_PRO, (
+            f"{MODELO_IA7_PRO} se está usando en el motor «{motor}» (línea "
+            f"{n + 1}) y solo puede usarlo {sorted(MOTORES_CON_PRO)}. Cada copia "
+            f"extra es un camino por el que el modelo creativo llega a un cliente.")
 
 
 def test_ia3_usa_flux_pro_y_no_la_version_barata():

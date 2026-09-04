@@ -24,6 +24,8 @@ adorno. Eso es lo que vigila este fichero.
 """
 import importlib
 import os
+
+import permisos_de_pestana as P
 import re
 import sys
 
@@ -191,15 +193,22 @@ def test_la_pantalla_comprueba_el_master_por_su_cuenta():
 
 
 def test_el_boton_del_menu_solo_le_sale_al_master():
-    src = _sin_comentarios_jsx(_leer(APP))
-    i = src.index("currentTab: 'planNegocio'")
-    trozo = src[max(0, i - 600):i]
-    assert "isMaster" in trozo and "isPrimaryAdmin" in trozo, (
-        "el boton del plan de negocio le sale a mas gente de la que puede entrar")
-    for prohibido in ("isGerente", "canAccessRentabilidad"):
-        assert prohibido not in trozo, (
-            f"el boton usa `{prohibido}`: se lo enseniaria a quien luego recibe "
-            "un 403, que es la peor forma de cerrar una puerta")
+    # SE EJECUTA LA REGLA. Antes se leia `isMaster`/`isPrimaryAdmin` escritos
+    # alrededor del boton en `App.js`; desde el 04/09/2026 lo decide
+    # `canAccessTab`, asi que buscar el texto se ponia rojo con la puerta
+    # intacta. Lo que importa no es como esta escrito: es quien entra.
+    abre = P.puertas({
+        "master": P.MASTER,
+        "gerente": P.GERENTE,
+        "admin": P.ADMIN,
+        "comercial": P.COMERCIAL_EN_NOMINA,
+    }, ["planNegocio"])
+    assert abre["master"] == ["planNegocio"], (
+        "el master ya no entra en el plan de negocio")
+    for quien in ("gerente", "admin", "comercial"):
+        assert abre[quien] == [], (
+            f"el plan de negocio se le abre a «{quien}»: por ahi pasan la "
+            f"proyeccion, los margenes y el dinero de la casa")
 
 
 # ─── 4. Lo calculado no se guarda ───────────────────────────────────────────

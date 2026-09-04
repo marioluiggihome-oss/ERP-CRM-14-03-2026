@@ -20,6 +20,8 @@ paso se movieran los permisos, nadie sabría si un usuario dejó de ver algo por
 el rediseño o porque se lo quitamos.
 """
 import os
+
+import permisos_de_pestana as P
 import re
 import sys
 
@@ -65,15 +67,26 @@ def test_LA_PUERTA_SE_ABRE_AL_SOCIO_O_LE_QUITAMOS_SU_AREA():
     Si COOP siguiera siendo solo del master, meter «Mi área» dentro dejaría al
     cooperativista sin ella — y sin un error: simplemente no vería el botón.
     """
-    cuerpo = _lee(APP)
-    # DONDE SE PINTA, no el primer «'coop'» del fichero — que es la clase CSS
-    # del botón del menú. Una ventana anclada a bulto ya dejó pasar un fallo
-    # dos veces en este proyecto.
-    i = cuerpo.index("['coop', 'miArea']")
-    trozo = cuerpo[i:i + 500]
-    assert "esCooperativista(state.currentUser)" in trozo, (
+    # SE EJECUTA LA REGLA. Antes se buscaba el texto del guardia dentro de
+    # `App.js`; desde el 04/09/2026 los permisos viven en `modulePermissions.js`
+    # y `App.js` pregunta `canOpenTab(...)`. La puerta no se movió; lo que
+    # cambió fue cómo está escrita, y el candado no puede confundir las dos
+    # cosas.
+    abre = P.puertas({
+        "socio": P.SOCIO_MONTADOR,
+        "master": P.MASTER,
+        "admin": P.ADMIN,
+        "gerente": P.GERENTE,
+    }, ["coop"])
+    assert abre["socio"] == ["coop"], (
         "la puerta de COOP no se abre al cooperativista: acaba de perder «Mi "
         "área», que es lo único suyo que hay en el ERP")
+    assert abre["master"] == ["coop"] and abre["admin"] == ["coop"], (
+        "COOP tiene que abrirla también un administrador: es la gestión de la "
+        "red de siempre (regla 27)")
+    assert abre["gerente"] == [], (
+        "el gerente entra en COOP: por ahí se asignan comisiones y se cierra el "
+        "mes")
 
 
 def test_CADA_PESTANA_DICE_QUIEN_LA_VE():

@@ -100,7 +100,13 @@ def test_la_prohibicion_NO_depende_de_que_el_dibujo_sea_a_mano(servicio):
         return {"success": True, "result": {"images": ["data:image/png;base64,x"]}}
 
     servicio._render_dispatch = falso
-    servicio._prepare_reference = lambda img, mime: ("iVBORw0KGgo=", "image/png")
+    # `**kw` PORQUE LA FIRMA DE VERDAD YA NO ES ESA: desde el Estudio 3D del
+    # 04/09/2026, `_prepare_reference` recibe `pdf_dpi` (280 para IA 7, 150 para
+    # el resto). Un doble con la firma vieja no hace que la prueba falle por lo
+    # que vigila —que no se pinten cotas—: la hace estallar con un TypeError
+    # antes de llegar a comprobar nada, que es peor, porque parece un fallo del
+    # render y es un fallo de la prueba.
+    servicio._prepare_reference = lambda img, mime, **kw: ("iVBORw0KGgo=", "image/png")
     # EL CASO DEL MASTER: un plano impreso, no un boceto a lápiz.
     servicio._parece_dibujo_a_mano = lambda *a, **k: False
 

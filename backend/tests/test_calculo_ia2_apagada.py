@@ -116,16 +116,53 @@ def test_el_motor_sigue_ahi_para_poder_volver():
 
 # ─── 3. Fuera de la pantalla ───────────────────────────────────────────────
 
-def test_el_boton_de_ia2_ya_no_se_ofrece():
+# LA BOTONERA DE MOTORES, ENTERA Y POR SU BLOQUE.
+#
+# Se buscaba por el rotulo «Motor» y su clase de Tailwind, escritos a mano. El
+# Estudio 3D que el master congelo el 04/09/2026 rotula esa fila «IA» —los
+# motores ya no se anuncian por su nombre (regla 15)— y la prueba dejo de
+# encontrar nada: reventaba con un ValueError, que no es ponerse rojo por lo
+# que vigila, es no llegar a mirarlo. Ahora se busca el bloque `{isMaster && (`
+# de la barra de accion y se cuenta por llaves, que no depende de como este
+# escrito el rotulo ni las clases.
+def _botonera_de_motores():
     codigo = _codigo_jsx()
-    i = codigo.index("<span className=\"text-[11px] font-black text-slate-500 uppercase tracking-wider\">Motor</span>")
-    fila = codigo[i:i + 1400]
+    inicio = codigo.index("{isMaster && (", codigo.index("Acción principal"))
+    hondo = 0
+    for k in range(inicio, len(codigo)):
+        if codigo[k] == "{":
+            hondo += 1
+        elif codigo[k] == "}":
+            hondo -= 1
+            if hondo == 0:
+                return codigo[inicio:k + 1]
+    raise AssertionError("la botonera de motores no cierra")
+
+
+def test_el_boton_de_ia2_ya_no_se_ofrece():
+    fila = _botonera_de_motores()
     assert "'ia2'" not in fila, (
-        "el boton de IA 2 ha vuelto a la fila de motores: se pulsara y se "
-        "esperaran minutos")
-    # Y tampoco para el usuario normal, que es la lista corta del final.
-    assert fila.count("'ia1'") >= 2, \
-        "la lista de motores del usuario normal ha cambiado de forma inesperada"
+        "el boton de IA 2 ha vuelto a la botonera: se pulsara y se esperaran "
+        "minutos, porque IA 2 es un agente y no un modelo de imagen")
+    # Y que la botonera sea de verdad la botonera, no un bloque cualquiera: si
+    # `_botonera_de_motores` cazara otro trozo, lo de arriba pasaria por no
+    # encontrar 'ia2' en un sitio donde nunca lo hubo.
+    assert "'ia1'" in fila and "setMotor(" in fila, (
+        "el bloque que se esta mirando no es la botonera de motores: la prueba "
+        "estaria pasando por el motivo equivocado")
+
+
+def test_la_botonera_de_motores_es_SOLO_DEL_MASTER():
+    """IA 1 es la unica que ve un usuario que no sea master (regla 1), y uno de
+    los motores de pruebas cuesta 3,3x por render."""
+    codigo = _codigo_jsx()
+    inicio = codigo.index("{isMaster && (", codigo.index("Acción principal"))
+    fila = _botonera_de_motores()
+    for motor in ("'ia0'", "'ia3'", "'ia5'", "'ia7'"):
+        assert motor in fila, (
+            f"{motor} ya no esta en la botonera del master; si se ha movido "
+            f"fuera del `isMaster`, lo ve todo el mundo")
+    assert inicio > 0
 
 
 def test_la_pantalla_no_puede_pedir_manus():

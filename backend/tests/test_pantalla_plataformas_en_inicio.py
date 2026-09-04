@@ -27,6 +27,8 @@ LO QUE VIGILA ESTE CANDADO, que es lo único que puede costar dinero aquí:
      botón no cierra ninguna puerta (regla 8).
 """
 import os
+
+import permisos_de_pestana as P
 import re
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -101,11 +103,28 @@ def test_EL_CIERRE_ESTA_TAMBIEN_EN_EL_ENRUTADO():
     """
     cuerpo = _lee(APP)
     for tab in ("carpinter", "landingStudio"):
-        i = cuerpo.index(f"state.currentTab === '{tab}'")
-        trozo = cuerpo[i:i + 260]
-        assert "isMaster" in trozo and "isPrimaryAdmin" in trozo, (
-            f"la pestaña «{tab}» se pinta sin comprobar el permiso: cualquiera "
-            "con sesión entra escribiéndola a mano")
+        # Que la pestaña siga ENRUTADA: `landingStudio` no tenía ninguna
+        # comprobación y se pintaba con solo llegar, y `carpinter` ni siquiera
+        # existía en el enrutado — el botón se habría quedado en blanco.
+        assert f"state.currentTab === '{tab}'" in cuerpo, (
+            f"la pestaña «{tab}» ha desaparecido del enrutado: su botón lleva a "
+            f"una pantalla en blanco")
+
+    # Y QUIÉN ENTRA, ejecutando la regla en vez de buscar su texto. El master,
+    # 30/08: «la puerta de carpinter y studio3k, sólo la veo yo».
+    abre = P.puertas({
+        "master": P.MASTER,
+        "admin": P.ADMIN,
+        "gerente": P.GERENTE,
+        "suscriptor": P.SUSCRIPTOR,
+    }, ["carpinter", "landingStudio"])
+    assert sorted(abre["master"]) == ["carpinter", "landingStudio"], (
+        "el master ha perdido la puerta de sus otras dos plataformas")
+    for quien in ("admin", "gerente", "suscriptor"):
+        assert abre[quien] == [], (
+            f"«{quien}» entra en carpinter.io o Studio3K escribiendo la pestaña "
+            f"a mano: son negocios que solo mira el master, y esconder el botón "
+            f"no cierra nada")
 
 
 def test_LA_PUERTA_DE_CARPINTER_LLEVA_A_ALGUN_SITIO():

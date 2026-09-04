@@ -20,6 +20,8 @@ pantalla tampoco la rompe, porque una suma en el JSX es un renglón y nadie la
 notaría.
 """
 import os
+
+import permisos_de_pestana as P
 import re
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -164,8 +166,20 @@ def test_el_AREA_SE_ABRE_DESDE_COOP():
     assert "'miArea'" in cuerpo, (
         "se ha perdido el camino viejo: los enlaces que ya existen llevarían a "
         "una pantalla en blanco (regla 22)")
-    assert "esCooperativista(state.currentUser)" in cuerpo, (
-        "la puerta de COOP no se abre al socio: acaba de perder su área")
+    # SE EJECUTA LA REGLA, NO SE BUSCA SU TEXTO. Hasta el 04/09/2026 aquí se
+    # miraba que `App.js` llevara escrito `esCooperativista(state.currentUser)`.
+    # Ese día los permisos se centralizaron en `modulePermissions.js` y `App.js`
+    # pasó a preguntar `canOpenTab(...)`: la puerta seguía abierta al socio,
+    # exactamente igual, y el candado se puso rojo igualmente. Un candado que se
+    # pone rojo por cómo está escrito el código, y no por que la promesa se haya
+    # roto, enseña a la gente a ignorarlo.
+    abre = P.puertas({"socio": P.SOCIO_MONTADOR}, ["coop", "miArea"])["socio"]
+    assert "miArea" in abre, (
+        "la puerta de «Mi área» no se abre al socio: acaba de perder lo único "
+        "suyo que hay en el ERP")
+    assert "coop" in abre, (
+        "el socio no entra en COOP, que es donde vive «Mi área»: la pestaña "
+        "existe y no hay forma de llegar a ella")
 
 
 def test_el_AREA_YA_NO_ESTA_SUELTA_EN_LA_BIENVENIDA():
@@ -211,16 +225,26 @@ def test_QUIEN_ENTRA_A_COOP_lo_decide_la_regla_comun_y_no_una_copia_a_mano():
     el otro. Es exactamente lo que ya pasó con el rótulo de los tramos de
     comisión: el importe bien y la explicación mintiendo.
     """
-    cuerpo = _lee_ruta(APP)
-    assert "esCooperativista" in cuerpo, (
-        "App.js no usa `esCooperativista` de plataformas.js")
-    assert "plataformas" in cuerpo, (
-        "App.js no importa la regla común de plataformas")
-    i = cuerpo.find("miArea")
-    assert i != -1
-    alrededor = cuerpo[max(0, i - 250):i + 250]
-    for a_mano in ("isMontador", "isComercial", "isRepresentative"):
-        assert a_mano not in alrededor, (
-            f"App.js decide quién entra mirando `{a_mano}` a mano, en vez de "
-            "preguntarle a plataformas.js. Así es como el menú y el servidor "
-            "se separan.")
+    modulo = _lee_ruta(os.path.join(RAIZ, "frontend", "src", "modulePermissions.js"))
+    assert "esCooperativista" in modulo and "plataformas" in modulo, (
+        "la matriz de permisos no le pregunta a `plataformas.js`: si escribiera "
+        "la condición a mano, el menú y el servidor se separarían")
+
+    # Y LA PRUEBA DE VERDAD: quién entra. Escrita a mano —`isMontador ||
+    # isComercial`— el menú le enseñaría COOP a un suscriptor de carpinter.io,
+    # que al entrar se comería un 403.
+    abre = P.puertas({
+        "socio": P.SOCIO_MONTADOR,
+        "comercial_socio": P.SOCIO_COMERCIAL,
+        "suscriptor": P.SUSCRIPTOR,
+        "comercial_en_nomina": P.COMERCIAL_EN_NOMINA,
+    }, ["coop", "miArea"])
+    assert "miArea" in abre["socio"] and "miArea" in abre["comercial_socio"], (
+        "un socio marcado no entra en su área")
+    assert abre["suscriptor"] == [], (
+        "un suscriptor de carpinter.io entra en COOP: se comerá un 403, y lo "
+        "que es peor, puede acabar en una liquidación (regla 21)")
+    assert abre["comercial_en_nomina"] == [], (
+        "el comercial de toda la vida de la casa —`isRepresentative`— entra en "
+        "el área de los cooperativistas. Ser comercial no basta: hay que ser "
+        "comercial DE LA COOPERATIVA, y eso se MARCA, no se deduce del rol")

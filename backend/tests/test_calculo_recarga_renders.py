@@ -73,6 +73,38 @@ jw.ADMIN_ROLE_FLAGS = ['isAdmin']; sys.modules['services.jwt_service'] = jw
 sp = importlib.util.spec_from_file_location('services.ai_usage', B + '/services/ai_usage.py')
 AU = importlib.util.module_from_spec(sp); sys.modules['services.ai_usage'] = AU; sp.loader.exec_module(AU)
 AU.db = DBI
+
+
+# Y OTRA VEZ ANTES DE CADA PRUEBA, QUE ES LO QUE FALTABA.
+#
+# `services/ai_usage.py` no pide su base de datos: la ata al importar, con un
+# `from config import db`. Si otro fichero de pruebas ha importado `config`
+# antes —`test_calculo_motor_solo_master.py` lo hace, y va delante por orden
+# alfabético—, ese `db` es la Mongo DE VERDAD, y el `AU.db = DBI` de aquí
+# arriba se ejecuta en el momento de COLECTAR, no en el de correr.
+#
+# Resultado: estas pruebas pasaban SOLAS y fallaban en la suite, intentando
+# escribir un saldo de créditos comprados contra la base de datos de verdad.
+# El error que salía —un `run_on_executor` de motor— no se parecía en nada a su
+# causa. Es el mismo tropiezo que la regla 25 de CLAUDE.md ya deja escrito: un
+# doble puesto en `sys.modules` durante la importación no sobrevive al orden de
+# los ficheros.
+# Y NO BASTA CON `AU.db`: `routes/render_packs.py` importa `añadir_saldo`
+# DENTRO de la función (`from services.ai_usage import ...` en la línea 117),
+# así que el módulo se resuelve EN EL MOMENTO DE LA LLAMADA. Para entonces otro
+# fichero de pruebas ya ha vuelto a poner el `services.ai_usage` de verdad en
+# `sys.modules`, y el que se ejecuta es ese — con la Mongo de producción
+# dentro. Por eso se repone también la entrada, no solo el atributo.
+@pytest.fixture(autouse=True)
+def _la_base_de_datos_es_la_de_mentira():
+    previo = sys.modules.get('services.ai_usage')
+    sys.modules['services.ai_usage'] = AU
+    AU.db = DBI
+    yield
+    # Se devuelve lo que hubiera, para no romperle el módulo al que venga
+    # detrás: este fichero ya ha dejado dobles sueltos otras veces.
+    if previo is not None:
+        sys.modules['services.ai_usage'] = previo
 DBI.ai_usage_config.docs.append({"_id": "cfg", "default_credits": 0, "credits_per": {"render": 1}})
 
 # stripe simulado
