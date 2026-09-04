@@ -62,14 +62,20 @@ def test_LAS_TRES_PLATAFORMAS_ESTAN_Y_SON_LAS_DEL_CODIGO():
     """Las mismas tres de `services/plataformas.py`: cooperativa, carpinter,
     studio3k. Si el menú y el código dijeran negocios distintos, el mapa
     mentiría."""
-    for tab in ("coop", "carpinter", "landingStudio"):
+    # LA ENTRADA DE STUDIO3K SE LLAMA `studio3k` DESDE EL 04/09/2026. Antes era
+    # `landingStudio` —la landing— y ahora la entrada del menú abre su panel de
+    # gestión (`Studio3kPanel.jsx`). `landingStudio` NO desaparece: sigue
+    # enrutada y cerrada al master, porque hay enlaces y estado de navegador con
+    # ese nombre (regla 22, los caminos viejos siguen vivos); lo que ya no tiene
+    # es entrada en el menú, y por eso no se busca aquí.
+    for tab in ("coop", "carpinter", "studio3k"):
         assert "group: 'plataformas'" in _entrada(tab), (
             f"«{tab}» no está en el grupo de plataformas")
 
 
 def test_CARPINTER_Y_STUDIO3K_SON_SOLO_DEL_MASTER():
     """Master, 30/08: «la puerta de carpinter y studio3k, sólo la veo yo»."""
-    for tab in ("carpinter", "landingStudio"):
+    for tab in ("carpinter", "studio3k"):
         linea = _entrada(tab)
         assert "isMaster" in linea and "isPrimaryAdmin" in linea, (
             f"«{tab}» no está cerrado al master")
@@ -102,7 +108,7 @@ def test_EL_CIERRE_ESTA_TAMBIEN_EN_EL_ENRUTADO():
     NINGUNA comprobación: se pintaba con solo llegar a esa pestaña.
     """
     cuerpo = _lee(APP)
-    for tab in ("carpinter", "landingStudio"):
+    for tab in ("carpinter", "studio3k", "landingStudio"):
         # Que la pestaña siga ENRUTADA: `landingStudio` no tenía ninguna
         # comprobación y se pintaba con solo llegar, y `carpinter` ni siquiera
         # existía en el enrutado — el botón se habría quedado en blanco.
@@ -117,8 +123,8 @@ def test_EL_CIERRE_ESTA_TAMBIEN_EN_EL_ENRUTADO():
         "admin": P.ADMIN,
         "gerente": P.GERENTE,
         "suscriptor": P.SUSCRIPTOR,
-    }, ["carpinter", "landingStudio"])
-    assert sorted(abre["master"]) == ["carpinter", "landingStudio"], (
+    }, ["carpinter", "studio3k", "landingStudio"])
+    assert sorted(abre["master"]) == ["carpinter", "landingStudio", "studio3k"], (
         "el master ha perdido la puerta de sus otras dos plataformas")
     for quien in ("admin", "gerente", "suscriptor"):
         assert abre[quien] == [], (

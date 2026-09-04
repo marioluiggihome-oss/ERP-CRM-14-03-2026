@@ -95,12 +95,26 @@ AU.db = DBI
 # fichero de pruebas ya ha vuelto a poner el `services.ai_usage` de verdad en
 # `sys.modules`, y el que se ejecuta es ese — con la Mongo de producción
 # dentro. Por eso se repone también la entrada, no solo el atributo.
+# Y LO MISMO CON STRIPE, por otro camino. `routes/render_packs.py` hace
+# `from services import stripe_pagos` ARRIBA del todo, o sea que se queda con
+# una referencia AL MODULO. Cuando otro fichero de pruebas reemplaza
+# `services.stripe_pagos` en `sys.modules`, esa referencia sigue apuntando a lo
+# de antes —o al reves— y `stripe_pagos.RENDER_PACKS` sale vacio: todos los
+# packs pasan a ser «Pack no valido» y estas pruebas fallan diciendo que el
+# catalogo de precios no existe. Se vuelve a atar la referencia del propio
+# modulo, que es la que se usa de verdad.
 @pytest.fixture(autouse=True)
 def _la_base_de_datos_es_la_de_mentira():
     previo = sys.modules.get('services.ai_usage')
+    previo_stripe = sys.modules.get('services.stripe_pagos')
     sys.modules['services.ai_usage'] = AU
+    sys.modules['services.stripe_pagos'] = SP
+    svc.stripe_pagos = SP
+    R.stripe_pagos = SP
     AU.db = DBI
     yield
+    if previo_stripe is not None:
+        sys.modules['services.stripe_pagos'] = previo_stripe
     # Se devuelve lo que hubiera, para no romperle el módulo al que venga
     # detrás: este fichero ya ha dejado dobles sueltos otras veces.
     if previo is not None:
@@ -143,6 +157,23 @@ class Req:
     async def body(self): return self._c
 
 
+class ReqPlano:
+    """La peticion que pide `comprar`, sin cuerpo.
+
+    `POST /render-packs/comprar` GANO UN PARAMETRO `request` el 04/09/2026, para
+    leer de que marca viene la compra (`x-platform-entry`). Las pruebas la
+    llamaban con la firma vieja —`comprar(payload, user)`— y entonces el pack
+    caia en `request` y el usuario en `payload`: todas las compras respondian
+    «Pack no valido».
+
+    Ojo con `test_pack_inexistente_se_rechaza`, que seguia EN VERDE: espera un
+    400 y lo recibia, pero por el motivo equivocado. Un candado que pasa por
+    otra razon no protege nada.
+    """
+    def __init__(self, entrada=None):
+        self.headers = {} if entrada is None else {'x-platform-entry': entrada}
+
+
 def evento(session_id='cs_test_1', pack='pack50', uid='u42', pagado=True, total=4235):
     import json
     return json.dumps({"type": "checkout.session.completed", "data": {"object": {
@@ -167,7 +198,7 @@ async def _saldo():
 
 def test_el_precio_lo_pone_el_servidor_no_el_navegador():
     async def esc():
-        await R.comprar({"packId": "pack50", "price": 1, "renders": 9999}, USER)
+        await R.comprar(ReqPlano(), {"packId": "pack50", "price": 1, "renders": 9999}, USER)
         importe = _Sess.ultimo["line_items"][0]["price_data"]["unit_amount"]
         assert importe == 4235, "se ha usado un precio enviado por el cliente"
     _correr(esc())
@@ -176,14 +207,14 @@ def test_el_precio_lo_pone_el_servidor_no_el_navegador():
 def test_no_se_abona_nada_al_abrir_la_pasarela():
     async def esc():
         antes = await _saldo()
-        await R.comprar({"packId": "pack50"}, USER)
+        await R.comprar(ReqPlano(), {"packId": "pack50"}, USER)
         assert await _saldo() == antes, "abonar antes de pagar permite renders gratis"
     _correr(esc())
 
 
 def test_pack_inexistente_se_rechaza():
     with pytest.raises(R.HTTPException) as e:
-        _correr(R.comprar({"packId": "pack_regalo"}, USER))
+        _correr(R.comprar(ReqPlano(), {"packId": "pack_regalo"}, USER))
     assert e.value.status_code == 400
 
 
@@ -235,7 +266,7 @@ def test_sin_claves_queda_inerte_pero_no_rompe():
             assert cat["pagoTarjeta"] is False
             assert len(cat["packs"]) == 3, "el catalogo debe verse aunque no se pueda cobrar"
             with pytest.raises(R.HTTPException) as e:
-                await R.comprar({"packId": "pack50"}, USER)
+                await R.comprar(ReqPlano(), {"packId": "pack50"}, USER)
             assert e.value.status_code == 503
         finally:
             os.environ["STRIPE_SECRET_KEY"] = "sk_test_x"

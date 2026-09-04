@@ -1,4 +1,10 @@
 /*
+ * © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
+/*
  * Entrada de plataforma. Centraliza la detección por dominio o ruta simulada
  * para que acceso, título, autenticación y carcasa usen exactamente la misma
  * identidad.
