@@ -714,6 +714,7 @@ export default function EstudioCocinas({ state, setState }) {
           style: proy.estilo || undefined,
           provider: providerDeMotor(),
           referenceImage: conCroquis ? render.croquis : undefined,
+          referenceIsSketch: conCroquis,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1485,7 +1486,7 @@ export default function EstudioCocinas({ state, setState }) {
                               const r = await fetch(`${API}/api/ai-engine/render`, {
                                 method: 'POST',
                                 headers: authHeaders({ 'Content-Type': 'application/json' }),
-                                body: JSON.stringify({ description: descB, style: proy.estilo || undefined, provider: providerDeMotor(), referenceImage: conCroquis ? render.croquis : undefined }),
+                                body: JSON.stringify({ description: descB, style: proy.estilo || undefined, provider: providerDeMotor(), referenceImage: conCroquis ? render.croquis : undefined, referenceIsSketch: conCroquis }),
                               });
                               const d = await r.json().catch(() => ({}));
                               if (!r.ok || !d.success) throw new Error(d.error || 'Error en render B');

@@ -524,6 +524,7 @@ class Render3DService:
         reference_mime: Optional[str] = None,
         provider: Optional[str] = None,
         reference_images: Optional[list] = None,
+        reference_is_sketch: bool = False,
         project_type: Optional[str] = None,
         room_photo: bool = False,
         editing_render: bool = False,
@@ -590,8 +591,9 @@ class Render3DService:
         # devolvía otra distinta (puertas convertidas en gavetas, altos movidos).
         # No daba ningún error: devolvía una cocina preciosa que no era la suya.
         # Una procedencia conocida siempre gana a una heurística.
-        is_sketch = False if (room_photo or editing_render) else \
-            self._is_sketch_reference(reference_image, reference_mime)
+        is_sketch = False if (room_photo or editing_render) else (
+            bool(reference_is_sketch) or self._is_sketch_reference(reference_image, reference_mime)
+        )
 
         # ── AMUEBLADO VIRTUAL: la foto es la ESTANCIA REAL (vacía / a reformar) ──
         # No hay que EDITAR un mueble existente, sino DISEÑAR uno nuevo DENTRO de esa

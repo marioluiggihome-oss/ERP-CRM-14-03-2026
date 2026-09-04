@@ -483,6 +483,7 @@ class RenderRequest(BaseModel):
     referenceImage: Optional[str] = Field(None, description="Imagen/PDF de referencia en base64 para condicionar el render")
     referenceMime: Optional[str] = Field(None, description="MIME de la imagen de referencia")
     referenceImages: Optional[List[str]] = Field(None, description="Imágenes adicionales (elemento a copiar: puerta, mueble…) en base64/data URL")
+    referenceIsSketch: Optional[bool] = Field(False, description="La referencia principal es un plano o croquis técnico subido desde el módulo de planos")
     provider: Optional[str] = Field(None, description="Motor de render: julio11 (IA0 histórica) | gemini (IA1) | manus | otros motores de master")
     projectType: Optional[str] = Field(None, description="Tipo de proyecto elegido por el usuario: cocina|armario|bano|otro. Fuerza el sujeto del render.")
     roomPhoto: Optional[bool] = Field(False, description="La imagen de referencia es una FOTO de la estancia REAL (vacía o a reformar): diseñar el mueble DENTRO de ella respetando su arquitectura.")
@@ -664,6 +665,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
         reference_mime=request.referenceMime,
         provider=motor_permitido(user, request.provider),
         reference_images=request.referenceImages,
+        reference_is_sketch=bool(request.referenceIsSketch),
         project_type=request.projectType,
         room_photo=bool(request.roomPhoto),
         editing_render=bool(request.editingRender),
