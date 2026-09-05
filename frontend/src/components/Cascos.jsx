@@ -7,6 +7,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
+import { ACB_PUERTAS, ACB_PUERTAS_SERIES } from '../data/acbPuertas';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -25,6 +26,9 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, 
 // el resto quedan listos para cargar su tarifa.
 const SECCIONES = [
   { id: 'cascos', label: 'CASCOS', desc: 'Módulos / cuerpos de mueble' },
+  // Los FRENTES del mismo proveedor (Canteado Industrial S.L.). Van pegados a
+  // CASCOS a proposito: es el mismo pedido y el mismo albaran.
+  { id: 'acbPuertas', label: 'ACB PUERTAS', desc: 'Frentes y puertas canteadas' },
   { id: 'blum', label: 'BLUM', desc: 'Bisagras, cajones y gavetas' },
   { id: 'gtv', label: 'GTV', desc: 'Cajones y gavetas' },
   { id: 'emuca', label: 'EMUCA', desc: 'Bisagras' },
@@ -254,6 +258,8 @@ const Cascos = ({ state, setState }) => {
     setAltoMin(conv); setAltoMax(conv); setAnchoMin(conv); setAnchoMax(conv);
     setUnidad(next);
   };
+  // ── ACB PUERTAS ──────────────────────────────────────────────────────────
+  const [seriePuerta, setSeriePuerta] = useState(ACB_PUERTAS_SERIES[0].id);
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
   // El carrito sobrevive a salir a otro módulo y volver: si no, ir al analizador
@@ -537,6 +543,47 @@ const Cascos = ({ state, setState }) => {
 
   // Añade un accesorio BLUM al presupuesto. Precio = tarifa (sin descuento); el
   // descuento se aplica luego globalmente. No lleva medidas ni acabado de color.
+  /** LA MATRIZ DE LA SERIE ELEGIDA: filas de alto, columnas de ancho.
+   *
+   *  Se pinta igual que viene en la tarifa del proveedor a proposito. Asi se
+   *  puede cotejar celda a celda contra el PDF, que es lo que hay que poder
+   *  hacer con una tarifa: comprobarla, no fiarse. */
+  const matrizPuertas = useMemo(() => {
+    const filas = ACB_PUERTAS.filter(f => f.serie === seriePuerta);
+    const anchos = [...new Set(filas.map(f => f.ancho))].sort((a, b) => a - b);
+    const grupos = [];
+    filas.forEach(f => {
+      const clave = f.altos.join('&');
+      let g = grupos.find(x => x.clave === clave);
+      if (!g) { g = { clave, altos: f.altos, precios: {} }; grupos.push(g); }
+      g.precios[f.ancho] = f.precio;
+    });
+    grupos.sort((a, b) => a.altos[0] - b.altos[0]);
+    return { anchos, grupos };
+  }, [seriePuerta]);
+
+  const serieObj = ACB_PUERTAS_SERIES.find(s => s.id === seriePuerta) || ACB_PUERTAS_SERIES[0];
+
+  /** Anade un frente al mismo carrito que los cascos: es el mismo pedido. */
+  const addPuertaToCart = (altos, ancho, precio) => {
+    const alto = altos[0];
+    const sig = `acbp|${seriePuerta}|${altos.join('&')}|${ancho}`;
+    setCart(prev => {
+      const i = prev.findIndex(l => l.sig === sig);
+      if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
+      return [...prev, {
+        key: `${sig}-${Date.now()}`, sig, puerta: true,
+        tipo: `Frente ${serieObj.label}`,
+        // Las DOS medidas del grupo viajan en la descripcion: un «1198 & 1298»
+        // no es un alto, son dos al mismo precio, y al proveedor hay que
+        // decirle cual se quiere.
+        gama: 'acbPuertas', serie: seriePuerta, serieLabel: serieObj.label,
+        altos, alto, ancho,
+        precio: pc(precio), precioBase: precio, qty: 1,
+      }];
+    });
+  };
+
   const addBlumToCart = (p) => {
     const sig = `blum|${p.ref}`;
     setCart(prev => {
@@ -1154,7 +1201,89 @@ const Cascos = ({ state, setState }) => {
             </div>
           </div>
           )}
-          </>) : (seccion === 'blum' || seccion === 'gtv' || seccion === 'emuca') && totalMarcaSec > 0 ? (
+          </>) : seccion === 'acbPuertas' ? (
+          /* ─────────── ACB PUERTAS ───────────
+             Los FRENTES del mismo proveedor que los cascos. Se pinta la matriz
+             tal como viene en su tarifa —altos en filas, anchos en columnas—
+             para poder COTEJARLA celda a celda contra el PDF. Con una tarifa
+             hay que poder comprobarla, no fiarse de ella. */
+          <div data-testid="acb-puertas" className="bg-white rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-center gap-3 flex-wrap mb-3">
+              <div className="flex-1 min-w-[220px]">
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Serie</label>
+                <select value={seriePuerta} onChange={e => setSeriePuerta(e.target.value)}
+                  data-testid="acb-puertas-serie"
+                  className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                  {ACB_PUERTAS_SERIES.map(s2 => <option key={s2.id} value={s2.id}>{s2.label}</option>)}
+                </select>
+              </div>
+              <div className="flex-[2] min-w-[240px] text-[11px] text-slate-500 self-end pb-1">
+                <div><span className="font-black text-slate-600">Acabados:</span> {serieObj.acabados}</div>
+                <div><span className="font-black text-slate-600">Canto:</span> {serieObj.canto}</div>
+              </div>
+            </div>
+
+            {/* LA LETRA PEQUENA DE LA TARIFA, DONDE SE VE. Son las tres cosas
+                que cambian el precio de verdad y no estan en ninguna casilla:
+                el tirador gola aparte, los montados que no lo admiten y los
+                frentes pequenos que salen lisos aunque pidas otra cosa. */}
+            {serieObj.nota && (
+              <div data-testid="acb-puertas-nota"
+                className="mb-3 px-3 py-2 rounded-lg bg-aviso-50 border border-aviso-200 text-[11px] text-aviso-800 font-bold">
+                {serieObj.nota}
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] whitespace-nowrap">
+                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="text-left py-2 px-2 font-black uppercase sticky left-0 bg-slate-50">Alto × ancho</th>
+                    {matrizPuertas.anchos.map(w => (
+                      <th key={w} className="text-right py-2 px-2 font-black">{med(w)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {matrizPuertas.grupos.map(g => (
+                    <tr key={g.clave} className="hover:bg-slate-50/60">
+                      <td className="py-1.5 px-2 font-black text-slate-700 sticky left-0 bg-white">
+                        {g.altos.map(med).join(' · ')}
+                      </td>
+                      {matrizPuertas.anchos.map(w => {
+                        const precio = g.precios[w];
+                        /* SIN PRECIO NO HAY BOTON. La casilla que el PDF deja
+                           en «----» es que ACB NO FABRICA esa medida en esta
+                           serie: se rotula «--», nunca 0,00 EUR. Un cero seria
+                           un frente gratis en el escandallo (regla 7). */
+                        if (precio == null) {
+                          return <td key={w} className="py-1.5 px-2 text-right text-slate-300"
+                            title="ACB no fabrica esta medida en esta serie">--</td>;
+                        }
+                        return (
+                          <td key={w} className="py-1.5 px-1 text-right">
+                            <button type="button"
+                              onClick={() => addPuertaToCart(g.altos, w, precio)}
+                              data-testid="acb-puertas-add"
+                              title={`Añadir ${serieObj.label} ${g.altos.join(' o ')} x ${w} mm`}
+                              className="w-full px-2 py-1 rounded-md font-mono font-bold text-slate-700 hover:bg-accion-600 hover:text-white transition-colors">
+                              {eur(precio)}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 text-[10px] text-slate-400">
+              Medidas en {unidad === 'cm' ? 'centímetros' : 'milímetros'}. Precios de TARIFA, antes del descuento de ACB.
+              Un alto con dos medidas (1198 · 1298) son dos frentes al mismo precio: al pedir hay que decir cuál.
+            </div>
+          </div>
+          ) : (seccion === 'blum' || seccion === 'gtv' || seccion === 'emuca') && totalMarcaSec > 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <ProviderLogo id={seccion} height={24} />
