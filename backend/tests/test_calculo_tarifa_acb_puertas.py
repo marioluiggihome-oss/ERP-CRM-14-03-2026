@@ -85,6 +85,15 @@ console.log(JSON.stringify({
     precioFrenteACB('touch22', 'alma', 558, 248),
     precioFrenteACB('gm20', 'alma', 558, 248),
   ],
+  // SE LLAMAN TODAS LAS FUNCIONES QUE EL FICHERO EXPORTA. Leerlas no basta:
+  // una funcion que usa una tabla que nadie emitio se lee tan bien como
+  // cualquier otra y solo revienta al EJECUTARSE. Paso el 05/09/2026 con
+  // ACB_CANTOS -- Cocina Desmontada no abria, «ACB_CANTOS is not defined».
+  cantosPorSerie: Object.fromEntries(
+    ACB_PUERTAS_SERIES.map((s) => [s.id, cantosDeSerieACB(s.id)])),
+  cantosDeUnaSerieQueNoExiste: cantosDeSerieACB('no-existe-esta-serie'),
+  tiradorProbado: precioTiradorACB('gola', 598),
+  tiradorDeUnaMedidaQueNoSeHace: precioTiradorACB('gola', 12345),
 }));"""
     # A UN FICHERO, NO A `node -e`. Con 1.530 precios el script se pasa del
     # tamaño máximo de la línea de órdenes y `node` revienta con «Argument list
@@ -280,6 +289,42 @@ def test_EL_CANTO_ES_PARTE_DEL_PRECIO_EN_LA_PANTALLA():
     assert "canto: cantoActivo" in add, (
         "el frente va al carrito sin decir de qué canto es: al proveedor no se "
         "le podría pedir")
+
+
+def test_EL_FICHERO_DE_DATOS_SE_EJECUTA_ENTERO():
+    """LA TARIFA TIENE QUE PODER EJECUTARSE, no solo leerse.
+
+    El 05/09/2026 el generador declaraba `CANTOS` en Python y NO lo volcaba al
+    fichero, asi que `cantosDeSerieACB` filtraba una tabla que no existia. En
+    JavaScript eso no falla al cargar el modulo: falla la primera vez que la
+    funcion se LLAMA. Y la primera vez fue en produccion — Cocina Desmontada
+    abria en «ERROR AL CARGAR EL MODULO · ACB_CANTOS is not defined» y no se
+    podia ni presupuestar ni pasar a pedido.
+
+    Las otras 23 pruebas de este fichero estaban en verde: todas leen TABLAS.
+    Esta LLAMA a las funciones, que es lo unico que destapa una tabla que no se
+    emitio. La comprobacion no es «devuelve algo»: es que devuelva exactamente
+    los cantos que la serie declara — si `ACB_CANTOS` volviera a faltar, el
+    `.filter` reventaria, y si estuviera vacia devolveria [] y tambien salta."""
+    t = _tarifa()
+    por_serie = t["cantosPorSerie"]
+    for s in t["series"]:
+        devueltos = [c["id"] for c in por_serie[s["id"]]]
+        assert devueltos == list(s["cantos"]), (
+            f"la serie {s['id']} declara los cantos {s['cantos']} y "
+            f"cantosDeSerieACB devuelve {devueltos}")
+        for c in por_serie[s["id"]]:
+            assert c.get("label"), (
+                f"el canto {c['id']} de {s['id']} sale sin rotulo: en la "
+                f"pantalla seria un boton en blanco")
+    # Una serie que no existe cae en el defecto ('pvc'), no revienta ni
+    # devuelve la lista entera: pedir un canto ALMA en una serie que no lo
+    # fabrica es un precio equivocado sin ningun error.
+    assert [c["id"] for c in t["cantosDeUnaSerieQueNoExiste"]] == ["pvc"]
+    # Y los tiradores, por lo mismo: `null` cuando ACB no hace esa medida,
+    # nunca 0 -- un tirador gratis en el escandallo (CLAUDE.md, regla 7).
+    assert t["tiradorProbado"] == 20.21
+    assert t["tiradorDeUnaMedidaQueNoSeHace"] is None
 
 
 def test_LOS_COMPLEMENTOS_SUBEN_CON_LA_SUPERFICIE():

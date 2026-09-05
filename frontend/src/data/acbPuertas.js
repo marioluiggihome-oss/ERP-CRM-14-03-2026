@@ -34,9 +34,9 @@ export const ACB_PUERTAS_SERIES = [
   { id: "calabria8", coleccion: "canteado", label: "Calabria 8", acabados: "Slate: Nieve 0021 · Salvia 1423 · Cosmos 1049 · Blanco Nórdico · Robles 4677/4678/4675/4701/4569 · Nogales Samburu/Turkana/Tuareg", canto: "PVC", cantos: ["pvc"], nota: "Los frentes de alto/ancho menor de 238 son LISOS." },
   { id: "auraResto", coleccion: "canteado", label: "Aura · resto de plafones", acabados: "Atlas · Mira · Lyra · Altair · Europa · Vesta — Roble Nébula · Nogal Eclipse · Fresno Nova", canto: "PVC", cantos: ["pvc"], nota: "Los frentes de alto/ancho menor de 238 son LISOS." },
   { id: "auraSense", coleccion: "canteado", label: "Aura · plafón Sense", acabados: "Yute · Apolo", canto: "PVC", cantos: ["pvc"], nota: "Los frentes de alto/ancho menor de 238 son LISOS." },
-  { id: "touch22", coleccion: "canteado", label: "Touch 22MM", acabados: "Seda · Alto Brillo", canto: "PVC ó ALMA", cantos: ["alma", "pvc"], nota: "BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA." },
-  { id: "palmaTouch", coleccion: "canteado", label: "Palma Touch 22MM", acabados: "Seda · Alto Brillo", canto: "PVC ó ALMA", cantos: ["alma", "pvc"], nota: "Lleva TIRADOR VERTICAL. BERNA TOUCH: el tirador GOLA se añade aparte." },
-  { id: "touch19", coleccion: "canteado", label: "Touch 19MM", acabados: "Solo en Blanco Seda", canto: "PVC ó ALMA", cantos: ["alma", "pvc"], nota: "BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA." },
+  { id: "touch22", coleccion: "canteado", label: "Touch 22MM", acabados: "Seda · Alto Brillo", canto: "PVC ó ALMA", cantos: ["pvc", "alma"], nota: "BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA." },
+  { id: "palmaTouch", coleccion: "canteado", label: "Palma Touch 22MM", acabados: "Seda · Alto Brillo", canto: "PVC ó ALMA", cantos: ["pvc", "alma"], nota: "Lleva TIRADOR VERTICAL. BERNA TOUCH: el tirador GOLA se añade aparte." },
+  { id: "touch19", coleccion: "canteado", label: "Touch 19MM", acabados: "Solo en Blanco Seda", canto: "PVC ó ALMA", cantos: ["pvc", "alma"], nota: "BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA." },
   { id: "palmaSlateVert", coleccion: "canteado", label: "Palma Slate · veta vertical / sin veta", acabados: "4675 · 4677 · Tuareg — sin veta: Blanco Cuero, Cuero, PVC su color", canto: "PVC", cantos: ["pvc"], nota: "Sin veta: el color, el tirador y el canto se piden aparte." },
   { id: "palmaCasella", coleccion: "canteado", label: "Palma Casella · veta horizontal", acabados: "Roble Casella claro · marrón · natural · oscuro", canto: "PVC", cantos: ["pvc"], nota: "También se puede fabricar con veta vertical. Es la única del grupo Palma que llega a 1498 de alto." },
   { id: "palmaHoriz", coleccion: "canteado", label: "Palma / Palma Slate · veta horizontal", acabados: "1180 · 1181 · 1176 — Fresno Saupe · Hermo 0,0 · Roble 3822", canto: "PVC", cantos: ["pvc"], nota: "" },
@@ -1706,6 +1706,16 @@ export const ACB_COMPLEMENTOS = {
     regletas: {"698": 11.98, "898": 14.44, "2440": 35.41},
   },
 };
+
+/** LOS CANTOS QUE ACB FABRICA, con su rótulo.
+ *
+ *  ESTA TABLA SE USA Y HAY QUE ESCRIBIRLA. `cantosDeSerieACB` la filtra, así
+ *  que el día que no se emita el fichero entero revienta al cargarse —
+ *  «ACB_CANTOS is not defined»— y Cocina Desmontada no abre. Pasó el 05/09:
+ *  el generador tenía la lista en Python y no la volcaba nunca. Un dato que
+ *  se declara arriba y no se emite abajo no da ningún aviso: da una pantalla
+ *  en blanco. */
+export const ACB_CANTOS = [{"id": "pvc", "label": "Canto PVC"}, {"id": "alma", "label": "Canto ALMA"}];
 
 /** LOS TIRADORES (pág. 93 de la tarifa del grupo ACB).
  *

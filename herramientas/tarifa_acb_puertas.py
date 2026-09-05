@@ -653,7 +653,10 @@ export const ACB_COLECCIONES = [PLACEHOLDER_COLECCIONES];
 /** Las series del catálogo, con lo que hay que saber al pedirlas. */
 export const ACB_PUERTAS_SERIES = [''']
 for sid, label, acabados, canto, nota in SERIES:
-    cantos = sorted({c for _, _, ss in FRENTES for (s2, c) in ss if s2 == sid})
+    # EN EL ORDEN DE `CANTOS`, no alfabetico: es el orden en que se pintan
+    # los botones, y el PVC va primero porque es el que lleva casi todo.
+    tiene = {c for _, _, ss in FRENTES for (s2, c) in ss if s2 == sid}
+    cantos = [c for c, _ in CANTOS if c in tiene]
     out.append("  { id: %s, coleccion: %s, label: %s, acabados: %s, canto: %s, cantos: %s, nota: %s }," % (
         js(sid), js(COLECCION), js(label), js(acabados), js(canto), js(cantos), js(nota)))
 out.append("];\n")
@@ -690,6 +693,18 @@ for gid, g in COMPLEMENTOS.items():
     out.append("    regletas: %s," % js({str(k): v for k, v in g["regletas"].items()}))
     out.append("  },")
 out.append("};\n")
+
+out.append("""/** LOS CANTOS QUE ACB FABRICA, con su rótulo.
+ *
+ *  ESTA TABLA SE USA Y HAY QUE ESCRIBIRLA. `cantosDeSerieACB` la filtra, así
+ *  que el día que no se emita el fichero entero revienta al cargarse —
+ *  «ACB_CANTOS is not defined»— y Cocina Desmontada no abre. Pasó el 05/09:
+ *  el generador tenía la lista en Python y no la volcaba nunca. Un dato que
+ *  se declara arriba y no se emite abajo no da ningún aviso: da una pantalla
+ *  en blanco. */"""
+)
+out.append("export const ACB_CANTOS = %s;\n" % js(
+    [{"id": c, "label": l} for c, l in CANTOS]))
 
 out.append("""/** LOS TIRADORES (pág. 93 de la tarifa del grupo ACB).
  *
