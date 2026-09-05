@@ -72,8 +72,8 @@ def _tarifa():
     js = src + """
 console.log(JSON.stringify({
   series: ACB_PUERTAS_SERIES, filas: ACB_PUERTAS,
-  tramos: ACB_COMPLEMENTOS_TRAMOS, complementos: ACB_COMPLEMENTOS,
-  regletas: ACB_REGLETAS, dtoZocalo: ACB_ZOCALO_SIN_CANTEAR_DTO,
+  complementos: ACB_COMPLEMENTOS, cantosPieza: ACB_COMPLEMENTOS_CANTOS,
+  dtoZocalo: ACB_ZOCALO_SIN_CANTEAR_DTO,
   pruebas: [
     precioFrenteACB('gm20', 'pvc', 558, 248),
     precioFrenteACB('qualita', 'pvc', 1298, 598),
@@ -277,6 +277,93 @@ def test_EL_CANTO_ES_PARTE_DEL_PRECIO_EN_LA_PANTALLA():
     assert "canto: cantoActivo" in add, (
         "el frente va al carrito sin decir de qué canto es: al proveedor no se "
         "le podría pedir")
+
+
+def test_LOS_COMPLEMENTOS_SUBEN_CON_LA_SUPERFICIE():
+    """Costados, zócalos y regletas van por cm². Una pieza más grande no puede
+    costar menos: es la misma propiedad que caza los dígitos mal leídos en los
+    frentes."""
+    t = _tarifa()
+    cantos = [c["id"] for c in t["cantosPieza"]]
+    fallos = []
+    for gid, g in t["complementos"].items():
+        for canto in cantos:
+            vals = g[canto]
+            assert len(vals) == len(g["tramos"]), (
+                f"«{gid}/{canto}» tiene {len(vals)} precios para "
+                f"{len(g['tramos'])} tramos: sobra o falta una columna entera")
+            for tramo, a, b in zip(g["tramos"][1:], vals, vals[1:]):
+                if a - b > TOLERANCIA_REDONDEO:
+                    fallos.append(f"{gid}/{canto} hasta {tramo} cm²: {b} < {a}")
+    assert not fallos, (
+        "hay complementos que BAJAN de precio al crecer la pieza:\n  "
+        + "\n  ".join(fallos[:10]))
+
+
+def test_MAS_CANTOS_CUESTA_MAS():
+    """Cada canto es más trabajo: 1 largo < 1 largo + 2 cortos < 4 cantos.
+    Si se cruzaran, es que se han cambiado dos columnas de sitio — y entonces
+    TODOS los precios de ese grupo están mal, no uno."""
+    t = _tarifa()
+    fallos = []
+    for gid, g in t["complementos"].items():
+        for tramo, a, b, c in zip(g["tramos"], g["unLargo"],
+                                  g["unLargoDosCortos"], g["cuatroCantos"]):
+            if a - b > TOLERANCIA_REDONDEO or b - c > TOLERANCIA_REDONDEO:
+                fallos.append(f"{gid} hasta {tramo} cm²: {a} / {b} / {c}")
+        costado = g.get("costado2440x600")
+        if costado:
+            if (costado["unLargo"] - costado["unLargoDosCortos"] > TOLERANCIA_REDONDEO
+                    or costado["unLargoDosCortos"] - costado["cuatroCantos"] > TOLERANCIA_REDONDEO):
+                fallos.append(f"{gid} costado 2440x600: {costado}")
+    assert not fallos, (
+        "el precio no crece con el número de cantos; lo más probable es que dos "
+        "columnas estén cambiadas de sitio:\n  " + "\n  ".join(fallos[:10]))
+
+
+def test_LO_QUE_EL_PDF_DEJA_EN_BLANCO_NO_ESTA():
+    """La regleta de 2440 que el PDF deja en «------» NO la fabrica ACB en esa
+    serie. Escribirla a 0 € sería una regleta gratis en un pedido."""
+    t = _tarifa()
+    for gid, g in t["complementos"].items():
+        for alto, precio in g["regletas"].items():
+            assert precio and precio > 0, (
+                f"«{gid}» tiene la regleta de {alto} a {precio}: si ACB no la "
+                f"fabrica, no se escribe; si la fabrica, tiene que costar algo")
+    # Las dos que el PDF deja en blanco, comprobadas: no están.
+    for gid in ("slateHoriz", "hafaxCasellaHoriz"):
+        assert "2440" not in t["complementos"][gid]["regletas"], (
+            f"«{gid}» tiene regleta de 2440 y el PDF (pág. 54) la deja en "
+            f"«------»: ACB no la fabrica en esa serie")
+
+
+def test_LAS_TOUCH_LLEGAN_A_UN_TRAMO_MAS_Y_NO_TRAEN_COSTADO():
+    """Cada grupo tiene sus propios tramos. Meterlos todos en una lista común
+    habría obligado a rellenar huecos, y rellenar huecos en una tarifa es
+    inventarse precios."""
+    t = _tarifa()
+    for gid in ("touch22|pvc", "touch22|alma", "touch19|pvc", "touch19|alma"):
+        g = t["complementos"][gid]
+        assert g["tramos"][-1] == 14640, (
+            f"«{gid}» ya no llega al tramo de 14640 cm² que trae su página")
+        assert "costado2440x600" not in g, (
+            f"«{gid}» tiene costado suelto y su página no lo trae: sale de otro "
+            f"sitio o está inventado")
+    for gid in ("gm20", "fenix", "hafaxCasellaVert"):
+        g = t["complementos"][gid]
+        assert g["tramos"][-1] == 10000, f"«{gid}» ha cambiado de tramos"
+        assert g.get("costado2440x600"), (
+            f"«{gid}» se ha quedado sin el costado de 2440x600, que su página sí trae")
+
+
+def test_EL_ZOCALO_SIN_CANTEAR_LLEVA_SU_DESCUENTO():
+    """Pág. 44: «al ser sin cantear, se hace un descuento del 10 % sobre el
+    precio del costado a 1 largo». Va en la tarifa y no escrito a mano en una
+    pantalla, para que no acaben existiendo dos descuentos para lo mismo."""
+    t = _tarifa()
+    assert abs(t["dtoZocalo"] - 0.10) < 1e-9, (
+        f"el descuento del zócalo sin cantear es {t['dtoZocalo']} y la tarifa "
+        f"dice 10 %")
 
 
 def test_EL_FICHERO_DE_DATOS_ES_EL_QUE_SALE_DEL_GENERADOR():
