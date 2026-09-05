@@ -10,6 +10,8 @@ import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { ACB_PUERTAS, ACB_PUERTAS_SERIES, ACB_COLECCIONES, ACB_TIRADORES,
   ACB_TIRADOR_LACADO_PCT, ACB_TIRADOR_COLOR_MUESTRA_PCT, ACB_TIRADOR_COLOR_MUESTRA_FIJO,
   cantosDeSerieACB } from '../data/acbPuertas';
+import { ACB_LACA_MODELOS, ACB_LACA_ACABADOS, ACB_LACA_MATRICES, ACB_LACA_COLORES,
+  gruesosDeModeloACBLaca, lineaDeModeloACBLaca, precioLacaACB } from '../data/acbLaca';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -271,6 +273,28 @@ const Cascos = ({ state, setState }) => {
   const [cantoPuerta, setCantoPuerta] = useState('pvc');
   const cantosSerie = cantosDeSerieACB(seriePuerta);
   const cantoActivo = cantosSerie.some(c => c.id === cantoPuerta) ? cantoPuerta : cantosSerie[0].id;
+  // ── LACA: se tarifa por MODELO y GRUPO, no por serie y canto ─────────────
+  // El grueso no es una nota de fabricacion: MANDA EN EL PRECIO. Un ALZIRA de
+  // 19mm es GRUPO 3 a secas y el de 22mm es GRUPO 3 + 5%. Al cambiar de modelo
+  // se vuelve al grueso que ESE modelo fabrica — si no, se quedaria pedido un
+  // 22 en un ROTTERDAM, que solo se hace en 19, y la matriz saldria vacia sin
+  // decir por que (mismo fallo que tenia el canto en el canteado).
+  const [modeloLaca, setModeloLaca] = useState(ACB_LACA_MODELOS[0].id);
+  const [gruesoLaca, setGruesoLaca] = useState(ACB_LACA_MODELOS[0].lineas[0].grueso);
+  const [acabadoLaca, setAcabadoLaca] = useState(ACB_LACA_ACABADOS[0].id);
+  const [especialLaca, setEspecialLaca] = useState(false);
+  const [xolidLaca, setXolidLaca] = useState(false);
+  const [decoracionLaca, setDecoracionLaca] = useState('');
+  const modeloLacaObj = ACB_LACA_MODELOS.find(m => m.id === modeloLaca) || ACB_LACA_MODELOS[0];
+  const gruesosLaca = gruesosDeModeloACBLaca(modeloLaca);
+  const gruesoActivo = gruesosLaca.includes(gruesoLaca) ? gruesoLaca : gruesosLaca[0];
+  const lineaLaca = lineaDeModeloACBLaca(modeloLaca, gruesoActivo);
+  const decoracionObj = ACB_LACA_COLORES.decoraciones.find(d => d.nombre === decoracionLaca) || null;
+  const opcionesLaca = {
+    colorEspecial: especialLaca, xolid: xolidLaca,
+    decoracionPct: decoracionObj ? decoracionObj.pct : 0,
+  };
+
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
   // El carrito sobrevive a salir a otro módulo y volver: si no, ir al analizador
@@ -560,6 +584,27 @@ const Cascos = ({ state, setState }) => {
    *  puede cotejar celda a celda contra el PDF, que es lo que hay que poder
    *  hacer con una tarifa: comprobarla, no fiarse. */
   const matrizPuertas = useMemo(() => {
+    /* LA LACA SE ARMA DESDE OTRA TARIFA, y sale con la MISMA forma
+       —{anchos, grupos}— para que la tabla de abajo, la regla de «sin precio
+       no hay boton» y el carrito no tengan que enterarse. Los precios NO se
+       leen de una lista: los calcula `precioLacaACB`, que es quien sabe que el
+       grueso cambia de grupo y que el color especial va sobre BLANCO. Copiar
+       aqui esa cuenta seria tener dos, y acabarian diciendo cosas distintas. */
+    if (coleccionPuerta === 'laca') {
+      if (!lineaLaca) return { anchos: [], grupos: [] };
+      const bloques = ACB_LACA_MATRICES[lineaLaca.grupo] || [];
+      const anchos = [...new Set(bloques.flatMap(b2 => b2.anchos))].sort((a, b) => a - b);
+      const grupos = bloques.map(b2 => {
+        const precios = {};
+        b2.anchos.forEach(w => {
+          const v = precioLacaACB(modeloLaca, gruesoActivo, acabadoLaca,
+            b2.altos[0], w, opcionesLaca);
+          if (v != null) precios[w] = v;
+        });
+        return { clave: b2.altos.join('&'), altos: b2.altos, precios };
+      });
+      return { anchos, grupos };
+    }
     const filas = ACB_PUERTAS.filter(
       f => f.coleccion === coleccionPuerta && f.serie === seriePuerta && f.canto === cantoActivo);
     const anchos = [...new Set(filas.map(f => f.ancho))].sort((a, b) => a - b);
@@ -572,7 +617,8 @@ const Cascos = ({ state, setState }) => {
     });
     grupos.sort((a, b) => a.altos[0] - b.altos[0]);
     return { anchos, grupos };
-  }, [coleccionPuerta, seriePuerta, cantoActivo]);
+  }, [coleccionPuerta, seriePuerta, cantoActivo, modeloLaca, gruesoActivo,
+      acabadoLaca, lineaLaca, especialLaca, xolidLaca, decoracionObj]);
 
   const serieObj = ACB_PUERTAS_SERIES.find(s => s.id === seriePuerta) || ACB_PUERTAS_SERIES[0];
 
@@ -599,6 +645,40 @@ const Cascos = ({ state, setState }) => {
   /** Anade un frente al mismo carrito que los cascos: es el mismo pedido. */
   const addPuertaToCart = (altos, ancho, precio) => {
     const alto = altos[0];
+    /* LA LACA VIAJA CON LO QUE HACE FALTA PARA PEDIRLA: modelo, GRUESO,
+       acabado y lo que lleve encima. Sin el grueso el pedido no se puede
+       cursar —un ALZIRA de 19 y uno de 22 son dos piezas distintas y a dos
+       precios— y ademas dos lineas de gruesos distintos se fundirian en una,
+       porque la firma seria la misma. */
+    if (coleccionPuerta === 'laca') {
+      const extras = [
+        especialLaca ? 'color especial' : '',
+        xolidLaca ? 'XOLID' : '',
+        decoracionObj ? decoracionObj.nombre : '',
+      ].filter(Boolean);
+      const acabadoObj = ACB_LACA_ACABADOS.find(x => x.id === acabadoLaca) || ACB_LACA_ACABADOS[0];
+      const sigL = `acbl|${modeloLaca}|${gruesoActivo}|${acabadoLaca}|${extras.join('+')}|${altos.join('&')}|${ancho}`;
+      setCart(prev => {
+        const i = prev.findIndex(l => l.sig === sigL);
+        if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
+        return [...prev, {
+          key: `${sigL}-${Date.now()}`, sig: sigL, puerta: true,
+          tipo: `Frente LACA ${modeloLacaObj.nombre} ${gruesoActivo}mm`,
+          gama: 'acbPuertas', coleccion: 'laca', coleccionLabel: 'LACA',
+          serie: modeloLaca, serieLabel: modeloLacaObj.nombre,
+          grueso: gruesoActivo, grupo: lineaLaca ? lineaLaca.grupo : null,
+          acabado: acabadoLaca, acabadoLabel: acabadoObj.label,
+          extras: extras.join(' · '),
+          // EL TIRADOR NO SE MONTA SOLO. BERNA lo lleva aparte (pag. 6) y esto
+          // lo dice en la linea, para que quien monte el pedido lo anada: si
+          // se sumara aqui, se sumaria tambien cuando el cliente no lo quiera.
+          tiradorAparte: modeloLacaObj.tiradorAparte,
+          altos, alto, ancho,
+          precio: pc(precio), precioBase: precio, qty: 1,
+        }];
+      });
+      return;
+    }
     const sig = `acbp|${seriePuerta}|${cantoActivo}|${altos.join('&')}|${ancho}`;
     setCart(prev => {
       const i = prev.findIndex(l => l.sig === sig);
@@ -1265,7 +1345,81 @@ const Cascos = ({ state, setState }) => {
               <span className="text-[11px] text-slate-500">{coleccionObj.desc}</span>
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap mb-3">
+            {/* LOS CONTROLES DE LA LACA. Son OTROS, y a proposito: aqui no
+                hay serie ni canto, hay MODELO, GRUESO y ACABADO, mas lo que
+                se le ponga encima. Ensenar el grupo y el recargo al lado no
+                es un adorno: es lo unico que deja comprobar el precio contra
+                el PDF sin abrirlo. */}
+            {coleccionPuerta === 'laca' && (
+              <div data-testid="acb-laca-controles" className="mb-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Modelo</label>
+                    <select value={modeloLaca} onChange={e => setModeloLaca(e.target.value)}
+                      data-testid="acb-laca-modelo"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      {ACB_LACA_MODELOS.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div className="min-w-[110px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Grueso</label>
+                    <select value={gruesoActivo} onChange={e => setGruesoLaca(Number(e.target.value))}
+                      data-testid="acb-laca-grueso"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      {gruesosLaca.map(g => <option key={g} value={g}>{g} mm</option>)}
+                    </select>
+                  </div>
+                  <div className="min-w-[200px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Acabado</label>
+                    <select value={acabadoLaca} onChange={e => setAcabadoLaca(e.target.value)}
+                      data-testid="acb-laca-acabado"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      {ACB_LACA_ACABADOS.map(a2 => <option key={a2.id} value={a2.id}>{a2.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="min-w-[190px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Decoración</label>
+                    <select value={decoracionLaca} onChange={e => setDecoracionLaca(e.target.value)}
+                      data-testid="acb-laca-decoracion"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      <option value="">Sin decoración</option>
+                      {ACB_LACA_COLORES.decoraciones.map(d => (
+                        <option key={d.nombre} value={d.nombre}>{d.nombre} (+{d.pct}%)</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center gap-4 flex-wrap text-[11px]">
+                  <label className="flex items-center gap-1.5 font-bold text-slate-600 cursor-pointer">
+                    <input type="checkbox" checked={especialLaca} data-testid="acb-laca-especial"
+                      onChange={e => setEspecialLaca(e.target.checked)} className="rounded" />
+                    Color especial <span className="text-slate-400">(+25 % sobre blanco)</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 font-bold text-slate-600 cursor-pointer">
+                    <input type="checkbox" checked={xolidLaca} data-testid="acb-laca-xolid"
+                      onChange={e => setXolidLaca(e.target.checked)} className="rounded" />
+                    XOLID <span className="text-slate-400">(+15 % sobre mate)</span>
+                  </label>
+                  {lineaLaca && (
+                    <span data-testid="acb-laca-grupo" className="px-2 py-0.5 rounded-md bg-slate-100 font-black text-slate-600">
+                      GRUPO {lineaLaca.grupo}{lineaLaca.recargo ? ` + ${lineaLaca.recargo} %` : ''}
+                    </span>
+                  )}
+                </div>
+                {/* EL TIRADOR NO SE MONTA SOLO: BERNA lo lleva aparte (pag. 6
+                    de la tarifa), y sin este aviso el frente sale mas barato
+                    de lo que se paga. */}
+                {modeloLacaObj.tiradorAparte && (
+                  <div data-testid="acb-laca-nota"
+                    className="mt-2 px-3 py-2 rounded-lg bg-aviso-50 border border-aviso-200 text-[11px] text-aviso-800 font-bold">
+                    {modeloLacaObj.nombre}: hay que añadir aparte el precio del tirador (tabla de tiradores, abajo).
+                  </div>
+                )}
+              </div>
+            )}
+
+            {coleccionPuerta !== 'laca' && (
+            <div data-testid="acb-puertas-controles" className="flex items-center gap-3 flex-wrap mb-3">
               <div className="flex-1 min-w-[220px]">
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Serie</label>
                 <select value={seriePuerta} onChange={e => setSeriePuerta(e.target.value)}
@@ -1290,12 +1444,13 @@ const Cascos = ({ state, setState }) => {
                 <div><span className="font-black text-slate-600">Canto:</span> {serieObj.canto}</div>
               </div>
             </div>
+            )}
 
             {/* LA LETRA PEQUENA DE LA TARIFA, DONDE SE VE. Son las tres cosas
                 que cambian el precio de verdad y no estan en ninguna casilla:
                 el tirador gola aparte, los montados que no lo admiten y los
                 frentes pequenos que salen lisos aunque pidas otra cosa. */}
-            {serieObj.nota && (
+            {coleccionPuerta !== 'laca' && serieObj.nota && (
               <div data-testid="acb-puertas-nota"
                 className="mb-3 px-3 py-2 rounded-lg bg-aviso-50 border border-aviso-200 text-[11px] text-aviso-800 font-bold">
                 {serieObj.nota}
@@ -1333,7 +1488,7 @@ const Cascos = ({ state, setState }) => {
                             <button type="button"
                               onClick={() => addPuertaToCart(g.altos, w, precio)}
                               data-testid="acb-puertas-add"
-                              title={`Añadir ${serieObj.label} ${g.altos.join(' o ')} x ${w} mm`}
+                              title={`Añadir ${coleccionPuerta === 'laca' ? `${modeloLacaObj.nombre} ${gruesoActivo}mm` : serieObj.label} ${g.altos.join(' o ')} x ${w} mm`}
                               className="w-full px-2 py-1 rounded-md font-mono font-bold text-slate-700 hover:bg-accion-600 hover:text-white transition-colors">
                               {eur(precio)}
                             </button>

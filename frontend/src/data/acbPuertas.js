@@ -23,7 +23,7 @@
 /** LAS COLECCIONES DE ACB. Hoy solo CANTEADO; Madera y Laca vendran despues.
  *  Cada serie y cada precio dicen a cual pertenecen, para que no se puedan
  *  mezclar dos tarifas distintas en la misma tabla. */
-export const ACB_COLECCIONES = [{ id: "canteado", label: "CANTEADO", desc: "Puertas canteadas a 4 cantos" }];
+export const ACB_COLECCIONES = [{ id: "canteado", label: "CANTEADO", desc: "Puertas canteadas a 4 cantos" }, { id: "laca", label: "LACA", desc: "Lacados por modelo y grupo" }];
 
 /** Las series del catálogo, con lo que hay que saber al pedirlas. */
 export const ACB_PUERTAS_SERIES = [

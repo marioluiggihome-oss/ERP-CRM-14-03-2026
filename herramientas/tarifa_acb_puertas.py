@@ -344,8 +344,13 @@ FRENTES = [
 # lo que ya funciona. Y cada fila dice a que coleccion pertenece, para que no
 # se puedan mezclar dos tarifas distintas en la misma tabla.
 COLECCION = 'canteado'
+# LAS COLECCIONES DE ACB. La lista vive aqui —y no repartida entre los dos
+# ficheros de tarifa— para que la pantalla tenga UN sitio del que sacar el
+# desplegable. La LACA se tarifa distinto (por grupo y modelo, no por serie) y
+# sus numeros viven en `tarifa_acb_laca.py`; lo que comparten es el nombre.
 COLECCIONES = [
     ('canteado', 'CANTEADO', 'Puertas canteadas a 4 cantos'),
+    ('laca', 'LACA', 'Lacados por modelo y grupo'),
 ]
 
 TRAMOS = [500,1000,1500,2000,2500,3000,3500,4000,4500,5000,

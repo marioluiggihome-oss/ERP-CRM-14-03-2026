@@ -932,6 +932,51 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      escandallo.
    - Candado: `test_calculo_hitos_de_cobro.py`.
 
+31. **LA TARIFA DE ACB SON DOS COLECCIONES, Y NO SE TARIFAN IGUAL** (04-05/09).
+   El master: «lo quiero poner en la sección de cocina desmontada al igual que
+   los cascos, pero una sección que ponga ACB PUERTAS», y «todo lo que te estoy
+   pasando de tarifa es un apartado que se debe de llamar CANTEADO... también
+   tiene otras colecciones en puertas de madera, puertas laca». La sección es
+   **ACB PUERTAS** y dentro va la COLECCIÓN: `canteado` y `laca` (Madera queda
+   pendiente). El proveedor es el mismo que el de los cascos, así que todo cae
+   en el mismo carrito y el mismo pedido.
+   - **CANTEADO:** el precio SALE de la matriz de su serie, y el CANTO es una
+     dimensión más — en las Touch el ALMA cuesta siempre más que el PVC, así
+     que devolver cualquiera de los dos es un precio equivocado sin error.
+   - **LACA: la matriz es solo el primer paso.**
+     `precio = matriz(GRUPO, acabado, alto, ancho) × (1 + recargo del modelo)`,
+     y encima el color especial, el XOLID y la decoración. Tres formas de
+     equivocarse, y las tres dan un número PLAUSIBLE que no es el que ACB
+     factura: **(a)** ignorar el GRUESO —un ALZIRA de 19 mm es GRUPO 3 a secas
+     y el de 22 mm es GRUPO 3 + 5 %, así que coger la primera línea del modelo
+     tarifa el de 22 al precio del de 19—; **(b)** aplicar el 25 % del color
+     especial sobre la columna de COLOR cuando la pág. 7 dice «sobre el precio
+     de BLANCO» (18,40 € contra 21,23 € en el grupo 1: un 15 % de más en cada
+     frente); **(c)** INTERPOLAR una medida que no está, cuando la tarifa dice
+     que vale lo que la INMEDIATA SUPERIOR — interpolar es inventarse una cifra
+     (regla 7). El cálculo vive en `precioLacaACB` y la pantalla NO lo repite:
+     dos cuentas para lo mismo acaban diciendo cosas distintas.
+   - **LEIDEN SALE EN DOS GRUPOS A LA VEZ** en la tarifa de ACB (pág. 6 y la
+     cabecera del grupo 1 dicen GRUPO 1; la cabecera del grupo 3 también lo
+     lista). Son 3,59 € por frente. Se toma el de la pág. 6 y queda MARCADO en
+     `ACB_LACA_MODELOS_EN_DOS_GRUPOS`, pendiente de confirmar con el proveedor:
+     un dato dudoso sin marcar acaba pareciendo firme y ya no lo revisa nadie.
+   - **LAS TARIFAS SE GENERAN, NO SE EDITAN.** `herramientas/tarifa_acb_*.py`
+     escriben `frontend/src/data/acb*.js` y VALIDAN antes de emitir nada: el
+     precio sube con el ancho, el brillo cuesta más que el mate, el color más
+     que el blanco y los grupos van de menos a más en la MISMA casilla. Editar
+     el fichero de datos a mano pone rojo el candado que lo regenera y compara.
+   - **Y HAY QUE EJECUTAR EL FICHERO, NO SOLO LEERLO** (05/09, y costó una caída
+     en producción). El generador declaraba `CANTOS` en Python y no lo volcaba;
+     `cantosDeSerieACB` filtraba una tabla que no existe. En JavaScript eso no
+     falla al cargar el módulo: falla la primera vez que la función se LLAMA —
+     y la primera vez fue en la pantalla del master, «ERROR AL CARGAR EL MÓDULO
+     · ACB_CANTOS is not defined», con Cocina Desmontada sin abrir. Las 23
+     pruebas de esa tarifa estaban en verde porque TODAS leían tablas. Un
+     candado de datos que no llama a las funciones no protege de esto.
+   - Candados: `test_calculo_tarifa_acb_puertas.py` y
+     `test_calculo_tarifa_acb_laca.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

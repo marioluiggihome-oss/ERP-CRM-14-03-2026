@@ -281,7 +281,7 @@ def test_EL_CANTO_ES_PARTE_DEL_PRECIO_EN_LA_PANTALLA():
     assert "cantosSerie.some" in linea, (
         f"al cambiar de serie se queda pedido un canto que esa serie puede no "
         f"fabricar, y la matriz saldría vacía sin decir por qué: {linea.strip()}")
-    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "}, [coleccionPuerta, seriePuerta, cantoActivo]);")
+    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "]);")
     assert "f.canto === cantoActivo" in matriz, (
         "la matriz mezcla los dos cantos: se pintarían dos precios distintos "
         "para la misma medida")
@@ -538,11 +538,13 @@ def test_NINGUN_PRECIO_SE_QUEDA_SIN_COLECCION():
 
 
 def test_LA_PANTALLA_NO_MEZCLA_DOS_COLECCIONES():
-    """El día que entren Madera y Laca, una tabla que no filtre por colección
-    enseñaría las tres tarifas revueltas — con los mismos altos y anchos, y
-    precios que no son."""
+    """YA SON DOS: canteado y laca (05/09/2026), y comparten la misma rejilla
+    de altos y anchos hasta el último milímetro. Una tabla que no filtrara por
+    colección enseñaría las dos tarifas revueltas, con las mismas medidas y
+    precios que no son — y nada de eso se ve como un error, se ve como una
+    tabla."""
     cuerpo = sin_comentarios(_lee(PANTALLA))
-    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "}, [coleccionPuerta, seriePuerta, cantoActivo]);")
+    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "]);")
     assert "f.coleccion === coleccionPuerta" in matriz, (
         "la matriz no filtra por colección")
     panel = _bloque(cuerpo, 'data-testid="acb-puertas"', "\n          ) : (seccion === 'blum'")
@@ -551,6 +553,10 @@ def test_LA_PANTALLA_NO_MEZCLA_DOS_COLECCIONES():
     assert 'data-testid="acb-puertas-coleccion"' in panel, (
         "la colección no se ve en pantalla, y el master pidió que se llamara CANTEADO")
     add = _bloque(cuerpo, "const addPuertaToCart", "\n  };")
+    assert "coleccionPuerta === 'laca'" in add, (
+        "la laca se tarifa por modelo y grueso, no por serie y canto: si "
+        "cayera por el camino del canteado iría al pedido sin grueso, y un "
+        "ALZIRA de 19 y uno de 22 son dos piezas distintas a dos precios")
     assert "coleccion: coleccionPuerta" in add, (
         "la línea del carrito no dice de qué colección es el frente: al pedir a "
         "ACB no se sabría si es canteado, madera o laca")
