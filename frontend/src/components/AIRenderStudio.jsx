@@ -3357,61 +3357,32 @@ export default function AIRenderStudio({ state, setState }) {
     }
   };
 
-  // Convierte la imagen actual en una lámina de líneas negras sobre fondo blanco.
-  // Es local y determinista: no vuelve a interpretar ni rediseñar la cocina.
-  const convertirABnLineal = (src) => new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.onload = () => {
-      const max = 2400;
-      const scale = Math.min(1, max / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
-      const w = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
-      const h = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0, w, h);
-      const data = ctx.getImageData(0, 0, w, h);
-      const srcPx = data.data;
-      const gray = new Float32Array(w * h);
-      for (let i = 0, p = 0; i < srcPx.length; i += 4, p += 1) {
-        gray[p] = 0.299 * srcPx[i] + 0.587 * srcPx[i + 1] + 0.114 * srcPx[i + 2];
-      }
-      const out = new Uint8ClampedArray(srcPx.length);
-      const at = (x, y) => gray[y * w + x];
-      for (let y = 0; y < h; y += 1) {
-        for (let x = 0; x < w; x += 1) {
-          const p = y * w + x;
-          const i = p * 4;
-          if (x === 0 || y === 0 || x === w - 1 || y === h - 1) {
-            out[i] = out[i + 1] = out[i + 2] = 255;
-          } else {
-            const gx = -at(x - 1, y - 1) + at(x + 1, y - 1) - 2 * at(x - 1, y) + 2 * at(x + 1, y) - at(x - 1, y + 1) + at(x + 1, y + 1);
-            const gy = -at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1) + at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1);
-            const strength = Math.max(0, Math.min(255, (Math.sqrt(gx * gx + gy * gy) - 18) * 2.4));
-            const v = 255 - strength;
-            out[i] = out[i + 1] = out[i + 2] = v;
-          }
-          out[i + 3] = 255;
-        }
-      }
-      ctx.putImageData(new ImageData(out, w, h), 0, 0);
-      resolve(canvas.toDataURL('image/png'));
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-
+  // B/N no es un filtro fotográfico: genera el ALZADO TÉCNICO de la cocina.
+  // Así conserva módulos, puertas, cajones y electrodomésticos como líneas
+  // limpias sobre blanco, y el resultado se puede imprimir para anotar medidas.
   const alternarBn = async () => {
     if (schematic) { setSchematic(false); return; }
-    const src = currentImage();
-    if (!src) return;
+    if (!currentImage() || bnProcessing) return;
     setBnProcessing(true); setError(null);
     try {
-      const converted = await convertirABnLineal(assetSrc(src));
-      setBnImage(converted);
+      const motivos = [], fallos = [];
+      const distribucion = await deducirDistribucion(motivos, fallos);
+      if (!distribucion) {
+        setError(`No se pudo obtener la distribución para generar el alzado técnico.${await explicarFallo(motivos, fallos)}`);
+        return;
+      }
+      const planos = await generarPlanosExactos(distribucion);
+      const alzado = planos.find(item => item?.description?.toLowerCase().includes('alzado')) || planos[1];
+      const alzadoImage = alzado?.result?.images?.[0];
+      if (!alzadoImage) {
+        setError('No se pudo generar el alzado técnico en blanco y negro.');
+        return;
+      }
+      setBnImage(alzadoImage);
       setSchematic(true);
-    } catch {
-      setError('No se pudo convertir la imagen a B/N.');
+      setRenderHistory(prev => [alzado, ...prev.filter(item => item !== alzado)].slice(0, 14));
+    } catch (e) {
+      setError(`No se pudo generar el alzado técnico B/N: ${e?.message || 'error desconocido'}.`);
     } finally { setBnProcessing(false); }
   };
 
