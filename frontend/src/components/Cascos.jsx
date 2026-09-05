@@ -7,7 +7,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
-import { ACB_PUERTAS, ACB_PUERTAS_SERIES, cantosDeSerieACB } from '../data/acbPuertas';
+import { ACB_PUERTAS, ACB_PUERTAS_SERIES, ACB_COLECCIONES, cantosDeSerieACB } from '../data/acbPuertas';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -259,6 +259,8 @@ const Cascos = ({ state, setState }) => {
     setUnidad(next);
   };
   // ── ACB PUERTAS ──────────────────────────────────────────────────────────
+  const [coleccionPuerta, setColeccionPuerta] = useState(ACB_COLECCIONES[0].id);
+  const coleccionObj = ACB_COLECCIONES.find(c => c.id === coleccionPuerta) || ACB_COLECCIONES[0];
   const [seriePuerta, setSeriePuerta] = useState(ACB_PUERTAS_SERIES[0].id);
   // EL CANTO ES PARTE DEL PRECIO, no un adorno: en las series Touch el canto
   // ALMA cuesta siempre mas que el PVC. Al cambiar de serie se vuelve al canto
@@ -556,7 +558,8 @@ const Cascos = ({ state, setState }) => {
    *  puede cotejar celda a celda contra el PDF, que es lo que hay que poder
    *  hacer con una tarifa: comprobarla, no fiarse. */
   const matrizPuertas = useMemo(() => {
-    const filas = ACB_PUERTAS.filter(f => f.serie === seriePuerta && f.canto === cantoActivo);
+    const filas = ACB_PUERTAS.filter(
+      f => f.coleccion === coleccionPuerta && f.serie === seriePuerta && f.canto === cantoActivo);
     const anchos = [...new Set(filas.map(f => f.ancho))].sort((a, b) => a - b);
     const grupos = [];
     filas.forEach(f => {
@@ -567,7 +570,7 @@ const Cascos = ({ state, setState }) => {
     });
     grupos.sort((a, b) => a.altos[0] - b.altos[0]);
     return { anchos, grupos };
-  }, [seriePuerta, cantoActivo]);
+  }, [coleccionPuerta, seriePuerta, cantoActivo]);
 
   const serieObj = ACB_PUERTAS_SERIES.find(s => s.id === seriePuerta) || ACB_PUERTAS_SERIES[0];
 
@@ -580,11 +583,12 @@ const Cascos = ({ state, setState }) => {
       if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
       return [...prev, {
         key: `${sig}-${Date.now()}`, sig, puerta: true,
-        tipo: `Frente ${serieObj.label}`,
+        tipo: `Frente ${coleccionObj.label} ${serieObj.label}`,
         // Las DOS medidas del grupo viajan en la descripcion: un «1198 & 1298»
         // no es un alto, son dos al mismo precio, y al proveedor hay que
         // decirle cual se quiere.
-        gama: 'acbPuertas', serie: seriePuerta, serieLabel: serieObj.label,
+        gama: 'acbPuertas', coleccion: coleccionPuerta, coleccionLabel: coleccionObj.label,
+        serie: seriePuerta, serieLabel: serieObj.label,
         canto: cantoActivo,
         cantoLabel: (cantosSerie.find(c => c.id === cantoActivo) || {}).label || '',
         altos, alto, ancho,
@@ -1217,13 +1221,36 @@ const Cascos = ({ state, setState }) => {
              para poder COTEJARLA celda a celda contra el PDF. Con una tarifa
              hay que poder comprobarla, no fiarse de ella. */
           <div data-testid="acb-puertas" className="bg-white rounded-2xl border border-slate-200 p-4">
+            {/* LA COLECCION, POR DELANTE DE TODO (master, 04/09/2026: «todo
+                lo que te estoy pasando de tarifa es un apartado que se debe
+                llamar CANTEADO, que son puertas canteadas a cuatro cantos»).
+                ACB tiene ademas puertas de MADERA y de LACA, que llegaran
+                despues: cuando lleguen, esto pasa a ser un desplegable y no
+                hay que mover nada mas. */}
+            <div className="mb-3 flex items-center gap-2 flex-wrap"
+              data-testid="acb-puertas-coleccion">
+              <span className="text-[10px] font-black text-slate-400 uppercase">Colección</span>
+              {ACB_COLECCIONES.length > 1 ? (
+                <select value={coleccionPuerta} onChange={e => setColeccionPuerta(e.target.value)}
+                  className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white font-black">
+                  {ACB_COLECCIONES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              ) : (
+                <span className="px-2.5 py-1 rounded-lg bg-accion-600 text-white text-sm font-black tracking-wide">
+                  {coleccionObj.label}
+                </span>
+              )}
+              <span className="text-[11px] text-slate-500">{coleccionObj.desc}</span>
+            </div>
+
             <div className="flex items-center gap-3 flex-wrap mb-3">
               <div className="flex-1 min-w-[220px]">
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Serie</label>
                 <select value={seriePuerta} onChange={e => setSeriePuerta(e.target.value)}
                   data-testid="acb-puertas-serie"
                   className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                  {ACB_PUERTAS_SERIES.map(s2 => <option key={s2.id} value={s2.id}>{s2.label}</option>)}
+                  {ACB_PUERTAS_SERIES.filter(s2 => s2.coleccion === coleccionPuerta)
+                    .map(s2 => <option key={s2.id} value={s2.id}>{s2.label}</option>)}
                 </select>
               </div>
               {cantosSerie.length > 1 && (

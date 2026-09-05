@@ -334,6 +334,20 @@ FRENTES = [
 # 10000 y llevan el costado de 2440x600 aparte. Meterlos todos en una sola
 # lista habría obligado a rellenar huecos, y rellenar huecos en una tarifa es
 # inventarse precios.
+# LA COLECCION (master, 04/09/2026): «todo lo que te estoy pasando de tarifa
+# es un apartado que se debe llamar CANTEADO, que son puertas canteadas a
+# cuatro cantos», y «ACB tambien tiene otras colecciones en puertas de MADERA
+# y puertas LACA, que ya te pasare mas adelante».
+#
+# Va como CAMPO y no en el nombre de la seccion: cuando lleguen Madera y Laca
+# seran otra entrada de esta lista y otro bloque de precios, sin mover nada de
+# lo que ya funciona. Y cada fila dice a que coleccion pertenece, para que no
+# se puedan mezclar dos tarifas distintas en la misma tabla.
+COLECCION = 'canteado'
+COLECCIONES = [
+    ('canteado', 'CANTEADO', 'Puertas canteadas a 4 cantos'),
+]
+
 TRAMOS = [500,1000,1500,2000,2500,3000,3500,4000,4500,5000,
           5500,6000,6500,7000,7500,8000,8500,9000,9500,10000]
 TRAMOS_TOUCH = TRAMOS + [14640]
@@ -589,12 +603,17 @@ out = ['''/*
 // PRECIOS DE TARIFA, ANTES DE DESCUENTO. El descuento de ACB lo teclea el
 // master, porque se negocia y cambia (igual que en los cascos).
 
+/** LAS COLECCIONES DE ACB. Hoy solo CANTEADO; Madera y Laca vendran despues.
+ *  Cada serie y cada precio dicen a cual pertenecen, para que no se puedan
+ *  mezclar dos tarifas distintas en la misma tabla. */
+export const ACB_COLECCIONES = [PLACEHOLDER_COLECCIONES];
+
 /** Las series del catálogo, con lo que hay que saber al pedirlas. */
 export const ACB_PUERTAS_SERIES = [''']
 for sid, label, acabados, canto, nota in SERIES:
     cantos = sorted({c for _, _, ss in FRENTES for (s2, c) in ss if s2 == sid})
-    out.append("  { id: %s, label: %s, acabados: %s, canto: %s, cantos: %s, nota: %s }," % (
-        js(sid), js(label), js(acabados), js(canto), js(cantos), js(nota)))
+    out.append("  { id: %s, coleccion: %s, label: %s, acabados: %s, canto: %s, cantos: %s, nota: %s }," % (
+        js(sid), js(COLECCION), js(label), js(acabados), js(canto), js(cantos), js(nota)))
 out.append("];\n")
 
 out.append("""/** Los altos y anchos que ACB fabrica, en MILÍMETROS.
@@ -602,8 +621,8 @@ out.append("""/** Los altos y anchos que ACB fabrica, en MILÍMETROS.
  *  es una lista y no un número. */""")
 out.append("export const ACB_PUERTAS = [")
 for f in filas:
-    out.append("  { serie: %s, canto: %s, altos: %s, ancho: %d, precio: %s }," % (
-        js(f["serie"]), js(f["canto"]), js(f["altos"]), f["ancho"], f["precio"]))
+    out.append("  { coleccion: %s, serie: %s, canto: %s, altos: %s, ancho: %d, precio: %s }," % (
+        js(COLECCION), js(f["serie"]), js(f["canto"]), js(f["altos"]), f["ancho"], f["precio"]))
 out.append("];\n")
 
 out.append("""/** COMPLEMENTOS: costados, zócalos y regletas.
@@ -669,6 +688,9 @@ import sys
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ruta = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
     RAIZ, "frontend", "src", "data", "acbPuertas.js")
+texto = "\n".join(out) + "\n"
+texto = texto.replace("PLACEHOLDER_COLECCIONES", ", ".join(
+    "{ id: %s, label: %s, desc: %s }" % (js(a), js(b), js(c)) for a, b, c in COLECCIONES))
 with open(ruta, "w", encoding="utf-8") as fh:
-    fh.write("\n".join(out) + "\n")
+    fh.write(texto)
 print("escrito", ruta, len(filas), "filas de frente")

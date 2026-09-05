@@ -176,7 +176,13 @@ def test_EL_PANEL_SE_PUEDE_ABRIR():
     assert "setShowProveedores(v => !v)" in abre, (
         f"el botón no abre el panel: {abre[-160:]}")
     assert "Proveedores" in boton, "el botón no dice a dónde lleva"
-    assert "{showProveedores && (" in cuerpo, "el panel no cuelga de su interruptor"
+    # EL INTERRUPTOR, Y ADEMÁS EL PERMISO. Desde el 04/09/2026 el panel es del
+    # master y de quien él marque (`test_pantalla_precios_proveedor_solo_master`),
+    # así que la condición lleva las dos cosas. Lo que esta prueba sigue
+    # vigilando es que el panel TENGA puerta: una pantalla a la que no se llega
+    # es una pantalla que no existe.
+    assert "{vePreciosProveedor && showProveedores && (" in cuerpo, (
+        "el panel no cuelga de su interruptor y de su permiso")
 
 
 def test_LOS_DESCUENTOS_NO_ESTAN_EN_LA_TABLA_DE_TARIFAS():

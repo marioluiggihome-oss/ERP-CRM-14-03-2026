@@ -34,6 +34,7 @@ import { getToken } from '../services/api';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 import BotonPantallaCompleta from './BotonPantallaCompleta';
 import { despiece, MV_COSTES_DEFAULT, getFactorDesmontada, tieneDespieceReal, DTO_CASCOS_PVP, esMuebleMV, margenSobreCoste, SEMAFORO_MARGEN } from './RentabilidadMV';
+import { esMasterSistema } from '../modulePermissions';
 import { VALOR_PUNTO_CASCOS } from '../utils/valorPuntoCascos';
 import RelacionReview from './RelacionReview';
 import { despieceDeFrentes, totalesDelDespiece } from '../utils/despieceFrentes';
@@ -304,6 +305,21 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [showComparador, setShowComparador] = useState(false);
   const [showEscandallo, setShowEscandallo] = useState(false);
   const [showFrentes, setShowFrentes] = useState(false);
+  /* QUIÉN VE LOS PRECIOS DE PROVEEDOR (master, 04/09/2026: «la parte de
+     proveedores que sólo la vea yo como master, pero también pon un permiso
+     para activárselo a los usuarios que yo considere»).
+     
+     El master siempre, y quien él marque en el panel Master con
+     «Precios de proveedor». Es la puerta del DINERO —lo que le cuesta a la casa
+     cada casco, cada frente, cada bisagra— así que va cerrada por defecto y se
+     abre de uno en uno (CLAUDE.md, regla 8b).
+     
+     `esMasterSistema` y NO una lista escrita aquí: la regla de quién es el
+     master vive en `modulePermissions.js` y se comparte con todo el ERP.
+     Copiarla sería tener dos, y el día que se apriete una la otra se queda
+     abierta (regla 8c). */
+  const vePreciosProveedor = esMasterSistema(currentUser)
+    || currentUser?.canVerPreciosProveedor === true;
   const [showProveedores, setShowProveedores] = useState(false);
   const [showMuestrario, setShowMuestrario] = useState(false);
   const [filtroCat, setFiltroCat] = useState('TODOS');
@@ -1714,6 +1730,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               proveedores de cascos, herraje, puertas, etc.»). Antes había que
               irse a Rentabilidad MV a cambiar el precio de una bisagra y
               volver. */}
+          {vePreciosProveedor && (
           <button
             onClick={() => setShowProveedores(v => !v)}
             data-testid="cm3-boton-proveedores"
@@ -1722,6 +1739,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           >
             <Hammer size={12} className="text-dato-400" /> Proveedores
           </button>
+          )}
           {/* Desplegable IMPORTAR */}
           <div className="relative">
             <input ref={relacionInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => importarRelacion(e.target.files?.[0])} />
@@ -1877,7 +1895,12 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           Master, 31/08: «pon botones para poder editar y cambiar datos para
           pedir a los distintos proveedores de cascos, herraje, puertas, etc.».
           Todo lo que entra en el coste, tecleable, agrupado por proveedor. */}
-      {showProveedores && (
+      {/* EL PANEL PREGUNTA POR SU CUENTA. Esconder el botón no cierra nada: el
+          interruptor vive en el estado y un `showProveedores` puesto por
+          cualquier camino —una vuelta de la pantalla, un cambio futuro—
+          pintaría el panel entero. Es la regla 8 del proyecto: la puerta se
+          comprueba donde se pinta, no solo donde se ofrece. */}
+      {vePreciosProveedor && showProveedores && (
         <div data-testid="cm3-panel-proveedores" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in">
           <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
             <Hammer size={15} className="text-master-600" />

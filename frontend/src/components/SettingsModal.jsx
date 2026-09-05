@@ -47,6 +47,7 @@ const CAPABILITY_KEYS = [
   'canAccessAlmacen', 'canAccessBackup', 'canViewAllDocuments', 'canAccessRentabilidad', 'canAccessMando', 'isController',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
   'canUseRender360', 'canUse4K', 'canUseAmueblado', 'canVolcarMV',
+  'canVerPreciosProveedor',
 ];
 
 const controllerOnlyForm = (form, checked) => {
@@ -227,6 +228,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     discountDespiece: 0,
     discountDesmontada: 0,
     canSeeCost: false,
+    // POR DEFECTO NO. Es lo que le CUESTA a la casa cada pieza: se da a
+    // quien el master decida, uno a uno (CLAUDE.md, regla 8b).
+    canVerPreciosProveedor: false,
     canSeeRetail: true,
     canUseAIAnalysis: false,
     canUseKitchenDesigner: false,
@@ -915,6 +919,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       discountDespiece: 0,
       discountDesmontada: 0,
       canSeeCost: false,
+      canVerPreciosProveedor: false,
       canSeeRetail: true,
       canUseAIAnalysis: false,
       canUseKitchenDesigner: false,
@@ -1886,6 +1891,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canAccessArmarios && <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-[9px] font-black">ARMARIOS</span>}
                               {user.canUseAIAnalysis && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">IA LAB</span>}
                               {user.canUseKitchenDesigner && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">COCINAS POR MÓDULOS</span>}
+                              {user.canVerPreciosProveedor && <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black">PRECIOS PROVEEDOR</span>}
                               {user.canSeeCost && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">VER COSTO</span>}
                               {user.canViewTechnicalDespiece && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-black">INFORMES</span>}
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
@@ -2838,6 +2844,26 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   primera: quitar el Estudio 3D a alguien era
                                   imposible de encontrar. */}
                               <span title="Abre «IA Lab» (análisis y laboratorio) y «Estudio 3D» (renders con IA)." className="text-xs font-bold text-slate-700">IA Lab y Estudio 3D</span>
+                            </label>
+                            {/* PRECIOS DE PROVEEDOR (master, 04/09/2026: «la
+                                parte de proveedores que solo la vea yo como
+                                master, pero también pon un permiso para
+                                activárselo a los usuarios que yo considere»).
+                                Abre el panel donde se teclean el descuento de
+                                ACB, el €/m² de las puertas MV, el herraje y la
+                                mano de obra: es lo que le CUESTA a la casa cada
+                                pieza (regla 8b). Se llama como la sección que
+                                abre, para poder encontrarlo al quitarlo
+                                (regla 26). */}
+                            <label className="flex items-center gap-2 cursor-pointer bg-rose-100 px-2 py-1.5 rounded-lg hover:bg-rose-200 transition-colors border border-rose-300">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canVerPreciosProveedor}
+                                onChange={(e) => setUserForm({...userForm, canVerPreciosProveedor: e.target.checked})}
+                                data-testid="permiso-precios-proveedor"
+                                className="w-4 h-4 rounded accent-rose-600"
+                              />
+                              <span title="Abre «Proveedores» en el Presupuestador: el descuento de ACB, el €/m² de las puertas MV, los precios de herraje y la mano de obra. Es lo que le cuesta a la casa cada pieza." className="text-xs font-black text-rose-800">Precios de proveedor</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
                               <input

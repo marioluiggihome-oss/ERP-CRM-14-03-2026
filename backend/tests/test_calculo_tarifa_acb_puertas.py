@@ -71,7 +71,7 @@ def _tarifa():
     src = re.sub(r"^export const", "const", _lee(DATOS), flags=re.M)
     js = src + """
 console.log(JSON.stringify({
-  series: ACB_PUERTAS_SERIES, filas: ACB_PUERTAS,
+  series: ACB_PUERTAS_SERIES, filas: ACB_PUERTAS, colecciones: ACB_COLECCIONES,
   complementos: ACB_COMPLEMENTOS, cantosPieza: ACB_COMPLEMENTOS_CANTOS,
   dtoZocalo: ACB_ZOCALO_SIN_CANTEAR_DTO,
   pruebas: [
@@ -269,7 +269,7 @@ def test_EL_CANTO_ES_PARTE_DEL_PRECIO_EN_LA_PANTALLA():
     assert "cantosSerie.some" in linea, (
         f"al cambiar de serie se queda pedido un canto que esa serie puede no "
         f"fabricar, y la matriz saldría vacía sin decir por qué: {linea.strip()}")
-    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "}, [seriePuerta, cantoActivo]);")
+    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "}, [coleccionPuerta, seriePuerta, cantoActivo]);")
     assert "f.canto === cantoActivo" in matriz, (
         "la matriz mezcla los dos cantos: se pintarían dos precios distintos "
         "para la misma medida")
@@ -402,6 +402,57 @@ def test_EL_FICHERO_DE_DATOS_ES_EL_QUE_SALE_DEL_GENERADOR():
             "el fichero de la tarifa NO es el que sale del generador. Toca el "
             "generador y vuelve a ejecutarlo; no edites el fichero a mano.\n"
             + "\n".join(dif[:40]))
+
+
+def test_LA_COLECCION_SE_LLAMA_CANTEADO():
+    """El master, 04/09/2026: «todo lo que te estoy pasando de tarifa es un
+    apartado que se debe llamar CANTEADO, que son puertas canteadas a cuatro
+    cantos», y «ACB también tiene otras colecciones en puertas de MADERA y
+    puertas LACA, que ya te pasaré más adelante».
+
+    Por eso la colección es un CAMPO y no el nombre de la sección: cuando
+    lleguen Madera y Laca serán otra entrada y otro bloque de precios, sin
+    mover nada de lo que ya funciona."""
+    t = _tarifa()
+    ids = [c["id"] for c in t["colecciones"]]
+    assert "canteado" in ids, "se ha perdido la colección CANTEADO"
+    canteado = next(c for c in t["colecciones"] if c["id"] == "canteado")
+    assert canteado["label"] == "CANTEADO", (
+        f"la colección se llama «{canteado['label']}» y el master la llamó CANTEADO")
+    assert "4 cantos" in canteado["desc"] or "cuatro cantos" in canteado["desc"], (
+        "la colección no dice qué es: puertas canteadas a cuatro cantos")
+
+
+def test_NINGUN_PRECIO_SE_QUEDA_SIN_COLECCION():
+    """Un precio sin colección no se puede pintar cuando haya más de una: o se
+    mezclaría con la tarifa de Madera, o desaparecería."""
+    t = _tarifa()
+    declaradas = {c["id"] for c in t["colecciones"]}
+    sueltas = {f.get("coleccion") for f in t["filas"]} - declaradas
+    assert not sueltas, f"hay precios de colecciones que no existen: {sueltas}"
+    sin = [f for f in t["filas"] if not f.get("coleccion")]
+    assert not sin, f"{len(sin)} precios sin colección: el primero es {sin[:1]}"
+    sueltas_s = {s2.get("coleccion") for s2 in t["series"]} - declaradas
+    assert not sueltas_s, f"hay series de colecciones que no existen: {sueltas_s}"
+
+
+def test_LA_PANTALLA_NO_MEZCLA_DOS_COLECCIONES():
+    """El día que entren Madera y Laca, una tabla que no filtre por colección
+    enseñaría las tres tarifas revueltas — con los mismos altos y anchos, y
+    precios que no son."""
+    cuerpo = sin_comentarios(_lee(PANTALLA))
+    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "}, [coleccionPuerta, seriePuerta, cantoActivo]);")
+    assert "f.coleccion === coleccionPuerta" in matriz, (
+        "la matriz no filtra por colección")
+    panel = _bloque(cuerpo, 'data-testid="acb-puertas"', "\n          ) : (seccion === 'blum'")
+    assert "s2.coleccion === coleccionPuerta" in panel, (
+        "el desplegable de series ofrece las de todas las colecciones")
+    assert 'data-testid="acb-puertas-coleccion"' in panel, (
+        "la colección no se ve en pantalla, y el master pidió que se llamara CANTEADO")
+    add = _bloque(cuerpo, "const addPuertaToCart", "\n  };")
+    assert "coleccion: coleccionPuerta" in add, (
+        "la línea del carrito no dice de qué colección es el frente: al pedir a "
+        "ACB no se sabría si es canteado, madera o laca")
 
 
 def test_LA_SECCION_SE_LLAMA_COMO_LA_PIDIO_EL_MASTER():
