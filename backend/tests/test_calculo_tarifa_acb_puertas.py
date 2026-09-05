@@ -74,10 +74,12 @@ console.log(JSON.stringify({
   tramos: ACB_COMPLEMENTOS_TRAMOS, complementos: ACB_COMPLEMENTOS,
   regletas: ACB_REGLETAS, dtoZocalo: ACB_ZOCALO_SIN_CANTEAR_DTO,
   pruebas: [
-    precioFrenteACB('gm20', 558, 248),
-    precioFrenteACB('qualita', 1298, 598),
-    precioFrenteACB('calabria8', 138, 248),
-    precioFrenteACB('gm20', 9999, 248),
+    precioFrenteACB('gm20', 'pvc', 558, 248),
+    precioFrenteACB('qualita', 'pvc', 1298, 598),
+    precioFrenteACB('calabria8', 'pvc', 138, 248),
+    precioFrenteACB('gm20', 'pvc', 9999, 248),
+    precioFrenteACB('touch22', 'alma', 558, 248),
+    precioFrenteACB('gm20', 'alma', 558, 248),
   ],
 }));"""
     r = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=60)
@@ -85,36 +87,57 @@ console.log(JSON.stringify({
     return json.loads(r.stdout)
 
 
-def test_EL_PRECIO_SUBE_CON_EL_ANCHO():
-    """La propiedad que caza un dígito mal leído: un 19,81 escrito 91,81 rompe
-    la subida y esto se pone rojo."""
-    t = _tarifa()
-    por_alto = {}
-    for f in t["filas"]:
-        por_alto.setdefault((f["serie"], tuple(f["altos"])), []).append((f["ancho"], f["precio"]))
-    fallos = []
-    for (serie, altos), piezas in por_alto.items():
-        piezas.sort()
-        for (w1, p1), (w2, p2) in zip(piezas, piezas[1:]):
-            if p2 < p1:
-                fallos.append(f"{serie} alto {list(altos)}: {w2}mm cuesta {p2} y {w1}mm cuesta {p1}")
-    assert not fallos, (
-        "hay precios que BAJAN al crecer el frente. O la tarifa es así —y hay que "
-        "dejarlo dicho aquí— o es un dígito mal transcrito del PDF:\n  "
-        + "\n  ".join(fallos[:10]))
-
-
-# UN CÉNTIMO DE TOLERANCIA POR EL EJE DEL ALTO, Y SOLO POR AHÍ.
+# UN CÉNTIMO DE TOLERANCIA, Y SOLO UN CÉNTIMO.
 #
-# La propia tarifa de ACB tiene una inversión de un céntimo: el Qualita de
-# 598x598 vale 50,10 € y el de 698x598 vale 50,09 €. Comprobado en el PDF (pág.
-# 43): no es una errata de la transcripción, es el redondeo del proveedor.
+# La propia tarifa de ACB tiene inversiones de un céntimo por redondeo: el
+# Qualita de 598x598 vale 50,10 € y el de 698x598 vale 50,09 €; el Touch 22 de
+# 798x248 vale 30,57 € y el de 798x298 vale 30,56 €. Comprobado en el PDF: no
+# son erratas de la transcripción.
 #
-# La tolerancia es de UN CÉNTIMO a propósito. Lo que esta prueba caza son
+# La tolerancia es de UN céntimo a propósito. Lo que estas dos pruebas cazan son
 # dígitos mal leídos —un 19,81 escrito 91,81, un 44,56 escrito 4,56—, y eso
 # nunca falla por céntimos: falla por decenas. Una tolerancia ancha dejaría
 # pasar justo lo que se busca.
 TOLERANCIA_REDONDEO = 0.011
+
+# INVERSIONES DE LA TARIFA COMPROBADAS UNA A UNA CONTRA EL PDF.
+#
+# Aquí solo entra lo que se ha mirado con lupa —el PDF re-renderizado a 400 dpi
+# y la celda leída otra vez— y ha resultado ser así de verdad. Cada una lleva su
+# página. Es una LISTA CERRADA a propósito: una inversión nueva se pone roja,
+# que es justo el fallo que se busca. Aflojar la tolerancia hasta que dejen de
+# saltar sería tapar erratas futuras con la excusa de estas.
+#
+# Palma Touch, ancho 398: el frente de 448 de alto cuesta 21 céntimos MENOS que
+# el de 348 (34,81 € contra 35,02 € en PVC; 35,51 € contra 35,72 € en ALMA).
+# Pág. 48 del PDF. Es la tarifa de ACB, no la transcripción.
+INVERSIONES_DE_LA_TARIFA = {
+    ("palmaTouch", "pvc", 398, 448, 348),
+    ("palmaTouch", "alma", 398, 448, 348),
+}
+
+
+def test_EL_PRECIO_SUBE_CON_EL_ANCHO():
+    """La propiedad que caza un dígito mal leído: un 19,81 escrito 91,81 rompe
+    la subida y esto se pone rojo."""
+    t = _tarifa()
+    # EL CANTO ENTRA EN EL GRUPO. Sin él se comparaban precios de cantos
+    # distintos —el ALMA de 248 contra el PVC de 298— y salían decenas de
+    # «bajadas» que no existen: el ALMA cuesta más que el PVC en toda la tarifa.
+    por_alto = {}
+    for f in t["filas"]:
+        clave = (f["serie"], f["canto"], tuple(f["altos"]))
+        por_alto.setdefault(clave, []).append((f["ancho"], f["precio"]))
+    fallos = []
+    for (serie, canto, altos), piezas in por_alto.items():
+        piezas.sort()
+        for (w1, p1), (w2, p2) in zip(piezas, piezas[1:]):
+            if p1 - p2 > TOLERANCIA_REDONDEO:
+                fallos.append(f"{serie}/{canto} alto {list(altos)}: {w2}mm cuesta {p2} y {w1}mm cuesta {p1}")
+    assert not fallos, (
+        "hay precios que BAJAN al crecer el frente. O la tarifa es así —y hay que "
+        "dejarlo dicho aquí— o es un dígito mal transcrito del PDF:\n  "
+        + "\n  ".join(fallos[:10]))
 
 
 def test_EL_PRECIO_SUBE_CON_EL_ALTO():
@@ -122,13 +145,16 @@ def test_EL_PRECIO_SUBE_CON_EL_ALTO():
     t = _tarifa()
     por_ancho = {}
     for f in t["filas"]:
-        por_ancho.setdefault((f["serie"], f["ancho"]), []).append((f["altos"][0], f["precio"]))
+        por_ancho.setdefault((f["serie"], f["canto"], f["ancho"]), []).append(
+            (f["altos"][0], f["precio"]))
     fallos = []
-    for (serie, ancho), piezas in por_ancho.items():
+    for (serie, canto, ancho), piezas in por_ancho.items():
         piezas.sort()
         for (h1, p1), (h2, p2) in zip(piezas, piezas[1:]):
+            if (serie, canto, ancho, h2, h1) in INVERSIONES_DE_LA_TARIFA:
+                continue
             if p1 - p2 > TOLERANCIA_REDONDEO:
-                fallos.append(f"{serie} ancho {ancho}: alto {h2} cuesta {p2} y alto {h1} cuesta {p1}")
+                fallos.append(f"{serie}/{canto} ancho {ancho}: alto {h2} cuesta {p2} y alto {h1} cuesta {p1}")
     assert not fallos, (
         "hay precios que BAJAN al crecer el alto del frente:\n  " + "\n  ".join(fallos[:10]))
 
@@ -141,13 +167,22 @@ def test_LO_QUE_NO_SE_FABRICA_NO_VALE_CERO():
         f"hay frentes a 0 € o menos en la tarifa: {ceros[:5]}. Una casilla «----» "
         "del PDF es que ACB NO FABRICA esa medida, no que salga gratis")
     # Y la búsqueda lo dice: `null`, no cero.
-    gm, qual, calabria, inexistente = t["pruebas"]
+    gm, qual, calabria, inexistente, touchAlma, gmAlma = t["pruebas"]
     assert gm == 19.81, f"el frente GM 2.0 de 558x248 vale {gm} y en la tarifa son 19,81 €"
     assert qual == 85.67, f"el Qualita de 1298x598 vale {qual} y en la tarifa son 85,67 €"
     assert calabria is None, (
         "Calabria 8 no se fabrica en 138x248 —el PDF pone «----»— y la tarifa "
         "está devolviendo un precio")
     assert inexistente is None, "una medida que no existe devuelve un precio"
+    # EL CANTO ENTRA EN LA BUSQUEDA. El ALMA cuesta mas que el PVC en toda la
+    # tarifa, asi que devolver «el primero que aparezca» seria un precio
+    # equivocado sin dar ningun error.
+    assert touchAlma == 24.52, (
+        f"el Touch 22 de 558x248 con canto ALMA vale {touchAlma} y en la tarifa "
+        f"son 24,52 € (el de canto PVC son 23,69 €)")
+    assert gmAlma is None, (
+        "GM 2.0 no se fabrica con canto ALMA y la tarifa está devolviendo un "
+        "precio: se estaría cobrando el del PVC")
 
 
 def test_NINGUN_PRECIO_ABSURDO():
@@ -170,6 +205,20 @@ def test_CADA_FILA_TIENE_SU_SERIE_DECLARADA():
         f"hay series en el catálogo sin un solo precio: {sorted(declaradas - usadas)}. "
         "Se ofrecería una serie que al elegirla sale vacía")
 
+    # Y LO MISMO CON EL CANTO. Una serie que anuncia un canto que no fabrica
+    # deja el desplegable con una opción que vacía la matriz — sin error, sin
+    # explicación, y el master pensando que la tarifa está mal cargada.
+    reales = {}
+    for f in t["filas"]:
+        reales.setdefault(f["serie"], set()).add(f["canto"])
+    for s2 in t["series"]:
+        anunciados = set(s2.get("cantos") or [])
+        assert anunciados == reales.get(s2["id"], set()), (
+            f"«{s2['id']}» anuncia los cantos {sorted(anunciados)} y en la tarifa "
+            f"tiene precios en {sorted(reales.get(s2['id'], set()))}. El que sobre "
+            f"sale en el desplegable y deja la matriz vacía; el que falte hace "
+            f"invisible media tarifa.")
+
 
 def test_LA_LETRA_PEQUENA_DE_LA_TARIFA_VIAJA_CON_LA_SERIE():
     """Son las tres cosas que cambian el precio y no están en ninguna casilla."""
@@ -184,6 +233,28 @@ def test_LA_LETRA_PEQUENA_DE_LA_TARIFA_VIAJA_CON_LA_SERIE():
         assert "238" in notas[serie], (
             f"«{serie}»: los frentes de menos de 238 salen LISOS aunque se pidan "
             f"de esta serie, y la tarifa no lo dice")
+
+
+def test_EL_CANTO_ES_PARTE_DEL_PRECIO_EN_LA_PANTALLA():
+    """El canto ALMA cuesta más que el PVC en toda la tarifa. Si la pantalla no
+    lo dejara elegir, o lo dejara pedido en una serie que no lo fabrica, se
+    cobraría un precio que no es y sin dar ningún error."""
+    cuerpo = sin_comentarios(_lee(PANTALLA))
+    assert 'data-testid="acb-puertas-canto"' in cuerpo, (
+        "no se puede elegir el canto: las series Touch se tarifan en dos y el "
+        "ALMA cuesta más")
+    linea = _bloque(cuerpo, "const cantoActivo =", ";")
+    assert "cantosSerie.some" in linea, (
+        f"al cambiar de serie se queda pedido un canto que esa serie puede no "
+        f"fabricar, y la matriz saldría vacía sin decir por qué: {linea.strip()}")
+    matriz = _bloque(cuerpo, "const matrizPuertas = useMemo", "}, [seriePuerta, cantoActivo]);")
+    assert "f.canto === cantoActivo" in matriz, (
+        "la matriz mezcla los dos cantos: se pintarían dos precios distintos "
+        "para la misma medida")
+    add = _bloque(cuerpo, "const addPuertaToCart", "\n  };")
+    assert "canto: cantoActivo" in add, (
+        "el frente va al carrito sin decir de qué canto es: al proveedor no se "
+        "le podría pedir")
 
 
 def test_LA_SECCION_SE_LLAMA_COMO_LA_PIDIO_EL_MASTER():

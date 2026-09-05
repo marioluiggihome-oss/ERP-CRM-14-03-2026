@@ -7,7 +7,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
-import { ACB_PUERTAS, ACB_PUERTAS_SERIES } from '../data/acbPuertas';
+import { ACB_PUERTAS, ACB_PUERTAS_SERIES, cantosDeSerieACB } from '../data/acbPuertas';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -260,6 +260,13 @@ const Cascos = ({ state, setState }) => {
   };
   // ── ACB PUERTAS ──────────────────────────────────────────────────────────
   const [seriePuerta, setSeriePuerta] = useState(ACB_PUERTAS_SERIES[0].id);
+  // EL CANTO ES PARTE DEL PRECIO, no un adorno: en las series Touch el canto
+  // ALMA cuesta siempre mas que el PVC. Al cambiar de serie se vuelve al canto
+  // que esa serie SI fabrica — si no, se quedaria pedido un «alma» en una serie
+  // que solo hace PVC y la matriz saldria vacia sin decir por que.
+  const [cantoPuerta, setCantoPuerta] = useState('pvc');
+  const cantosSerie = cantosDeSerieACB(seriePuerta);
+  const cantoActivo = cantosSerie.some(c => c.id === cantoPuerta) ? cantoPuerta : cantosSerie[0].id;
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
   // El carrito sobrevive a salir a otro módulo y volver: si no, ir al analizador
@@ -549,7 +556,7 @@ const Cascos = ({ state, setState }) => {
    *  puede cotejar celda a celda contra el PDF, que es lo que hay que poder
    *  hacer con una tarifa: comprobarla, no fiarse. */
   const matrizPuertas = useMemo(() => {
-    const filas = ACB_PUERTAS.filter(f => f.serie === seriePuerta);
+    const filas = ACB_PUERTAS.filter(f => f.serie === seriePuerta && f.canto === cantoActivo);
     const anchos = [...new Set(filas.map(f => f.ancho))].sort((a, b) => a - b);
     const grupos = [];
     filas.forEach(f => {
@@ -560,14 +567,14 @@ const Cascos = ({ state, setState }) => {
     });
     grupos.sort((a, b) => a.altos[0] - b.altos[0]);
     return { anchos, grupos };
-  }, [seriePuerta]);
+  }, [seriePuerta, cantoActivo]);
 
   const serieObj = ACB_PUERTAS_SERIES.find(s => s.id === seriePuerta) || ACB_PUERTAS_SERIES[0];
 
   /** Anade un frente al mismo carrito que los cascos: es el mismo pedido. */
   const addPuertaToCart = (altos, ancho, precio) => {
     const alto = altos[0];
-    const sig = `acbp|${seriePuerta}|${altos.join('&')}|${ancho}`;
+    const sig = `acbp|${seriePuerta}|${cantoActivo}|${altos.join('&')}|${ancho}`;
     setCart(prev => {
       const i = prev.findIndex(l => l.sig === sig);
       if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
@@ -578,6 +585,8 @@ const Cascos = ({ state, setState }) => {
         // no es un alto, son dos al mismo precio, y al proveedor hay que
         // decirle cual se quiere.
         gama: 'acbPuertas', serie: seriePuerta, serieLabel: serieObj.label,
+        canto: cantoActivo,
+        cantoLabel: (cantosSerie.find(c => c.id === cantoActivo) || {}).label || '',
         altos, alto, ancho,
         precio: pc(precio), precioBase: precio, qty: 1,
       }];
@@ -1217,6 +1226,16 @@ const Cascos = ({ state, setState }) => {
                   {ACB_PUERTAS_SERIES.map(s2 => <option key={s2.id} value={s2.id}>{s2.label}</option>)}
                 </select>
               </div>
+              {cantosSerie.length > 1 && (
+                <div className="min-w-[150px]">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Canto</label>
+                  <select value={cantoActivo} onChange={e => setCantoPuerta(e.target.value)}
+                    data-testid="acb-puertas-canto"
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                    {cantosSerie.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="flex-[2] min-w-[240px] text-[11px] text-slate-500 self-end pb-1">
                 <div><span className="font-black text-slate-600">Acabados:</span> {serieObj.acabados}</div>
                 <div><span className="font-black text-slate-600">Canto:</span> {serieObj.canto}</div>
