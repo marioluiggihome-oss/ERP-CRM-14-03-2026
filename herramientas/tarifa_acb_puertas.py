@@ -194,6 +194,134 @@ FRENTES = [
     # El 1298 x 698 solo lo hace Palma Touch.
     ([1298], [698], {
         ('palmaTouch','pvc'):[132.29], ('palmaTouch','alma'):[134.93]}),
+    # ── pág. 50: alturas grandes. El 2000 y el 2200 SOLO los hace Palma Touch.
+    ([1498,1598], [298,348,398,448,498,598], {
+        ('touch22','pvc'):   [59.98,66.91,73.23,80.35,88.10,101.61],
+        ('touch22','alma'):  [62.08,69.25,75.79,83.16,91.18,105.17],
+        ('palmaTouch','pvc'):[78.84,83.97,89.08,102.04,108.09,117.96],
+        ('palmaTouch','alma'):[80.41,85.65,90.86,104.08,110.25,120.32],
+        ('touch19','pvc'):   [53.98,60.22,65.90,72.31,79.29,91.45],
+        ('touch19','alma'):  [55.87,62.33,68.21,74.84,82.06,94.65]}),
+    ([1498,1598], [698], {
+        ('palmaTouch','pvc'):[136.72], ('palmaTouch','alma'):[139.46]}),
+    ([2000], [298,348,398,448,498,598,698], {
+        ('palmaTouch','pvc'):[103.45,108.50,112.71,125.81,134.29,150.83,168.88],
+        ('palmaTouch','alma'):[105.52,110.67,114.97,128.32,136.97,153.84,172.25]}),
+    ([2200], [298,348,398,448,498,598,698], {
+        ('palmaTouch','pvc'):[126.18,133.74,140.13,146.24,159.00,179.90,189.56],
+        ('palmaTouch','alma'):[128.70,136.41,142.93,149.16,162.18,183.50,193.35]}),
+
+    # ── págs. 52-53: PALMA SLATE / PALMA CASELLA / PALMA ───────────────────
+    # TRES SERIES Y NO UNA, aunque compartan precio en casi toda la tabla: a
+    # 1498 de alto SOLO la Casella existe, las otras dos ponen «---». Juntarlas
+    # habria hecho vendible un frente que ACB no fabrica.
+    ([138,173], [248,298,348,398,448,498,598,698,798,898,998,1198], {
+        ('palmaSlateVert','pvc'):[13.86,14.69,16.46,18.26,20.02,21.80,25.37,30.11,34.86,38.02,43.61,50.75],
+        ('palmaCasella','pvc'):  [15.24,16.16,18.11,20.08,22.02,23.98,27.90,33.12,38.34,41.82,47.97,55.82],
+        ('palmaHoriz','pvc'):    [15.24,16.16,18.11,20.08,22.02,23.98,27.90,33.12,38.34,41.82,47.97,55.82]}),
+    ([278], [298,348,398,448,498,598,698,798,898,998,1198], {
+        ('palmaSlateVert','pvc'):[15.59,17.55,19.51,21.48,23.42,27.34,31.27,35.17,39.09,46.85,54.66],
+        ('palmaCasella','pvc'):  [17.15,19.30,21.46,23.63,25.77,30.07,34.40,38.69,43.00,51.53,60.13],
+        ('palmaHoriz','pvc'):    [17.15,19.30,21.46,23.63,25.77,30.07,34.40,38.69,43.00,51.53,60.13]}),
+    ([348], [298,348,398,448,498,598,698,798,898], {
+        ('palmaSlateVert','pvc'):[17.26,19.45,21.63,23.86,25.98,30.34,34.69,39.06,43.41],
+        ('palmaCasella','pvc'):  [18.99,21.39,23.79,26.25,28.58,33.37,38.16,42.97,47.75],
+        ('palmaHoriz','pvc'):    [18.99,21.39,23.79,26.25,28.58,33.37,38.16,42.97,47.75]}),
+    ([418], [298,598], {
+        ('palmaSlateVert','pvc'):[18.99,33.41],
+        ('palmaCasella','pvc'):  [20.89,36.75],
+        ('palmaHoriz','pvc'):    [20.89,36.75]}),
+    ([448], [298,348,398,448,498,598,698,798,898], {
+        ('palmaSlateVert','pvc'):[20.89,23.57,26.24,28.94,31.57,36.98,41.82,46.61,51.44],
+        ('palmaCasella','pvc'):  [22.98,25.93,28.86,31.83,34.73,40.68,46.00,51.27,56.59],
+        ('palmaHoriz','pvc'):    [22.98,25.93,28.86,31.83,34.73,40.68,46.00,51.27,56.59]}),
+    ([558], [248,298,348,398,448,498,598], {
+        ('palmaSlateVert','pvc'):[21.45,22.28,25.13,27.94,30.80,33.64,39.33],
+        ('palmaCasella','pvc'):  [23.60,24.51,27.64,30.74,33.88,37.00,43.26],
+        ('palmaHoriz','pvc'):    [23.60,24.51,27.64,30.74,33.88,37.00,43.26]}),
+    ([598], [598], {
+        ('palmaSlateVert','pvc'):[45.34], ('palmaCasella','pvc'):[49.87],
+        ('palmaHoriz','pvc'):[49.87]}),
+    ([698], [248,298,348,398,448,498,598], {
+        ('palmaSlateVert','pvc'):[24.78,25.61,28.89,32.19,35.47,38.76,45.34],
+        ('palmaCasella','pvc'):  [27.26,28.17,31.78,35.41,39.02,42.63,49.87],
+        ('palmaHoriz','pvc'):    [27.26,28.17,31.78,35.41,39.02,42.63,49.87]}),
+    ([798], [248,298,348,398,448,498,598], {
+        ('palmaSlateVert','pvc'):[27.54,28.36,32.02,35.68,39.36,43.04,50.39],
+        ('palmaCasella','pvc'):  [30.29,31.20,35.23,39.25,43.30,47.34,55.43],
+        ('palmaHoriz','pvc'):    [30.29,31.20,35.23,39.25,43.30,47.34,55.43]}),
+    ([898], [248,298,348,398,448,498,598], {
+        ('palmaSlateVert','pvc'):[29.57,30.40,34.30,38.22,42.15,46.06,53.91],
+        ('palmaCasella','pvc'):  [32.53,33.44,37.73,42.04,46.36,50.67,59.30],
+        ('palmaHoriz','pvc'):    [32.53,33.44,37.73,42.04,46.36,50.67,59.30]}),
+    ([1198,1298], [298,348,398,448,498,598], {
+        ('palmaSlateVert','pvc'):[39.96,45.16,50.37,55.51,60.74,71.10],
+        ('palmaCasella','pvc'):  [43.96,49.68,55.41,61.06,66.81,78.21],
+        ('palmaHoriz','pvc'):    [43.96,49.68,55.41,61.06,66.81,78.21]}),
+    # A 1498 de alto SOLO la Casella. Las otras dos ponen «---» en el PDF.
+    ([1498], [298,348,398,448,498,598], {
+        ('palmaCasella','pvc'):[58.71,64.78,72.42,81.48,87.63,103.59]}),
+
+    # ── págs. 55-56: HAFAX y CASELLA, las dos en VETA VERTICAL ─────────────
+    # El PDF les pone UNA sola columna de precio a las dos: es la misma tarifa.
+    ([138,173], [248,298,348,398,448,498,598,698,798,898,998,1198], {
+        ('hafaxCasellaVert','pvc'):[11.65,11.65,12.81,13.94,15.08,16.22,18.52,22.22,25.93,27.78,32.44,37.04]}),
+    ([278], [298,348,398,448,498,598,698,798,898,998,1198], {
+        ('hafaxCasellaVert','pvc'):[12.75,14.09,15.46,16.82,18.16,20.87,23.60,26.30,29.01,36.33,41.74]}),
+    ([348], [298,348,398,448,498,598,698,798,898], {
+        ('hafaxCasellaVert','pvc'):[14.75,16.37,18.00,19.62,21.24,24.47,27.72,30.97,34.20]}),
+    ([418], [298,598], {('hafaxCasellaVert','pvc'):[16.82,28.17]}),
+    ([448], [298,348,398,448,498,598,698,798,898], {
+        ('hafaxCasellaVert','pvc'):[19.10,21.33,23.55,25.78,27.99,32.44,36.26,40.03,43.82]}),
+    ([558], [248,298,348,398,448,498,598], {
+        ('hafaxCasellaVert','pvc'):[20.76,20.76,23.19,25.59,28.02,30.43,35.26]}),
+    ([598], [598], {('hafaxCasellaVert','pvc'):[42.47]}),
+    ([698], [248,298,348,398,448,498,598], {
+        ('hafaxCasellaVert','pvc'):[24.77,24.77,27.72,30.67,33.62,36.57,42.47]}),
+    ([798], [248,298,348,398,448,498,598], {
+        ('hafaxCasellaVert','pvc'):[28.06,28.06,31.46,34.88,38.30,41.70,48.53]}),
+    ([898], [248,298,348,398,448,498,598], {
+        ('hafaxCasellaVert','pvc'):[30.50,30.50,34.20,37.91,41.63,45.32,52.75]}),
+    ([1198,1298], [298,348,398,448,498,598], {
+        ('hafaxCasellaVert','pvc'):[42.00,47.23,52.47,57.70,62.95,73.40]}),
+    ([1498,1598], [298,348,398,448,498,598], {
+        ('hafaxCasellaVert','pvc'):[55.27,61.92,68.58,75.25,81.89,95.22]}),
+
+    # ── págs. 58-59: SERIE FENIX · SERIE UNIVERSO / SERIE LIGNO ────────────
+    # Universo y Ligno comparten una sola columna de precio en el PDF.
+    ([138,173], [248,298,348,398,448,498,598,698,798,898,998,1198], {
+        ('fenix','pvc'):        [14.57,14.57,16.58,18.47,20.26,22.27,26.02,33.16,36.94,40.52,44.55,52.03],
+        ('universoLigno','pvc'):[8.82,8.82,10.03,11.18,12.26,13.48,15.74,20.07,22.35,24.53,26.96,31.49]}),
+    ([278], [298,348,398,448,498,598,698,798,898,998,1198], {
+        ('fenix','pvc'):        [21.68,24.19,26.79,29.39,32.14,37.46,42.32,47.58,52.53,64.28,74.92],
+        ('universoLigno','pvc'):[13.12,14.64,16.21,17.79,19.45,22.67,25.61,28.79,31.79,38.90,45.34]}),
+    ([348], [298,348,398,448,498,598,698,798,898], {
+        ('fenix','pvc'):        [24.07,26.97,29.73,32.48,35.73,41.54,47.27,53.08,58.53],
+        ('universoLigno','pvc'):[14.57,16.33,17.99,19.66,21.62,25.14,28.61,32.13,35.42]}),
+    ([418], [298,598], {
+        ('fenix','pvc'):[26.79,50.39], ('universoLigno','pvc'):[16.21,30.50]}),
+    ([448], [298,348,398,448,498,598,698,798,898], {
+        ('fenix','pvc'):        [34.47,38.56,42.36,46.35,50.78,58.80,77.13,84.75,92.71],
+        ('universoLigno','pvc'):[20.86,23.34,25.64,28.05,30.73,35.59,46.68,51.29,56.11]}),
+    ([558], [248,298,348,398,448,498,598], {
+        ('fenix','pvc'):        [37.46,37.46,41.92,46.06,50.39,55.19,63.91],
+        ('universoLigno','pvc'):[22.67,22.67,25.37,27.88,30.50,33.40,38.68]}),
+    ([598], [598], {('fenix','pvc'):[71.86], ('universoLigno','pvc'):[43.49]}),
+    ([698], [248,298,348,398,448,498,598], {
+        ('fenix','pvc'):        [42.32,42.32,47.27,51.41,56.79,62.21,71.86],
+        ('universoLigno','pvc'):[25.61,25.61,28.61,31.11,34.37,37.65,43.49]}),
+    ([798], [248,298,348,398,448,498,598], {
+        ('fenix','pvc'):        [48.33,48.32,53.85,59.22,64.63,70.92,81.71],
+        ('universoLigno','pvc'):[29.25,29.25,32.59,35.84,39.11,42.92,49.45]}),
+    ([898], [248,298,348,398,448,498,598], {
+        ('fenix','pvc'):        [52.54,52.53,58.53,64.37,70.25,77.09,88.81],
+        ('universoLigno','pvc'):[31.79,31.79,35.42,38.96,42.52,46.65,53.75]}),
+    ([1198,1298], [298,348,398,448,498,598], {
+        ('fenix','pvc'):        [72.85,81.05,89.15,97.16,106.57,122.84],
+        ('universoLigno','pvc'):[44.09,49.05,53.96,58.80,64.50,74.34]}),
+    ([1498,1598], [298,348,398,448,498,598], {
+        ('fenix','pvc'):        [94.84,105.79,115.79,127.05,139.30,160.67],
+        ('universoLigno','pvc'):[57.40,64.03,70.07,76.89,84.30,97.24]}),
 ]
 
 # ── COMPLEMENTOS (pág. 44): se tarifan por SUPERFICIE, en cm² ───────────────
@@ -250,9 +378,25 @@ SERIES = [
     ('touch22','Touch 22MM','Seda · Alto Brillo','PVC ó ALMA',
      'BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA.'),
     ('palmaTouch','Palma Touch 22MM','Seda · Alto Brillo','PVC ó ALMA',
-     'BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA.'),
+     'Lleva TIRADOR VERTICAL. BERNA TOUCH: el tirador GOLA se añade aparte.'),
     ('touch19','Touch 19MM','Solo en Blanco Seda','PVC ó ALMA',
      'BERNA TOUCH: hay que añadir aparte el precio del tirador GOLA.'),
+    ('palmaSlateVert','Palma Slate · veta vertical / sin veta',
+     '4675 · 4677 · Tuareg — sin veta: Blanco Cuero, Cuero, PVC su color','PVC',
+     'Sin veta: el color, el tirador y el canto se piden aparte.'),
+    ('palmaCasella','Palma Casella · veta horizontal',
+     'Roble Casella claro · marrón · natural · oscuro','PVC',
+     'También se puede fabricar con veta vertical. Es la única del grupo Palma que llega a 1498 de alto.'),
+    ('palmaHoriz','Palma / Palma Slate · veta horizontal',
+     '1180 · 1181 · 1176 — Fresno Saupe · Hermo 0,0 · Roble 3822','PVC',
+     ''),
+    ('hafaxCasellaVert','Hafax / Casella · veta vertical',
+     'Hafax 1176 · 1180 · 1181 — Casella Roble: arena, blanco, claro, marrón, natural, oscuro','PVC',
+     'BERNA: hay que añadir aparte el precio del tirador GOLA.'),
+    ('fenix','Fenix','Serie Fenix','PVC',
+     'BERNA FENIX: hay que añadir aparte el precio del tirador GOLA.'),
+    ('universoLigno','Universo / Ligno','Series Universo y Ligno','PVC',
+     'BERNA UNIVERSO: hay que añadir aparte el precio del tirador GOLA.'),
 ]
 
 # Los cantos que existen, con su rótulo. El ALMA solo lo tienen las Touch.
@@ -389,9 +533,17 @@ export const cantosDeSerieACB = (serie) => {
   return ACB_CANTOS.filter((c) => ids.includes(c.id));
 };''')
 
-ruta = "frontend/src/data/acbPuertas.js"
+# DONDE SE ESCRIBE. Por defecto, el fichero de datos del ERP; con un argumento,
+# donde se le diga. Eso ultimo lo usa su candado, que REGENERA a un temporal y
+# compara: sin esa comprobacion, el fichero generado puede separarse del
+# generador sin que nadie lo note —paso, y se perdio un aviso de la tarifa— y
+# entonces el generador deja de ser la fuente y pasa a ser un adorno.
 import os
-os.chdir("/home/user/ERP-CRM-14-03-2026")
+import sys
+
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ruta = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
+    RAIZ, "frontend", "src", "data", "acbPuertas.js")
 with open(ruta, "w", encoding="utf-8") as fh:
     fh.write("\n".join(out) + "\n")
 print("escrito", ruta, len(filas), "filas de frente")

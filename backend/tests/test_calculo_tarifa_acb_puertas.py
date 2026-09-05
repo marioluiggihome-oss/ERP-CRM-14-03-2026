@@ -42,6 +42,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -82,7 +83,19 @@ console.log(JSON.stringify({
     precioFrenteACB('gm20', 'alma', 558, 248),
   ],
 }));"""
-    r = subprocess.run(["node", "-e", js], capture_output=True, text=True, timeout=60)
+    # A UN FICHERO, NO A `node -e`. Con 1.530 precios el script se pasa del
+    # tamaño máximo de la línea de órdenes y `node` revienta con «Argument list
+    # too long» — un error que no se parece en nada a su causa y que dejó seis
+    # pruebas rojas sin que la tarifa tuviera nada malo.
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8",
+                                     delete=False) as fh:
+        fh.write(js)
+        ruta = fh.name
+    try:
+        r = subprocess.run(["node", ruta], capture_output=True, text=True, timeout=120)
+    finally:
+        os.unlink(ruta)
     assert r.returncode == 0, f"la tarifa no se puede leer: {r.stderr[-400:]}"
     return json.loads(r.stdout)
 
@@ -111,9 +124,18 @@ TOLERANCIA_REDONDEO = 0.011
 # Palma Touch, ancho 398: el frente de 448 de alto cuesta 21 céntimos MENOS que
 # el de 348 (34,81 € contra 35,02 € en PVC; 35,51 € contra 35,72 € en ALMA).
 # Pág. 48 del PDF. Es la tarifa de ACB, no la transcripción.
+#
+# Palma Touch, ancho 598: el frente de 1498 de alto cuesta 6,46 € MENOS que el
+# de 1298 (117,96 € contra 124,42 € en PVC; 120,32 € contra 126,91 € en ALMA).
+# Págs. 49 y 50. Y el 124,42 se sale también de su propia fila —de 498 a 598
+# sube 19,75 € cuando en la fila de 1498 sube 9,87 €—, así que lo más probable
+# es que el error esté en la tarifa de ACB. Se deja tal cual: aquí se copia lo
+# que el proveedor factura, no lo que debería facturar.
 INVERSIONES_DE_LA_TARIFA = {
     ("palmaTouch", "pvc", 398, 448, 348),
     ("palmaTouch", "alma", 398, 448, 348),
+    ("palmaTouch", "pvc", 598, 1498, 1298),
+    ("palmaTouch", "alma", 598, 1498, 1298),
 }
 
 
@@ -255,6 +277,44 @@ def test_EL_CANTO_ES_PARTE_DEL_PRECIO_EN_LA_PANTALLA():
     assert "canto: cantoActivo" in add, (
         "el frente va al carrito sin decir de qué canto es: al proveedor no se "
         "le podría pedir")
+
+
+def test_EL_FICHERO_DE_DATOS_ES_EL_QUE_SALE_DEL_GENERADOR():
+    """El generador tiene que SER la fuente, no un adorno.
+
+    `frontend/src/data/acbPuertas.js` se escribe con
+    `herramientas/tarifa_acb_puertas.py`. Si alguien lo edita a mano —o un
+    script se lo deja tocado, que ya pasó y se perdió un aviso de la tarifa—,
+    el generador y el fichero dicen cosas distintas y nadie se entera: el
+    siguiente que regenere borra el cambio, o al revés.
+
+    Se REGENERA a un temporal y se compara byte a byte. Si esto se pone rojo,
+    lo que hay que hacer es tocar el GENERADOR y volver a ejecutarlo, nunca
+    editar el fichero de datos.
+    """
+    generador = os.path.join(RAIZ, "herramientas", "tarifa_acb_puertas.py")
+    assert os.path.exists(generador), (
+        "el generador de la tarifa no está en el repo, y el fichero de datos lo "
+        "cita: nadie podría volver a generarlo")
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        destino = os.path.join(tmp, "acbPuertas.js")
+        r = subprocess.run([sys.executable, generador, destino],
+                           capture_output=True, text=True, timeout=120)
+        assert r.returncode == 0, (
+            f"el generador de la tarifa no se ejecuta: {r.stderr[-500:]}")
+        with open(destino, encoding="utf-8") as f:
+            generado = f.read()
+    actual = _lee(DATOS)
+    if generado != actual:
+        import difflib
+        dif = list(difflib.unified_diff(
+            generado.splitlines(), actual.splitlines(),
+            "lo que genera la herramienta", "lo que hay en el repo", lineterm=""))
+        raise AssertionError(
+            "el fichero de la tarifa NO es el que sale del generador. Toca el "
+            "generador y vuelve a ejecutarlo; no edites el fichero a mano.\n"
+            + "\n".join(dif[:40]))
 
 
 def test_LA_SECCION_SE_LLAMA_COMO_LA_PIDIO_EL_MASTER():
