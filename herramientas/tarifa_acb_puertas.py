@@ -476,6 +476,39 @@ COMPLEMENTOS = {
         'regletas': {698:11.98, 898:14.44, 2440:35.41}},
 }
 
+# ── TIRADORES (pág. 93) ────────────────────────────────────────────────────
+#
+# LA PIEZA QUE FALTABA. Seis series del canteado dicen «BERNA: añadir a esta
+# tarifa el precio del tirador GOLA (pág. 93)», y esa página no venía en el PDF
+# del canteado: hasta hoy esos frentes salían mas baratos de lo que se pagan.
+#
+# GOLA, GOLA OCULTO y ALBA cuestan LO MISMO — el PDF les pone la misma tabla a
+# los tres. Se escriben los tres igual de todos modos: son piezas distintas que
+# se piden por su nombre, y el día que ACB separe los precios se separan aquí
+# sin que nadie tenga que descubrir que estaban compartidos.
+#
+# EL MECANIZADO VA INCLUIDO. Lo dice el propio PDF, y es justo lo que alguien
+# añadiría por su cuenta creyendo que falta.
+TIRADORES = [
+    ('gola', 'Gola', 'Mate · Brillo · Inox · Lacado', 'ancho', {
+        298:13.30, 348:14.42, 398:15.56, 448:16.54, 498:17.54, 598:20.21,
+        698:21.63, 798:25.20, 898:29.70, 1198:38.77, 1298:46.22}),
+    ('golaOculto', 'Gola oculto', 'Mate · Brillo · Inox · Lacado', 'ancho', {
+        298:13.30, 348:14.42, 398:15.56, 448:16.54, 498:17.54, 598:20.21,
+        698:21.63, 798:25.20, 898:29.70, 1198:38.77, 1298:46.22}),
+    ('alba', 'Alba', 'Mate · Brillo · Inox · Lacado', 'ancho', {
+        298:13.30, 348:14.42, 398:15.56, 448:16.54, 498:17.54, 598:20.21,
+        698:21.63, 798:25.20, 898:29.70, 1198:38.77, 1298:46.22}),
+    ('t8778', '877,8', 'Titanio · Cobre', 'fijo', {160: 13.88}),
+    ('t88825', '888,25', 'Cobre + color (Touch mate: blanco, negro, crema, grafito, nube)',
+     'fijo', {160: 8.73}),
+]
+
+# Los recargos del tirador, escritos donde se usan y no a mano en una pantalla.
+TIRADOR_LACADO_PCT = 0.10          # Gola y Gola oculto lacados: +10 %
+TIRADOR_COLOR_MUESTRA_PCT = 0.10   # color según muestra: +10 % por lacado…
+TIRADOR_COLOR_MUESTRA_FIJO = 48.65 # …y además 48,65 € netos
+
 CANTOS_DE_PIEZA = [('unLargo','1 largo'),
                    ('unLargoDosCortos','1 largo + 2 cortos'),
                    ('cuatroCantos','4 cantos')]
@@ -558,6 +591,15 @@ for gid, g in COMPLEMENTOS.items():
         if a - b > 0.011:
             fallos.append(f"complementos {gid} tramo {g['tramos'][i]}: "
                           f"1 largo + 2 cortos ({a}) cuesta mas que 4 cantos ({b})")
+for tid, tlabel, _, tipo, precios in TIRADORES:
+    anchos = sorted(precios)
+    for a1, a2 in zip(anchos, anchos[1:]):
+        if precios[a2] < precios[a1]:
+            fallos.append(f"tirador {tid}: {a2}mm ({precios[a2]}) < {a1}mm ({precios[a1]})")
+    for a1, v in precios.items():
+        if not (1 <= v <= 200):
+            fallos.append(f"tirador {tid} de {a1}mm cuesta {v}, fuera de todo rango")
+
 if fallos:
     print("REVISAR (el precio baja al crecer la pieza):")
     for f in fallos: print("  ", f)
@@ -649,6 +691,27 @@ for gid, g in COMPLEMENTOS.items():
     out.append("  },")
 out.append("};\n")
 
+out.append("""/** LOS TIRADORES (pág. 93 de la tarifa del grupo ACB).
+ *
+ *  Seis series del canteado dicen «añadir a esta tarifa el precio del tirador
+ *  GOLA»: sin esta tabla esos frentes salen más baratos de lo que se pagan.
+ *
+ *  `tipo: 'ancho'` = el precio va por el ancho del frente, en mm.
+ *  `tipo: 'fijo'`  = una sola medida (160 mm).
+ *  EL MECANIZADO VA INCLUIDO, lo dice el PDF. */""")
+out.append("export const ACB_TIRADORES = [")
+for tid, tlabel, acabados, tipo, precios in TIRADORES:
+    out.append("  { id: %s, label: %s, acabados: %s, tipo: %s, precios: %s }," % (
+        js(tid), js(tlabel), js(acabados), js(tipo),
+        js({str(k): v for k, v in sorted(precios.items())})))
+out.append("];\n")
+out.append("""/** Los recargos del tirador, de la misma página. Van aquí y no escritos a
+ *  mano en una pantalla, para que no acaben existiendo dos. */
+export const ACB_TIRADOR_LACADO_PCT = %s;
+export const ACB_TIRADOR_COLOR_MUESTRA_PCT = %s;
+export const ACB_TIRADOR_COLOR_MUESTRA_FIJO = %s;
+""" % (TIRADOR_LACADO_PCT, TIRADOR_COLOR_MUESTRA_PCT, TIRADOR_COLOR_MUESTRA_FIJO))
+
 out.append('''/** EL ZÓCALO SIN CANTEAR TIENE SU PROPIA REGLA (pág. 44 del PDF):
  *  «se hace un descuento del 10 % sobre el precio del costado a 1 largo».
  *  Va aquí y no escrito a mano en la pantalla, para que no acabe habiendo dos
@@ -668,6 +731,15 @@ export const precioFrenteACB = (serie, canto, alto, ancho) => {
     (x) => x.serie === serie && x.canto === canto
         && x.altos.includes(a) && x.ancho === w);
   return f ? f.precio : null;
+};
+
+/** El precio de un tirador para un ancho dado. `null` si ACB no lo hace en
+ *  esa medida — que es distinto de que sea gratis. */
+export const precioTiradorACB = (tirador, ancho) => {
+  const t = ACB_TIRADORES.find((x) => x.id === tirador);
+  if (!t) return null;
+  const v = t.precios[String(Number(ancho))];
+  return v == null ? null : v;
 };
 
 /** Los cantos que ACB fabrica de verdad en esta serie. */

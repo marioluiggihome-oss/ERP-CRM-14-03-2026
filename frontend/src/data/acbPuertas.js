@@ -1707,6 +1707,28 @@ export const ACB_COMPLEMENTOS = {
   },
 };
 
+/** LOS TIRADORES (pág. 93 de la tarifa del grupo ACB).
+ *
+ *  Seis series del canteado dicen «añadir a esta tarifa el precio del tirador
+ *  GOLA»: sin esta tabla esos frentes salen más baratos de lo que se pagan.
+ *
+ *  `tipo: 'ancho'` = el precio va por el ancho del frente, en mm.
+ *  `tipo: 'fijo'`  = una sola medida (160 mm).
+ *  EL MECANIZADO VA INCLUIDO, lo dice el PDF. */
+export const ACB_TIRADORES = [
+  { id: "gola", label: "Gola", acabados: "Mate · Brillo · Inox · Lacado", tipo: "ancho", precios: {"298": 13.3, "348": 14.42, "398": 15.56, "448": 16.54, "498": 17.54, "598": 20.21, "698": 21.63, "798": 25.2, "898": 29.7, "1198": 38.77, "1298": 46.22} },
+  { id: "golaOculto", label: "Gola oculto", acabados: "Mate · Brillo · Inox · Lacado", tipo: "ancho", precios: {"298": 13.3, "348": 14.42, "398": 15.56, "448": 16.54, "498": 17.54, "598": 20.21, "698": 21.63, "798": 25.2, "898": 29.7, "1198": 38.77, "1298": 46.22} },
+  { id: "alba", label: "Alba", acabados: "Mate · Brillo · Inox · Lacado", tipo: "ancho", precios: {"298": 13.3, "348": 14.42, "398": 15.56, "448": 16.54, "498": 17.54, "598": 20.21, "698": 21.63, "798": 25.2, "898": 29.7, "1198": 38.77, "1298": 46.22} },
+  { id: "t8778", label: "877,8", acabados: "Titanio · Cobre", tipo: "fijo", precios: {"160": 13.88} },
+  { id: "t88825", label: "888,25", acabados: "Cobre + color (Touch mate: blanco, negro, crema, grafito, nube)", tipo: "fijo", precios: {"160": 8.73} },
+];
+
+/** Los recargos del tirador, de la misma página. Van aquí y no escritos a
+ *  mano en una pantalla, para que no acaben existiendo dos. */
+export const ACB_TIRADOR_LACADO_PCT = 0.1;
+export const ACB_TIRADOR_COLOR_MUESTRA_PCT = 0.1;
+export const ACB_TIRADOR_COLOR_MUESTRA_FIJO = 48.65;
+
 /** EL ZÓCALO SIN CANTEAR TIENE SU PROPIA REGLA (pág. 44 del PDF):
  *  «se hace un descuento del 10 % sobre el precio del costado a 1 largo».
  *  Va aquí y no escrito a mano en la pantalla, para que no acabe habiendo dos
@@ -1726,6 +1748,15 @@ export const precioFrenteACB = (serie, canto, alto, ancho) => {
     (x) => x.serie === serie && x.canto === canto
         && x.altos.includes(a) && x.ancho === w);
   return f ? f.precio : null;
+};
+
+/** El precio de un tirador para un ancho dado. `null` si ACB no lo hace en
+ *  esa medida — que es distinto de que sea gratis. */
+export const precioTiradorACB = (tirador, ancho) => {
+  const t = ACB_TIRADORES.find((x) => x.id === tirador);
+  if (!t) return null;
+  const v = t.precios[String(Number(ancho))];
+  return v == null ? null : v;
 };
 
 /** Los cantos que ACB fabrica de verdad en esta serie. */

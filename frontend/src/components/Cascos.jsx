@@ -7,7 +7,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart, Lock, Unlock, FileUp, ChevronDown, Package } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
-import { ACB_PUERTAS, ACB_PUERTAS_SERIES, ACB_COLECCIONES, cantosDeSerieACB } from '../data/acbPuertas';
+import { ACB_PUERTAS, ACB_PUERTAS_SERIES, ACB_COLECCIONES, ACB_TIRADORES,
+  ACB_TIRADOR_LACADO_PCT, ACB_TIRADOR_COLOR_MUESTRA_PCT, ACB_TIRADOR_COLOR_MUESTRA_FIJO,
+  cantosDeSerieACB } from '../data/acbPuertas';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -573,6 +575,26 @@ const Cascos = ({ state, setState }) => {
   }, [coleccionPuerta, seriePuerta, cantoActivo]);
 
   const serieObj = ACB_PUERTAS_SERIES.find(s => s.id === seriePuerta) || ACB_PUERTAS_SERIES[0];
+
+  /** Anade un TIRADOR al mismo pedido.
+   *
+   *  Va aqui y no en otra pantalla porque se pide con el frente: seis series
+   *  del canteado dicen «anadir a esta tarifa el precio del tirador GOLA», y
+   *  hasta que esta tabla existio esos frentes salian mas baratos de lo que se
+   *  pagan. */
+  const addTiradorToCart = (t, mm, precio) => {
+    const sig = `acbt|${t.id}|${mm}`;
+    setCart(prev => {
+      const i = prev.findIndex(l => l.sig === sig);
+      if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
+      return [...prev, {
+        key: `${sig}-${Date.now()}`, sig, tirador: true, accesorio: true,
+        tipo: `Tirador ${t.label} ${mm} mm`, gama: 'acbPuertas',
+        coleccion: coleccionPuerta, coleccionLabel: coleccionObj.label,
+        ancho: mm, precio: pc(precio), precioBase: precio, qty: 1,
+      }];
+    });
+  };
 
   /** Anade un frente al mismo carrito que los cascos: es el mismo pedido. */
   const addPuertaToCart = (altos, ancho, precio) => {
@@ -1322,6 +1344,53 @@ const Cascos = ({ state, setState }) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* LOS TIRADORES, DEBAJO DE LOS FRENTES Y NO EN OTRA PANTALLA.
+                Se piden con el frente: la nota de seis series dice «añadir a
+                esta tarifa el precio del tirador GOLA», y sin esta tabla esos
+                frentes salen más baratos de lo que se pagan. */}
+            <div className="mt-4 pt-4 border-t border-slate-200" data-testid="acb-tiradores">
+              <div className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                Tiradores <span className="text-slate-300 normal-case font-bold">· pág. 93 · mecanizado incluido</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] whitespace-nowrap">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left py-2 px-2 font-black uppercase">Tirador</th>
+                      <th className="text-left py-2 px-2 font-black uppercase">Acabados</th>
+                      <th className="text-left py-2 px-2 font-black uppercase">Medidas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {ACB_TIRADORES.map(t => (
+                      <tr key={t.id} className="hover:bg-slate-50/60 align-top">
+                        <td className="py-2 px-2 font-black text-slate-700">{t.label}</td>
+                        <td className="py-2 px-2 text-slate-500 max-w-[18rem] whitespace-normal">{t.acabados}</td>
+                        <td className="py-2 px-2">
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(t.precios).map(([mm, precio]) => (
+                              <button key={mm} type="button"
+                                onClick={() => addTiradorToCart(t, Number(mm), precio)}
+                                data-testid="acb-tirador-add"
+                                title={`Añadir tirador ${t.label} de ${mm} mm`}
+                                className="px-2 py-1 rounded-md border border-slate-200 font-mono text-[10px] text-slate-700 hover:bg-accion-600 hover:text-white hover:border-accion-600 transition-colors">
+                                <span className="font-black">{mm}</span> · {eur(precio)}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-2 text-[10px] text-slate-500" data-testid="acb-tirador-recargos">
+                Gola y Gola oculto <b>lacados</b>: +{Math.round(ACB_TIRADOR_LACADO_PCT * 100)} %.
+                Color según muestra: +{Math.round(ACB_TIRADOR_COLOR_MUESTRA_PCT * 100)} % por lacado
+                y {eur(ACB_TIRADOR_COLOR_MUESTRA_FIJO)} netos. Se añaden a mano al pasar el pedido.
+              </div>
             </div>
 
             <div className="mt-3 text-[10px] text-slate-400">

@@ -73,6 +73,9 @@ def _tarifa():
 console.log(JSON.stringify({
   series: ACB_PUERTAS_SERIES, filas: ACB_PUERTAS, colecciones: ACB_COLECCIONES,
   complementos: ACB_COMPLEMENTOS, cantosPieza: ACB_COMPLEMENTOS_CANTOS,
+  tiradores: ACB_TIRADORES, tiradorLacado: ACB_TIRADOR_LACADO_PCT,
+  tiradorColorPct: ACB_TIRADOR_COLOR_MUESTRA_PCT,
+  tiradorColorFijo: ACB_TIRADOR_COLOR_MUESTRA_FIJO,
   dtoZocalo: ACB_ZOCALO_SIN_CANTEAR_DTO,
   pruebas: [
     precioFrenteACB('gm20', 'pvc', 558, 248),
@@ -402,6 +405,59 @@ def test_EL_FICHERO_DE_DATOS_ES_EL_QUE_SALE_DEL_GENERADOR():
             "el fichero de la tarifa NO es el que sale del generador. Toca el "
             "generador y vuelve a ejecutarlo; no edites el fichero a mano.\n"
             + "\n".join(dif[:40]))
+
+
+def test_EL_TIRADOR_GOLA_TIENE_PRECIO():
+    """LA PIEZA QUE FALTABA. Seis series del canteado dicen «BERNA: añadir a
+    esta tarifa el precio del tirador GOLA (pág. 93)», y esa página no venía en
+    el PDF del canteado: hasta que llegó, esos frentes salían más baratos de lo
+    que se pagan."""
+    t = _tarifa()
+    ids = {x["id"] for x in t["tiradores"]}
+    assert "gola" in ids, (
+        "no hay precio del tirador GOLA, y seis series lo llevan aparte: sus "
+        "frentes salen más baratos de lo que cuestan")
+    gola = next(x for x in t["tiradores"] if x["id"] == "gola")
+    assert gola["precios"]["298"] == 13.30, (
+        f"el Gola de 298 mm vale {gola['precios']['298']} y la tarifa dice 13,30 €")
+    assert gola["precios"]["1298"] == 46.22, (
+        f"el Gola de 1298 mm vale {gola['precios']['1298']} y la tarifa dice 46,22 €")
+    # Y sube con el ancho, como todo lo demás.
+    anchos = sorted(int(k) for k in gola["precios"])
+    for a1, a2 in zip(anchos, anchos[1:]):
+        assert gola["precios"][str(a2)] >= gola["precios"][str(a1)], (
+            f"el Gola de {a2} mm cuesta menos que el de {a1} mm")
+
+
+def test_LOS_RECARGOS_DEL_TIRADOR_ESTAN_EN_LA_TARIFA():
+    """«Gola y Gola oculto lacado +10 %. Para color según muestra +10 % por
+    lacado +48,65 € netos» (pág. 93). Van en la tarifa y no escritos a mano en
+    una pantalla, para que no acaben existiendo dos."""
+    t = _tarifa()
+    assert abs(t["tiradorLacado"] - 0.10) < 1e-9, (
+        f"el recargo del tirador lacado es {t['tiradorLacado']} y la tarifa dice 10 %")
+    assert abs(t["tiradorColorPct"] - 0.10) < 1e-9
+    assert abs(t["tiradorColorFijo"] - 48.65) < 1e-9, (
+        f"el fijo del color según muestra es {t['tiradorColorFijo']} y son 48,65 €")
+
+
+def test_EL_TIRADOR_SE_PIDE_CON_EL_FRENTE():
+    """Va en la misma pantalla y en el mismo carrito: es el mismo pedido a ACB.
+    En otra pantalla se olvida, y el frente sale más barato de lo que se paga."""
+    cuerpo = sin_comentarios(_lee(PANTALLA))
+    assert 'data-testid="acb-tiradores"' in cuerpo, (
+        "los tiradores no se pueden pedir desde la sección de puertas")
+    add = _bloque(cuerpo, "const addTiradorToCart", "\n  };")
+    assert "setCart(prev =>" in add, "el tirador no va al carrito de siempre"
+    assert "tirador: true" in add, (
+        "la línea no se marca como tirador: no se distinguiría de un frente al "
+        "mandarle el pedido al proveedor")
+    assert "precio: pc(precio)" in add, (
+        "el precio del tirador no pasa por `pc`, que es quien decide el precio "
+        "en Cocina Desmontada")
+    assert 'data-testid="acb-tirador-recargos"' in cuerpo, (
+        "no se avisa de los recargos del lacado y del color según muestra: se "
+        "pediría a un precio que no es")
 
 
 def test_LA_COLECCION_SE_LLAMA_CANTEADO():
