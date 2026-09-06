@@ -1000,6 +1000,39 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      entera. Son el grupo 3 de 278×498 y el grupo 5 de 898×398, y tienen su
      propio candado — una matriz con una fila de menos sigue pareciendo una
      matriz.
+   - **TECLEAR LA MEDIDA DE LA PUERTA Y QUE SALGA EL PRECIO** (06/09, a
+     petición del master: «necesito poder poner la medida de la puerta, el
+     ancho y el alto, y que calcule automáticamente el precio... con tirador,
+     sin tirador»). Una puerta real casi nunca cae en una casilla: mide 596 ×
+     397, no 598 × 398. La tarifa lo zanja en una línea (pág. 7): «el precio
+     para medidas especiales será igual al precio de la medida INMEDIATA
+     SUPERIOR». No se interpola nunca (regla 7).
+     - **LO QUE LA TARIFA NO DICE, Y HAY QUE DECIDIR: LA REJILLA TIENE
+       HUECOS.** La fila de alto 598 solo se fabrica en 598 de ancho y la de
+       418 solo en 298 y 598, así que «subir cada medida por su lado» —lo que
+       parece natural— COBRA DE MÁS: una pieza de 560 × 200 se iría a 598 × 598
+       = 61,91 € cuando 698 × 248 = 35,42 € ya la cubre, y en otras 210 medidas
+       ni encuentra casilla. La regla es **la casilla MÁS BARATA QUE CUBRE la
+       pieza**; en el 96 % de los casos coincide con subir por ejes.
+     - **PERO LA CASILLA EXACTA MANDA SOBRE ESO.** Si la medida ES de tarifa se
+       factura ESA casilla, porque la tarifa de ACB tiene inversiones de un
+       céntimo —el Touch 22 de 798×248 vale 31,64 € y el de 798×298 vale
+       31,63 €— y sin esta precedencia teclear una medida daba un precio y
+       pulsar esa misma casilla otro. Un céntimo no arruina a nadie; dos
+       precios para la misma puerta según por dónde entres, sí.
+     - **LA MEDIDA REAL NO SE PIERDE.** El escalón decide lo que CUESTA; el
+       alto y el ancho de verdad son lo que se fabrica y lo que viaja con el
+       pedido — la misma regla que en los costados de MV. Y la FIRMA de la
+       línea va por la medida real: dos puertas de 596 y de 570 se facturan
+       igual y NO son la misma pieza, así que fundirlas dejaría el pedido con
+       la mitad de las puertas.
+     - El criterio de los huecos es NUESTRO, no una línea del PDF, así que la
+       casilla con la que se factura se ENSEÑA al lado de la medida real. Un
+       criterio que no se ve no lo puede comprobar nadie con el proveedor.
+     - De paso: `acabadoOf` pintaba `${l.grosor}mm` para toda línea y una
+       puerta no tiene grosor de tablero, así que TODAS las líneas de ACB
+       salían con un «undefinedmm» pegado al nombre.
+     - Candado: `test_calculo_medida_a_medida_acb.py`.
    - Candados: `test_calculo_tarifa_acb_puertas.py`,
      `test_calculo_tarifa_acb_laca.py` y `test_calculo_tarifa_acb_madera.py`.
 

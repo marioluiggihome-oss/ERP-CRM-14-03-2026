@@ -12,6 +12,7 @@ import { ACB_PUERTAS, ACB_PUERTAS_SERIES, ACB_COLECCIONES, ACB_TIRADORES,
   cantosDeSerieACB } from '../data/acbPuertas';
 import { ACB_LACA_MODELOS, ACB_LACA_ACABADOS, ACB_LACA_MATRICES, ACB_LACA_COLORES,
   gruesosDeModeloACBLaca, lineaDeModeloACBLaca, precioLacaACB } from '../data/acbLaca';
+import { aMmTecleado, casillaFacturableACB, escalonTiradorACB } from '../data/acbMedidas';
 import { ACB_MADERA_MODELOS, ACB_MADERA_ACABADOS, ACB_MADERA_ACABADOS_ABETO,
   ACB_MADERA_MATRICES, ACB_MADERA_VITRINA_MAS_20, chapasDeModeloACBMadera,
   lineaDeModeloACBMadera, precioMaderaACB } from '../data/acbMadera';
@@ -337,6 +338,15 @@ const Cascos = ({ state, setState }) => {
     ...extrasMadera,
   };
 
+  // ── MEDIDA A MEDIDA ─────────────────────────────────────────────────────
+  // Una puerta real casi nunca cae en una casilla del cuadro: mide 596 x 397,
+  // no 598 x 398. Se teclea la medida DE VERDAD y la tarifa dice con que
+  // escalon se factura (`casillaFacturableACB`, que explica el criterio).
+  const [medAlto, setMedAlto] = useState('');
+  const [medAncho, setMedAncho] = useState('');
+  const [medUds, setMedUds] = useState(1);
+  const [medTirador, setMedTirador] = useState('');
+
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
   // El carrito sobrevive a salir a otro módulo y volver: si no, ir al analizador
@@ -582,6 +592,18 @@ const Cascos = ({ state, setState }) => {
   // Acabado legible para diferenciar líneas mezcladas en el pedido.
   const acabadoOf = (l) => {
     if (l.accesorio) return l.ref || 'BLUM';
+    /* UNA PUERTA NO TIENE GROSOR DE TABLERO, y aqui se pintaba
+       `${l.grosor}mm` para todo: TODAS las lineas de ACB salian con un
+       «undefinedmm» pegado al nombre. Lo que identifica un frente es su
+       coleccion, su serie o modelo y su acabado — que es ademas lo que hay
+       que leer para pedirselo al proveedor. */
+    if (l.puerta) {
+      /* Sin repetir la coleccion ni la serie: eso ya va en el nombre de la
+         linea. Aqui va el ACABADO, que es lo que falta para pedirla. */
+      return [l.chapaLabel, l.cantoLabel, l.acabadoLabel, l.extras]
+        .filter(Boolean).join(' · ') || l.coleccionLabel;
+    }
+    if (l.tirador) return [l.coleccionLabel, l.tipo].filter(Boolean).join(' · ');
     const g = l.gama || 'kit';
     return g === 'kit' ? `${l.colorLabel} · ${l.grosor}mm` : `${gamaLabelOf(g)} · ${l.grosor}mm`;
   };
@@ -697,6 +719,110 @@ const Cascos = ({ state, setState }) => {
         tipo: `Tirador ${t.label} ${mm} mm`, gama: 'acbPuertas',
         coleccion: coleccionPuerta, coleccionLabel: coleccionObj.label,
         ancho: mm, precio: pc(precio), precioBase: precio, qty: 1,
+      }];
+    });
+  };
+
+  /* LO QUE SE TECLEA, PASADO A MILIMETROS Y RESUELTO CONTRA LA TARIFA.
+     La matriz que se le pasa es la MISMA que pinta la tabla, a proposito: asi
+     el precio de teclear una medida y el de pulsar una casilla no se pueden
+     separar nunca. */
+  const medAltoMm = aMmTecleado(medAlto, unidad);
+  const medAnchoMm = aMmTecleado(medAncho, unidad);
+  const casillaMedida = (medAltoMm && medAnchoMm)
+    ? casillaFacturableACB(matrizPuertas, medAltoMm, medAnchoMm) : null;
+  const tiradorObj = ACB_TIRADORES.find(t => t.id === medTirador) || null;
+  /* EL TIRADOR SE FACTURA POR EL ANCHO DEL FRENTE, y por su propio escalon:
+     un tirador de 300 se cobra al de 348. Los de medida fija (160 mm) no
+     dependen del ancho. */
+  const escalonTirador = tiradorObj
+    ? (tiradorObj.tipo === 'ancho'
+        ? (medAnchoMm ? escalonTiradorACB(tiradorObj.precios, medAnchoMm) : null)
+        : { ancho: Number(Object.keys(tiradorObj.precios)[0]),
+            precio: Object.values(tiradorObj.precios)[0], exacta: true })
+    : null;
+  const precioLineaMedida = casillaMedida
+    ? pc(casillaMedida.precio) + (escalonTirador ? pc(escalonTirador.precio) : 0)
+    : null;
+
+  /* Lo que distingue una pieza de otra DENTRO de la coleccion elegida: el
+     canto en el canteado, el acabado y lo que lleve encima en la laca, y la
+     chapa mas el acabado en la madera. Entra en la firma de la linea para que
+     dos frentes de la misma medida y distinto acabado no se fundan en uno. */
+  const acabadoDeLaColeccion = () => {
+    if (coleccionPuerta === 'laca') {
+      return [acabadoLaca, especialLaca ? 'especial' : '', xolidLaca ? 'xolid' : '',
+        decoracionObj ? decoracionObj.nombre : ''].filter(Boolean).join('+');
+    }
+    if (coleccionPuerta === 'madera') {
+      return [chapaActiva, acabadoMaderaActivo, acabadoAbeto, vitrinaMadera,
+        ...Object.keys(extrasMadera).filter(k => extrasMadera[k])].filter(Boolean).join('+');
+    }
+    return cantoActivo;
+  };
+
+  /* Los campos DESCRIPTIVOS de lo que hay elegido ahora mismo. Se usan tal
+     cual en la linea, para que un frente a medida se lea igual que uno pulsado
+     en el cuadro y para que el pedido al proveedor diga lo mismo por los dos
+     caminos. */
+  const detalleDeLaColeccion = () => {
+    if (coleccionPuerta === 'laca') {
+      const ac = ACB_LACA_ACABADOS.find(x => x.id === acabadoLaca);
+      return { serieLabel: `${modeloLacaObj.nombre} ${gruesoActivo}mm`,
+        acabadoLabel: ac ? ac.label : '',
+        extras: [especialLaca ? 'color especial' : '', xolidLaca ? 'XOLID' : '',
+          decoracionObj ? decoracionObj.nombre : ''].filter(Boolean).join(' · '),
+        tiradorAparte: modeloLacaObj.tiradorAparte };
+    }
+    if (coleccionPuerta === 'madera') {
+      const ch = chapasMadera.find(x => x.id === chapaActiva);
+      const ac = ACB_MADERA_ACABADOS.find(x => x.id === acabadoMaderaActivo);
+      const ab = ACB_MADERA_ACABADOS_ABETO.find(x => x.id === acabadoAbeto);
+      return { serieLabel: modeloMaderaObj.nombre,
+        chapaLabel: ch ? ch.label : '', acabadoLabel: ac ? ac.label : '',
+        extras: [ab ? ab.label : '',
+          vitrinaMadera === 'normal' ? 'vitrina' : '',
+          vitrinaMadera === 'palilleria' ? 'vitrina palillería/celosía' : '',
+          ...Object.keys(extrasMadera).filter(k => extrasMadera[k])].filter(Boolean).join(' · '),
+        chapaSinConfirmar: !!(lineaMadera && lineaMadera.chapaSinConfirmar) };
+    }
+    return { serieLabel: serieObj.label,
+      cantoLabel: (cantosSerie.find(c => c.id === cantoActivo) || {}).label || '' };
+  };
+
+  /** Anade al carrito UNA PIEZA CON SU MEDIDA REAL.
+   *
+   *  La medida real y el escalon con el que se factura viajan LAS DOS en la
+   *  linea: el escalon decide lo que cuesta, el alto y el ancho de verdad son
+   *  lo que se fabrica y lo que hay que mandarle al proveedor (CLAUDE.md, «EL
+   *  ESCALON DE LA TARIFA NO ES LA MEDIDA»). */
+  const addMedidaToCart = () => {
+    if (!casillaMedida) return;
+    const uds = Math.max(1, parseInt(medUds, 10) || 1);
+    const base = casillaMedida.precio + (escalonTirador ? escalonTirador.precio : 0);
+    const det = detalleDeLaColeccion();
+    /* LA FIRMA LLEVA LA MEDIDA REAL, no el escalon: dos puertas de 596 y de
+       570 se facturan igual y NO son la misma pieza — fundirlas dejaria el
+       pedido con la mitad de las puertas y con la medida de una sola. */
+    const sig = `acbmed|${coleccionPuerta}|${det.serieLabel}|${acabadoDeLaColeccion()}|`
+      + `${medAltoMm}x${medAnchoMm}|${medTirador || 'sin'}`;
+    setCart(prev => {
+      const i = prev.findIndex(l => l.sig === sig);
+      if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + uds }; return c; }
+      return [...prev, {
+        key: `${sig}-${Date.now()}`, sig, puerta: true, aMedida: true,
+        tipo: `Frente ${coleccionObj.label} ${det.serieLabel} a medida`,
+        gama: 'acbPuertas', coleccion: coleccionPuerta, coleccionLabel: coleccionObj.label,
+        serie: det.serieLabel, ...det,
+        alto: medAltoMm, ancho: medAnchoMm, altos: [medAltoMm],
+        altoFacturado: casillaMedida.alto, anchoFacturado: casillaMedida.ancho,
+        medidaExacta: casillaMedida.exacta,
+        tirador: medTirador || null,
+        tiradorLabel: tiradorObj ? tiradorObj.label : '',
+        tiradorAncho: escalonTirador ? escalonTirador.ancho : null,
+        tiradorPrecio: escalonTirador ? pc(escalonTirador.precio) : 0,
+        precioFrente: pc(casillaMedida.precio),
+        precio: pc(base), precioBase: base, qty: uds,
       }];
     });
   };
@@ -1697,6 +1823,94 @@ const Cascos = ({ state, setState }) => {
               </table>
             </div>
 
+            {/* MEDIDA A MEDIDA. El cuadro de arriba es la TARIFA; esto es la
+                PUERTA. Se teclea el alto y el ancho de verdad y la tarifa dice
+                con que escalon se factura — nunca se interpola (regla 7). */}
+            <div data-testid="acb-medida" className="mt-4 rounded-xl border border-accion-200 bg-accion-50/40 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] font-black text-accion-700 uppercase tracking-wide">Medida a medida</span>
+                <span className="text-[10px] text-slate-500">
+                  el precio sale del escalón inmediato superior de la tarifa, sin interpolar
+                </span>
+              </div>
+              <div className="flex items-end gap-2 flex-wrap">
+                <div className="w-24">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Alto ({unidad})</label>
+                  {/* SIN `step`: un costado se corta a milimetro, asi que no se
+                      fija un paso que el navegador rechace. Y ADMITE COMA: en
+                      un teclado español se teclea 59,6 (lo resuelve
+                      `aMmTecleado`). Por eso el input es de texto. */}
+                  <input type="text" inputMode="decimal" value={medAlto} data-testid="acb-medida-alto"
+                    onChange={e => setMedAlto(e.target.value)} placeholder={unidad === 'cm' ? '59,6' : '596'}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white" />
+                </div>
+                <div className="w-24">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Ancho ({unidad})</label>
+                  <input type="text" inputMode="decimal" value={medAncho} data-testid="acb-medida-ancho"
+                    onChange={e => setMedAncho(e.target.value)} placeholder={unidad === 'cm' ? '39,7' : '397'}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white" />
+                </div>
+                <div className="w-20">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Uds</label>
+                  <input type="number" min="1" value={medUds} data-testid="acb-medida-uds"
+                    onChange={e => setMedUds(e.target.value)}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white" />
+                </div>
+                <div className="min-w-[190px] flex-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tirador</label>
+                  <select value={medTirador} onChange={e => setMedTirador(e.target.value)}
+                    data-testid="acb-medida-tirador"
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                    <option value="">Sin tirador</option>
+                    {ACB_TIRADORES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </div>
+                <button type="button" onClick={addMedidaToCart} disabled={!casillaMedida}
+                  data-testid="acb-medida-add"
+                  className="px-4 py-2 rounded-lg text-sm font-black text-white bg-accion-600 hover:bg-accion-700 disabled:bg-slate-200 disabled:text-slate-400">
+                  Añadir a la línea
+                </button>
+              </div>
+
+              {/* SE ENSEÑA CON QUE CASILLA SE FACTURA. El criterio de los huecos
+                  de la rejilla es una decision nuestra, no una linea del PDF:
+                  si no se ve, no lo puede comprobar nadie con el proveedor. */}
+              {(medAltoMm && medAnchoMm) && (
+                <div data-testid="acb-medida-resumen" className="mt-2 text-[11px] font-bold">
+                  {casillaMedida ? (
+                    <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-slate-600">
+                      <span>Pieza <span className="font-black text-slate-800">{med(medAltoMm)} × {med(medAnchoMm)} {unidad}</span></span>
+                      <span className={casillaMedida.exacta ? 'text-ok-700' : 'text-aviso-700'}>
+                        {casillaMedida.exacta
+                          ? 'medida de tarifa'
+                          : `se factura como ${med(casillaMedida.alto)} × ${med(casillaMedida.ancho)} ${unidad}`}
+                      </span>
+                      <span>Frente <span className="font-black text-slate-800">{eur(pc(casillaMedida.precio))}</span></span>
+                      {escalonTirador && (
+                        <span>+ tirador {tiradorObj.label} {med(escalonTirador.ancho)} {unidad}{' '}
+                          <span className="font-black text-slate-800">{eur(pc(escalonTirador.precio))}</span></span>
+                      )}
+                      {tiradorObj && !escalonTirador && (
+                        <span className="text-error-600">ACB no hace ese tirador tan ancho</span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">
+                        {medUds > 1 ? `${medUds} × ` : ''}
+                        {/* SIN `|| 0`: aqui dentro `precioLineaMedida` NO puede
+                            ser nulo —esta rama solo se pinta con casilla— y un
+                            cero por defecto en un precio es una puerta gratis
+                            en el escandallo (CLAUDE.md, regla 7). */}
+                        <span className="font-black text-slate-900">{eur(precioLineaMedida * Math.max(1, parseInt(medUds, 10) || 1))}</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-error-600">
+                      ACB no fabrica ninguna pieza que cubra {med(medAltoMm)} × {med(medAnchoMm)} {unidad} en esta selección.
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* LOS TIRADORES, DEBAJO DE LOS FRENTES Y NO EN OTRA PANTALLA.
                 Se piden con el frente: la nota de seis series dice «añadir a
                 esta tarifa el precio del tirador GOLA», y sin esta tabla esos
@@ -1823,11 +2037,27 @@ const Cascos = ({ state, setState }) => {
                     </span>
                   ) : (
                     <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
-                      <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[l.color] || '#e3e8ee' }} />
+                      {/* El circulito es el COLOR DEL CASCO. Una puerta de ACB
+                          no lo tiene, y pintarlo en gris hacia creer que si. */}
+                      {!l.puerta && !l.tirador && (
+                        <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[l.color] || '#e3e8ee' }} />
+                      )}
                       <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
                     </span>
                   )}
-                  <p className="text-[10px] text-slate-400 mt-0.5">{l.accesorio ? eur(l.precio) : `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)} ${unidad} · ${eur(l.precio)}`}</p>
+                  {/* UNA PUERTA NO TIENE FONDO: pintar `med(l.fondo)` daba
+                      «55.8x24.8xNaN cm» en todas las lineas de ACB. Y cuando la
+                      medida no es de tarifa se dice con que casilla se factura,
+                      que es lo que hay que poder cotejar con el proveedor. */}
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {l.accesorio ? eur(l.precio) : l.puerta
+                      ? `${med(l.alto)}×${med(l.ancho)} ${unidad}`
+                        + (l.altoFacturado && !l.medidaExacta
+                          ? ` · se factura ${med(l.altoFacturado)}×${med(l.anchoFacturado)}` : '')
+                        + (l.tiradorLabel ? ` · tirador ${l.tiradorLabel}` : '')
+                        + ` · ${eur(l.precio)}`
+                      : `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)} ${unidad} · ${eur(l.precio)}`}
+                  </p>
                 </div>
                 <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
                 <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
