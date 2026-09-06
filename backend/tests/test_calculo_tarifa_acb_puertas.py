@@ -575,6 +575,49 @@ def test_LA_SECCION_SE_LLAMA_COMO_LA_PIDIO_EL_MASTER():
         f"la sección de puertas no va junto a la de cascos: {ids}")
 
 
+def test_NINGUNA_SECCION_SE_QUEDA_CON_LA_PESTANA_EN_BLANCO():
+    """UNA PESTAÑA SIN NOMBRE NO LA PULSA NADIE.
+
+    La sección ACB PUERTAS estuvo entera —tres tarifas, más de cuatro mil
+    precios, canteado, laca y madera— detrás de un BOTÓN EN BLANCO. Existía,
+    abría y funcionaba: simplemente no se veía. La pestaña pintaba el rótulo
+    solo para «cascos» y para las demás llamaba a `ProviderLogo`, que conoce
+    blum, gtv y emuca y para todo lo demás devolvía `null`.
+
+    NO LO CAZÓ NINGÚN CANDADO, y había uno mirando justo al lado: el de arriba
+    comprueba que la sección esté declarada y se llame «ACB PUERTAS», y eso era
+    verdad — en el array. Lo que ninguno miraba es si ese nombre llega a la
+    pantalla. Un candado que lee la declaración y no el pintado da confianza
+    falsa, que es peor que no tener candado.
+
+    Se comprueban las dos mitades: que `ProviderLogo` tenga SALIDA POR DEFECTO
+    (nunca `null`, que es lo que deja el hueco) y que la pestaña le pase el
+    rótulo para que tenga qué escribir.
+    """
+    cuerpo = sin_comentarios(_lee(PANTALLA))
+    logo = _bloque(cuerpo, "function ProviderLogo(", "\n}")
+    assert "return null;" not in logo, (
+        "ProviderLogo vuelve a devolver `null`: el proveedor que no tenga "
+        "wordmark se queda con la pestaña EN BLANCO y su sección desaparece de "
+        "la pantalla sin dar ningún error")
+    assert "label" in logo.split("{")[0] or "label = " in logo, (
+        "ProviderLogo no recibe el rótulo, así que no tiene qué escribir "
+        "cuando no hay logo")
+
+    secciones = _bloque(cuerpo, "const SECCIONES = [", "\n];")
+    ids = re.findall(r"id: '(\w+)'", secciones)
+    con_logo = set(re.findall(r"id === '(\w+)'", logo))
+    # El rótulo de la pestaña: o lo pinta el logo, o lo escribe el nombre.
+    pestana = _bloque(cuerpo, "{SECCIONES.map(s => (", "))}")
+    assert "label={s.label}" in pestana, (
+        f"la pestaña no le pasa el rótulo a ProviderLogo, así que las secciones "
+        f"sin wordmark ({sorted(set(ids) - con_logo - {'cascos'})}) salen en "
+        f"blanco")
+    for sid in ids:
+        assert sid == "cascos" or sid in con_logo or "label" in pestana, (
+            f"la sección «{sid}» no tiene ni logo ni rótulo en la pestaña")
+
+
 def test_LA_PANTALLA_PINTA_LA_MATRIZ_Y_NO_INVENTA_HUECOS():
     cuerpo = sin_comentarios(_lee(PANTALLA))
     panel = _bloque(cuerpo, 'data-testid="acb-puertas"', "\n          ) : (seccion === 'blum'")

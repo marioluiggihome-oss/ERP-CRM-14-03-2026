@@ -70,7 +70,13 @@ const BLUM_PRODUCTOS = [
 
 // Logotipos de proveedor (wordmarks SVG inline en colores de marca; sin hotlinking
 // externo para evitar problemas de CSP / enlaces rotos).
-function ProviderLogo({ id, height = 20 }) {
+//
+// SI NO HAY LOGO, SE ESCRIBE EL NOMBRE. Devolver `null` deja un BOTON EN
+// BLANCO, y un boton en blanco no lo pulsa nadie: la seccion existe, abre y
+// funciona, pero no se encuentra. Paso con ACB PUERTAS —tres tarifas y mas de
+// cuatro mil precios detras de una pestaña invisible— y no lo caza ningun
+// candado de calculo, porque lo que falla es lo que se VE.
+function ProviderLogo({ id, label = '', height = 20 }) {
   const box = { display: 'inline-flex', alignItems: 'center' };
   if (id === 'blum') {
     // Caja naranja, "blum" en blanco itálico con flecha ascendente y ®.
@@ -104,7 +110,13 @@ function ProviderLogo({ id, height = 20 }) {
       </svg>
     );
   }
-  return null;
+  // El proveedor que no tiene wordmark va con su nombre, nunca vacio.
+  return (
+    <span style={{ ...box, fontWeight: 900, letterSpacing: '0.02em',
+      fontSize: Math.max(11, Math.round(height * 0.62)) }}>
+      {label || id}
+    </span>
+  );
 }
 
 // Dibujo esquemático (SVG) reconocible según el tipo de casco.
@@ -1274,7 +1286,7 @@ const Cascos = ({ state, setState }) => {
             {SECCIONES.map(s => (
               <button key={s.id} onClick={() => setSeccion(s.id)}
                 className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors flex items-center justify-center gap-1.5 ${seccion === s.id ? (s.id === 'blum' ? 'bg-accion-500 text-white shadow' : s.id === 'gtv' ? 'bg-accion-700 text-white shadow' : s.id === 'emuca' ? 'bg-slate-700 text-white shadow' : 'bg-accion-600 text-white shadow') : 'text-slate-500 hover:bg-slate-100'}`}>
-                {s.id === 'cascos' ? s.label : <ProviderLogo id={s.id} height={18} />}
+                {s.id === 'cascos' ? s.label : <ProviderLogo id={s.id} label={s.label} height={18} />}
               </button>
             ))}
           </div>
@@ -1740,7 +1752,7 @@ const Cascos = ({ state, setState }) => {
           ) : (seccion === 'blum' || seccion === 'gtv' || seccion === 'emuca') && totalMarcaSec > 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <ProviderLogo id={seccion} height={24} />
+                <ProviderLogo id={seccion} label={(SECCIONES.find(s => s.id === seccion) || {}).label} height={24} />
                 <span className="text-xs text-slate-400">{resultadosBlum.length} de {totalMarcaSec} artículos</span>
               </div>
               <div className="relative mb-3">
@@ -1769,7 +1781,7 @@ const Cascos = ({ state, setState }) => {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
-              <div className="mx-auto mb-4 flex items-center justify-center"><ProviderLogo id={seccion} height={44} /></div>
+              <div className="mx-auto mb-4 flex items-center justify-center"><ProviderLogo id={seccion} label={(SECCIONES.find(s => s.id === seccion) || {}).label} height={44} /></div>
               <p className="text-sm text-slate-500 mt-1">{(SECCIONES.find(s => s.id === seccion) || {}).desc}</p>
               <p className="text-xs text-slate-400 mt-3 max-w-sm mx-auto">Catálogo en preparación. En cuanto carguemos la tarifa de este proveedor podrás buscar sus productos y añadirlos al mismo presupuesto.</p>
             </div>
@@ -1806,7 +1818,7 @@ const Cascos = ({ state, setState }) => {
                   <p className="text-xs font-bold text-slate-700 truncate">{l.accesorio ? l.tipo : nombre(l)}</p>
                   {l.accesorio ? (
                     <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-100 max-w-full">
-                      <ProviderLogo id="blum" height={12} />
+                      <ProviderLogo id="blum" label="BLUM" height={12} />
                       <span className="text-[10px] font-black text-orange-700 truncate">{l.ref}</span>
                     </span>
                   ) : (
