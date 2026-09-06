@@ -137,6 +137,32 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      3D está congelado y porque cuánto se cobra por un render lo decide el
      master. A los usuarios que no son master NO les afecta: el servidor los
      sigue forzando a `gemini` (regla 11).
+   - **TODO BOTÓN QUE EDITA NUESTRO RENDER TIENE QUE DECIRLO** (06/09, a
+     petición del master: «cuando le doy al botón de visita decorador cambia
+     los colores que he ido cambiando después de las puertas»). El servidor
+     tiene un detector de croquis: si la referencia parece un dibujo a mano, no
+     la EDITA, la INTERPRETA, y reconstruye la cocina desde cero — con los
+     acabados de partida. Una cocina clara tiene poco color y mucho brillo, que
+     es la firma del papel. Para eso existe `editingRender`… y estaba puesto en
+     UNA sola llamada, la de «aplicar cambios», mientras SEIS botones más
+     editaban la misma imagen sin declararlo: decorador, HD, 4K, variante de
+     color, ficha técnica y 360º. **Un arreglo aplicado a un sitio y no a los
+     otros seis no es un arreglo.** El 360º va por su propia ruta, que no
+     declara ese campo y no pasa por el detector: ahí NO se le cuela.
+   - **Y LA IMAGEN SOLA NO BASTA: HAY QUE DECIRLE QUÉ CONSERVAR.** La línea de
+     «aplicar cambios» arrastraba la lista de lo ya aplicado de una vuelta a la
+     siguiente; los botones que no deben tocar el diseño no la llevaban, así
+     que cada pulsación era una vuelta sin memoria. Ahora la comparten por
+     `memoriaDeCambios()`. NO la llevan `colorVariant` ni la ficha técnica, a
+     propósito: el primero cambia el color aposta —la lista traería el
+     anterior— y la segunda es un plano, no una foto. Candado:
+     `test_pantalla_estudio3d_no_pierde_acabados.py`.
+   - **«MIS RENDERS» VIVE EN LA CABECERA, NO FLOTANDO ABAJO** (06/09). En una
+     tablet de 8,6" en vertical caía justo encima de la barra de escribir el
+     cambio, que es por donde se trabaja. Va como HERMANO de las dos mitades de
+     la cabecera, no dentro de una: al meterlo dentro con `flex-1 min-w-0`, esa
+     mitad se dejaba encoger, las dos cabían en una línea y se pintaban
+     montadas.
    - **SE PERDIÓ EL AVISO DE MOTOR DE RESPALDO.** Hasta el 04/09 la pantalla
      decía en ámbar «lo ha pintado un modelo de respaldo, no lo uses para
      comparar motores». El Estudio congelado ya no lo enseña; el dato sigue

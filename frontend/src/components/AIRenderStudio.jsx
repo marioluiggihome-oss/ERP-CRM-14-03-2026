@@ -863,6 +863,9 @@ export default function AIRenderStudio({ state, setState }) {
       const dataUrl = await imageToDataUrl(src);
       const r = await fetch(`${API_URL}/api/ai-engine/render/orbit`, {
         method: 'POST', headers: getAuthHeaders(),
+        // El 360º va por SU PROPIO endpoint (`/render/orbit`), cuyo cuerpo no
+        // admite `editingRender` — se le manda desde el servidor. No se le
+        // cuela aqui un campo que la ruta no declara.
         body: JSON.stringify({ referenceImage: dataUrl, projectType: tipo3d, n: 6 }),
       });
       const d = await r.json();
@@ -1405,6 +1408,30 @@ export default function AIRenderStudio({ state, setState }) {
     return prev.trim() ? `${prev.trim()}, ${t}` : t;
   });
 
+  /** LO QUE YA SE HA PEDIDO Y NO SE PUEDE PERDER.
+   *
+   *  El master, 06/09/2026: «cuando le doy al botón de visita decorador cambia
+   *  los colores que he ido cambiando después de las puertas, y eso no debería
+   *  pasar; debería guardar todo lo que yo le voy pidiendo».
+   *
+   *  La linea de «aplicar cambios» ya arrastraba esta lista de una vuelta a la
+   *  siguiente; los botones que NO deben tocar el diseño —decorador, HD, 4K y
+   *  360º— no la llevaban, asi que cada uno de ellos era una vuelta sin
+   *  memoria. La imagen de referencia sola no basta: al modelo hay que
+   *  DECIRLE lo que tiene que conservar, porque si no lo lee como una escena a
+   *  reinterpretar.
+   *
+   *  NO se le pone a `colorVariant` ni a la ficha tecnica a proposito: el
+   *  primero esta cambiando el color aposta —la lista traeria el anterior y
+   *  pelearia con el nuevo— y la segunda no es una foto, es un plano. */
+  const memoriaDeCambios = () => (
+    editAppliedChanges.length
+      ? ('\n\nACABADOS Y CAMBIOS YA APLICADOS QUE DEBES CONSERVAR EXACTAMENTE, '
+         + 'SIN VOLVER A LOS ORIGINALES:\n'
+         + editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n') + '\n')
+      : ''
+  );
+
   // Genera una variante del render actual cambiando SOLO el color de los muebles.
   const colorVariant = async (colorInput) => {
     const img = currentImage();
@@ -1427,6 +1454,15 @@ export default function AIRenderStudio({ state, setState }) {
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,
+          // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
+          // servidor se lo pasa al detector de croquis, y una cocina clara
+          // —paredes, muebles y encimera claros— tiene poco color y mucho
+          // brillo, que es justo la firma del papel: la toma por un dibujo a
+          // mano y se va por la rama de «construye lo que esta dibujado», o
+          // sea que REHACE la cocina entera en vez de respetarla. Ahi se
+          // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
+          // cambios; estos seis botones editan la misma imagen y no lo decian.
+          editingRender: true,
         }),
       });
       const data = await response.json();
@@ -2178,6 +2214,15 @@ export default function AIRenderStudio({ state, setState }) {
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+          // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
+          // servidor se lo pasa al detector de croquis, y una cocina clara
+          // —paredes, muebles y encimera claros— tiene poco color y mucho
+          // brillo, que es justo la firma del papel: la toma por un dibujo a
+          // mano y se va por la rama de «construye lo que esta dibujado», o
+          // sea que REHACE la cocina entera en vez de respetarla. Ahi se
+          // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
+          // cambios; estos seis botones editan la misma imagen y no lo decian.
+          editingRender: true,
       });
       const data = await response.json();
       if (data.success) {
@@ -2269,10 +2314,20 @@ export default function AIRenderStudio({ state, setState }) {
         + 'y equilibrada, y complementos decorativos SUELTOS que no forman parte del mueble (plantas, un cuadro en '
         + 'la pared, textiles, fruteros, algún objeto sobre la encimera). Estos complementos no deben tapar ni '
         + 'alterar los muebles. Misma cámara, misma perspectiva, fotorrealista y de alta calidad.'
+        + memoriaDeCambios()
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+          // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
+          // servidor se lo pasa al detector de croquis, y una cocina clara
+          // —paredes, muebles y encimera claros— tiene poco color y mucho
+          // brillo, que es justo la firma del papel: la toma por un dibujo a
+          // mano y se va por la rama de «construye lo que esta dibujado», o
+          // sea que REHACE la cocina entera en vez de respetarla. Ahi se
+          // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
+          // cambios; estos seis botones editan la misma imagen y no lo decian.
+          editingRender: true,
       });
       const data = await response.json();
       if (data.success) {
@@ -2318,10 +2373,20 @@ export default function AIRenderStudio({ state, setState }) {
         + 'distribución, encuadre, perspectiva e iluminación. Solo mejora la DEFINICIÓN, el '
         + 'enfoque y el detalle fino, eliminando el suavizado, el ruido y cualquier pixelado '
         + 'acumulado. Resultado limpio y nítido, misma composición exacta.'
+        + memoriaDeCambios()
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+          // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
+          // servidor se lo pasa al detector de croquis, y una cocina clara
+          // —paredes, muebles y encimera claros— tiene poco color y mucho
+          // brillo, que es justo la firma del papel: la toma por un dibujo a
+          // mano y se va por la rama de «construye lo que esta dibujado», o
+          // sea que REHACE la cocina entera en vez de respetarla. Ahi se
+          // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
+          // cambios; estos seis botones editan la misma imagen y no lo decian.
+          editingRender: true,
       });
       const data = await response.json();
       if (data.success) {
@@ -2349,10 +2414,20 @@ export default function AIRenderStudio({ state, setState }) {
           'Reprocesa esta imagen a MÁXIMA nitidez y detalle fotorrealista SIN cambiar '
           + 'nada del diseño: mismos muebles, colores, materiales, distribución, encuadre, '
           + 'perspectiva e iluminación. Solo mejora definición y detalle fino.'
+          + memoriaDeCambios()
         );
         const rr = await fetch(`${API_URL}/api/ai-engine/render`, {
           method: 'POST', headers: getAuthHeaders(),
           body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+          // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
+          // servidor se lo pasa al detector de croquis, y una cocina clara
+          // —paredes, muebles y encimera claros— tiene poco color y mucho
+          // brillo, que es justo la firma del papel: la toma por un dibujo a
+          // mano y se va por la rama de «construye lo que esta dibujado», o
+          // sea que REHACE la cocina entera en vez de respetarla. Ahi se
+          // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
+          // cambios; estos seis botones editan la misma imagen y no lo decian.
+          editingRender: true,
         });
         const rd = await rr.json();
         if (rd.success) base = await imageToDataUrl(rd.result?.images?.[0]);
@@ -3741,6 +3816,26 @@ export default function AIRenderStudio({ state, setState }) {
               )
             )}
           </div>
+
+          {/* «MIS RENDERS», ARRIBA Y A LA DERECHA. El master, en una tablet de
+              8,6" en vertical: «mis render lo pisa con lo de aplicar cambios».
+              Flotaba en `fixed bottom-4 right-4` y en vertical caia justo
+              encima de la barra de escribir el cambio, que es por donde se
+              trabaja.
+              VA COMO HERMANO de las dos mitades, no dentro de una: la de la
+              izquierda tiene que seguir midiendo lo que mide su contenido —al
+              ponerle `flex-1 min-w-0` se dejaba encoger, las dos mitades
+              cabian en una linea y se pintaban montadas—. Asi, con `ml-auto`,
+              se va al borde derecho de su linea, y la mitad de la derecha baja
+              sola porque no cabe. */}
+          <button onClick={() => setVerRecarga(true)} title="Tus renders"
+            className="ml-auto shrink-0 px-2.5 py-1.5 rounded-lg bg-accion-600 hover:bg-accion-700 text-white text-xs font-black shadow flex items-center gap-1.5">
+            {/* El rotulo se esconde por debajo de `sm`, igual que en «Nuevo»,
+                «Proyectos» y «Guardar» de esta misma cabecera. Y NO se usa
+                `xs:`: este proyecto no tiene ese breakpoint, asi que seria una
+                clase muerta que no hace nada. */}
+            <Zap size={13} /> <span className="hidden sm:inline">Mis renders</span>
+          </button>
 
           <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
             {/* Cliente / referencia del proyecto — más compactos en móvil */}
@@ -5516,12 +5611,10 @@ export default function AIRenderStudio({ state, setState }) {
         </React.Suspense>
       )}
 
-      {/* Saldo de renders: acceso siempre visible, para poder recargar
-          sin salir del estudio cuando se agota el cupo. */}
-      <button onClick={() => setVerRecarga(true)} title="Tus renders"
-        className="fixed bottom-4 right-4 z-[60] px-3 py-2 rounded-full bg-accion-600 hover:bg-accion-700 text-white text-xs font-black shadow-lg flex items-center gap-1.5">
-        <Zap size={14} /> Mis renders
-      </button>
+      {/* «Mis renders» ya NO flota abajo a la derecha: vive en la cabecera.
+          Flotando ahi pisaba la barra de escribir el cambio —el master, en una
+          tablet de 8,6" en vertical: «mis render lo pisa con lo de aplicar
+          cambios»—, que es justo el sitio por donde se trabaja. */}
       <RecargarRenders abierto={verRecarga} onClose={() => setVerRecarga(false)} />
     </div>
   );
