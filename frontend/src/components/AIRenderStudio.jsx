@@ -2055,8 +2055,18 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Vista ALÁMBRICA en blanco y negro (estilo CAD tipo TeoWin), con o sin cotas.
   // Es el mismo motor vectorial determinista: nunca hay medidas inventadas.
+  const medidasRealesParaPlano = (distribucion) => {
+    const paredes = distribucion?.paredes || [];
+    const elementos = distribucion?.elementos || [];
+    const paredSinCota = paredes.findIndex(p => !(Number(p?.ancho) > 0) || !(p?.ancho_escrito || p?.ancho_corregido));
+    const moduloSinCota = elementos.find(e => !(Number(e?.ancho) > 0) || e?.ancho_desconocido || !(e?.medida_escrita || e?.corregida));
+    if (paredSinCota >= 0) return `Falta la medida real de la pared ${paredSinCota + 1}.`;
+    if (moduloSinCota) return `Falta la medida real del módulo «${moduloSinCota.label || moduloSinCota.id || 'sin nombre'}».`;
+    return null;
+  };
+
   const generarVistaAlambrica = async (conCotas, opciones = {}) => {
-    if (editing) return null;
+    if (editing) return;
     setEditing(true); setError(null); setAvisoGeom(null);
     try {
       // Dos vías para sacar la distribución: del render y de la descripción. La
@@ -2075,6 +2085,10 @@ export default function AIRenderStudio({ state, setState }) {
         // que hay que decir es DÓNDE se escriben, no solo que no salió.
         setError(`No he podido deducir la distribución.${await explicarFallo(motivos, fallos)}${queHacerParaDeducir(fallos)}`);
         return null;
+      }
+      if (conCotas) {
+        const falta = medidasRealesParaPlano(distribucion);
+        if (falta) { setError(`${falta} No se genera un plano acotado para evitar inventar dimensiones.`); return null; }
       }
       const ar = await postJson('/api/estudio-cocinas/alzado', {
         nombre_cliente: cliente || 'Cliente',
@@ -2145,6 +2159,8 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   const generarPlanosExactos = async (distribucion) => {
+    const falta = medidasRealesParaPlano(distribucion);
+    if (falta) throw new Error(`${falta} No se genera un plano acotado para evitar inventar dimensiones.`);
     // NI AQUÍ NI EN NINGUNA DE LAS CUATRO VÍAS se pide el trazo de lápiz: la
     // planta y el alzado son planos de taller y salen a línea recta siempre.
     // Lo pidió el master viendo el suyo: «queda muy distorsionado y queda muy
@@ -2254,28 +2270,14 @@ export default function AIRenderStudio({ state, setState }) {
       const motivos = [], fallos = [];
       let distribucion = await deducirDistribucion(motivos, fallos).catch(() => null);
       if (!distribucion) {
-        distribucion = {
-          tipo: 'L',
-          paredes: [
-            { id: 1, ancho: 270, elementos: [
-              { id: 'columna', label: 'Columna 60', fila: 'bajo', ancho: 60, alto: 215, fondo: 60 },
-              { id: 'frigo', label: 'Frigo 60', fila: 'bajo', ancho: 60, alto: 215, fondo: 60 },
-              { id: 'bajo', label: 'Bajo 60', fila: 'bajo', ancho: 60, alto: 85, fondo: 60 },
-              { id: 'placa', label: 'Bajo Placa 90', fila: 'bajo', ancho: 90, alto: 85, fondo: 60 },
-            ]},
-            { id: 2, ancho: 210, elementos: [
-              { id: 'fregadero', label: 'Bajo Fregadero 90', fila: 'bajo', ancho: 90, alto: 85, fondo: 60 },
-              { id: 'lavavajillas', label: 'Lavavajillas 60', fila: 'bajo', ancho: 60, alto: 85, fondo: 60 },
-              { id: 'horno', label: 'Columna Horno 60', fila: 'bajo', ancho: 60, alto: 215, fondo: 60 },
-            ]}
-          ]
-        };
+        setError('No se pudo obtener una distribución con medidas verificables. No se generó ningún plano para evitar inventar módulos o cotas. Revisa el croquis y pulsa «Detectar distribución».');
+        return;
       }
       const extra = await generarPlanosExactos(distribucion);
       if (!extra.length) { setError('No se pudieron generar los planos técnicos (respuesta vacía del servicio).'); return; }
-      // Los planos técnicos se añaden al historial y se muestran inmediatamente en pantalla.
+      // Los planos técnicos se añaden al historial y el primero pasa a ser la vista activa.
+      setRenderResult(extra[0]);
       setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
-      if (extra[0]?.url) setRenderUrl(extra[0].url);
     } catch (e) { setError(`Error al generar los planos técnicos: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
   };
@@ -2293,8 +2295,8 @@ export default function AIRenderStudio({ state, setState }) {
       if (!dj?.success || !dj.distribucion) { setError(dj?.detail || 'No se pudo interpretar la descripción para dibujar el alzado.'); return; }
       const extra = await generarPlanosExactos(dj.distribucion);
       if (!extra.length) { setError('No se pudo generar el alzado (respuesta vacía del servicio).'); return; }
+      setRenderResult(extra[0]);
       setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
-      if (extra[0]?.url) setRenderUrl(extra[0].url);
     } catch (e) { setError(`Error al generar el alzado desde la descripción: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
   };
@@ -2824,16 +2826,19 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Exportar Plano CAD Vectorial DXF
   const exportDXF = async () => {
+    if (!currentImage() || downloading) return;
     setDownloading(true); setError(null);
     try {
       const motivos = [];
-      const dist = await deducirDistribucion(motivos).catch(() => ({
-        tipo: 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }, { id: 2, ancho: 240, elementos: [] }]
-      }));
+      const dist = await deducirDistribucion(motivos).catch(() => null);
+      if (!dist) {
+        setError('No se pudo obtener una distribución con medidas verificables. No se generó ningún archivo CAD.');
+        return;
+      }
       const r = await fetch(`${API_URL}/api/estudio-cocinas/exportar-dxf`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ distribucion: dist || { tipo: 'L', paredes: [{ id: 1, ancho: 360, elementos: [] }] }, cliente: cliente || 'Cliente' }),
+        body: JSON.stringify({ distribucion: dist, cliente: cliente || 'Cliente' }),
       });
       const data = await r.json();
       if (!data.success || !data.dxfContent) {
@@ -4830,9 +4835,9 @@ export default function AIRenderStudio({ state, setState }) {
                 </button>
                 {canUse4K && (
                 <button onClick={generar4K} disabled={editing || downloading || !currentImage()}
-                  title="Genera y descarga la imagen a máxima resolución fotorrealista Ultra-HD (8K / 4K real 3840 px)"
+                  title="Genera y descarga la imagen a máxima resolución fotorrealista 4K real (3840 px)"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-accion-600 via-purple-600 to-accion-600 hover:opacity-90 shadow-md disabled:opacity-50">
-                  {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />} 📷 Render 8K / 4K
+                  {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />} 📷 Render 4K
                 </button>
                 )}
                 {/* Separador visual */}
@@ -4864,7 +4869,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <BookOpen size={12} />
                   <span className="hidden sm:inline truncate">Dossier</span>
                 </button>
-                <button onClick={exportDXF} disabled={downloading}
+                <button onClick={exportDXF} disabled={downloading || !currentImage()}
                   className="flex items-center gap-1 px-2.5 py-1 bg-ok-600 text-white rounded-lg text-[11px] font-bold hover:bg-ok-700 shadow-sm" title="Descargar plano en formato vectorial DXF (AutoCAD R12/2000) listo para taller, fábrica ACB y marmolista">
                   <Maximize2 size={12} />
                   <span className="truncate">📐 CAD DXF</span>

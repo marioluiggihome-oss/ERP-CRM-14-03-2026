@@ -2903,23 +2903,26 @@ async def distribucion_desde_texto(payload: dict):
         except (TypeError, ValueError):
             return 0
     ancho_real = int(round(_num(medidas.get("ancho"))))
-    alto_real = int(round(_num(medidas.get("altura")))) or 240
+    alto_real = int(round(_num(medidas.get("altura"))))
+    # No completar alturas por catálogo: una cota ausente debe permanecer ausente.
     try:
         from services.llm_vision import generate_text_with_gemini
     except Exception:
         raise HTTPException(status_code=503, detail="IA de texto no disponible.")
     escala = (f"\nEl ancho total de la pared principal es {ancho_real} cm: la suma de anchos de sus módulos debe coincidir.\n" if ancho_real else "\n")
     prompt = (
-        "Eres proyectista de cocinas. A partir de esta DESCRIPCIÓN de un diseño, deduce su DISTRIBUCIÓN "
-        "estructurada, RESPETANDO LITERALMENTE lo que se pide por cada módulo (nº de puertas, cajones y "
-        "gavetas, y su orden de izquierda a derecha). Anchos típicos en cm: 15,20,30,40,45,50,60,80,90,100,120.\n"
+        "Eres proyectista de cocinas. A partir de esta DESCRIPCIÓN de un diseño, extrae únicamente la DISTRIBUCIÓN "
+        "estructurada que tenga medidas explícitas. RESPETA LITERALMENTE cada módulo, su orden y sus cotas. "
+        "NO completes anchos, fondos, alturas o paredes con medidas típicas ni por conocimiento de catálogo: "
+        "si una medida no aparece en la descripción o en el campo medidas, devuelve ese dato como null y no inventes.\n"
         + escala +
         "Devuelve SOLO un JSON con esta forma exacta:\n"
-        "{\"tipo\":\"lineal\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240}],"
-        "\"elementos\":[{\"id\":\"cajonera\",\"label\":\"1 cajón + 2 gavetas\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":60}]}.\n"
+        "{\"tipo\":\"lineal\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":null,\"alto\":null}],"
+        "\"elementos\":[{\"id\":\"cajonera\",\"label\":\"1 cajón + 2 gavetas\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":null}]}.\n"
         "REGLAS del campo 'id' (palabras clave que entiende el dibujo): frigorifico, congelador, "
         "columna_hornos, horno, microondas, lavavajillas, fregadero, placa, campana, despensa, vinoteca, "
         "cajonera (para módulos con cajones/gavetas), mueble (bajo/alto de puerta normal). "
+        "No rellenes con anchos estándar: un campo null significa que falta el dato y debe rechazarse. "
         "Para un módulo con cajones/gavetas usa id='cajonera' y en 'label' escribe el recuento EXACTO "
         "(p. ej. '1 cajón + 2 gavetas') para que se dibujen los frentes correctos.\n"
         f"DESCRIPCIÓN:\n{desc}\n\n"
@@ -2938,6 +2941,37 @@ async def distribucion_desde_texto(payload: dict):
         except Exception:
             data = {}
     from services.kitchen_geometry import validar_distribucion
+    # Esta ruta promete un alzado exacto desde texto. No puede convertir el
+    # ancho de dibujo de un módulo incompleto en una cota real.
+    paredes_datos = data.get("paredes") if isinstance(data, dict) else None
+    elementos_datos = data.get("elementos") if isinstance(data, dict) else None
+    if not isinstance(paredes_datos, list) or not paredes_datos or not isinstance(elementos_datos, list) or not elementos_datos:
+        raise HTTPException(status_code=422, detail="La descripción no contiene una distribución medible: faltan paredes o módulos.")
+    if any(_num(p.get("ancho")) <= 0 for p in paredes_datos):
+        raise HTTPException(status_code=422, detail="Falta el ancho real de una pared; no se puede generar un alzado con cotas fiables.")
+    if any(_num(e.get("ancho")) <= 0 for e in elementos_datos):
+        raise HTTPException(status_code=422, detail="Falta el ancho real de uno o más módulos; no se puede generar un alzado con cotas fiables.")
+    # Una cifra producida por la interpretación no basta por sí sola. Para que
+    # pueda entrar en un plano acotado debe estar escrita en el texto o venir en
+    # el campo de medidas del formulario. Así no se convierten anchos típicos en
+    # cotas de fabricación sin respaldo.
+    numeros_explicitos = {
+        int(round(float(n.replace(",", "."))))
+        for n in _re.findall(r"(?<!\w)(\d+(?:[.,]\d+)?)\s*(?:cm|metros?|m)\b", desc.lower())
+        if float(n.replace(",", ".")) > 0
+    }
+    if ancho_real > 0:
+        numeros_explicitos.add(ancho_real)
+    for pared in paredes_datos:
+        ancho_pared = int(round(_num(pared.get("ancho"))))
+        if ancho_pared not in numeros_explicitos and not ancho_real:
+            raise HTTPException(status_code=422, detail="El ancho de una pared no aparece como medida explícita; no se puede generar un alzado fiable.")
+        pared["ancho_escrito"] = True
+    for elemento in elementos_datos:
+        ancho_modulo = int(round(_num(elemento.get("ancho"))))
+        if ancho_modulo not in numeros_explicitos:
+            raise HTTPException(status_code=422, detail=f"El ancho del módulo «{elemento.get('label') or elemento.get('id') or 'sin nombre'}» no aparece como medida explícita.")
+        elemento["medida_escrita"] = True
     dist = validar_distribucion(data, ancho_real=ancho_real, alto_real=alto_real)
     if not dist.get("ok"):
         raise HTTPException(status_code=422,

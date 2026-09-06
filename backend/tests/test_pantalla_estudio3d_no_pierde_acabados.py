@@ -85,7 +85,8 @@ def _envian_la_imagen_actual(cuerpo):
     exactamente lo que pasó.
     """
     return {n: b for n, b in _funciones(cuerpo).items()
-            if "/api/ai-engine/render`" in b and "referenceImage: dataUrl" in b}
+            if "/api/ai-engine/render`" in b
+            and ("referenceImage: dataUrl" in b or "referenceImage: img" in b)}
 
 
 def test_TODO_BOTON_QUE_EDITA_NUESTRO_RENDER_LO_DECLARA():
@@ -96,6 +97,9 @@ def test_TODO_BOTON_QUE_EDITA_NUESTRO_RENDER_LO_DECLARA():
     No da ningún error: devuelve una cocina preciosa que no es la suya."""
     cuerpo = sin_comentarios(_lee())
     editores = _envian_la_imagen_actual(cuerpo)
+    # La edición principal usa deliberadamente `referenceImage: img`, que es
+    # el último diseño aprobado; los demás flujos convierten la referencia a
+    # dataURL antes de enviarla.
     assert len(editores) >= 6, (
         f"el reconocedor solo encuentra {len(editores)} botones que editen el "
         f"render; algo ha cambiado de forma y esta prueba dejaría de mirar lo "
