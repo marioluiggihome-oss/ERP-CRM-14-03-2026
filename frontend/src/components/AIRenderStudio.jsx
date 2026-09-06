@@ -3432,32 +3432,51 @@ export default function AIRenderStudio({ state, setState }) {
     }
   };
 
-  // B/N no es un filtro fotográfico: genera el ALZADO TÉCNICO de la cocina.
-  // Así conserva módulos, puertas, cajones y electrodomésticos como líneas
-  // limpias sobre blanco, y el resultado se puede imprimir para anotar medidas.
+  // B/N convierte el render completo en una única vista lineal EN LA MISMA
+  // PERSPECTIVA. No genera alzados, cotas ni paredes separadas: conserva la
+  // cámara, isla, columnas, plantas, electrodomésticos y composición visibles.
   const alternarBn = async () => {
     if (schematic) { setSchematic(false); return; }
-    if (!currentImage() || bnProcessing) return;
+    const src = currentImage();
+    if (!src || bnProcessing) return;
     setBnProcessing(true); setError(null);
     try {
-      const motivos = [], fallos = [];
-      const distribucion = await deducirDistribucion(motivos, fallos);
-      if (!distribucion) {
-        setError(`No se pudo obtener la distribución para generar el alzado técnico.${await explicarFallo(motivos, fallos)}`);
+      const referenceImage = await imageToDataUrl(src);
+      const description = [
+        'Transforma esta misma imagen de cocina en un dibujo lineal arquitectónico en blanco y negro.',
+        'CONSERVA EXACTAMENTE la misma cámara, perspectiva, encuadre, distribución, proporciones y geometría.',
+        'Mantén todos los elementos visibles del render: muebles altos y bajos, puertas, cajones, electrodomésticos, columnas, isla o península, encimera, fregadero, ventanas, plantas y objetos.',
+        'Dibuja contornos negros finos y limpios sobre fondo blanco, con interiores blancos y sombreado mínimo.',
+        'No cambies, muevas, añadas ni elimines ningún elemento. No conviertas la imagen en alzado, planta, ficha técnica o varios dibujos separados.',
+        'No incluyas cotas, números, etiquetas, títulos, flechas, despiece ni texto. El resultado debe ser una única lámina lineal de la misma vista, preparada para imprimir y anotar medidas a mano.',
+      ].join(' ');
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description,
+          style: 'line-art',
+          provider: providerOf(),
+          referenceImage,
+        }),
+      });
+      const data = await response.json();
+      const lineImage = data?.result?.images?.[0];
+      if (!data?.success || !lineImage) {
+        setError(data?.error || 'No se pudo generar la vista lineal B/N.');
         return;
       }
-      const planos = await generarPlanosExactos(distribucion);
-      const alzado = planos.find(item => item?.description?.toLowerCase().includes('alzado')) || planos[1];
-      const alzadoImage = alzado?.result?.images?.[0];
-      if (!alzadoImage) {
-        setError('No se pudo generar el alzado técnico en blanco y negro.');
-        return;
-      }
-      setBnImage(alzadoImage);
+      const lineResult = {
+        ...data,
+        result: { ...data.result, images: [lineImage] },
+        description: 'Vista lineal B/N de la misma perspectiva',
+        timestamp: new Date(),
+      };
+      setBnImage(lineImage);
       setSchematic(true);
-      setRenderHistory(prev => [alzado, ...prev.filter(item => item !== alzado)].slice(0, 14));
+      setRenderHistory(prev => [lineResult, ...prev].slice(0, 14));
     } catch (e) {
-      setError(`No se pudo generar el alzado técnico B/N: ${e?.message || 'error desconocido'}.`);
+      setError(`No se pudo generar la vista lineal B/N: ${e?.message || 'error desconocido'}.`);
     } finally { setBnProcessing(false); }
   };
 
