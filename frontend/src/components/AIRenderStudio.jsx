@@ -829,10 +829,11 @@ export default function AIRenderStudio({ state, setState }) {
     if (setState) setState(p => { const { estudio3dPreset, ...rest } = p; return rest; });
   }, [state?.estudio3dPreset]); // eslint-disable-line
 
-  // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
-  // marcas de enchufes/agua/desagüe/gas donde irían).
+  // Detección AUTOMÁTICA de instalaciones: analiza la imagen que está viendo
+  // el usuario y coloca marcas editables. No debe activar B/N por su cuenta.
   const detectInstalaciones = async (srcArg) => {
-    const src = (typeof srcArg === 'string' && srcArg.length > 5) ? srcArg : currentImage(); if (!src || detecting) return;
+    const visibleImage = schematic && bnImage ? bnImage : currentImage();
+    const src = (typeof srcArg === 'string' && srcArg.length > 5) ? srcArg : visibleImage; if (!src || detecting) return;
     setDetecting(true); setError(null);
     try {
       // Reducir la imagen antes de enviar (un render 4K rompe la petición por tamaño).
@@ -847,8 +848,10 @@ export default function AIRenderStudio({ state, setState }) {
         // (p. ej. no dejar gas/campana en un baño aunque la IA lo devuelva).
         const validas = (d.marks || []).filter(m => MARK_TYPES[m.type]?.tipos?.includes(tipo3d));
         setMarks(validas); setMarkTool(null);
-        if (validas.length) setSchematic(true);
-        else setError('No se localizaron puntos claros; márcalos a mano.');
+        // Mantener el modo actual: si el usuario estaba viendo color, sigue en
+        // color; si ya estaba en B/N, conserva esa vista. Detectar no cambia el
+        // formato del diseño ni genera una ficha técnica.
+        if (!validas.length) setError('No se localizaron puntos claros; márcalos a mano.');
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
     } catch (e) { setError(`Error al detectar instalaciones: ${e?.message || 'fallo de conexión'}`); }
     finally { setDetecting(false); }
@@ -899,7 +902,9 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Descarga el render con las marcas de instalaciones "quemadas" y una leyenda.
   const descargarConMarcas = async () => {
-    const src = currentImage(); if (!src) return;
+    // Descargar exactamente la imagen que se ve en el visor. En B/N la imagen
+    // visible vive en bnImage, aunque renderResult conserve otro historial.
+    const src = schematic && bnImage ? bnImage : currentImage(); if (!src) return;
     const dataUrl = await imageToDataUrl(src);
     const el = document.getElementById('render-annot-img');
     const cw = el?.offsetWidth || 1280, ch = el?.offsetHeight || 720;
@@ -912,7 +917,10 @@ export default function AIRenderStudio({ state, setState }) {
       const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
       ctx.drawImage(im, dx, dy, dw, dh);
       marks.forEach((mk) => {
-        const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
+        const t = MARK_TYPES[mk.type];
+        // Las coordenadas son relativas a la imagen dibujada, no al fondo del
+        // canvas. Así la descarga coincide con la posición visible del visor.
+        const x = dx + (mk.x / 100) * dw, y = dy + (mk.y / 100) * dh;
         // Punto (círculo de color, sin letra)
         ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
@@ -949,7 +957,7 @@ export default function AIRenderStudio({ state, setState }) {
   // (punto + cota de altura), en alta resolución, como dataURL. Reutilizable para
   // descargar o para el PDF de gremio.
   const renderMarcadoDataUrl = (scale = 2) => new Promise(async (resolve) => {
-    const src = currentImage(); if (!src) return resolve(null);
+    const src = schematic && bnImage ? bnImage : currentImage(); if (!src) return resolve(null);
     const dataUrl = await imageToDataUrl(src);
     const el = document.getElementById('render-annot-img');
     const cw = (el?.offsetWidth || 1280) * scale, ch = (el?.offsetHeight || 720) * scale;
@@ -970,7 +978,8 @@ export default function AIRenderStudio({ state, setState }) {
       const R = Math.max(9, cw * 0.013);          // radio del punto
       const FS = Math.max(12, cw * 0.019);        // cuerpo de la cota
       marks.forEach((mk) => {
-        const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
+        const t = MARK_TYPES[mk.type];
+        const x = dx + (mk.x / 100) * dw, y = dy + (mk.y / 100) * dh;
         // Halo blanco: sin él, un punto naranja sobre una cocina blanca con
         // mucha luz se pierde igual aunque sea grande.
         ctx.beginPath(); ctx.arc(x, y, R + R * 0.28, 0, Math.PI * 2);
@@ -2453,13 +2462,15 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
-  const editRender = async () => {
+  const editRender = async (forcedLines = null) => {
     const img = currentImage();
     // La referencia queda congelada en el primer cambio. Así la segunda y
     // siguientes iteraciones no reciben una copia ya regenerada/comprimida.
     const baseImg = editBaseImage || img;
     // Combina la instrucción principal + líneas adicionales (multi-línea).
-    const allLines = [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
+    // Las acciones rápidas, como iluminación, entran por la misma cadena para
+    // conservar la base original y el historial de cambios.
+    const allLines = forcedLines || [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
     if (!img || (!allLines.length && !editRefImage)) return;
     // Instantánea de lo que se APLICA ahora, para luego borrar SOLO eso y conservar
     // lo que el usuario escriba mientras se procesa (poder encolar órdenes).
@@ -2489,9 +2500,7 @@ export default function AIRenderStudio({ state, setState }) {
         : (allLines.length === 1
            ? allLines[0]
            : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : ''));
-      const historial = editAppliedChanges.length
-        ? `\n\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR EN EL RESULTADO:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`
-        : '';
+      const historial = `\n\nEL ÚLTIMO DISEÑO APROBADO ES LA AUTORIDAD VISUAL:\nConserva exactamente todos los elementos que ya aparecen en la imagen de referencia más reciente: incluidos tiradores, frentes, puertas, cajones, electrodomésticos, encimera, colores, materiales, iluminación, decoración y distribución. La nueva orden solo puede modificar lo que se pide expresamente.\n${editAppliedChanges.length ? `\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n` : ''}`;
       const cambio = `${historial}\nNUEVO CAMBIO QUE DEBES APLICAR AHORA:\n${cambioNuevo}`;
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
@@ -2507,7 +2516,11 @@ export default function AIRenderStudio({ state, setState }) {
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,
-          referenceImages: editRefImage ? [editRefImage] : undefined,
+          // La base original evita degradación acumulativa; la imagen actual
+          // aprobada evita que el siguiente cambio recupere estados antiguos.
+          // Si existe una referencia aportada por el usuario, se conserva como
+          // apoyo adicional sin sustituir el estado aprobado.
+          referenceImages: [img, ...(editRefImage ? [editRefImage] : [])],
           // La imagen es un render NUESTRO: se dice, no se deja adivinar. Sin
           // esto el servidor se lo pasaba al detector de croquis, y una cocina
           // blanca —paredes, muebles y encimera blancos— tiene poco color y
@@ -2558,6 +2571,10 @@ export default function AIRenderStudio({ state, setState }) {
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
   };
+
+  const mejorarIluminacion = () => editRender([
+    'Mejora ÚNICAMENTE la iluminación de la cocina: aumenta la entrada de luz natural desde las ventanas y equilibra la luz artificial del techo, bajo los muebles, campana y ambiente general. Haz la escena más luminosa, clara y natural, con exposición equilibrada y sin zonas quemadas. Conserva EXACTAMENTE la misma distribución, cámara, perspectiva, encuadre, paredes, ventanas, muebles, puertas, cajones, electrodomésticos, encimera, materiales, colores, suelo, objetos y decoración. No añadas ni elimines ventanas o luminarias, no cambies posiciones, no modifiques materiales y no recortes la imagen.'
+  ]);
 
   const resetEditChain = () => {
     setEditBaseImage(null);
@@ -3432,32 +3449,51 @@ export default function AIRenderStudio({ state, setState }) {
     }
   };
 
-  // B/N no es un filtro fotográfico: genera el ALZADO TÉCNICO de la cocina.
-  // Así conserva módulos, puertas, cajones y electrodomésticos como líneas
-  // limpias sobre blanco, y el resultado se puede imprimir para anotar medidas.
+  // B/N convierte el render completo en una única vista lineal EN LA MISMA
+  // PERSPECTIVA. No genera alzados, cotas ni paredes separadas: conserva la
+  // cámara, isla, columnas, plantas, electrodomésticos y composición visibles.
   const alternarBn = async () => {
     if (schematic) { setSchematic(false); return; }
-    if (!currentImage() || bnProcessing) return;
+    const src = currentImage();
+    if (!src || bnProcessing) return;
     setBnProcessing(true); setError(null);
     try {
-      const motivos = [], fallos = [];
-      const distribucion = await deducirDistribucion(motivos, fallos);
-      if (!distribucion) {
-        setError(`No se pudo obtener la distribución para generar el alzado técnico.${await explicarFallo(motivos, fallos)}`);
+      const referenceImage = await imageToDataUrl(src);
+      const description = [
+        'Transforma esta misma imagen de cocina en un dibujo lineal arquitectónico en blanco y negro.',
+        'CONSERVA EXACTAMENTE la misma cámara, perspectiva, encuadre, distribución, proporciones y geometría.',
+        'Mantén todos los elementos visibles del render: muebles altos y bajos, puertas, cajones, electrodomésticos, columnas, isla o península, encimera, fregadero, ventanas, plantas y objetos.',
+        'Dibuja contornos negros finos y limpios sobre fondo blanco, con interiores blancos y sombreado mínimo.',
+        'No cambies, muevas, añadas ni elimines ningún elemento. No conviertas la imagen en alzado, planta, ficha técnica o varios dibujos separados.',
+        'No incluyas cotas, números, etiquetas, títulos, flechas, despiece ni texto. El resultado debe ser una única lámina lineal de la misma vista, preparada para imprimir y anotar medidas a mano.',
+      ].join(' ');
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description,
+          style: 'line-art',
+          provider: providerOf(),
+          referenceImage,
+        }),
+      });
+      const data = await response.json();
+      const lineImage = data?.result?.images?.[0];
+      if (!data?.success || !lineImage) {
+        setError(data?.error || 'No se pudo generar la vista lineal B/N.');
         return;
       }
-      const planos = await generarPlanosExactos(distribucion);
-      const alzado = planos.find(item => item?.description?.toLowerCase().includes('alzado')) || planos[1];
-      const alzadoImage = alzado?.result?.images?.[0];
-      if (!alzadoImage) {
-        setError('No se pudo generar el alzado técnico en blanco y negro.');
-        return;
-      }
-      setBnImage(alzadoImage);
+      const lineResult = {
+        ...data,
+        result: { ...data.result, images: [lineImage] },
+        description: 'Vista lineal B/N de la misma perspectiva',
+        timestamp: new Date(),
+      };
+      setBnImage(lineImage);
       setSchematic(true);
-      setRenderHistory(prev => [alzado, ...prev.filter(item => item !== alzado)].slice(0, 14));
+      setRenderHistory(prev => [lineResult, ...prev].slice(0, 14));
     } catch (e) {
-      setError(`No se pudo generar el alzado técnico B/N: ${e?.message || 'error desconocido'}.`);
+      setError(`No se pudo generar la vista lineal B/N: ${e?.message || 'error desconocido'}.`);
     } finally { setBnProcessing(false); }
   };
 
@@ -4780,6 +4816,11 @@ export default function AIRenderStudio({ state, setState }) {
                   {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                   <span className="hidden sm:inline truncate">Decorador/a</span><span className="sm:hidden">Deco</span>
                 </button>
+                <button onClick={mejorarIluminacion} disabled={editing || downloading || !currentImage()}
+                  title="Aumenta la iluminación natural y artificial sin cambiar la distribución ni los materiales"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-50">
+                  {editing ? <Loader size={12} className="animate-spin" /> : <Lightbulb size={12} />} <span className="hidden sm:inline">Más luz</span><span className="sm:hidden">Luz</span>
+                </button>
                 <button onClick={mejorarResolucion} disabled={editing || downloading || !currentImage()}
                   title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50">
@@ -5265,7 +5306,7 @@ export default function AIRenderStudio({ state, setState }) {
                     className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
-                  <button onClick={editRender} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
+                  <button onClick={() => editRender()} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
                     className="flex items-center gap-1.5 px-4 py-2 bg-accion-600 text-white rounded-lg text-xs font-bold hover:bg-accion-700 disabled:opacity-50 shrink-0">
                     {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}</>}
                   </button>
