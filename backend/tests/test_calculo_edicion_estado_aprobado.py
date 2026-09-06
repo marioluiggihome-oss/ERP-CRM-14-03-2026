@@ -12,8 +12,9 @@ def test_edicion_envia_base_original_y_ultimo_estado_aprobado():
     assert "const baseImg = editBaseImage || img;" in block
     assert "EL ÚLTIMO DISEÑO APROBADO ES LA AUTORIDAD VISUAL" in block
     assert "Conserva exactamente todos los elementos" in block
-    assert "referenceImage: dataUrl" in block
-    assert "referenceImages: [img, ...(editRefImage ? [editRefImage] : [])]" in block
+    assert "referenceImage: img" in block
+    assert "referenceImages: editRefImage ? [editRefImage] : []" in block
+    assert "El último diseño aprobado debe ser la referencia principal" in block
 
 
 def test_la_nueva_orden_se_separa_de_los_cambios_conservados():

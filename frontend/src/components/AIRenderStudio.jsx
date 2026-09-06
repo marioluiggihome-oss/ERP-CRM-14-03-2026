@@ -2515,12 +2515,14 @@ export default function AIRenderStudio({ state, setState }) {
           description: cambio,
           style: params.style,
           provider: providerOf(),
-          referenceImage: dataUrl,
-          // La base original evita degradación acumulativa; la imagen actual
-          // aprobada evita que el siguiente cambio recupere estados antiguos.
-          // Si existe una referencia aportada por el usuario, se conserva como
-          // apoyo adicional sin sustituir el estado aprobado.
-          referenceImages: [img, ...(editRefImage ? [editRefImage] : [])],
+          // El último diseño aprobado debe ser la referencia principal. Antes se
+          // enviaba aquí la base original y el diseño actual quedaba como imagen
+          // secundaria de acabado; así una nueva orden podía recuperar tiradores,
+          // frentes o materiales del primer render.
+          referenceImage: img,
+          // Solo una imagen aportada expresamente por el usuario se envía como
+          // elemento adicional; no se reintroduce el render anterior como apoyo.
+          referenceImages: editRefImage ? [editRefImage] : [],
           // La imagen es un render NUESTRO: se dice, no se deja adivinar. Sin
           // esto el servidor se lo pasaba al detector de croquis, y una cocina
           // blanca —paredes, muebles y encimera blancos— tiene poco color y
