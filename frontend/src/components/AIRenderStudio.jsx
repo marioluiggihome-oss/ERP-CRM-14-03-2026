@@ -2462,13 +2462,15 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
-  const editRender = async () => {
+  const editRender = async (forcedLines = null) => {
     const img = currentImage();
     // La referencia queda congelada en el primer cambio. Así la segunda y
     // siguientes iteraciones no reciben una copia ya regenerada/comprimida.
     const baseImg = editBaseImage || img;
     // Combina la instrucción principal + líneas adicionales (multi-línea).
-    const allLines = [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
+    // Las acciones rápidas, como iluminación, entran por la misma cadena para
+    // conservar la base original y el historial de cambios.
+    const allLines = forcedLines || [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
     if (!img || (!allLines.length && !editRefImage)) return;
     // Instantánea de lo que se APLICA ahora, para luego borrar SOLO eso y conservar
     // lo que el usuario escriba mientras se procesa (poder encolar órdenes).
@@ -2498,9 +2500,7 @@ export default function AIRenderStudio({ state, setState }) {
         : (allLines.length === 1
            ? allLines[0]
            : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : ''));
-      const historial = editAppliedChanges.length
-        ? `\n\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR EN EL RESULTADO:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`
-        : '';
+      const historial = `\n\nEL ÚLTIMO DISEÑO APROBADO ES LA AUTORIDAD VISUAL:\nConserva exactamente todos los elementos que ya aparecen en la imagen de referencia más reciente: incluidos tiradores, frentes, puertas, cajones, electrodomésticos, encimera, colores, materiales, iluminación, decoración y distribución. La nueva orden solo puede modificar lo que se pide expresamente.\n${editAppliedChanges.length ? `\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n` : ''}`;
       const cambio = `${historial}\nNUEVO CAMBIO QUE DEBES APLICAR AHORA:\n${cambioNuevo}`;
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
@@ -2516,7 +2516,11 @@ export default function AIRenderStudio({ state, setState }) {
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,
-          referenceImages: editRefImage ? [editRefImage] : undefined,
+          // La base original evita degradación acumulativa; la imagen actual
+          // aprobada evita que el siguiente cambio recupere estados antiguos.
+          // Si existe una referencia aportada por el usuario, se conserva como
+          // apoyo adicional sin sustituir el estado aprobado.
+          referenceImages: [img, ...(editRefImage ? [editRefImage] : [])],
           // La imagen es un render NUESTRO: se dice, no se deja adivinar. Sin
           // esto el servidor se lo pasaba al detector de croquis, y una cocina
           // blanca —paredes, muebles y encimera blancos— tiene poco color y
@@ -2567,6 +2571,10 @@ export default function AIRenderStudio({ state, setState }) {
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
   };
+
+  const mejorarIluminacion = () => editRender([
+    'Mejora ÚNICAMENTE la iluminación de la cocina: aumenta la entrada de luz natural desde las ventanas y equilibra la luz artificial del techo, bajo los muebles, campana y ambiente general. Haz la escena más luminosa, clara y natural, con exposición equilibrada y sin zonas quemadas. Conserva EXACTAMENTE la misma distribución, cámara, perspectiva, encuadre, paredes, ventanas, muebles, puertas, cajones, electrodomésticos, encimera, materiales, colores, suelo, objetos y decoración. No añadas ni elimines ventanas o luminarias, no cambies posiciones, no modifiques materiales y no recortes la imagen.'
+  ]);
 
   const resetEditChain = () => {
     setEditBaseImage(null);
@@ -4799,6 +4807,11 @@ export default function AIRenderStudio({ state, setState }) {
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-accion-600 to-accion-600 hover:from-accion-500 hover:to-accion-500 shadow-sm disabled:opacity-50">
                   {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                   <span className="hidden sm:inline truncate">Decorador/a</span><span className="sm:hidden">Deco</span>
+                </button>
+                <button onClick={mejorarIluminacion} disabled={editing || downloading || !currentImage()}
+                  title="Aumenta la iluminación natural y artificial sin cambiar la distribución ni los materiales"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-50">
+                  {editing ? <Loader size={12} className="animate-spin" /> : <Lightbulb size={12} />} <span className="hidden sm:inline">Más luz</span><span className="sm:hidden">Luz</span>
                 </button>
                 <button onClick={mejorarResolucion} disabled={editing || downloading || !currentImage()}
                   title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
