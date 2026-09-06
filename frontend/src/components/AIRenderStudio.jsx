@@ -829,10 +829,11 @@ export default function AIRenderStudio({ state, setState }) {
     if (setState) setState(p => { const { estudio3dPreset, ...rest } = p; return rest; });
   }, [state?.estudio3dPreset]); // eslint-disable-line
 
-  // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
-  // marcas de enchufes/agua/desagüe/gas donde irían).
+  // Detección AUTOMÁTICA de instalaciones: analiza la imagen que está viendo
+  // el usuario y coloca marcas editables. No debe activar B/N por su cuenta.
   const detectInstalaciones = async (srcArg) => {
-    const src = (typeof srcArg === 'string' && srcArg.length > 5) ? srcArg : currentImage(); if (!src || detecting) return;
+    const visibleImage = schematic && bnImage ? bnImage : currentImage();
+    const src = (typeof srcArg === 'string' && srcArg.length > 5) ? srcArg : visibleImage; if (!src || detecting) return;
     setDetecting(true); setError(null);
     try {
       // Reducir la imagen antes de enviar (un render 4K rompe la petición por tamaño).
@@ -847,8 +848,10 @@ export default function AIRenderStudio({ state, setState }) {
         // (p. ej. no dejar gas/campana en un baño aunque la IA lo devuelva).
         const validas = (d.marks || []).filter(m => MARK_TYPES[m.type]?.tipos?.includes(tipo3d));
         setMarks(validas); setMarkTool(null);
-        if (validas.length) setSchematic(true);
-        else setError('No se localizaron puntos claros; márcalos a mano.');
+        // Mantener el modo actual: si el usuario estaba viendo color, sigue en
+        // color; si ya estaba en B/N, conserva esa vista. Detectar no cambia el
+        // formato del diseño ni genera una ficha técnica.
+        if (!validas.length) setError('No se localizaron puntos claros; márcalos a mano.');
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
     } catch (e) { setError(`Error al detectar instalaciones: ${e?.message || 'fallo de conexión'}`); }
     finally { setDetecting(false); }
