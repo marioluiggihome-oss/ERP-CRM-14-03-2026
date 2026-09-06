@@ -12,6 +12,9 @@ import { ACB_PUERTAS, ACB_PUERTAS_SERIES, ACB_COLECCIONES, ACB_TIRADORES,
   cantosDeSerieACB } from '../data/acbPuertas';
 import { ACB_LACA_MODELOS, ACB_LACA_ACABADOS, ACB_LACA_MATRICES, ACB_LACA_COLORES,
   gruesosDeModeloACBLaca, lineaDeModeloACBLaca, precioLacaACB } from '../data/acbLaca';
+import { ACB_MADERA_MODELOS, ACB_MADERA_ACABADOS, ACB_MADERA_ACABADOS_ABETO,
+  ACB_MADERA_MATRICES, ACB_MADERA_VITRINA_MAS_20, chapasDeModeloACBMadera,
+  lineaDeModeloACBMadera, precioMaderaACB } from '../data/acbMadera';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
@@ -293,6 +296,33 @@ const Cascos = ({ state, setState }) => {
   const opcionesLaca = {
     colorEspecial: especialLaca, xolid: xolidLaca,
     decoracionPct: decoracionObj ? decoracionObj.pct : 0,
+  };
+
+  // ── MADERA: aqui el grupo lo decide la CHAPA, no el grueso ──────────────
+  // Un MADRID en fresno es GRUPO 1 y en abeto tricapa es GRUPO 7: otra matriz
+  // entera, no un porcentaje. Al cambiar de modelo se vuelve a una chapa que
+  // ESE modelo fabrica, igual que con el grueso de la laca.
+  const [modeloMadera, setModeloMadera] = useState(ACB_MADERA_MODELOS[0].id);
+  const [chapaMadera, setChapaMadera] = useState('fresno');
+  const [acabadoMadera, setAcabadoMadera] = useState('crudo');
+  const [acabadoAbeto, setAcabadoAbeto] = useState('');
+  const [vitrinaMadera, setVitrinaMadera] = useState('');
+  const [extrasMadera, setExtrasMadera] = useState({});
+  const modeloMaderaObj = ACB_MADERA_MODELOS.find(m => m.id === modeloMadera) || ACB_MADERA_MODELOS[0];
+  const chapasMadera = chapasDeModeloACBMadera(modeloMadera);
+  const chapaActiva = chapasMadera.some(c => c.id === chapaMadera)
+    ? chapaMadera : (chapasMadera[0] || {}).id;
+  const lineaMadera = lineaDeModeloACBMadera(modeloMadera, chapaActiva);
+  const esAbeto = !!lineaMadera && lineaMadera.grupo === 7;
+  // El grupo 7 solo tiene columna de crudo: pedirle la B o la C seria tarifarlo
+  // por una tabla que no existe.
+  const acabadoMaderaActivo = esAbeto ? 'crudo' : acabadoMadera;
+  const llevaVitrina20 = ACB_MADERA_VITRINA_MAS_20.includes(modeloMaderaObj.nombre);
+  const opcionesMadera = {
+    acabadoAbeto: esAbeto ? acabadoAbeto : '',
+    vitrina: vitrinaMadera === 'normal',
+    vitrinaPalilleria: vitrinaMadera === 'palilleria',
+    ...extrasMadera,
   };
 
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
@@ -590,6 +620,21 @@ const Cascos = ({ state, setState }) => {
        leen de una lista: los calcula `precioLacaACB`, que es quien sabe que el
        grueso cambia de grupo y que el color especial va sobre BLANCO. Copiar
        aqui esa cuenta seria tener dos, y acabarian diciendo cosas distintas. */
+    if (coleccionPuerta === 'madera') {
+      if (!lineaMadera) return { anchos: [], grupos: [] };
+      const bloques = ACB_MADERA_MATRICES[lineaMadera.grupo] || [];
+      const anchos = [...new Set(bloques.flatMap(b2 => b2.anchos))].sort((a, b) => a - b);
+      const grupos = bloques.map(b2 => {
+        const precios = {};
+        b2.anchos.forEach(w => {
+          const v = precioMaderaACB(modeloMadera, chapaActiva, acabadoMaderaActivo,
+            b2.altos[0], w, opcionesMadera);
+          if (v != null) precios[w] = v;
+        });
+        return { clave: b2.altos.join('&'), altos: b2.altos, precios };
+      });
+      return { anchos, grupos };
+    }
     if (coleccionPuerta === 'laca') {
       if (!lineaLaca) return { anchos: [], grupos: [] };
       const bloques = ACB_LACA_MATRICES[lineaLaca.grupo] || [];
@@ -618,7 +663,9 @@ const Cascos = ({ state, setState }) => {
     grupos.sort((a, b) => a.altos[0] - b.altos[0]);
     return { anchos, grupos };
   }, [coleccionPuerta, seriePuerta, cantoActivo, modeloLaca, gruesoActivo,
-      acabadoLaca, lineaLaca, especialLaca, xolidLaca, decoracionObj]);
+      acabadoLaca, lineaLaca, especialLaca, xolidLaca, decoracionObj,
+      modeloMadera, chapaActiva, acabadoMaderaActivo, lineaMadera,
+      acabadoAbeto, esAbeto, vitrinaMadera, extrasMadera]);
 
   const serieObj = ACB_PUERTAS_SERIES.find(s => s.id === seriePuerta) || ACB_PUERTAS_SERIES[0];
 
@@ -650,6 +697,43 @@ const Cascos = ({ state, setState }) => {
        cursar —un ALZIRA de 19 y uno de 22 son dos piezas distintas y a dos
        precios— y ademas dos lineas de gruesos distintos se fundirian en una,
        porque la firma seria la misma. */
+    if (coleccionPuerta === 'madera') {
+      const chapaObj = chapasMadera.find(c => c.id === chapaActiva) || {};
+      const acabObj = ACB_MADERA_ACABADOS.find(x => x.id === acabadoMaderaActivo) || {};
+      const abetoObj = ACB_MADERA_ACABADOS_ABETO.find(x => x.id === acabadoAbeto);
+      const notas = [
+        abetoObj ? abetoObj.label : '',
+        vitrinaMadera === 'normal' ? 'vitrina' : '',
+        vitrinaMadera === 'palilleria' ? 'vitrina palillería/celosía' : '',
+        extrasMadera.patina ? 'pátina' : '',
+        extrasMadera.poroArenado ? 'poro arenado' : '',
+        extrasMadera.fueraDeCarta ? 'fuera de carta' : '',
+        extrasMadera.vetaConsecutiva ? 'veta consecutiva' : '',
+        extrasMadera.xolid ? 'XOLID' : '',
+      ].filter(Boolean);
+      const sigM = `acbm|${modeloMadera}|${chapaActiva}|${acabadoMaderaActivo}|${notas.join('+')}|${altos.join('&')}|${ancho}`;
+      setCart(prev => {
+        const i = prev.findIndex(l => l.sig === sigM);
+        if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
+        return [...prev, {
+          key: `${sigM}-${Date.now()}`, sig: sigM, puerta: true,
+          tipo: `Frente MADERA ${modeloMaderaObj.nombre} ${chapaObj.label || ''}`.trim(),
+          gama: 'acbPuertas', coleccion: 'madera', coleccionLabel: 'MADERA',
+          serie: modeloMadera, serieLabel: modeloMaderaObj.nombre,
+          chapa: chapaActiva, chapaLabel: chapaObj.label || '',
+          grupo: lineaMadera ? lineaMadera.grupo : null,
+          acabado: acabadoMaderaActivo, acabadoLabel: acabObj.label || '',
+          extras: notas.join(' · '),
+          /* LA CHAPA DE UN MODELO ANTIGUO NO ESTA EN LA TARIFA. Se tarifa
+             —el grupo si lo da— pero la linea lo dice, para que se confirme
+             con ACB antes de cursar el pedido. */
+          chapaSinConfirmar: !!(lineaMadera && lineaMadera.chapaSinConfirmar),
+          altos, alto, ancho,
+          precio: pc(precio), precioBase: precio, qty: 1,
+        }];
+      });
+      return;
+    }
     if (coleccionPuerta === 'laca') {
       const extras = [
         especialLaca ? 'color especial' : '',
@@ -1350,6 +1434,102 @@ const Cascos = ({ state, setState }) => {
                 se le ponga encima. Ensenar el grupo y el recargo al lado no
                 es un adorno: es lo unico que deja comprobar el precio contra
                 el PDF sin abrirlo. */}
+            {/* LOS CONTROLES DE LA MADERA. La CHAPA va delante del acabado
+                porque es la que decide el GRUPO: un MADRID en abeto tricapa
+                sale de otra matriz, no de la misma con un porcentaje. */}
+            {coleccionPuerta === 'madera' && (
+              <div data-testid="acb-madera-controles" className="mb-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[210px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Modelo</label>
+                    <select value={modeloMadera} onChange={e => setModeloMadera(e.target.value)}
+                      data-testid="acb-madera-modelo"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      {ACB_MADERA_MODELOS.map(m => (
+                        <option key={m.id} value={m.id}>{m.nombre}{m.antiguo ? ' (antiguo)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="min-w-[150px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Chapa</label>
+                    <select value={chapaActiva} onChange={e => setChapaMadera(e.target.value)}
+                      data-testid="acb-madera-chapa"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      {chapasMadera.map(c => (
+                        <option key={c.id} value={c.id}>{c.label}{c.recargo ? ` (+${c.recargo}%)` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* EL GRUPO 7 (abeto tricapa) NO TIENE COLUMNAS B NI C: sus
+                      acabados son recargos sobre el crudo. Ofrecer las
+                      columnas seria tarifarlo por una tabla que no existe. */}
+                  {!esAbeto ? (
+                    <div className="min-w-[150px]">
+                      <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Acabado</label>
+                      <select value={acabadoMadera} onChange={e => setAcabadoMadera(e.target.value)}
+                        data-testid="acb-madera-acabado"
+                        className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                        {ACB_MADERA_ACABADOS.map(a2 => <option key={a2.id} value={a2.id}>{a2.label}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="min-w-[170px]">
+                      <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Acabado (abeto)</label>
+                      <select value={acabadoAbeto} onChange={e => setAcabadoAbeto(e.target.value)}
+                        data-testid="acb-madera-acabado-abeto"
+                        className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                        <option value="">Crudo</option>
+                        {ACB_MADERA_ACABADOS_ABETO.map(a2 => (
+                          <option key={a2.id} value={a2.id}>{a2.label} (+{a2.recargo}%)</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="min-w-[190px]">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Vitrina</label>
+                    <select value={vitrinaMadera} onChange={e => setVitrinaMadera(e.target.value)}
+                      data-testid="acb-madera-vitrina"
+                      className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                      <option value="">Puerta (sin vitrina)</option>
+                      {/* El +20 % lo llevan ONCE modelos de la pag. 18 y nadie
+                          mas: por eso la opcion dice si este lo lleva. */}
+                      <option value="normal">Vitrina{llevaVitrina20 ? ' (+20%)' : ' (sin recargo)'}</option>
+                      <option value="palilleria">Palillería / celosía (+50%)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center gap-4 flex-wrap text-[11px]">
+                  {[['patina', 'Pátina (+10%)'], ['poroArenado', 'Poro arenado (+10%)'],
+                    ['fueraDeCarta', 'Fuera de carta (+25%)'],
+                    ['vetaConsecutiva', 'Veta consecutiva (+25%)'], ['xolid', 'XOLID (+15%)']
+                  ].map(([k, txt]) => (
+                    <label key={k} className="flex items-center gap-1.5 font-bold text-slate-600 cursor-pointer">
+                      <input type="checkbox" checked={!!extrasMadera[k]} data-testid={`acb-madera-${k}`}
+                        onChange={e => setExtrasMadera(p2 => ({ ...p2, [k]: e.target.checked }))}
+                        className="rounded" />
+                      {txt}
+                    </label>
+                  ))}
+                  {lineaMadera && (
+                    <span data-testid="acb-madera-grupo" className="px-2 py-0.5 rounded-md bg-slate-100 font-black text-slate-600">
+                      GRUPO {lineaMadera.grupo}{lineaMadera.recargo ? ` + ${lineaMadera.recargo} %` : ''}
+                    </span>
+                  )}
+                </div>
+                {/* LA TARIFA NO DICE EN QUE CHAPAS SE FABRICA UN MODELO
+                    ANTIGUO. Se tarifa —el grupo si lo da— y se avisa, para que
+                    se confirme con ACB en vez de darlo por bueno. */}
+                {lineaMadera && lineaMadera.chapaSinConfirmar && (
+                  <div data-testid="acb-madera-sin-confirmar"
+                    className="mt-2 px-3 py-2 rounded-lg bg-aviso-50 border border-aviso-200 text-[11px] text-aviso-800 font-bold">
+                    {modeloMaderaObj.nombre} es un modelo antiguo: la tarifa da su grupo, pero NO dice
+                    en qué chapas lo fabrica ACB. El precio es el del grupo {lineaMadera.grupo};
+                    hay que confirmar la chapa con el proveedor antes de cursar el pedido.
+                  </div>
+                )}
+              </div>
+            )}
+
             {coleccionPuerta === 'laca' && (
               <div data-testid="acb-laca-controles" className="mb-3">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -1418,7 +1598,7 @@ const Cascos = ({ state, setState }) => {
               </div>
             )}
 
-            {coleccionPuerta !== 'laca' && (
+            {coleccionPuerta === 'canteado' && (
             <div data-testid="acb-puertas-controles" className="flex items-center gap-3 flex-wrap mb-3">
               <div className="flex-1 min-w-[220px]">
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Serie</label>
@@ -1450,7 +1630,7 @@ const Cascos = ({ state, setState }) => {
                 que cambian el precio de verdad y no estan en ninguna casilla:
                 el tirador gola aparte, los montados que no lo admiten y los
                 frentes pequenos que salen lisos aunque pidas otra cosa. */}
-            {coleccionPuerta !== 'laca' && serieObj.nota && (
+            {coleccionPuerta === 'canteado' && serieObj.nota && (
               <div data-testid="acb-puertas-nota"
                 className="mb-3 px-3 py-2 rounded-lg bg-aviso-50 border border-aviso-200 text-[11px] text-aviso-800 font-bold">
                 {serieObj.nota}
@@ -1488,7 +1668,11 @@ const Cascos = ({ state, setState }) => {
                             <button type="button"
                               onClick={() => addPuertaToCart(g.altos, w, precio)}
                               data-testid="acb-puertas-add"
-                              title={`Añadir ${coleccionPuerta === 'laca' ? `${modeloLacaObj.nombre} ${gruesoActivo}mm` : serieObj.label} ${g.altos.join(' o ')} x ${w} mm`}
+                              title={`Añadir ${coleccionPuerta === 'laca'
+                                ? `${modeloLacaObj.nombre} ${gruesoActivo}mm`
+                                : coleccionPuerta === 'madera'
+                                  ? `${modeloMaderaObj.nombre} ${chapaActiva}`
+                                  : serieObj.label} ${g.altos.join(' o ')} x ${w} mm`}
                               className="w-full px-2 py-1 rounded-md font-mono font-bold text-slate-700 hover:bg-accion-600 hover:text-white transition-colors">
                               {eur(precio)}
                             </button>

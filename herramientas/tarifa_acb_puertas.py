@@ -351,6 +351,7 @@ COLECCION = 'canteado'
 COLECCIONES = [
     ('canteado', 'CANTEADO', 'Puertas canteadas a 4 cantos'),
     ('laca', 'LACA', 'Lacados por modelo y grupo'),
+    ('madera', 'MADERA', 'Chapa natural por modelo y grupo'),
 ]
 
 TRAMOS = [500,1000,1500,2000,2500,3000,3500,4000,4500,5000,

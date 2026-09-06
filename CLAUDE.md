@@ -932,14 +932,19 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      escandallo.
    - Candado: `test_calculo_hitos_de_cobro.py`.
 
-31. **LA TARIFA DE ACB SON DOS COLECCIONES, Y NO SE TARIFAN IGUAL** (04-05/09).
+31. **LA TARIFA DE ACB SON TRES COLECCIONES, Y NO SE TARIFAN IGUAL** (04-05/09).
    El master: «lo quiero poner en la sección de cocina desmontada al igual que
    los cascos, pero una sección que ponga ACB PUERTAS», y «todo lo que te estoy
    pasando de tarifa es un apartado que se debe de llamar CANTEADO... también
    tiene otras colecciones en puertas de madera, puertas laca». La sección es
-   **ACB PUERTAS** y dentro va la COLECCIÓN: `canteado` y `laca` (Madera queda
-   pendiente). El proveedor es el mismo que el de los cascos, así que todo cae
-   en el mismo carrito y el mismo pedido.
+   **ACB PUERTAS** y dentro va la COLECCIÓN: `canteado`, `laca` y `madera`. El
+   proveedor es el mismo que el de los cascos, así que todo cae en el mismo
+   carrito y el mismo pedido.
+   - **CADA UNA TARIFA POR UNA COSA DISTINTA, Y ESA ES LA TRAMPA.** Canteado:
+     por SERIE y CANTO. Laca: por MODELO, y el **GRUESO** decide el grupo.
+     Madera: por MODELO, y la **CHAPA** decide el grupo. Las tres comparten
+     casi la misma rejilla de altos y anchos, así que una tarifa aplicada a la
+     colección que no es da un número plausible, nunca un error.
    - **CANTEADO:** el precio SALE de la matriz de su serie, y el CANTO es una
      dimensión más — en las Touch el ALMA cuesta siempre más que el PVC, así
      que devolver cualquiera de los dos es un precio equivocado sin error.
@@ -956,6 +961,22 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      que vale lo que la INMEDIATA SUPERIOR — interpolar es inventarse una cifra
      (regla 7). El cálculo vive en `precioLacaACB` y la pantalla NO lo repite:
      dos cuentas para lo mismo acaban diciendo cosas distintas.
+   - **MADERA: la CHAPA cambia la MATRIZ, no un porcentaje.**
+     `precio = matriz(GRUPO, acabado, alto, ancho) × (1 + recargo del modelo)
+     × (1 + recargo de la chapa)`. Un MADRID en fresno es GRUPO 1 y en **abeto
+     tricapa es GRUPO 7** — otra tabla entera; igual PALENCIA, PALMA y VEGA.
+     Coger la primera línea del modelo tarifa el abeto al precio del fresno.
+     Cuatro cosas más que cuestan dinero en silencio: **(a)** el recargo de la
+     CHAPA —NOGAL +10 %, ROBLE NUDOS +15 %, en TODOS los grupos (pág. 18)—;
+     **(b)** el **GRUPO 7 solo tiene columna de CRUDO**, sus acabados son
+     recargos (pigmento +20 %, poro arenado +10 %, tinte +10 %), así que
+     pedirle la B o la C es tarifarlo por una tabla que no tiene; **(c)** la
+     **VITRINA la pagan ONCE modelos** y nadie más (+20 % sobre el valor de la
+     puerta), mientras palillería y celosía van a +50 % en cualquiera — la
+     lista es CERRADA, ampliarla cobra de más y recortarla cobra de menos;
+     **(d)** los **MODELOS ANTIGUOS** (30) traen su grupo pero la tarifa NO
+     dice en qué chapas los fabrica ACB: se tarifan y se marcan
+     `chapaSinConfirmar`, ni se dan por imposibles ni por confirmados.
    - **LEIDEN SALE EN DOS GRUPOS A LA VEZ** en la tarifa de ACB (pág. 6 y la
      cabecera del grupo 1 dicen GRUPO 1; la cabecera del grupo 3 también lo
      lista). Son 3,59 € por frente. Se toma el de la pág. 6 y queda MARCADO en
@@ -974,8 +995,13 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      · ACB_CANTOS is not defined», con Cocina Desmontada sin abrir. Las 23
      pruebas de esa tarifa estaban en verde porque TODAS leían tablas. Un
      candado de datos que no llama a las funciones no protege de esto.
-   - Candados: `test_calculo_tarifa_acb_puertas.py` y
-     `test_calculo_tarifa_acb_laca.py`.
+   - **DOS CASILLAS DE LA MADERA SE LEYERON A OJO**, a 400 dpi: al extraer el
+     texto sus precios salían pegados en un solo número y la fila se caía
+     entera. Son el grupo 3 de 278×498 y el grupo 5 de 898×398, y tienen su
+     propio candado — una matriz con una fila de menos sigue pareciendo una
+     matriz.
+   - Candados: `test_calculo_tarifa_acb_puertas.py`,
+     `test_calculo_tarifa_acb_laca.py` y `test_calculo_tarifa_acb_madera.py`.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

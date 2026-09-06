@@ -507,7 +507,12 @@ def test_LA_LACA_NO_SE_PINTA_CON_LOS_CONTROLES_DEL_CANTEADO():
     # buscando la condición suelta en el fichero: esa cadena aparece también
     # en el aviso de la serie, así que quitar la guarda del selector dejaba la
     # prueba en verde. Un ancla que casa en otro sitio no es un ancla.
-    assert "{coleccionPuerta !== 'laca' && (\n            <div data-testid=\"acb-puertas-controles\"" in _lee(PANTALLA), (
+    #
+    # La guarda dice «=== canteado» y no «!== laca»: con tres colecciones, una
+    # negación se queda corta a la cuarta — al entrar la madera habría dejado
+    # los selectores de serie y canto puestos ahí también.
+    assert ("{coleccionPuerta === 'canteado' && (\n            "
+            '<div data-testid="acb-puertas-controles"') in _lee(PANTALLA), (
         "los selectores de serie y canto se siguen enseñando en la laca: se "
         "pediría un canto que la laca no tiene y una serie que no existe en "
         "esa colección")
