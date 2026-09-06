@@ -3714,7 +3714,10 @@ export default function AIRenderStudio({ state, setState }) {
       const response = await fetch(`${API_URL}/api/ai-engine/render/params`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ ...params, projectType: tipo3d }),
+        // EL MOTOR ELEGIDO VIAJA TAMBIEN POR AQUI. Sin el, este boton
+        // renderizaba con el motor por defecto aunque en pantalla hubiera
+        // otro puesto, y no lo decia.
+        body: JSON.stringify({ ...params, projectType: tipo3d, provider: providerOf() }),
       });
 
       const data = await response.json();
@@ -4202,7 +4205,12 @@ export default function AIRenderStudio({ state, setState }) {
                     <><Send size={18} /> {variantCount > 1 ? `Generar ${variantCount} variaciones` : 'Generar desde la descripción'}</>
                   )}
                 </button>
-                <AvisoDeCoste n={variantCount} />
+                {/* CON PLANO O BOCETOS SE VA POR `handleGenerateComposed`, que
+                    genera UNA imagen aunque haya varias variantes pedidas. El
+                    aviso tiene que decir lo que se va a cobrar de verdad: si
+                    dijera 3 y se cobrara 1, el contador y el aviso volverian a
+                    contar cosas distintas (CLAUDE.md, regla 15). */}
+                <AvisoDeCoste n={(floorPlan || wallSketches.length > 0) ? 1 : variantCount} />
               </div>
             </div>
           ) : (

@@ -1717,6 +1717,13 @@ class Render3DService:
         lighting: str = "natural",
         style: str = "photorealistic",
         additional_details: Optional[str] = None,
+        # EL MOTOR ELEGIDO EN PANTALLA. Este era el UNICO de los once sitios
+        # que llaman a `_render_dispatch` que no se lo pasaba, asi que el boton
+        # de parametros renderizaba siempre con el de por defecto aunque en
+        # pantalla hubiera otro puesto (CLAUDE.md, regla 1: «el motor elegido en
+        # pantalla manda siempre, por cualquier camino»). No daba ningun error:
+        # devolvia una imagen, solo que de otro motor.
+        provider: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de parámetros explícitos (formulario).
@@ -1739,7 +1746,7 @@ class Render3DService:
             f"shadows/reflections. Avoid plastic, flat or oversaturated looks."
         )
 
-        return await self._render_dispatch(task_prompt, prompt)
+        return await self._render_dispatch(task_prompt, prompt, provider=provider)
 
     async def _render_with_gemini(self, task_prompt: str, prompt: str,
                                   parsed_params: Optional[Dict[str, Any]] = None,

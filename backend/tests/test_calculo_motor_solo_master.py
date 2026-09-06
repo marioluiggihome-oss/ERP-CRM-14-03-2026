@@ -103,8 +103,15 @@ def test_un_motor_desconocido_no_encarece_ni_abarata():
     assert coste_de_motor("render", 1, None) == 1
 
 
-def test_las_tres_rutas_de_render_pasan_por_el_candado():
-    """Nadie puede colar `provider` sin filtrar: se mira el fichero entero."""
+def test_las_cuatro_rutas_de_render_pasan_por_el_candado():
+    """Nadie puede colar `provider` sin filtrar: se mira el fichero entero.
+
+    Eran TRES hasta el 06/09. Al auditar salió que `/render/params` —el botón
+    del formulario— ni siquiera ACEPTABA el motor: renderizaba siempre con el
+    de por defecto aunque en pantalla hubiera otro elegido. Ahora lo acepta, y
+    por tanto tiene que filtrarlo como las otras tres: el motor viaja en el
+    cuerpo de la petición y sin filtro cualquiera con sesión pediría el caro
+    desde fuera de la pantalla (CLAUDE.md, regla 11)."""
     ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         "routes", "ai_engine.py")
     with open(ruta, "r", encoding="utf-8") as f:
@@ -112,6 +119,6 @@ def test_las_tres_rutas_de_render_pasan_por_el_candado():
     assert "provider=request.provider" not in cuerpo, (
         "hay una ruta que vuelve a pasar el motor pedido SIN comprobar quién lo "
         "pide. Tiene que ir por `motor_permitido(user, ...)`.")
-    assert cuerpo.count("provider=motor_permitido(user, request.provider)") == 3, (
-        "deberían ser tres rutas de render las que pasan por el candado "
-        "(render, render/compose y render/orbit)")
+    assert cuerpo.count("provider=motor_permitido(user, request.provider)") == 4, (
+        "deberían ser CUATRO las rutas de render que pasan por el candado: "
+        "render, render/compose, render/orbit y render/params")

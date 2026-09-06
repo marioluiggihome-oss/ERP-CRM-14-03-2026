@@ -511,6 +511,12 @@ class RenderParamsRequest(BaseModel):
     floor: str = Field(default="wood_oak", description="Material del suelo")
     lighting: str = Field(default="natural", description="Tipo de iluminación")
     style: str = Field(default="photorealistic", description="Estilo de renderizado")
+    # EL MOTOR ELEGIDO EN PANTALLA VIAJA TAMBIEN POR AQUI. Sin este campo, el
+    # boton de parametros renderizaba SIEMPRE con el motor por defecto aunque
+    # en pantalla hubiera otro elegido — era el unico de los once caminos que
+    # se saltaba la regla 1 de CLAUDE.md, y no daba ningun error: devolvia una
+    # imagen, solo que de otro motor.
+    provider: Optional[str] = None
     additional_details: Optional[str] = Field(None, description="Detalles adicionales")
     projectType: Optional[str] = Field(None, description="cocina|armario|bano|otro")
 
@@ -597,6 +603,47 @@ async def get_materials_catalog(user=Depends(require_auth)):
     return service.get_materials_catalog()
 
 
+async def cobrar_render(user: dict, provider=None, veces: int = 1) -> int:
+    """COBRA UNA GENERACION DE IMAGEN. En UN solo sitio, y por eso existe.
+
+    El cobro estaba escrito dentro de `/render` y otra vez dentro de
+    `/render/orbit`, y los otros dos endpoints que generan imagen —`/render/
+    compose` (plano + bocetos) y `/render/params` (el formulario)— no lo
+    tenian: renderizaban GRATIS. Peor: el boton de parametros lleva en su
+    tooltip «consume creditos» y ensena «vas a gastar 1 credito». El contador
+    decia una cosa y la factura del proveedor otra.
+
+    SE COBRA POR EL MOTOR QUE SE VA A USAR DE VERDAD, no por el pedido:
+    `motor_permitido` ya ha rebajado a IA 1 a quien no sea master, y seria
+    absurdo cobrarle el 3,3x de un motor que no va a llegar a tocar.
+
+    NO BLOQUEA POR UN ERROR INTERNO del contador, solo cuando de verdad no
+    quedan creditos. Un fallo leyendo el saldo no puede dejar sin trabajar a
+    nadie; es la misma decision que ya tomaba `/render`.
+
+    Devuelve cuantas veces se ha podido cobrar (para el 360, que son varias
+    vistas y hay que recortar a lo que quede).
+    """
+    veces = max(1, int(veces or 1))
+    try:
+        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
+        credits = await get_user_credits(user)
+        if not credits.get("ilimitado"):
+            restantes = int(credits.get("restantes", 0) or 0)
+            if restantes <= 0:
+                raise HTTPException(status_code=402,
+                                    detail=mensaje_sin_creditos(user, credits))
+            veces = min(veces, restantes)
+        motor = motor_permitido(user, provider)
+        for _ in range(veces):
+            await consume_credits(user, "render", motor=motor)
+        return veces
+    except HTTPException:
+        raise
+    except Exception:
+        return veces  # error interno del contador: nunca bloquea la generacion
+
+
 @ai_engine_router.post("/render")
 async def generate_render_natural(request: RenderRequest, user=Depends(require_auth)):
     """
@@ -610,23 +657,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     # ENFORCEMENT de créditos de IA por usuario. Admin/master = ilimitado.
     # Defensivo: si el contador falla por un error interno, NO se bloquea; solo
     # se bloquea cuando realmente no quedan créditos (restantes <= 0).
-    try:
-        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
-        credits = await get_user_credits(user)
-        if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
-            raise HTTPException(
-                status_code=402,
-                detail=mensaje_sin_creditos(user, credits),
-            )
-        # SE COBRA POR EL MOTOR QUE SE VA A USAR DE VERDAD, no por el pedido:
-        # `motor_permitido` ya ha rebajado a IA 1 a quien no sea master, y sería
-        # absurdo cobrarle el 3,3x de un motor que no va a llegar a tocar.
-        await consume_credits(user, "render",
-                              motor=motor_permitido(user, request.provider))
-    except HTTPException:
-        raise
-    except Exception:
-        pass  # error interno del contador: nunca bloquea la generación
+    await cobrar_render(user, request.provider)
     # Registro de uso de IA POR USUARIO (alimenta la columna "IA" del ranking y
     # el consumo por usuario). Best-effort: nunca bloquea el render.
     try:
@@ -719,6 +750,10 @@ async def generate_render_compose(request: RenderComposeRequest, user=Depends(re
     """Genera un render fotorrealista combinando un PLANO EN PLANTA (distribución)
     y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos a la vez."""
     request.projectType = await exigir_tipo_estudio3d(user, request.projectType)
+    # COBRA COMO CUALQUIER OTRO RENDER. No lo hacia, y este es de los caros:
+    # manda el plano y un boceto por pared, o sea varias imagenes de referencia
+    # en la misma llamada.
+    await cobrar_render(user, request.provider)
     service = get_render_service()
     overrides = {}
     if request.style:
@@ -761,21 +796,7 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
     n = max(2, min(int(request.n or 6), 6))
     # Enforcement de créditos: cada vista cuesta un render. Bloquea solo si no hay
     # créditos suficientes; el contador nunca bloquea por error interno.
-    try:
-        from services.ai_usage import get_user_credits, consume_credits, mensaje_sin_creditos
-        credits = await get_user_credits(user)
-        if not credits.get("ilimitado"):
-            restantes = int(credits.get("restantes", 0) or 0)
-            if restantes <= 0:
-                raise HTTPException(status_code=402, detail="Sin créditos disponibles para generar el giro 360º.")
-            n = min(n, restantes)
-        for _ in range(n):
-            await consume_credits(user, "render",
-                                  motor=motor_permitido(user, getattr(request, "provider", None)))
-    except HTTPException:
-        raise
-    except Exception:
-        pass
+    n = await cobrar_render(user, getattr(request, "provider", None), veces=n)
     try:
         from services.activity_tracker import get_tracker, ActivityType
         _tr = get_tracker()
@@ -858,9 +879,14 @@ async def generate_render_params(request: RenderParamsRequest, user=Depends(requ
             status_code=400,
             detail="El render por parámetros actuales solo está disponible para Cocina. Usa descripción o plano para el tipo contratado.",
         )
+    # COBRA, y con el motor de verdad. El boton dice en su propio tooltip
+    # «consume creditos» y ensena «vas a gastar 1 credito»; el servidor no
+    # cobraba ninguno.
+    await cobrar_render(user, request.provider)
     service = get_render_service()
 
     result = await service.generate_render_from_params(
+        provider=motor_permitido(user, request.provider),
         layout=request.layout,
         countertop=request.countertop,
         cabinets=request.cabinets,

@@ -129,14 +129,20 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      `test_calculo_ia7_modelo_pro.py`, porque un candado con el nombre de un
      motor que ya no usa es un candado que el siguiente que pase se cree y no
      comprueba.
-   - **PENDIENTE DE DECIDIR, Y ES DINERO:** `julio11` y `julio11_plus` cobran
-     **1 crédito** en `COSTE_POR_MOTOR`, y usan el mismo modelo que
-     `banana_pro`, que cobra **3,3**. El propio código dice que ese modelo
-     cuesta 0,12 $ por imagen frente a 0,036 $. O sea que hoy el contador dice
-     1 y la factura del proveedor dice 3,3. No se ha tocado porque el Estudio
-     3D está congelado y porque cuánto se cobra por un render lo decide el
-     master. A los usuarios que no son master NO les afecta: el servidor los
-     sigue forzando a `gemini` (regla 11).
+   - **PENDIENTE DE DECIDIR, Y ES DINERO (medido el 06/09):** IA 0
+     (`julio11`) e IA 7 (`julio11_plus`) hacen `model_override=
+     "gemini-3-pro-image-preview"`, que en `MODEL_PRICES` vale **0,12 €/imagen**;
+     la IA 1 no pone override y usa `gemini-2.5-flash-image`, a **0,036 €**.
+     Son **3,33x**. En `COSTE_POR_MOTOR` las tres cobran así: julio11 **1**,
+     julio11_plus **1**, banana_pro **3,3** — o sea que dos motores que gastan
+     lo mismo que el tercero cobran un tercio. **OJO CON EL NOMBRE:**
+     `banana_pro` es un MOTOR nuestro, no un modelo; los tres piden el mismo
+     modelo y por eso el candado se llama `test_calculo_ia7_modelo_pro.py`.
+     Hay cascada de respaldo (`GEMINI_IMAGE_MODELS`): si el `pro` falla o tarda
+     más de 90 s, cae a los flash de 0,036 € y se marca `de_respaldo`, así que
+     un render de IA 7 puede costar 0,12 € **o** 0,036 € según lo que responda.
+     Cuánto se cobra lo decide el master. A los usuarios que no son master NO
+     les afecta: el servidor los sigue forzando a `gemini` (regla 11).
    - **TODO BOTÓN QUE EDITA NUESTRO RENDER TIENE QUE DECIRLO** (06/09, a
      petición del master: «cuando le doy al botón de visita decorador cambia
      los colores que he ido cambiando después de las puertas»). El servidor
@@ -163,11 +169,16 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      la cabecera, no dentro de una: al meterlo dentro con `flex-1 min-w-0`, esa
      mitad se dejaba encoger, las dos cabían en una línea y se pintaban
      montadas.
-   - **SE PERDIÓ EL AVISO DE MOTOR DE RESPALDO.** Hasta el 04/09 la pantalla
-     decía en ámbar «lo ha pintado un modelo de respaldo, no lo uses para
-     comparar motores». El Estudio congelado ya no lo enseña; el dato sigue
-     viajando desde el backend (`motorUsado` / `motorDeRespaldo`). Comparar dos
-     motores sin ese aviso da la conclusión al revés, así que conviene saberlo.
+   - **SE PERDIÓ EL AVISO DE MOTOR DE RESPALDO, Y EL DATO YA NO LLEGA**
+     (corregido al auditar, 06/09). Hasta el 04/09 la pantalla decía en ámbar
+     «lo ha pintado un modelo de respaldo, no lo uses para comparar motores».
+     Esta nota decía que «el dato sigue viajando desde el backend
+     (`motorUsado` / `motorDeRespaldo`)» y **eso ya no es verdad**:
+     `limpiar_respuesta_render` borra los dos —están en
+     `_CAMPOS_TECNICOS_RENDER`— y no los lee nadie en la pantalla. El servicio
+     los sigue calculando; se quedan en el servidor. Para recuperar el aviso
+     habría que sacarlos de esa lista a propósito. Comparar dos motores sin él
+     da la conclusión al revés, así que conviene saberlo.
    - **IA 1 es la de producción y es la única que ve un usuario que no sea
      master.** Las demás son motores de pruebas del master (IA 7 cuesta 3,3x
      por render).
@@ -1061,6 +1072,28 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      - Candado: `test_calculo_medida_a_medida_acb.py`.
    - Candados: `test_calculo_tarifa_acb_puertas.py`,
      `test_calculo_tarifa_acb_laca.py` y `test_calculo_tarifa_acb_madera.py`.
+
+32. **TODO LO QUE GENERA UNA IMAGEN SE COBRA** (06/09, auditando el Estudio
+   3D). Cuatro endpoints generan imagen con IA y solo DOS cobraban: `/render` y
+   `/render/orbit` sí; **`/render/compose` (plano + un boceto por pared) y
+   `/render/params` (el formulario) NO**. El de parámetros además MENTÍA: su
+   `title` dice «consume créditos» y enseña «vas a gastar 1 crédito» mientras
+   el servidor no descontaba ninguno — justo lo que la regla 15 existe para
+   impedir. `/render/upscale-4k` no entra: es un reescalado determinista con
+   Pillow, sin IA, y tiene su propio permiso (`canUse4K`).
+   - **EL COBRO VIVE EN `cobrar_render`, EN UN SOLO SITIO.** Estaba escrito
+     dentro de `/render` y COPIADO dentro de `/render/orbit`, y los otros dos
+     no lo tenían: con el cobro repartido, cada endpoint nuevo empieza gratis
+     por omisión y nadie se entera hasta que llega la factura.
+   - **Y EL MOTOR ELEGIDO LLEGA POR LOS ONCE CAMINOS.**
+     `generate_render_from_params` era el ÚNICO de los once que llaman a
+     `_render_dispatch` que no le pasaba el motor, así que el botón de
+     parámetros renderizaba siempre con el de por defecto aunque en pantalla
+     hubiera otro. No daba ningún error: devolvía una imagen, de otro motor y
+     de otro precio (regla 1).
+   - El aviso dice lo que se va a cobrar DE VERDAD: con plano o bocetos se
+     genera UNA imagen aunque haya varias variantes pedidas.
+   - Candado: `test_calculo_todo_render_se_cobra.py`.
 
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se

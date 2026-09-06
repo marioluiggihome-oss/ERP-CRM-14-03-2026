@@ -49,9 +49,16 @@ def test_se_avisa_del_coste_antes_de_pulsar():
 def test_el_aviso_cuenta_las_variaciones():
     """Tres variaciones son tres renders, y tres veces el coste."""
     cuerpo = _codigo()
-    assert "<AvisoDeCoste n={variantCount} />" in cuerpo, (
-        "el aviso del botón de la descripción no tiene en cuenta el número de "
-        "variaciones: diría «1 crédito» y gastaría tres")
+    # El aviso sigue contando las variaciones, PERO con plano o bocetos el
+    # camino es otro (`handleGenerateComposed`) y ese genera UNA imagen aunque
+    # se pidan tres. Si dijera 3 y se cobrara 1, el aviso y el contador
+    # volverían a contar cosas distintas — que es lo que esta prueba impide,
+    # en los dos sentidos.
+    assert ("<AvisoDeCoste n={(floorPlan || wallSketches.length > 0) "
+            "? 1 : variantCount} />") in cuerpo, (
+        "el aviso del botón de la descripción no cuadra con lo que se cobra: "
+        "o no cuenta las variaciones —diría «1 crédito» y gastaría tres— o "
+        "las cuenta también con plano/bocetos, donde solo se genera una")
     assert "creditosDeEstaTanda(n)" in cuerpo, (
         "el aviso ya no multiplica por el número de renders de la tanda")
 
