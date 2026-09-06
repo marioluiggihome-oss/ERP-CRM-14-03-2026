@@ -899,7 +899,9 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Descarga el render con las marcas de instalaciones "quemadas" y una leyenda.
   const descargarConMarcas = async () => {
-    const src = currentImage(); if (!src) return;
+    // Descargar exactamente la imagen que se ve en el visor. En B/N la imagen
+    // visible vive en bnImage, aunque renderResult conserve otro historial.
+    const src = schematic && bnImage ? bnImage : currentImage(); if (!src) return;
     const dataUrl = await imageToDataUrl(src);
     const el = document.getElementById('render-annot-img');
     const cw = el?.offsetWidth || 1280, ch = el?.offsetHeight || 720;
@@ -912,7 +914,10 @@ export default function AIRenderStudio({ state, setState }) {
       const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
       ctx.drawImage(im, dx, dy, dw, dh);
       marks.forEach((mk) => {
-        const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
+        const t = MARK_TYPES[mk.type];
+        // Las coordenadas son relativas a la imagen dibujada, no al fondo del
+        // canvas. Así la descarga coincide con la posición visible del visor.
+        const x = dx + (mk.x / 100) * dw, y = dy + (mk.y / 100) * dh;
         // Punto (círculo de color, sin letra)
         ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
@@ -949,7 +954,7 @@ export default function AIRenderStudio({ state, setState }) {
   // (punto + cota de altura), en alta resolución, como dataURL. Reutilizable para
   // descargar o para el PDF de gremio.
   const renderMarcadoDataUrl = (scale = 2) => new Promise(async (resolve) => {
-    const src = currentImage(); if (!src) return resolve(null);
+    const src = schematic && bnImage ? bnImage : currentImage(); if (!src) return resolve(null);
     const dataUrl = await imageToDataUrl(src);
     const el = document.getElementById('render-annot-img');
     const cw = (el?.offsetWidth || 1280) * scale, ch = (el?.offsetHeight || 720) * scale;
@@ -970,7 +975,8 @@ export default function AIRenderStudio({ state, setState }) {
       const R = Math.max(9, cw * 0.013);          // radio del punto
       const FS = Math.max(12, cw * 0.019);        // cuerpo de la cota
       marks.forEach((mk) => {
-        const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
+        const t = MARK_TYPES[mk.type];
+        const x = dx + (mk.x / 100) * dw, y = dy + (mk.y / 100) * dh;
         // Halo blanco: sin él, un punto naranja sobre una cocina blanca con
         // mucha luz se pierde igual aunque sea grande.
         ctx.beginPath(); ctx.arc(x, y, R + R * 0.28, 0, Math.PI * 2);
