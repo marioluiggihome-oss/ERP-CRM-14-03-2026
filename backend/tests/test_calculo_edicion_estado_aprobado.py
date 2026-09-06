@@ -24,3 +24,4 @@ def test_la_nueva_orden_se_separa_de_los_cambios_conservados():
     assert "CAMBIOS YA APLICADOS QUE DEBES CONSERVAR" in block
     assert "NUEVO CAMBIO QUE DEBES APLICAR AHORA" in block
     assert "setEditAppliedChanges(prev => [...prev, ...allLines])" in block
+    assert "<button onClick={() => editRender()}" in source

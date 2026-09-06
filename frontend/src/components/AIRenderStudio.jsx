@@ -5298,7 +5298,7 @@ export default function AIRenderStudio({ state, setState }) {
                     className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
-                  <button onClick={editRender} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
+                  <button onClick={() => editRender()} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
                     className="flex items-center gap-1.5 px-4 py-2 bg-accion-600 text-white rounded-lg text-xs font-bold hover:bg-accion-700 disabled:opacity-50 shrink-0">
                     {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}</>}
                   </button>
