@@ -231,25 +231,65 @@ def test_LAS_VEINTIUNA_TARIFAS_ENTERAS_encuentran_su_precio():
         f"primero: {fallos[0]}")
 
 
+def _busca_en(familias, casos):
+    """Igual que `_busca`, pero contra un catálogo dado. Hace falta para poder
+    probar la regla del código SIN precio ahora que el hueco de la T9 está
+    tapado: la regla sigue valiendo, y una prueba que dependa de que exista un
+    hueco concreto se apaga sola el día que se rellene."""
+    fn = _extrae("entradaDeTarifa")
+    js = (fn + f"\nconst FAMS = {json.dumps(familias)};\n"
+          + f"const CASOS = {json.dumps(casos)};\n"
+          + "console.log(JSON.stringify(CASOS.map(c => entradaDeTarifa(FAMS, c).e)));")
+    return _en_node(js)
+
+
 def test_un_codigo_SIN_PRECIO_no_coge_el_del_mueble_de_al_lado():
-    """El otro que salió del barrido, y era silencioso.
+    """Lo que salió al barrer las 21 tarifas, y era silencioso.
 
-    En la T9, `MEDIACOLUMNA_VITRINA` trae `MV60: null` —un hueco: en T8 vale
-    273 y en T10, 249—. Sin parar ahí, la búsqueda seguía y encontraba
-    `MV60D/I` = 230: un mueble de DOS puertas presupuestado al precio del de
-    UNA, unos 30 € menos, sin error y sin que nadie lo mirara.
+    En la T9, `MEDIACOLUMNA_VITRINA` traía `MV60: null` y la búsqueda seguía
+    hasta encontrar `MV60D/I`: un mueble de DOS puertas presupuestado al precio
+    del de UNA. El master dio los valores buenos el 07/09 y ese hueco ya está
+    tapado, pero LA REGLA sigue haciendo falta —hay 21 tarifas transcritas a
+    mano—, así que se prueba con un catálogo de laboratorio.
 
-    `null` significa «de este no se sabe el precio», y eso se enseña vacío para
-    que alguien pregunte (regla 7).
+    `null` significa «de este no se sabe el precio»: se enseña vacío para que
+    alguien pregunte (regla 7). Distinto de un código que NO ESTÁ, que sí sigue
+    buscando — es lo que salva a los proyectos viejos con la mano pegada a un
+    código de dos puertas.
     """
-    fams = _tarifas()["tariffs"]["T9"]["MEDIACOLUMNA_VITRINA"]["items"]
-    assert fams.get("MV60", "AUSENTE") is None, (
-        "ya no hay hueco en la T9: si se ha rellenado, esta prueba necesita "
-        "otro caso — pero el criterio sigue valiendo")
-    assert fams.get("MV60D/I") is not None, "sin el gemelo no hay a qué caerse"
-    (e,) = _busca([{"cod": "MV60", "familia": "MEDIACOLUMNA_VITRINA"}], "T9")
-    assert e is None, (
-        f"un código sin precio está cogiendo el del mueble de al lado ({e})")
+    fams = {"X": {"type": "single", "items": {"ZZ60D/I": 111, "ZZ60": None}}}
+    assert _busca_en(fams, [{"cod": "ZZ60", "familia": "X"}]) == [None], (
+        "un código sin precio está cogiendo el del mueble de al lado")
+    # Y el que sí lo tiene se sigue encontrando.
+    assert _busca_en(fams, [{"cod": "ZZ60D", "familia": "X"}]) == [111]
+    # Un código que NO ESTÁ sí sigue buscando: son cosas distintas.
+    fams2 = {"X": {"type": "single", "items": {"ZZ60": 222}}}
+    assert _busca_en(fams2, [{"cod": "ZZ60D", "familia": "X"}]) == [222]
+
+
+def test_LOS_VALORES_QUE_DIO_EL_MASTER_para_la_T9():
+    """El master, 07/09/2026: «MV60 EN T9 = a 230 y MV60D/I = a 188»."""
+    t9 = _tarifas()["tariffs"]["T9"]["MEDIACOLUMNA_VITRINA"]["items"]
+    assert t9["MV60"] == 230
+    assert t9["MV60D/I"] == 188
+    assert t9["MV60"] > t9["MV60D/I"], (
+        "el de DOS puertas tiene que costar más que el de una")
+
+
+def test_LO_QUE_QUEDA_DUDOSO_DE_LA_T9_ESTA_ESCRITO():
+    """Los dos valores que dio el master son los que estaban una columna a la
+    izquierda, así que la fila parece transcrita CORRIDA: MV50D/I sigue
+    valiendo lo mismo que MV60D/I, que es raro para un 50 y un 60.
+
+    Eso no se arregla por deducción —sería inventarse un precio de proveedor—
+    pero tampoco se deja sin decir: queda anotado en el propio fichero de la
+    tarifa, que es donde lo va a encontrar el siguiente que pase.
+    """
+    cambios = _tarifas()["_meta"]["cambios_del_master"]
+    ultimo = [c for c in cambios if c.get("fecha") == "2026-09-07"]
+    assert ultimo, "el cambio de la T9 no está registrado en la tarifa"
+    assert "lo_que_queda_dudoso" in ultimo[0], (
+        "no se ha dejado escrito qué queda por comprobar de esa fila")
 
 
 def test_HAY_UN_SOLO_BUSCADOR_para_el_precio_y_para_el_cambio_de_tarifa():

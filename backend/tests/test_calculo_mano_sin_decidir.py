@@ -165,6 +165,76 @@ def test_la_MEDIDA_DEFINITIVA_tambien_llega_a_la_fabrica():
     assert "height: m.altoReal ?? m.alto" in src
 
 
+# ─── Y EL MISMO FALLO ESTABA EN EL SERVIDOR ──────────────────────────────────
+
+def test_el_SERVIDOR_tampoco_convierte_un_D_BARRA_I_en_izquierda():
+    """El cuarto sitio, encontrado barriendo el repo entero después del aviso.
+
+    `mv_relacion.py` lee la relación escrita a mano y tenía, en el camino del
+    CÓDIGO EXACTO —cuyo propio ejemplo dice «ASC60D/I, B60D/I»—:
+
+        mano = "D" if cod.endswith("D") else "I" if cod.endswith("I") else ""
+
+    Así que escribir o pegar «1 b60d/i» devolvía `mano: "I"`. La pantalla
+    seguía pintando «⚠️ Sin Mano» —ese rótulo sale del CÓDIGO— mientras el dato
+    decía izquierda: la misma partida en dos que en el frontend, y en la fuente.
+
+    El otro camino, el de «b60i» escrito suelto, sí lo distinguía desde el
+    principio; por eso el fallo solo salía al pegar códigos de catálogo.
+    """
+    from services.mv_relacion import parse_relacion_text as P
+
+    def _mano(texto):
+        muebles = P(texto, "T1")
+        assert muebles, f"«{texto}» no se ha leído"
+        return muebles[0]["cod"], muebles[0]["mano"]
+
+    assert _mano("1 b60d/i") == ("B60D/I", ""), "un D/I vuelve a salir con mano"
+    assert _mano("1 asc60d/i") == ("ASC60D/I", "")
+    assert _mano("1 a60d/i") == ("A60D/I", "")
+    # Y lo que SÍ trae mano escrita se sigue leyendo: no se puede arreglar una
+    # mitad rompiendo la otra.
+    assert _mano("1 b60i")[1] == "I"
+    assert _mano("1 b60d")[1] == "D"
+
+
+def test_NINGUN_codigo_de_catalogo_trae_la_mano_decidida():
+    """La premisa de la que depende el arreglo del servidor.
+
+    En la tarifa, un mueble de una puerta se escribe «B60D/I» —las dos manos,
+    sin elegir—. Si algún día MV imprimiera un «B60I» como código de catálogo,
+    el camino del código exacto tendría que volver a mirar el final, y esta
+    prueba es la que lo diría. Se comprueban las 21 tarifas.
+    """
+    with open(TARIFAS, "r", encoding="utf-8") as f:
+        tfs = json.load(f)["tariffs"]
+    raros = sorted({k for fams in tfs.values() for v in fams.values()
+                    for k in (v.get("items") or {})
+                    if not k.upper().endswith("D/I")
+                    and k.upper().endswith(("D", "I"))})
+    assert not raros, (
+        f"hay códigos de catálogo con la mano ya decidida ({raros[:5]}): el "
+        "camino del código exacto de `mv_relacion` los daría por «sin decidir»")
+
+
+def test_TODOS_los_codigos_D_BARRA_I_pegados_salen_SIN_MANO_del_servidor():
+    """Los 125 de la tarifa, uno a uno, por el camino del código exacto."""
+    from services.mv_relacion import parse_relacion_text as P
+    with open(TARIFAS, "r", encoding="utf-8") as f:
+        t1 = json.load(f)["tariffs"]["T1"]
+    di = sorted({k for v in t1.values() for k in (v.get("items") or {})
+                 if k.endswith("D/I")})
+    assert len(di) > 100
+    malos = []
+    for cod in di:
+        muebles = P(f"1 {cod.lower()}", "T1")
+        if muebles and muebles[0].get("mano"):
+            malos.append((cod, muebles[0]["mano"]))
+    assert not malos, (
+        f"{len(malos)} códigos sin decidir vuelven del servidor con una mano "
+        f"puesta; el primero: {malos[0]}")
+
+
 def test_el_AVISO_de_sin_mano_sigue_contando_los_que_faltan():
     """La red de seguridad: mientras queden líneas sin decidir, la pantalla lo
     dice y ofrece fijarlas de golpe."""

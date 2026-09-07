@@ -274,8 +274,29 @@
     },
     "por_que": "La hoja de MV pone P45=65 y P50=59, o sea una puerta mas ancha mas barata. Comprobado a 900 dpi sobre el escaneo: pone 59, no 69 — la rareza es del impreso, no de la transcripcion. El master mando invertirlas: «invierte el precio, cambialo y ya esta». Se invierten y no se inventa un tercer numero; lo que cuadraria del todo seria P50=69, pero ese valor no aparece impreso en ninguna parte.",
     "efecto_que_queda": "La fila sigue bajando, ahora en P45 (P40=62 y P45=59). Es la consecuencia de invertir y esta asumida."
+   },
+   {
+    "fecha": "2026-09-07",
+    "donde": "T9 / MEDIACOLUMNA_VITRINA / MV60D-I y MV60",
+    "estaba": {
+     "MV60D/I": 230,
+     "MV60": null
+    },
+    "queda_en": {
+     "MV60D/I": 188,
+     "MV60": 230
+    },
+    "por_que": "El master, 07/09/2026: «MV60 EN T9 = a 230 y MV60D/I = a 188». Salió al barrer las 21 tarifas buscando precios que no se encuentran: MV60 estaba vacío y la búsqueda se caía al MV60D/I, o sea que un mueble de DOS puertas se presupuestaba al precio del de UNA.",
+    "lo_que_queda_dudoso": "Los dos valores que da el master son los que HOY están escritos una columna a la izquierda (188 está en MV50D/I y 230 en MV60D/I), así que la fila parece transcrita CORRIDA una columna desde MV45 en adelante. Con el arreglo, MV50D/I sigue valiendo 188 igual que MV60D/I, lo cual rompe el orden creciente: MV50D/I (y quizá MV45D/I y MV40D/I) están PENDIENTES de comprobar contra la hoja. Comparando con T10, encajaría MV50D/I=174, pero eso NO se escribe sin que lo diga el master: sería inventarse un precio de proveedor."
    }
-  ]
+  ],
+  "anomalias_pendientes_de_hoja": {
+   "_que_es": "Casillas en las que un mueble MÁS ANCHO sale MÁS BARATO que el mismo mueble más estrecho. Salieron al barrer las 21 tarifas enteras el 07/09/2026, a petición del master («revisa la tarifa para que no falte nada»). Son CUATRO en 12.963 códigos. NO se corrigen aquí: un precio de proveedor no se deduce (regla 7). Se dejan escritas con la evidencia de las tarifas vecinas para que se comprueben contra la hoja impresa, y hay un candado que salta si aparece una quinta.",
+   "T4_ALTILLO_L50_L60": "YA ESTABA DOCUMENTADA más arriba en notas_revision: L50=[86,89] y L60=[80,90]. Confirmada por zoom; posible error de imprenta del catálogo original.",
+   "T1_TECHO_COLOR_TEC260": "TEC260 primera columna = 38,4 entre TEC240=27,4 y TEC280=29,4. La columna sube de uno en uno o de dos en dos, así que ahí debería haber un 28,4: parece un 2 leído como 3. Las otras DOS columnas de TEC260 (37 y 41,4) sí caen donde les toca, entre las de 240 y las de 280, o sea que el fallo es de una sola casilla.",
+   "T2_ALTILLO_L35": "L35 = [86, 86] entre L30=[75,84] y L40=[81,88]. Es la ÚNICA fila de toda la familia en la que las dos columnas valen lo mismo, y además la primera se sale por arriba: parece que se copió el valor de la segunda columna en la primera. Por la progresión de T1/T3/T4 y por sus vecinas, la primera debería andar por 78-80.",
+   "T17_ALTO_RINCON_CIEGO": "AR60D/I=[131,152] y AR65D/I=[118,139]: el de 65 sale más barato que el de 60. En T16 son [105,122] y [111,129], y en T18 [112,130] y [118,137] — o sea que en las dos vecinas el 65 cuesta MÁS. Parecen las dos casillas INTERCAMBIADAS, el mismo caso que el P45/P50 de la T11 que el master zanjó el 25/08 («invierte el precio, cámbialo y ya está»). Aquí no se invierte sin que lo diga él: son 13 puntos, unos 26 € por mueble."
+  }
  },
  "tariffs": {
   "T1": {
@@ -21108,8 +21129,8 @@
      "MV40D/I": 152,
      "MV45D/I": 174,
      "MV50D/I": 188,
-     "MV60D/I": 230,
-     "MV60": null
+     "MV60D/I": 188,
+     "MV60": 230
     }
    },
    "MEDIA_PUERTA_GAVETA": {

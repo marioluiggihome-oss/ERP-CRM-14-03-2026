@@ -295,7 +295,38 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
                 if tipo == "BAJO" and not alto:
                     alto = 80
                 pts = _puntos(entry, alto)
-                mano = "D" if cod.endswith("D") else "I" if cod.endswith("I") else ""
+                # «B60D/I» ACABA EN «I», Y ESO NO ES MANO IZQUIERDA (master,
+                # 07/09/2026: «ten en cuenta que HAY muchos muebles que
+                # aparecen como D/I»). Es UNA puerta con la mano SIN DECIDIR, y
+                # así se escribe en la tarifa: 125 de los 366 códigos de la T4.
+                #
+                # Este es el camino del CÓDIGO EXACTO, y su propio ejemplo de
+                # arriba dice «ASC60D/I, B60D/I». Con el `endswith("I")` a
+                # secas, escribir o pegar «1 b60d/i» devolvía `mano: "I"`: la
+                # pantalla seguía pintando «⚠️ Sin Mano» —ese rótulo sale del
+                # CÓDIGO— mientras el dato decía izquierda. El Caso 2, el de
+                # «b60i» escrito suelto, sí lo distinguía desde el principio.
+                #
+                # Vacío significa «sin decidir», que es lo que hace saltar el
+                # aviso y el botón de fijarlas todas.
+                # UN CÓDIGO DE CATÁLOGO NUNCA TRAE LA MANO DECIDIDA.
+                #
+                # Este es el camino del código EXACTO: lo que ha llegado está
+                # tal cual en la tarifa. Y en la tarifa un mueble de una puerta
+                # se escribe «B60D/I» —las dos manos, sin elegir—; ninguno de
+                # los 12.963 códigos de las 21 tarifas acaba en una «D» o una
+                # «I» suelta (hay candado para esa premisa). Así que aquí la
+                # mano SIEMPRE está por decidir, y eso es un vacío.
+                #
+                # Aquí ponía `"I" if cod.endswith("I")`, y «B60D/I» acaba en
+                # «I» (master, 07/09/2026: «ten en cuenta que HAY muchos
+                # muebles que aparecen como D/I»). Pegar «1 b60d/i» devolvía
+                # `mano: "I"`: la pantalla pintaba «⚠️ Sin Mano» —ese rótulo
+                # sale del CÓDIGO— y el dato decía izquierda.
+                #
+                # La mano escrita a mano («b60i») se lee en el Caso 2, que sí
+                # la distinguía desde el principio.
+                mano = ""
                 out.append({
                     "qty": qty,
                     "cod": cod,
