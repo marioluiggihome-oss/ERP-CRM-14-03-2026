@@ -625,6 +625,38 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       .catch(() => {});
   }, []);
 
+  /** LA ENTRADA DE TARIFA DE UNA LÍNEA. «B45D» SE BUSCA COMO «B45D/I».
+   *
+   *  El master, 07/09/2026: «OJO, el bajo de 45 D, B45D/I, su valor del punto
+   *  es de 54 puntos en tarifa 4 y aquí lo refleja mal». Y así era: la línea
+   *  enseñaba 146,52 €, que son 44 × 3,33 — los puntos de la TARIFA 1 — con la
+   *  T4 seleccionada en pantalla.
+   *
+   *  EL MOTIVO: en la tarifa MV, un mueble de UNA puerta se escribe con el
+   *  sufijo `D/I` («B45D/I»), y la línea, una vez elegida la mano, lleva
+   *  «B45D». Se buscaba «B45D» y, como no estaba, se buscaba «B45» — que
+   *  tampoco. Al no encontrar nada se devolvía el precio que la línea ya
+   *  traía, o sea el de la tarifa anterior.
+   *
+   *  NO ES UN CASO RARO: 125 de los 366 códigos de la T4 llevan `D/I`, un
+   *  tercio del catálogo. Y no daba ningún error: la pantalla enseñaba la T4
+   *  seleccionada y los precios de la T1, un 18,5 % por debajo en este mueble.
+   *
+   *  Se busca en este orden y no en otro: primero el código tal cual (por si
+   *  algún día MV imprime «B45D» de verdad), después la forma `D/I` que es la
+   *  de la tarifa, y por último el código sin mano (los de dos puertas). */
+  const entradaDeTarifa = (fams, m) => {
+    const info = fams?.[m.familia];
+    const items = info?.items;
+    if (!items) return { info: null, e: null };
+    const cod = String(m.cod || '').toUpperCase();
+    const base = cod.replace(/(D\/I|D|I)$/i, '');
+    for (const clave of [cod, `${base}D/I`, base]) {
+      if (clave && items[clave] != null) return { info, e: items[clave] };
+    }
+    return { info, e: null };
+  };
+
   useEffect(() => {
     try { localStorage.setItem('mv_tarifa', tarifa); } catch { /* noop */ }
     fetch(`${API_URL}/api/cascos/mv/tarifa?tariff=${encodeURIComponent(tarifa)}`, { headers: authHeaders() })
@@ -639,9 +671,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             setAcabadoPuerta(MUESTRARIO_PUERTAS[tarifa][0].nombre);
           }
           setMuebles(prev => prev.map(m => {
-            const baseCod = String(m.cod || '').replace(/(D\/I|D|I)$/i, '');
-            const info = d.familias?.[m.familia];
-            const e = info?.items?.[m.cod] || info?.items?.[baseCod];
+            // MISMO buscador que `puntosLocal`, no una segunda copia: aquí
+            // vivía el fallo del 07/09 —se probaba «B45D» y «B45», nunca
+            // «B45D/I»— y con dos búsquedas distintas para lo mismo vuelve a
+            // separarse a la primera de cambio.
+            const { info, e } = entradaDeTarifa(d.familias, m);
             if (e == null) return m;
             let pvp = m.pvp;
             if (Array.isArray(e)) {
@@ -794,8 +828,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const anchosDe = (m) => OPCIONES_ANCHO[familias?.[m.familia]?.type] || null;
 
   const puntosLocal = (m, alto) => {
-    const info = familias?.[m.familia];
-    const e = info?.items?.[m.cod];
+    const { info, e } = entradaDeTarifa(familias, m);
     if (e == null) return m.pvp;
     if (Array.isArray(e)) {
       const t = info.type;
