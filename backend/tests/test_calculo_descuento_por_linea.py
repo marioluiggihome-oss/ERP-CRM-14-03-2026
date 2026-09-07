@@ -227,8 +227,14 @@ def test_el_desglose_del_coste_no_se_ve_ni_pasando_el_raton():
     mano de obra se enseña solo con pasar el ratón por encima — con el candado
     cerrado y el cliente delante."""
     src = _pantalla()
-    i = src.index("title={!verCoste ? '' : (m.coste == null ?")
-    assert i > 0, "el `title` del coste no se calla con el candado cerrado"
+    # Se ancla en el ARRANQUE del `title`, no en la expresión entera: desde que
+    # un electrodoméstico tiene su propio texto —no tiene casco ni herrajes—
+    # esa expresión tiene varias ramas, y un ancla pegada a una sola forma de
+    # escribirla se cae en cuanto se añade la segunda.
+    i = src.index("title={!verCoste ? ''")
+    cuerpo = src[i:src.index("}>", i)]
+    assert "m.coste" in cuerpo, "no es el `title` del coste"
+    assert "Casco ${eur(" in cuerpo, "el desglose ya no se enseña ni abriendo"
 
 
 def test_el_candado_SIGUE_ESTANDO_cuando_esta_cerrado():

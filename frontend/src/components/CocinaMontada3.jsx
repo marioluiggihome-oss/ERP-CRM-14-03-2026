@@ -3161,22 +3161,54 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           </label>
                         </>
                       ) : (
-                        <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
-                          {m.ancho ? `${m.ancho} cm de ancho` : 'ancho —'}
-                        </span>
+                        <label className="flex items-center gap-1">
+                          <span className="text-slate-400 font-bold">Ancho</span>
+                          <input type="number" min="0" step="any" placeholder="cm"
+                            value={m.ancho ?? ''}
+                            onChange={e => setMedidaMueble(m._k, 'ancho', e.target.value)}
+                            title="Ancho de fabricación, en cm. No cambia el precio: el de un mueble MV sale de su código."
+                            data-testid="cm3-ancho-libre-ficha"
+                            className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs" />
+                        </label>
                       )}
                       {opcionesAnc ? null : opcionesAlt ? (
+                        /* EL ESCALÓN Y LA MEDIDA DE VERDAD, también en la
+                           ficha: en la tablet de 8,6" la tabla no cabe y esto
+                           es lo que se ve. Si la cota no cabe en el escalón,
+                           sube sola al siguiente y se marca por qué. */
                         <label className="flex items-center gap-1">
                           <span className="text-slate-400 font-bold">Alto</span>
                           <select value={m.alto || opcionesAlt[0]} onChange={e => setAlto(m._k, e.target.value)}
+                            title="El escalón de tarifa que decide el PRECIO."
                             className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs">
                             {opcionesAlt.map(a => <option key={a} value={a}>{a} cm</option>)}
                           </select>
+                          <input type="number" min="0" step="any" placeholder="cm reales"
+                            value={m.altoReal ?? ''}
+                            onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
+                            title="Alto DEFINITIVO de fabricación. Si no cabe en el escalón, sube solo al siguiente y el precio va con él."
+                            data-testid="cm3-alto-real-ficha"
+                            className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs" />
+                          {m.escalonSubido && (
+                            <span className="text-[9px] font-black text-aviso-700"
+                              data-testid="cm3-escalon-subido-ficha"
+                              title={`No cabe en el escalón anterior: se tarifa a ${m.alto} cm.`}>
+                              ↑ {m.alto}
+                            </span>
+                          )}
                         </label>
                       ) : (
-                        <span className="px-2 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">
-                          {m.alto ? `${m.alto} cm de alto` : 'alto —'}
-                        </span>
+                        /* Sin escalones, el alto se teclea: un texto fijo
+                           obligaba a apuntarlo como observación. */
+                        <label className="flex items-center gap-1">
+                          <span className="text-slate-400 font-bold">Alto</span>
+                          <input type="number" min="0" step="any" placeholder="cm"
+                            value={m.alto ?? ''}
+                            onChange={e => setMedidaMueble(m._k, 'alto', e.target.value)}
+                            title="Alto de fabricación, en cm. No cambia el precio: el de un mueble MV sale de su código."
+                            data-testid="cm3-alto-libre-ficha"
+                            className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs" />
+                        </label>
                       )}
                       {tieneMano !== undefined && (
                         <button type="button" onClick={() => rotarMano(m._k)}
@@ -3222,15 +3254,60 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                                 : 'border-transparent bg-transparent text-slate-500 hover:border-slate-200 focus:border-indigo-400 focus:bg-white'
                             }`} />
                           <span className="uppercase">{`€ × ${m.qty}`}</span>
+                          {/* EL DESCUENTO, TAMBIÉN EN LA FICHA. En la tablet de
+                              8,6" la tabla no cabe y lo que se ve es ESTO, así
+                              que sin la casilla aquí el descuento por línea no
+                              existía en el sitio donde de verdad se trabaja. */}
+                          <input type="number" min="0" max="100" step="any"
+                            value={m.dto ?? ''}
+                            onChange={e => setDto(m._k, e.target.value)}
+                            placeholder={String(Number(descuento) || 0)}
+                            data-testid="cm3-dto-linea-ficha"
+                            title={m.dto != null
+                              ? 'Descuento propio de esta línea: manda sobre el general. Bórralo para volver al general.'
+                              : `Sin descuento propio: se le aplica el general (${Number(descuento) || 0}%).`}
+                            className={`w-12 px-1 py-0.5 rounded-lg border text-right font-mono font-bold text-[11px] outline-none ${
+                              m.dto != null
+                                ? 'border-master-300 bg-master-50 text-master-800'
+                                : 'border-transparent bg-transparent text-slate-400 hover:border-slate-200 focus:border-indigo-400 focus:bg-white'
+                            }`} />
+                          <span className="uppercase">%</span>
                         </div>
+                        {/* EL TOTAL, CON EL DESCUENTO DENTRO. Aquí ponía el
+                            bruto: en cuanto hubiera un descuento, la ficha
+                            enseñaba una cifra y el pie del presupuesto otra, y
+                            nadie sabría cuál de las dos es la buena. */}
                         <div className="font-mono font-black text-slate-900 text-lg leading-none">
-                          {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
+                          {eur(m.importeLinea)}
                         </div>
+                        {m.dtoAplicado > 0 && (
+                          <div className="text-[9px] font-bold text-slate-400 leading-none mt-0.5">
+                            −{m.dtoAplicado}% · antes {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Coste y margen: solo con el candado abierto */}
-                    {verCoste && (
+                    {verCoste && m.esElectro && (
+                      /* UN ELECTRO NO SE DESPIEZA: no tiene casco, ni puertas,
+                         ni herrajes. Enseñarle el desglose de un mueble era
+                         pintarle cuatro ceros y un margen del 100 %. Su coste
+                         es la CESIÓN del proveedor, y solo si quien mira puede
+                         verla; si no, «sin coste», que es la verdad. */
+                      <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[10px] font-mono border-t border-slate-100 pt-2">
+                        <span className="text-dato-900 font-black">
+                          {m.coste == null ? 'Sin coste (cesión no visible)' : `Coste ${eur(m.coste)}`}
+                        </span>
+                        {m.coste != null && (
+                          <span className="text-dato-600 font-bold">
+                            {m.margenPct == null ? 'Margen —' : `Margen ${eur(m.margen)} (${m.margenPct.toFixed(1)}% s/coste)`}
+                          </span>
+                        )}
+                        <span className="text-slate-400">· electrodoméstico</span>
+                      </div>
+                    )}
+                    {verCoste && !m.esElectro && (
                       <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[10px] font-mono border-t border-slate-100 pt-2">
                         {/* EL DESGLOSE TIENE QUE SUMAR EL TOTAL (master, 30/08:
                             «ojo, el coste no lo veo bien»). Se enseñaban dos de
@@ -3610,7 +3687,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           un número: es la misma regla que el desglose original
                           ya traía («m.encontrado ? eur(m.coste) : "—"»). */}
                       <td className="py-3 px-3 text-right font-mono text-slate-600"
-                        title={!verCoste ? '' : (m.coste == null ? `Sin coste: el despiece no conoce «${m.familia || m.tipo || '?'}»` :
+                        title={!verCoste ? ''
+                          /* UN ELECTRO NO TIENE CASCO NI HERRAJES: enseñarle el
+                             desglose de un mueble es pintarle cuatro ceros. Su
+                             coste es la cesión del proveedor y punto. */
+                          : m.esElectro ? (m.coste == null
+                              ? 'Sin coste: la cesión del proveedor no está a la vista'
+                              : `Cesión del proveedor ${eur(m.coste)} (sin IVA ni portes)`)
+                          : (m.coste == null ? `Sin coste: el despiece no conoce «${m.familia || m.tipo || '?'}»` :
                           `Casco ${eur(m.despiece?.casco)}${m.despiece?.cascoOtroAcabado ? ' (otra gama)' : ''} · Puertas ${eur(m.despiece?.puerta)} · Herrajes ${eur(herrajesDe(m))} · M. obra ${eur(m.despiece?.mo)}`)}>
                         {/* CERRADO NO SE PINTA NI «•••»: con un cliente
                             delante, ese «•••» anuncia que ahí hay un número

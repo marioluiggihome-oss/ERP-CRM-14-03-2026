@@ -119,7 +119,11 @@ def test_LA_FICHA_ENSEÑA_LOS_CUATRO():
     # código crece, y se pasa de largo cazando lo que hay debajo.
     cm3 = _lee(CM3)
     i = cm3.index("Coste y margen: solo con el candado abierto")
-    inicio = cm3.index("{verCoste && (", i)
+    # LA RAMA DEL MUEBLE, no la del electrodoméstico. Desde el 07/09/2026 la
+    # ficha tiene dos: un aparato no tiene casco ni puertas ni herrajes, así
+    # que enseñarle este desglose sería pintarle cuatro ceros. Los cuatro
+    # sumandos que tienen que cuadrar son los del MUEBLE.
+    inicio = cm3.index("{verCoste && !m.esElectro && (", i)
     profundidad = 0
     for k in range(inicio, len(cm3)):
         if cm3[k] == "{":
