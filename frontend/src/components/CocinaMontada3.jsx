@@ -925,8 +925,54 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     // la medida se perdería en silencio.
     const bruto = String(v ?? '').trim().replace(',', '.');
     const n = bruto === '' ? null : Number(bruto);
-    return { ...m, [campo]: Number.isFinite(n) && n > 0 ? n : null };
+    const medida = Number.isFinite(n) && n > 0 ? n : null;
+    const conMedida = { ...m, [campo]: medida };
+    if (campo !== 'altoReal' || medida == null) return conMedida;
+    return subeElEscalonSiNoCabe(conMedida, medida);
   }));
+
+  /** SI LA MEDIDA NO CABE EN EL ESCALÓN, SE SUBE AL SIGUIENTE.
+   *
+   *  El master, 07/09/2026: «si me paso, por ejemplo en columna de 200, aplique
+   *  la tarifa de 220, y en los muebles altos si pongo 75 de altura, que
+   *  aplique la tarifa de 90».
+   *
+   *  Es lo mismo que ya hace la tarifa de ACB con las medidas especiales
+   *  (regla 31): se factura la casilla INMEDIATA SUPERIOR, porque un mueble de
+   *  75 no se fabrica al precio del de 70 — sencillamente no cabe.
+   *
+   *  SOLO SUBE, NUNCA BAJA, y eso es a propósito. Escribir 65 en un alto que
+   *  está tarifado a 90 NO lo devuelve a 70: bajar el escalón abarata el
+   *  presupuesto solo, mientras alguien ajusta cotas, que es justo lo que
+   *  CLAUDE.md prohíbe («escribir la medida definitiva no puede tocar el
+   *  precio»). Lo que el master ha pedido es lo contrario: que no se quede
+   *  corto. Para bajar está el desplegable, que es una decisión.
+   *
+   *  Y SI NO CABE EN NINGUNO, NO SE INVENTA: se sube al escalón más alto y se
+   *  DICE en la observación de la propia línea, que es donde lo ve quien monta
+   *  el pedido. Una columna de 240 no existe en la tarifa MV, y tarifarla como
+   *  una de 220 sería cobrar de menos un mueble que además va especial. */
+  const subeElEscalonSiNoCabe = (m, alturaReal) => {
+    const opciones = alturasDe(m);
+    if (!opciones || !opciones.length) return m;
+    const escalones = [...opciones].sort((a, b) => a - b);
+    const actual = Number(m.alto) || escalones[0];
+    if (alturaReal <= actual) return m;              // cabe: no se toca nada
+    const cubre = escalones.find(e => e >= alturaReal);
+    if (cubre == null) {
+      const tope = escalones[escalones.length - 1];
+      const nota = `ALTURA ${alturaReal} cm: fuera de tarifa (el mayor es ${tope}). Confirmar con MV.`;
+      const obs = (m.obs || '').includes('fuera de tarifa')
+        ? m.obs : [(m.obs || '').trim(), nota].filter(Boolean).join(' · ');
+      const conTope = { ...m, alto: tope, obs, escalonSubido: true };
+      return m.pvpManual ? conTope : { ...conTope, pvp: puntosLocal(conTope, tope) };
+    }
+    if (cubre === actual) return m;
+    const subido = { ...m, alto: cubre, escalonSubido: true };
+    // UN PRECIO PACTADO A MANO MANDA, igual que en `setAlto`: si no, escribir
+    // una cota devolvería el presupuesto al precio de catálogo sin decir nada.
+    return m.pvpManual ? subido : { ...subido, pvp: puntosLocal(subido, cubre) };
+  };
 
   const setAnchoTarifa = (k, v) => setMuebles(prev => prev.map(m => {
     if (m._k !== k) return m;
@@ -1946,7 +1992,45 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [guardados, setGuardados] = useState(null);   // null = panel cerrado
   const [cargandoGuardados, setCargandoGuardados] = useState(false);
 
+  /** EL BUSCADOR DE PRESUPUESTOS (master, 07/09/2026: «pon un filtro en
+   *  presupuestos de cocina montada, para buscar mejor los documentos»).
+   *
+   *  La lista crece por obra, no por cliente: en la pantalla que lo destapó
+   *  había SEIS presupuestos del mismo «DESI / DOMUS +», y lo único que los
+   *  distingue es la REFERENCIA («APARTAMENTO 001 / 002 / 003», y de esos, uno
+   *  «/ ELECTROS»). Por eso se busca en el cliente Y en la referencia: buscando
+   *  solo por cliente, los seis siguen ahí.
+   *
+   *  Se busca SIN TILDES Y SIN MAYÚSCULAS (`norm`, el mismo que ya usa el
+   *  buscador de muebles): quien teclea «domus» tiene que encontrar «DOMUS», y
+   *  quien teclea «apartamento» tiene que encontrar «APARTAMENTO» aunque un día
+   *  alguien lo escriba con tilde.
+   *
+   *  Y POR PALABRAS SUELTAS, no por la frase entera: «003 domus» encuentra
+   *  «DESI / DOMUS + · APARTAMENTO 003» aunque el 003 vaya después. Buscando la
+   *  cadena tal cual, ese orden no daría nada y parecería que el documento no
+   *  está. */
+  const [filtroGuardados, setFiltroGuardados] = useState('');
+
+  const guardadosFiltrados = useMemo(() => {
+    const lista = guardados || [];
+    const termino = norm(filtroGuardados).trim();
+    if (!termino) return lista;
+    const palabras = termino.split(/\s+/).filter(Boolean);
+    return lista.filter(o => {
+      // La FECHA también entra: «2026-09» saca el mes entero, que es como se
+      // busca un presupuesto del que solo se recuerda cuándo se hizo.
+      const heno = norm([o.cliente, o.ref, o.expediente,
+                         String(o.createdAt || '').slice(0, 10)].join(' '));
+      return palabras.every(w => heno.includes(w));
+    });
+  }, [guardados, filtroGuardados]);
+
   const abrirGuardados = async () => {
+    // El filtro arranca limpio cada vez que se abre: si se quedara el de la
+    // vez anterior, la lista saldría vacía y parecería que no hay nada
+    // guardado.
+    setFiltroGuardados('');
     setGuardados([]); setCargandoGuardados(true);
     try {
       const r = await fetch(
@@ -3468,9 +3552,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             <input type="number" min="0" step="any" placeholder="cm reales"
                               value={m.altoReal ?? ''}
                               onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
-                              title="Alto DEFINITIVO de fabricación, si no es el del escalón. No cambia el precio; viaja con el pedido."
+                              title="Alto DEFINITIVO de fabricación. Si no cabe en el escalón de arriba, se sube solo al siguiente y el precio va con él."
                               data-testid="cm3-alto-real-mueble"
                               className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-[11px] outline-none focus:border-dato-400" />
+                            {/* POR QUÉ HA CAMBIADO EL PRECIO. Si el escalón sube
+                                solo y no se dice, el total se mueve y nadie sabe
+                                de dónde ha salido. */}
+                            {m.escalonSubido && (
+                              <span className="text-[9px] font-black text-aviso-700 leading-none text-center"
+                                data-testid="cm3-escalon-subido"
+                                title={`No cabe en el escalón anterior: se tarifa a ${m.alto} cm.`}>
+                                ↑ tarifa {m.alto}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           /* Sin escalones que elegir, el alto se teclea y ya:
@@ -4289,6 +4383,38 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               <p className="text-xs text-dato-500 mt-0.5">
                 Se abre tal como se guardó: muebles, acabados y tarifa.
               </p>
+              {/* EL BUSCADOR. Se busca por CLIENTE y por REFERENCIA: la lista
+                  crece por obra, no por cliente, y del mismo «DESI / DOMUS +»
+                  puede haber seis presupuestos que solo se distinguen por el
+                  «APARTAMENTO 001 / 002 / 003». */}
+              {guardados.length > 0 && (
+                <div className="relative mt-3">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={filtroGuardados}
+                    onChange={e => setFiltroGuardados(e.target.value)}
+                    autoFocus
+                    placeholder="Buscar por cliente, referencia o fecha (ej.: domus 003)…"
+                    data-testid="cm3-filtro-guardados"
+                    className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-accion-500 focus:ring-2 focus:ring-accion-100 bg-slate-50/60"
+                  />
+                  {filtroGuardados && (
+                    <button type="button" onClick={() => setFiltroGuardados('')}
+                      title="Quitar el filtro"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+                      <X size={14} />
+                    </button>
+                  )}
+                  {/* CUÁNTOS SE ESTÁN VIENDO Y CUÁNTOS HAY. Sin el total, una
+                      búsqueda que deja tres a la vista parece la lista entera y
+                      nadie sabe que está filtrando. */}
+                  {filtroGuardados.trim() && (
+                    <p className="text-[11px] font-bold text-dato-500 mt-1.5" data-testid="cm3-cuenta-guardados">
+                      {guardadosFiltrados.length} de {guardados.length}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-3">
               {cargandoGuardados ? (
@@ -4299,7 +4425,20 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 <p className="text-sm text-dato-500 p-4 text-center">
                   Todavía no hay ninguno guardado.
                 </p>
-              ) : guardados.map(o => (
+              ) : guardadosFiltrados.length === 0 ? (
+                /* «NO HAY NINGUNO» Y «NINGUNO COINCIDE» SON COSAS DISTINTAS.
+                   Con el mismo texto para las dos, quien busca mal cree que ha
+                   perdido el presupuesto. */
+                <div className="p-4 text-center">
+                  <p className="text-sm text-dato-500">
+                    Ninguno de los {guardados.length} coincide con «{filtroGuardados.trim()}».
+                  </p>
+                  <button type="button" onClick={() => setFiltroGuardados('')}
+                    className="mt-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">
+                    Ver todos
+                  </button>
+                </div>
+              ) : guardadosFiltrados.map(o => (
                 <button
                   key={o.id}
                   onClick={() => recuperar(o)}
