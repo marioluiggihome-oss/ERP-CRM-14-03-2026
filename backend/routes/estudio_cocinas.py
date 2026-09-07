@@ -2476,6 +2476,19 @@ async def detect_distribucion(payload: dict):
             "- Si el croquis o render muestra elementos en DOS paredes formando una esquina de 90° (por ejemplo, placa/fregadero en un frente y columna/horno/micro/lavadora/pilar en la pared lateral), EL TIPO ES OBLIGATORIAMENTE \"l\" Y DEBES DEVOLVER 2 PAREDES (Pared 1 y Pared 2). NUNCA devuelvas \"lineal\" si ves muebles dispuestos en dos paredes en esquina.\n"
             "- Si ves 3 paredes con muebles, el tipo es \"u\". Si solo hay muebles a lo largo de una única línea recta de pared, el tipo es \"lineal\".\n"
             "- Un arco de apertura en el extremo de una pared representa una puerta o retorno de esquina; no lo conviertas en un frigorífico o despensero salvo que esté rotulado. Devuélvelo como elemento de esquina pendiente de confirmar.\n"
+            "\nEL MUEBLE DEL RINCÓN: ESCUADRA, CHAFLÁN O CIEGO. Son tres muebles "
+            "DISTINTOS, con ancho y precio distintos, así que hay que decir cuál es:\n"
+            "- ESCUADRA: el rincón queda en ángulo recto y se ven DOS frentes "
+            "encontrándose en la arista. id \"alto_rincon_escuadra\" o "
+            "\"bajo_rincon_escuadra\".\n"
+            "- CHAFLÁN: UN solo frente en DIAGONAL a 45° que corta la esquina. Si "
+            "ese frente es de cristal, \"alto_rincon_chaflan_vitrina\"; si no, "
+            "\"alto_rincon_chaflan\". (MV no fabrica el chaflán en bajo.)\n"
+            "- CIEGO: el rincón no tiene puerta propia; se entra por el mueble de "
+            "al lado. id \"alto_rincon_ciego\" o \"bajo_rincon_ciego\".\n"
+            "- SI NO SE VE CUÁL DE LOS TRES ES, devuelve el módulo con su id "
+            "normal (\"mueble\", \"alto\") y NO adivines el tipo de rincón: "
+            "elegir mal cambia el mueble y el precio.\n"
             + (f"\nCONTEXTO ESCRITO DEL USUARIO (comprueba las etiquetas, pero no inventes elementos que no estén dibujados):\\n{contexto_usuario}\\n" if contexto_usuario else "")
             + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"
@@ -2483,7 +2496,9 @@ async def detect_distribucion(payload: dict):
             "\"elementos\":[{\"id\":\"placa\",\"label\":\"Placa\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":90,\"medida_escrita\":true},{\"id\":\"columna_hornos\",\"label\":\"Columna Horno/Micro\",\"pared_idx\":1,\"posicion_cm\":0,\"ancho\":60,\"medida_escrita\":true}]}. "
             "'posicion_cm' es la distancia desde el inicio de esa pared. "
             "id usa palabras clave: frigorifico, congelador, columna_hornos, horno, microondas, lavavajillas, "
-            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca, lavadora. "
+            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca, lavadora, "
+            "alto_rincon_escuadra, alto_rincon_chaflan, alto_rincon_chaflan_vitrina, "
+            "alto_rincon_ciego, bajo_rincon_escuadra, bajo_rincon_ciego. "
             "Distingue CAJONERA de mueble de PUERTA."
         )
         text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")

@@ -160,7 +160,14 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
         etiqueta = e.get("label") or eid or "Módulo"
         ancho = int(e.get("ancho") or 0)
         pared = int(e.get("pared_idx") or 0)
-        fila = e.get("fila") or "bajo"
+        # LA FILA DE UN RINCÓN LA DICE SU TIPO. Sin esto, un elemento que
+        # llegue sin `fila` —que la pone `validar_distribucion`, y no todo
+        # camino pasa por ahí— cae en el «bajo» de por defecto, y entonces
+        # `_altura_de` le da 80: un ALTO tarifado a una altura que en MV no
+        # existe para él (los altos son 70 o 90). No da ningún error, da otro
+        # precio.
+        from services import rincones as _rin0
+        fila = _rin0.fila_de(eid) or e.get("fila") or "bajo"
 
         motivo_fuera = SIN_CASCO.get(eid) or A_MEDIDA.get(eid)
         if motivo_fuera:
@@ -168,7 +175,26 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
                                "pared_idx": pared, "motivo": motivo_fuera})
             continue
 
-        entrada = MAPA.get(eid)
+        # ── LOS RINCONES VAN POR SU PROPIA TABLA ─────────────────────────
+        # No se copian aquí sus prefijos: los sabe `services/rincones.py`, que
+        # además lee de la tarifa en qué anchos existen. Dos listas del mismo
+        # catálogo se separan, y el día que MV mueva una medida esta diría que
+        # un mueble no existe cuando sí.
+        from services import rincones as _rin
+        entrada = None
+        if _rin.es_rincon(eid):
+            t = _rin.TIPOS[eid]
+            entrada = (t["prefijo"], t["label"], True)
+        elif eid in _rin.NO_EXISTE_EN_MV:
+            # Se DICE que el proveedor no lo hace, no se sustituye por otro a
+            # escondidas: un chaflán cambiado por una escuadra son 64 € y otro
+            # ancho, y en el pedido nadie lo vería.
+            sin_codigo.append({"label": etiqueta, "id": eid, "ancho": ancho,
+                               "pared_idx": pared,
+                               "motivo": _rin.NO_EXISTE_EN_MV[eid]})
+            continue
+        if entrada is None:
+            entrada = MAPA.get(eid)
         if not entrada:
             sin_codigo.append({"label": etiqueta, "id": eid, "ancho": ancho,
                                "pared_idx": pared,

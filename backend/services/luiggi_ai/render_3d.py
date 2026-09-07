@@ -1043,6 +1043,13 @@ class Render3DService:
                 "- Reproduce the EXACT overall SHAPE of the kitchen (linear, L-shaped, U-shaped, "
                 "with island or peninsula) as drawn. If it is drawn as an L, it must be an L.\n"
                 "- PHYSICAL L-SHAPE RULE: when the drawing has a 90-degree corner, a visible return, or modules continuing onto a secondary wall, render TWO PERPENDICULAR cabinet runs joined at that inside corner. Never flatten the return wall into the main frontal run. The final image must visibly show the depth and receding side wall of the L.\n"
+                # EL RINCÓN NO ES SIEMPRE IGUAL, Y SE VE. El master, 07/09/2026:
+                # «necesito que el sistema distinga entre muebles en escuadra y
+                # mueble con chaflán». Son dos geometrías distintas y hasta hoy
+                # el encargo no las nombraba: el modelo pintaba la que le
+                # apetecía, casi siempre la escuadra, aunque el diseño llevara
+                # un chaflán (que es otro mueble y otro precio).
+                "- CORNER CABINET SHAPE — SQUARE vs CHAMFERED: how the two runs meet at the inside corner is part of the design, not a detail. If the drawing or the brief says CHAMFERED / CHAFLAN / 45-degree corner unit, render ONE single flat door set DIAGONALLY across the inside corner, cutting it off at 45 degrees: the corner is bevelled, not sharp. If it says SQUARE / ESCUADRA / right-angle corner unit, render a sharp 90-degree inside corner with BOTH fronts visible meeting at that edge and NO diagonal door. If it says BLIND / CIEGO, the corner has no door of its own: a plain filler panel, access through the neighbouring cabinet. NEVER swap one for another and never mix both in the same corner.\n"
                 "- Reproduce the EXACT NUMBER and ORDER of the modules from left to right: base units, wall units and tall columns.\n"
                 "- EXACT TALL COLUMN COUNT: render PRECISELY the number of tall columns drawn in the sketch. If ONLY 1 single column is drawn on the right, render EXACTLY 1 column (do NOT invent a 2nd or 3rd column). If 2 or 3 columns are drawn, render each one as drawn.\n"
                 "- APPLIANCE PLACEMENT FROM SKETCH: place every sink and cooktop on the EXACT module where drawn (e.g. if sink is on module 2 and cooktop is on module 3, keep that exact sequence).\n"

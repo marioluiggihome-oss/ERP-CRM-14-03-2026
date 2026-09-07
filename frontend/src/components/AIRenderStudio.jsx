@@ -1351,6 +1351,41 @@ export default function AIRenderStudio({ state, setState }) {
     if (medidas.aberturas.trim()) t += `Ventanas/puertas: ${medidas.aberturas.trim()}. `;
     return t;
   };
+  /* EL RINCÓN VIAJA AL ENCARGO DEL RENDER.
+   *
+   *  El master, 07/09/2026: «necesito que el sistema distinga entre muebles en
+   *  escuadra y mueble con chaflán». Son dos geometrías distintas —dos frentes
+   *  a 90° contra un frente diagonal a 45°— y dos muebles distintos en la
+   *  tarifa (ARI65 contra ARC63: otro ancho y 64 € de diferencia).
+   *
+   *  Sin esta frase, la distribución podía tener el chaflán bien detectado y el
+   *  render pintaba una escuadra igualmente: el encargo no lo nombraba, así que
+   *  el modelo elegía. Y no daba ningún error — daba una cocina bonita con el
+   *  rincón que no es.
+   */
+  const RINCONES_TEXTO = {
+    escuadra: 'en ESCUADRA: el rincón queda en ángulo recto y se ven los dos frentes encontrándose en la arista, SIN puerta diagonal',
+    chaflan: 'con CHAFLÁN: un único frente en DIAGONAL a 45° que corta la esquina',
+    ciego: 'CIEGO: el rincón no tiene puerta propia, se entra por el mueble de al lado',
+  };
+  const formaDeRincon = (id) => {
+    const t = String(id || '').toLowerCase();
+    if (!t.includes('rincon')) return null;
+    if (t.includes('chaflan')) return 'chaflan';
+    if (t.includes('escuadra')) return 'escuadra';
+    if (t.includes('ciego')) return 'ciego';
+    return null;
+  };
+  const rinconTexto = () => {
+    const els = distDetectada?.distribucion?.elementos || [];
+    const formas = [...new Set(els.map(e => formaDeRincon(e.id)).filter(Boolean))];
+    if (!formas.length) return '';
+    // Si hay más de una forma en la misma cocina se dicen las dos: un alto en
+    // chaflán sobre un bajo en escuadra es un diseño real, no una
+    // contradicción, y aplanarlo a una sola sería elegir por el master.
+    return `Mueble de rincón ${formas.map(f => RINCONES_TEXTO[f]).join(' y también ')}. `;
+  };
+
   // Electrodomésticos y punto de vista → frase para el prompt.
   const electrosTexto = () => {
     const sel = MATERIALS.appliances.filter(a => electros.includes(a.id)).map(a => a.prompt);
@@ -1365,7 +1400,7 @@ export default function AIRenderStudio({ state, setState }) {
     return l ? `Iluminación: ${l.prompt}. ` : '';
   };
   const conMedidas = (desc) => {
-    const extra = `${medidasTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
+    const extra = `${medidasTexto()}${rinconTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
     const conExtra = extra ? `${extra}\n${desc}` : desc;
     // Contexto de tipo de mueble (permisos por partidas): guía al motor de IA.
     return `[Tipo de proyecto: ${tipoActual.label}]\n${conExtra}`;

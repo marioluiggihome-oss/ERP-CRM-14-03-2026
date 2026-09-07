@@ -80,6 +80,31 @@ _PISTAS_NO_ALTO = ("bajo", "columna", "semicolumna", "cajonera", "fregadero",
                    "zocalo", "zócalo", "relleno")
 
 
+# ─── LOS MUEBLES DE RINCÓN ───────────────────────────────────────────────────
+#
+# Escuadra (dos frentes a 90°), chaflán (un frente en diagonal a 45°) y ciego.
+# El master, 07/09/2026: «necesito que el sistema distinga entre muebles en
+# escuadra y mueble con chaflán».
+#
+# AQUÍ IMPORTAN POR EL ANCHO. En la tarifa MV el chaflán alto mide 63, el
+# escuadra alto 65 y el escuadra bajo 95 — y NINGUNO de los tres está en
+# `ANCHOS_STD`. O sea que un rincón que pase por `snap_ancho` se convierte en
+# un 60 o en un 90 EN SILENCIO, y a partir de ahí ni existe el código MV ni
+# cuadra la pared. Son ancho FIJO de catálogo, igual que un lavavajillas.
+#
+# La tabla de tipos vive en `services/rincones.py`, que los lee de la tarifa.
+def _rincones():
+    """Se importa aquí dentro y no arriba: `rincones` consulta la tarifa MV a
+    través de `distribucion_a_mv`, y ese módulo importa geometría. Cargarlo al
+    principio cerraría el círculo."""
+    from services import rincones
+    return rincones
+
+
+def es_rincon(elem_id: str) -> bool:
+    return _rincones().es_rincon(elem_id)
+
+
 def es_alto(elem_id: str, label: str = "") -> bool:
     """¿Este módulo va COLGADO (fila de altos) o apoyado (fila de suelo)?
 
@@ -268,6 +293,32 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
                     f"«{eid}»: {anc_snap:g} cm de tablero no existe (un costado "
                     f"son 16-19 mm). ¿El plano estaba en milímetros? Serían "
                     f"{anc_snap / 10:g} cm. Corrígelo antes de pedir.")
+        elif es_rincon(eid):
+            # UN RINCÓN NO SE AJUSTA AL ESTÁNDAR. Su ancho lo fija el catálogo
+            # (63 el chaflán, 65 la escuadra, 95 el bajo) y ninguno está en
+            # `ANCHOS_STD`: pasarlo por `snap_ancho` lo dejaría en 60 o en 90
+            # sin decir nada, y entonces no existe el código.
+            rin = _rincones()
+            anchos = rin.anchos_de(eid)
+            fijo = rin.ancho_fijo_de(eid)
+            if sin_ancho or anc <= 0:
+                # Con UNA sola medida posible no hay nada que adivinar: es esa.
+                # Con varias (los ciegos) no se elige por nosotros.
+                anc_snap = fijo or 0
+                if not fijo:
+                    avisos.append(
+                        f"Rincón «{eid}»: MV lo hace de {', '.join(map(str, anchos))} cm. "
+                        f"Elige cuál antes de pedir; su cota sale como «?».")
+            elif anchos and int(round(anc)) not in anchos:
+                # NO se corrige a la brava: se dice. Un rincón mal medido que se
+                # ajusta solo acaba en el pedido con otro mueble.
+                anc_snap = int(round(anc))
+                avisos.append(
+                    f"Rincón «{eid}»: {anc_snap} cm no es una medida de MV "
+                    f"(los hace de {', '.join(map(str, anchos))} cm). "
+                    f"Corrígelo antes de pedir.")
+            else:
+                anc_snap = int(round(anc))
         else:
             anc_snap = snap_ancho(anc)
             if sin_ancho:
@@ -292,7 +343,10 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             escrita = True
         # La FILA (suelo o colgado) se decide aquí, una sola vez, y viaja con el
         # módulo. El dibujo ya no tiene que adivinarlo por el id.
-        fila = "alto" if es_alto(eid, etiqueta) else "bajo"
+        # LA FILA DE UN RINCÓN LA DICE SU TIPO, no una pista en el texto. Un
+        # «bajo_rincon_escuadra» lleva la palabra «rincón» y un
+        # «alto_rincon_chaflan» también: adivinarlo por el texto es jugársela.
+        fila = _rincones().fila_de(eid) or ("alto" if es_alto(eid, etiqueta) else "bajo")
         elementos.append({
             "id": eid,
             "label": etiqueta,
