@@ -894,6 +894,80 @@ async def mv_tarifa(tariff: str = "T1", current_user: Optional[dict] = Depends(g
     }
 
 
+# ─── LA PUBLIOFERTA DE ELECTROSTOCK ─────────────────────────────────────────
+#
+# El master, 07/09/2026: «mete una línea en presupuestador de cocina montada...
+# un artículo para que metiendo el modelo meta el precio, descripción y precio».
+#
+# EL CORTE VA EN EL PRECIO, NO EN EL CÓDIGO — igual que con el MV (regla 8b).
+# El modelo, la descripción, la marca y el epígrafe los ve cualquiera que
+# presupueste: sin ellos no hay aparato que buscar y la pantalla se queda
+# muerta, que fue el error que hubo que deshacer el 28/08. Lo que se protege es
+# la CESIÓN, que es lo que le cuesta a la casa cada aparato.
+#
+# Y LA CESIÓN NO ES UN PVP. Es coste, sin IVA y sin portes. El precio de venta
+# sale del catálogo de Electros —donde el master ya le ha puesto su margen—, no
+# de este papel; aquí no se calcula ninguno (regla 7).
+@router.get("/cascos/electros/catalogo")
+async def electros_catalogo(q: str = "", modelo: str = "",
+                            current_user: Optional[dict] = Depends(get_current_user)):
+    """El catálogo de la PubliOferta. Con `modelo` devuelve UNO, exacto.
+
+    La cesión solo viaja si quien pregunta puede ver el dinero del proveedor
+    (`_ve_precios_mv`, la puerta ESTRECHA: el master). Ojo, no
+    `_precios_para_presupuestar`: esa abre el PVP de venta, y esto es COSTE.
+    """
+    from services import electrostock as _es
+    ve_coste = _ve_precios_mv(current_user)
+    if modelo.strip():
+        art = _es.por_modelo(modelo, cesion=ve_coste)
+        arts = [art] if art else []
+    else:
+        arts = _es.catalogo(cesion=ve_coste, q=q)
+    arts = await _con_pvp_de_electros(arts, current_user)
+    if modelo.strip():
+        return {"success": True, "articulo": arts[0] if arts else None,
+                "encontrado": bool(arts),
+                "cabecera": _es.cabecera(), "vigencia": _es.vigencia_de()}
+    return {"success": True, "total": len(arts), "articulos": arts,
+            "cabecera": _es.cabecera(), "vigencia": _es.vigencia_de()}
+
+
+async def _con_pvp_de_electros(articulos: list, current_user: Optional[dict]) -> list:
+    """Le pega a cada artículo el PVP que tenga en el catálogo de Electros.
+
+    EL PRECIO DE VENTA NO SALE DE LA TARIFA DEL PROVEEDOR: sale de `article_costs`,
+    que es donde el master le ha puesto su margen. Aquí solo se acompaña, para que
+    el presupuestador no tenga que llamar a dos sitios ni cruzar códigos a mano.
+
+    Un artículo que aún no se haya volcado a Electros viene SIN `pvp` — no con un
+    cero, que parecería un precio (regla 7). La pantalla dice «sin PVP» y el
+    master lo pone; inventarle aquí un margen sería decidir por él.
+
+    El PVP se ve si se puede presupuestar; el COSTE no viaja por aquí de ninguna
+    manera: esta función no lee `costeUnitario`.
+    """
+    if not articulos or not _precios_para_presupuestar(current_user):
+        return articulos
+    claves = [a.get("modeloNorm") for a in articulos if a.get("modeloNorm")]
+    if not claves:
+        return articulos
+    try:
+        filas = await _get_db().article_costs.find(
+            {"codigoNorm": {"$in": claves}, "esElectro": True},
+            {"_id": 0, "codigoNorm": 1, "pvp": 1}).to_list(len(claves) + 10)
+    except Exception:                                    # noqa: BLE001
+        # Sin base de datos se devuelve el catálogo tal cual: mejor sin precio
+        # que con uno inventado, y así al menos se puede buscar el aparato.
+        return articulos
+    pvps = {f.get("codigoNorm"): f.get("pvp") for f in filas if f.get("pvp") is not None}
+    salida = []
+    for a in articulos:
+        pvp = pvps.get(a.get("modeloNorm"))
+        salida.append({**a, "pvp": pvp} if pvp is not None else dict(a))
+    return salida
+
+
 @router.post("/cascos/mv/detectar-pdf")
 async def mv_detectar_pdf(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Detecta códigos de muebles MV en un PDF (relación/presupuesto) para el módulo

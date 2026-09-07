@@ -240,6 +240,11 @@ export const FAMILIAS_SIN_MANO_DE_OBRA = new Set([
   'COSTADOS_COLOR', 'COSTADOS_MELAMINA', 'LATERALES_COLOR',
   'REGLETA_COLOR', 'REGLETA_MELAMINA', 'TECHO_COLOR',
   'ELEMENTOS_LINEALES',
+  // UN ELECTRODOMÉSTICO NO ES UN MUEBLE (07/09/2026, con la PubliOferta de
+  // Electrostock). Se compra hecho y se revende: ni se monta como mueble ni
+  // paga comisión. Tiene que decir lo MISMO que `FAMILIAS_SIN_COMISION` del
+  // backend, o la pantalla enseñaría un margen y la nómina pagaría otra cosa.
+  'ELECTRODOMESTICO', 'ELECTRO', 'ELECTROS',
 ]);
 
 /** ¿Esta línea se monta como un mueble? (o sea: ¿paga mano de obra y comisión?)

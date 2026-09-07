@@ -124,10 +124,21 @@ def test_la_pantalla_SIGUE_sacando_la_mano_del_codigo():
     """
     with open(JSX, "r", encoding="utf-8") as f:
         cuerpo = f.read()
-    i = cuerpo.index("const manoDe = (cod) =>")
-    trozo = cuerpo[i:i + 260]
+    i = cuerpo.index("const manoDe = (")
+    trozo = cuerpo[i:cuerpo.index("const rotarMano", i)]
     assert "_MANO_SUFIJO.exec" in trozo, (
         "`manoDe` ya no saca la mano del código")
-    assert ".mano" not in trozo, (
+    assert not re.search(r"\.mano\b", trozo), (
         "`manoDe` ha empezado a leer el campo `mano`: eso son dos fuentes para "
         "el mismo dato y se separarán en cuanto se pulse «cambiar mano»")
+    # Y DESDE EL 07/09/2026 RECIBE LA LÍNEA, NO EL CÓDIGO SUELTO. Un
+    # electrodoméstico no tiene mano, pero su modelo puede acabar en «I» —el
+    # lavavajillas «EDB6130-I» de Edesa—: con el código a secas la pantalla le
+    # sacaba el botón de girar la mano, y una pulsación lo reescribía a
+    # «EDB6130-D», un aparato que no existe en la tarifa de nadie.
+    assert "esElectro" in trozo, (
+        "`manoDe` ha vuelto a mirar solo el código: le girará la mano a un "
+        "electrodoméstico y le cambiará el modelo")
+    assert "manoDe(m.cod)" not in cuerpo, (
+        "queda una llamada a `manoDe` con el código suelto, que se salta la "
+        "comprobación del electrodoméstico")

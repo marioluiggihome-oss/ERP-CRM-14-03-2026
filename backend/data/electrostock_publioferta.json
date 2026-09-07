@@ -1,0 +1,1533 @@
+{
+ "_aviso": "GENERADO por herramientas/tarifa_electrostock.py desde el PDF del proveedor. No editar a mano: hay un candado que lo regenera y compara.",
+ "proveedor": "ELECTROSTOCK",
+ "tarifa": "PubliOferta",
+ "fecha": "2026-09-01",
+ "vigencia": "2026-09",
+ "ivaIncluido": false,
+ "transporteIncluido": false,
+ "pie": "IVA y Transporte no incluido. Precios válidos para el mes de Tarifa o fin de existencias. Portes de envío a consultar.",
+ "articulos": [
+  {
+   "modelo": "3EB715LR",
+   "modeloNorm": "3EB715LR",
+   "descripcion": "Placa 3EB715LR 3 Fuegos grande doble biselada",
+   "marca": "BALAY",
+   "categoria": "VITROCERÁMICAS, GAS Y CRISTAL GAS (2, 3 Y 4 FUEGOS)",
+   "reclamo": "OFERTA",
+   "cesion": 338.0
+  },
+  {
+   "modelo": "3ETX463BB",
+   "modeloNorm": "3ETX463BB",
+   "descripcion": "Placa Balay 3ETX463BB 3 Fuegos Gas Butano convertible a gas natural Inox",
+   "marca": "BALAY",
+   "categoria": "VITROCERÁMICAS, GAS Y CRISTAL GAS (2, 3 Y 4 FUEGOS)",
+   "reclamo": "INTERESANTE",
+   "cesion": 258.0
+  },
+  {
+   "modelo": "PKK631BB8E",
+   "modeloNorm": "PKK631BB8E",
+   "descripcion": "Placa PKK631BB8E Radiación 3 fuegos Bisel delantero Zona grande de 28 cm Cristal Negro",
+   "marca": "BOSCH",
+   "categoria": "VITROCERÁMICAS, GAS Y CRISTAL GAS (2, 3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 378.0
+  },
+  {
+   "modelo": "CH63CC/4U2",
+   "modeloNorm": "CH63CC4U2",
+   "descripcion": "Placa CH63CC/4U2 Radiación 3 fuegos",
+   "marca": "CANDY",
+   "categoria": "VITROCERÁMICAS, GAS Y CRISTAL GAS (2, 3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 218.0
+  },
+  {
+   "modelo": "TD 3002 BK",
+   "modeloNorm": "TD3002BK",
+   "descripcion": "Placa TD 3002 BK Radiación 2 fuegos",
+   "marca": "CATA",
+   "categoria": "VITROCERÁMICAS, GAS Y CRISTAL GAS (2, 3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 198.0
+  },
+  {
+   "modelo": "TT 6003 BK",
+   "modeloNorm": "TT6003BK",
+   "descripcion": "Placa TT 6003 BK Radiación 3 Fuegos Zona Grande Triple de 28 cm Cristal Negro 60 cm",
+   "marca": "CATA",
+   "categoria": "VITROCERÁMICAS, GAS Y CRISTAL GAS (2, 3 Y 4 FUEGOS)",
+   "reclamo": "OFERTA",
+   "cesion": 230.0
+  },
+  {
+   "modelo": "IAE63421FB",
+   "modeloNorm": "IAE63421FB",
+   "descripcion": "Placa IAE63421FB 3 Zonas grande flexible de 28 cm Biselada Potencia 7350 W",
+   "marca": "AEG",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "ÚLTIMAS UDS",
+   "cesion": 578.0
+  },
+  {
+   "modelo": "3EB865FR",
+   "modeloNorm": "3EB865FR",
+   "descripcion": "Placa 3EB865FR 3 Zonas grande doble inducción Biselada Potencia 4600 W",
+   "marca": "BALAY",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OFERTA",
+   "cesion": 490.0
+  },
+  {
+   "modelo": "3EB965LR",
+   "modeloNorm": "3EB965LR",
+   "descripcion": "Placa 3EB965LR 3 Zonas grande doble inducción Sin Marco Potencia 7400 W",
+   "marca": "BALAY",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 590.0
+  },
+  {
+   "modelo": "3EB965MH",
+   "modeloNorm": "3EB965MH",
+   "descripcion": "Placa 3EB965MH 3 Fuegos Zona Grande 28 cm Potencia 7400 W Control placa - campana Negro Mate 60 cm",
+   "marca": "BALAY",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "INTERESANTE",
+   "cesion": 798.0
+  },
+  {
+   "modelo": "3EB967FR",
+   "modeloNorm": "3EB967FR",
+   "descripcion": "Placa 3EB967FR 3 Zonas Zona grande 32 cm inducción Sin Marco Potencia 7400 W",
+   "marca": "BALAY",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 630.0
+  },
+  {
+   "modelo": "PUJ631BB5E",
+   "modeloNorm": "PUJ631BB5E",
+   "descripcion": "Placa PUJ631BB5E Inducción 3 fuegos Bisel delantero Zona grande de 28 cm Cristal Negro",
+   "marca": "BOSCH",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "",
+   "cesion": 558.0
+  },
+  {
+   "modelo": "ISB3102BK",
+   "modeloNorm": "ISB3102BK",
+   "descripcion": "Placa ISB 3102 BK Inducción 2 fuegos",
+   "marca": "CATA",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 258.0
+  },
+  {
+   "modelo": "IBS6303E2BK",
+   "modeloNorm": "IBS6303E2BK",
+   "descripcion": "Placa IBS 6303 E2 BK Inducción 3 fuegos Zona Grande 28 cm Potencia 7100 W Cristal Negro 60 cm",
+   "marca": "CATA",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OFERTA",
+   "cesion": 298.0
+  },
+  {
+   "modelo": "EIS6330R",
+   "modeloNorm": "EIS6330R",
+   "descripcion": "Placa EIS-6330 R Inducción 3 Fuegos Zona Grande 30 cm Potencia 7100 W Cristal Negro 60 cm",
+   "marca": "EDESA",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "MUY INTERESANTE (POCAS UDS)",
+   "cesion": 250.0
+  },
+  {
+   "modelo": "EIM6330B",
+   "modeloNorm": "EIM6330B",
+   "descripcion": "Placa EIM-6330 B Inducción 3 Fuegos Zona Grande 30 cm Potencia 7100 W Cristal Negro 60 cm",
+   "marca": "EDESA",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 318.0
+  },
+  {
+   "modelo": "LIT60336C",
+   "modeloNorm": "LIT60336C",
+   "descripcion": "Placa LIT60336C Inducción 3 Fuegos Zona grande doble de 28 cm Cristal Negro 60 cm",
+   "marca": "ELECTROLUX",
+   "categoria": "INDUCCIÓN (2,3 Y 4 FUEGOS)",
+   "reclamo": "OFERTA",
+   "cesion": 470.0
+  },
+  {
+   "modelo": "3HB2030X0",
+   "modeloNorm": "3HB2030X0",
+   "descripcion": "Horno 3HB2030X0 7 funciones Multifunción Aqualisis electrónico 66L Clase A Inox",
+   "marca": "BALAY",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "OFERTA",
+   "cesion": 450.0
+  },
+  {
+   "modelo": "3HB4131X3",
+   "modeloNorm": "3HB4131X3",
+   "descripcion": "Horno 3HB4131X3 7 funciones Multifunción Aqualisis electrónico 71L Clase A Inox",
+   "marca": "BALAY",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 498.0
+  },
+  {
+   "modelo": "3HB5131B3",
+   "modeloNorm": "3HB5131B3",
+   "descripcion": "Horno 3HB5131B3 Multifunción 7 Funciones Aqualisis Clase A Cristal Blanco",
+   "marca": "BALAY",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "OFERTA",
+   "cesion": 530.0
+  },
+  {
+   "modelo": "3HB5131N3",
+   "modeloNorm": "3HB5131N3",
+   "descripcion": "Horno 3HB5131N3 Multifunción 7 Funciones Aqualisis Clase A Cristal Negro",
+   "marca": "BALAY",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "OFERTA",
+   "cesion": 530.0
+  },
+  {
+   "modelo": "FIDCB100",
+   "modeloNorm": "FIDCB100",
+   "descripcion": "Horno FIDC B100 Convencional independiente 70 litros Clase A Blanco",
+   "marca": "CANDY",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "INTERESANTE",
+   "cesion": 298.0
+  },
+  {
+   "modelo": "FIDCPX200",
+   "modeloNorm": "FIDCPX200",
+   "descripcion": "Horno FIDCP X200 Convencional Aquactiva 70 litros Clase A Inox",
+   "marca": "CANDY",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "INTERESANTE",
+   "cesion": 278.0
+  },
+  {
+   "modelo": "EOE6040X",
+   "modeloNorm": "EOE6040X",
+   "descripcion": "Horno EOE-6040 X Multifunción 7 Funciones 80 Litros Clase A Inox",
+   "marca": "EDESA",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "INTERESANTE",
+   "cesion": 430.0
+  },
+  {
+   "modelo": "BO76SYW",
+   "modeloNorm": "BO76SYW",
+   "descripcion": "Horno BO76SYW Multifunción 10 funciones 71 Litros Clase A+ Cristal Blanco",
+   "marca": "GORENJE",
+   "categoria": "HORNOS NORMALES Y MULTIFUNCIÓN",
+   "reclamo": "INTERESANTE",
+   "cesion": 538.0
+  },
+  {
+   "modelo": "ME4006X",
+   "modeloNorm": "ME4006X",
+   "descripcion": "Horno Cata ME 4006 X Multifunción 45 cm 6 Funciones 40 Litros Clase A Inox",
+   "marca": "CATA",
+   "categoria": "HORNOS DE 45 CM",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 438.0
+  },
+  {
+   "modelo": "3HB4841X3",
+   "modeloNorm": "3HB4841X3",
+   "descripcion": "Horno 3HB4841X3 Multifunción 7 funciones 71L Clase A+ Inox",
+   "marca": "BALAY",
+   "categoria": "HORNOS PIROLÍTICOS",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 670.0
+  },
+  {
+   "modelo": "HBG675BB1",
+   "modeloNorm": "HBG675BB1",
+   "descripcion": "Horno HBG675BB1 13 Funciones Multifunción electrónico 71L Clase A+ Cristal Negro",
+   "marca": "BOSCH",
+   "categoria": "HORNOS PIROLÍTICOS",
+   "reclamo": "",
+   "cesion": 978.0
+  },
+  {
+   "modelo": "3CG6112X3",
+   "modeloNorm": "3CG6112X3",
+   "descripcion": "Micro 3CG6112X3 20 litros 800 W, grill 1000W encastrable con marco incluido inox Tecla de apertura",
+   "marca": "BALAY",
+   "categoria": "MICROONDAS DE ENCASTRE",
+   "reclamo": "OFERTA",
+   "cesion": 270.0
+  },
+  {
+   "modelo": "3CG5172B2",
+   "modeloNorm": "3CG5172B2",
+   "descripcion": "Micro 3CG5172B2 20 litros 800 W Grill 1000 W encastrable sin marco Cristal Blanco",
+   "marca": "BALAY",
+   "categoria": "MICROONDAS DE ENCASTRE",
+   "reclamo": "OFERTA",
+   "cesion": 370.0
+  },
+  {
+   "modelo": "3CG5172N2",
+   "modeloNorm": "3CG5172N2",
+   "descripcion": "Micro 3CG5172N2 20 litros 800 W Grill 1000 W encastrable sin marco Cristal Negro",
+   "marca": "BALAY",
+   "categoria": "MICROONDAS DE ENCASTRE",
+   "reclamo": "OFERTA",
+   "cesion": 370.0
+  },
+  {
+   "modelo": "EMW2020IGX",
+   "modeloNorm": "EMW2020IGX",
+   "descripcion": "Micro EMW-2020-IG X 20 Litros, 700 W, grill 1000 W encastrable con marco Inox",
+   "marca": "EDESA",
+   "categoria": "MICROONDAS DE ENCASTRE",
+   "reclamo": "INTERESANTE",
+   "cesion": 250.0
+  },
+  {
+   "modelo": "JOMI28NINT",
+   "modeloNorm": "JOMI28NINT",
+   "descripcion": "Micro JOMI28NINT 28 Litros 900 W Grill 1000 W Control Táctil Display Digital Encastrable Cristal Negro",
+   "marca": "JOHNSON",
+   "categoria": "MICROONDAS DE ENCASTRE",
+   "reclamo": "MUY INTERESANTE",
+   "cesion": 350.0
+  },
+  {
+   "modelo": "BE623LMB3",
+   "modeloNorm": "BE623LMB3",
+   "descripcion": "Micro BE623LMB3 20 Litros 800 W Grill 1000 W Mandos Giratorios Display Digital LED Encastrable Negro",
+   "marca": "SIEMENS",
+   "categoria": "MICROONDAS DE ENCASTRE",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 338.0
+  },
+  {
+   "modelo": "260383",
+   "modeloNorm": "260383",
+   "descripcion": "Micro AMW2080WG, 20 Litros 700W con grill 1000W Blanco",
+   "marca": "ARTICA",
+   "categoria": "MICROONDAS DE LIBRE INSTALACIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 104.0
+  },
+  {
+   "modelo": "JOMI20GDX",
+   "modeloNorm": "JOMI20GDX",
+   "descripcion": "Micro JOMI20GDX 20 Litros 700 W Grill 1000 W Control Electrónico Display Digital LED Inox",
+   "marca": "JOHNSON",
+   "categoria": "MICROONDAS DE LIBRE INSTALACIÓN",
+   "reclamo": "MUY INTERESANTE",
+   "cesion": 118.0
+  },
+  {
+   "modelo": "TF 2003 DURALUM 60",
+   "modeloNorm": "TF2003DURALUM60",
+   "descripcion": "Campana TF 2003 60 Duralum inox antihuellas 390 m³/h 02017305",
+   "marca": "CATA",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "INTERESANTE",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "TF 5260 WH",
+   "modeloNorm": "TF5260WH",
+   "descripcion": "Campana TF 5260 WH 60 cm Blanco 325 m³/h 02034501",
+   "marca": "CATA",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "OFERTA",
+   "cesion": 158.0
+  },
+  {
+   "modelo": "TF 5260 X",
+   "modeloNorm": "TF5260X",
+   "descripcion": "Campana TF 5260 X 60 cm Inox 325 m³/h 02034310",
+   "marca": "CATA",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 158.0
+  },
+  {
+   "modelo": "315.0547.797",
+   "modeloNorm": "3150547797",
+   "descripcion": "Campana FTC 632L WH 60 cm Blanco 310 m3/h",
+   "marca": "FRANKE",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 144.0
+  },
+  {
+   "modelo": "315.0547.796",
+   "modeloNorm": "3150547796",
+   "descripcion": "Campana FTC 632L GR/XS 60 cm Inox 310 m3/h",
+   "marca": "FRANKE",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 144.0
+  },
+  {
+   "modelo": "ECOLINE 60 BLANCA",
+   "modeloNorm": "ECOLINE60BLANCA",
+   "descripcion": "Campana ECOLINE 60 Blanca 310 m³/h 315.0547.786 Ancho 60 cm",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 150.0
+  },
+  {
+   "modelo": "ECOLINE 60 INOX",
+   "modeloNorm": "ECOLINE60INOX",
+   "descripcion": "Campana ECOLINE 60 Inox 310 m³/h 315.0547.787 Ancho 60 cm",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS EXTRAÍBLES",
+   "reclamo": "INTERESANTE",
+   "cesion": 150.0
+  },
+  {
+   "modelo": "LFK6001WH",
+   "modeloNorm": "LFK6001WH",
+   "descripcion": "Campana LFK-6001 WH Convencional 60 cm Blanca Extracción máxima 162 m3/h 02011112",
+   "marca": "CATA",
+   "categoria": "CAMPANAS PIRAMIDALES Y CONVENCIONALES",
+   "reclamo": "(NOVEDAD)",
+   "cesion": 118.0
+  },
+  {
+   "modelo": "LFK6001X",
+   "modeloNorm": "LFK6001X",
+   "descripcion": "Campana LFK-6001 X Convencional 60 cm Inox Extracción máxima 162 m3/h 02011603",
+   "marca": "CATA",
+   "categoria": "CAMPANAS PIRAMIDALES Y CONVENCIONALES",
+   "reclamo": "(NOVEDAD)",
+   "cesion": 118.0
+  },
+  {
+   "modelo": "PIRAMIDE PLUS 60 X",
+   "modeloNorm": "PIRAMIDEPLUS60X",
+   "descripcion": "Campana PIRAMIDE PLUS 60 X (Piramidal) 400 m³/h 320.0569.117 Ancho 60 cm Inox",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS PIRAMIDALES Y CONVENCIONALES",
+   "reclamo": "OFERTA",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "PIRAMIDE PLUS 70 X",
+   "modeloNorm": "PIRAMIDEPLUS70X",
+   "descripcion": "Campana PIRAMIDE PLUS 70 X (Piramidal) 400 m³/h 320.0569.118 Ancho 70 cm Inox",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS PIRAMIDALES Y CONVENCIONALES",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 210.0
+  },
+  {
+   "modelo": "PIRAMIDE PLUS 90 X",
+   "modeloNorm": "PIRAMIDEPLUS90X",
+   "descripcion": "Campana PIRAMIDE PLUS 90 X (Piramidal) 400 m³/h 320.0569.119 Ancho 90 cm Inox",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS PIRAMIDALES Y CONVENCIONALES",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 230.0
+  },
+  {
+   "modelo": "SILUETA XLA 60",
+   "modeloNorm": "SILUETAXLA60",
+   "descripcion": "Campana SILUETA XLA 60 inox (T invertida) 600 m³/h 325.0568.821",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS T INVERTIDA",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 278.0
+  },
+  {
+   "modelo": "SILUETA XLA 70",
+   "modeloNorm": "SILUETAXLA70",
+   "descripcion": "Campana SILUETA XLA 70 inox (T invertida) 600 m³/h 325.0571.785",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS T INVERTIDA",
+   "reclamo": "OFERTA",
+   "cesion": 298.0
+  },
+  {
+   "modelo": "SILUETA XLA 90",
+   "modeloNorm": "SILUETAXLA90",
+   "descripcion": "Campana SILUETA XLA 90 inox (T invertida) 600 m³/h 325.0568.822",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS T INVERTIDA",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 318.0
+  },
+  {
+   "modelo": "COUNTRY 70",
+   "modeloNorm": "COUNTRY70",
+   "descripcion": "Campana COUNTRY 70 OYSTER 650 m³/h (OYSTER BEIGE) 321.0580.503",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS VERTICALES",
+   "reclamo": "MUY INTERESANTE",
+   "cesion": 756.0
+  },
+  {
+   "modelo": "LUNA PLUS 70",
+   "modeloNorm": "LUNAPLUS70",
+   "descripcion": "Campana LUNA PLUS 70 cristal negro 590 m³/h (También en cristal blanco) 330.0593.140",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS VERTICALES",
+   "reclamo": "OFERTA",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "LUNA PLUS 90",
+   "modeloNorm": "LUNAPLUS90",
+   "descripcion": "Campana LUNA PLUS 90 cristal negro 590 m³/h (También en cristal blanco) 330.0593.162",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS VERTICALES",
+   "reclamo": "OFERTA",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "CIELO 90 CRISTAL",
+   "modeloNorm": "CIELO90CRISTAL",
+   "descripcion": "Campana CIELO 90 Cristal Blanco 740 m³/h 110.0426.080",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS ISLA TECHO",
+   "reclamo": "",
+   "cesion": 2198.0
+  },
+  {
+   "modelo": "CIELO 90 INOX",
+   "modeloNorm": "CIELO90INOX",
+   "descripcion": "Campana CIELO 90 Inox 740 m³/h 110.0426.201",
+   "marca": "MEPAMSA",
+   "categoria": "CAMPANAS ISLA TECHO",
+   "reclamo": "",
+   "cesion": 1558.0
+  },
+  {
+   "modelo": "GT PLUS 45 INOX",
+   "modeloNorm": "GTPLUS45INOX",
+   "descripcion": "Grupo Filtrante GT PLUS 45 Inox 645 m³/h 52 cm Nivel sonoro máximo 65 dB Para mueble de 60 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OFERTA",
+   "cesion": 238.0
+  },
+  {
+   "modelo": "GL 45 X",
+   "modeloNorm": "GL45X",
+   "descripcion": "Grupo Filtrante GL 45 X Inox 820 m³/h 52 cm Nivel sonoro máximo 65 dB Para mueble de 60 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 278.0
+  },
+  {
+   "modelo": "ARMONIA 60",
+   "modeloNorm": "ARMONIA60",
+   "descripcion": "Campana integración ARMONIA 60 Inox 645 m³/h Nivel sonoro máximo 70 dB Para mueble de 60 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OFERTA",
+   "cesion": 350.0
+  },
+  {
+   "modelo": "ARMONIA 90",
+   "modeloNorm": "ARMONIA90",
+   "descripcion": "Campana integración ARMONIA 90 Inox 645 m³/h Nivel sonoro máximo 70 dB Para mueble de 90 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "MUY INTERESANTE",
+   "cesion": 390.0
+  },
+  {
+   "modelo": "CORONA 60",
+   "modeloNorm": "CORONA60",
+   "descripcion": "Campana integración CORONA 60 Inox 850 m³/h 50 cm Nivel sonoro máximo 65 dB Para mueble de 60 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "CORONA 70",
+   "modeloNorm": "CORONA70",
+   "descripcion": "Campana interación CORONA 70 Inox 850 m³/h 60 cm Nivel sonoro máximo 65 dB Para mueble de 70 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "",
+   "cesion": 578.0
+  },
+  {
+   "modelo": "CORONA 90",
+   "modeloNorm": "CORONA90",
+   "descripcion": "Campana integración CORONA 90 Inox 850 m³/h 60 cm Nivel sonoro máximo 65 dB Para mueble de 90 cm",
+   "marca": "CATA",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "",
+   "cesion": 598.0
+  },
+  {
+   "modelo": "305.0572.834",
+   "modeloNorm": "3050572834",
+   "descripcion": "Campana integración STYLE PLUS FST PLUS 908 X Inox 90 cm 650 m3/h",
+   "marca": "FRANKE",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 578.0
+  },
+  {
+   "modelo": "305.0717.356",
+   "modeloNorm": "3050717356",
+   "descripcion": "Campana integración STYLE PLUS FST PLUS 908 BK Negro Mate 90 cm 650 m3/h",
+   "marca": "FRANKE",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 550.0
+  },
+  {
+   "modelo": "305.0717.355",
+   "modeloNorm": "3050717355",
+   "descripcion": "Campana integración STYLE PLUS FST PLUS 608 BK Negro Mate 60 cm 650 m3/h",
+   "marca": "FRANKE",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 530.0
+  },
+  {
+   "modelo": "305.0572.835",
+   "modeloNorm": "3050572835",
+   "descripcion": "Campana integración STYLE PLUS FST PLUS 608 X Inox 60 cm 650 m3/h",
+   "marca": "FRANKE",
+   "categoria": "GRUPOS FILTRANTES Y CAMPANAS DE INTEGRACIÓN",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 550.0
+  },
+  {
+   "modelo": "3KFE551WI",
+   "modeloNorm": "3KFE551WI",
+   "descripcion": "Combi 3KFE551WI 186 x 60 cm Clase E Blanco NO FROST TOTAL",
+   "marca": "BALAY",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "",
+   "cesion": 818.0
+  },
+  {
+   "modelo": "3KFE753WI",
+   "modeloNorm": "3KFE753WI",
+   "descripcion": "Combi 3KFE753WI 203 x 60 cm Clase E Blanco NO FROST TOTAL",
+   "marca": "BALAY",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 918.0
+  },
+  {
+   "modelo": "KGN36VWEA",
+   "modeloNorm": "KGN36VWEA",
+   "descripcion": "Combi KGN36VWEA 186 x 60 x 66 cm Clase E NO FROST FULL SKIN CONDENSER Cajones VitaFresh Blanco",
+   "marca": "BOSCH",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "",
+   "cesion": 878.0
+  },
+  {
+   "modelo": "KGN362WED",
+   "modeloNorm": "KGN362WED",
+   "descripcion": "Combi KGN362WED 186 x 60 x 66 cm Clase E TOTAL NO FROST Cajones VitaFresh Blanco",
+   "marca": "BOSCH",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 898.0
+  },
+  {
+   "modelo": "EFC1821NFWH",
+   "modeloNorm": "EFC1821NFWH",
+   "descripcion": "Combi Edesa EFC 1821 NF WH 188 x 59,5 x 63 cm No Frost Clase E Blanco",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD (ÚLTIMAS UDS)",
+   "cesion": 630.0
+  },
+  {
+   "modelo": "EFC18220NFWH",
+   "modeloNorm": "EFC18220NFWH",
+   "descripcion": "Combi Edesa EFC 18220 NF WH 186 x 60 x 59 cm Total No Frost Clase E Blanco",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OFERTA",
+   "cesion": 598.0
+  },
+  {
+   "modelo": "EFC2032NFWH",
+   "modeloNorm": "EFC2032NFWH",
+   "descripcion": "Combi Edesa EFC 2032 NF WH 201 x 59,5 x 63 cm No Frost Clase E Blanco",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD (ÚLTIMAS UDS)",
+   "cesion": 818.0
+  },
+  {
+   "modelo": "EFC20320NFWH",
+   "modeloNorm": "EFC20320NFWH",
+   "descripcion": "Combi Edesa EFC 20320 NF WH 201 x 60 x 60 cm Total No Frost Clase E Blanco",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OFERTA",
+   "cesion": 738.0
+  },
+  {
+   "modelo": "JRC1851ENW2",
+   "modeloNorm": "JRC1851ENW2",
+   "descripcion": "Combi JRC1851ENW2 185 x 60 x 60 cm No Frost Clase E Blanco",
+   "marca": "JOHNSON",
+   "categoria": "COMBINADOS BLANCOS Y CRISTAL BLANCO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD (NOVEDAD)",
+   "cesion": 538.0
+  },
+  {
+   "modelo": "3KFE553XI",
+   "modeloNorm": "3KFE553XI",
+   "descripcion": "Combi 3KFE553XI 186 x 60 cm Clase E Acero Cepillado Antihuellas NO FROST TOTAL",
+   "marca": "BALAY",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "INTERESANTE",
+   "cesion": 938.0
+  },
+  {
+   "modelo": "3KFE753XI",
+   "modeloNorm": "3KFE753XI",
+   "descripcion": "Combi 3KFE753XI 203 x 60 cm Clase E Acero Cepillado Antihuellas NO FROST TOTAL",
+   "marca": "BALAY",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 1018.0
+  },
+  {
+   "modelo": "KGN36VIED",
+   "modeloNorm": "KGN36VIED",
+   "descripcion": "Combi KGN36VIED 186 x 60 x 66 cm Clase E TOTAL NO FROST Cajones VitaFresh Inox antihuellas",
+   "marca": "BOSCH",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "OFERTA",
+   "cesion": 938.0
+  },
+  {
+   "modelo": "EFC18220NFEX",
+   "modeloNorm": "EFC18220NFEX",
+   "descripcion": "Combi Edesa EFC 18220 NF EX 186 x 60 x 59 cm Total No Frost Clase E Inox",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "INTERESANTE",
+   "cesion": 618.0
+  },
+  {
+   "modelo": "EFC1833NFEX",
+   "modeloNorm": "EFC1833NFEX",
+   "descripcion": "Combi Edesa EFC 1833 NF EX 186 x 60 x 59 cm Total No Frost Clase D Inox",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "OFERTA",
+   "cesion": 598.0
+  },
+  {
+   "modelo": "EFC2032NFEX",
+   "modeloNorm": "EFC2032NFEX",
+   "descripcion": "Combi Edesa EFC 2032 NF EX 201 x 59,5 x 63 cm No Frost Clase E Inox",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD (ÚLTIMAS UDS)",
+   "cesion": 878.0
+  },
+  {
+   "modelo": "EFC20320NFEX",
+   "modeloNorm": "EFC20320NFEX",
+   "descripcion": "Combi Edesa EFC 20320 NF EX 201 x 60 x 60 cm Total No Frost Clase E Inox",
+   "marca": "EDESA",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "INTERESANTE",
+   "cesion": 758.0
+  },
+  {
+   "modelo": "JRC1851ENX",
+   "modeloNorm": "JRC1851ENX",
+   "descripcion": "Combi JRC1851ENX 185 x 60 x 60 cm No Frost Clase E Inox",
+   "marca": "JOHNSON",
+   "categoria": "COMBINADOS INOXIDABLES, CRISTAL GRIS ANTRACITA Y NEGRO (186 Y 203 CM)",
+   "reclamo": "OPORTUNIDAD (ÚLTIMAS UDS)",
+   "cesion": 578.0
+  },
+  {
+   "modelo": "EFT-1711 WH",
+   "modeloNorm": "EFT1711WH",
+   "descripcion": "Frigorífico EFT-1711 WH 176 x 60 cm 2 Puertas Clase E Blanco",
+   "marca": "EDESA",
+   "categoria": "FRIGOS DE 2 PUERTAS",
+   "reclamo": "",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "EWF6200WH",
+   "modeloNorm": "EWF6200WH",
+   "descripcion": "Lavadora Edesa EWF-6200 WH 6 Kg 1200 rpm Clase A Blanca",
+   "marca": "EDESA",
+   "categoria": "LAVADORAS DE 6 Y 7 KG (BLANCAS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 398.0
+  },
+  {
+   "modelo": "EWF7202WH",
+   "modeloNorm": "EWF7202WH",
+   "descripcion": "Lavadora Edesa EWF-7202 WH 7 Kg 1200 rpm Clase A Blanca",
+   "marca": "EDESA",
+   "categoria": "LAVADORAS DE 6 Y 7 KG (BLANCAS E INOX)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 450.0
+  },
+  {
+   "modelo": "LFA6I8472A",
+   "modeloNorm": "LFA6I8472A",
+   "descripcion": "Lavadora LFA6I8472A 8 Kg 1400 rpm Clase A Blanca",
+   "marca": "AEG",
+   "categoria": "LAVADORAS DE 8, 9 Y 10 KG (BLANCAS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 618.0
+  },
+  {
+   "modelo": "3TS993BP",
+   "modeloNorm": "3TS993BP",
+   "descripcion": "Lavadora 3TS993BP 9 Kg 1200 rpm Clase A Blanca",
+   "marca": "BALAY",
+   "categoria": "LAVADORAS DE 8, 9 Y 10 KG (BLANCAS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 670.0
+  },
+  {
+   "modelo": "NARCEA80A",
+   "modeloNorm": "NARCEA80A",
+   "descripcion": "Lavadora NARCEA80A 8 Kg 1400 rpm Clase A Blanca",
+   "marca": "JOHNSON",
+   "categoria": "LAVADORAS DE 8, 9 Y 10 KG (BLANCAS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 378.0
+  },
+  {
+   "modelo": "NARCEA90A",
+   "modeloNorm": "NARCEA90A",
+   "descripcion": "Lavadora NARCEA90A 9 Kg 1400 rpm Clase A Blanca",
+   "marca": "JOHNSON",
+   "categoria": "LAVADORAS DE 8, 9 Y 10 KG (BLANCAS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 418.0
+  },
+  {
+   "modelo": "3TI979B",
+   "modeloNorm": "3TI979B",
+   "descripcion": "Lavadora 3TI979B 7 Kg 1200 rpm Clase A+++ integración total",
+   "marca": "BALAY",
+   "categoria": "LAVADORAS DE INTEGRACIÓN TOTAL",
+   "reclamo": "OFERTA",
+   "cesion": 958.0
+  },
+  {
+   "modelo": "3TI983B",
+   "modeloNorm": "3TI983B",
+   "descripcion": "Lavadora 3TI983B 8 Kg 1200 rpm Clase C integración total",
+   "marca": "BALAY",
+   "categoria": "LAVADORAS DE INTEGRACIÓN TOTAL",
+   "reclamo": "",
+   "cesion": 1018.0
+  },
+  {
+   "modelo": "3SB582BE",
+   "modeloNorm": "3SB582BE",
+   "descripcion": "Secadora 3SB582BE Con Bomba de Calor 8 Kg Ruido 63 dB Display LED Clase A++",
+   "marca": "BALAY",
+   "categoria": "SECADORAS (BLANCAS)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 818.0
+  },
+  {
+   "modelo": "COW 4854TWME6/1-S",
+   "modeloNorm": "COW4854TWME61S",
+   "descripcion": "Lava/Secadora COW 4854TWME6/1-S 8 Kg de Lavado + 5 Kg de Secado 1400 rpm Blanca LIBRE INSTALACIÓN",
+   "marca": "CANDY",
+   "categoria": "LAVADORAS/SECADORAS (BLANCAS)",
+   "reclamo": "(NOVEDAD)",
+   "cesion": 598.0
+  },
+  {
+   "modelo": "3VS506BP",
+   "modeloNorm": "3VS506BP",
+   "descripcion": "Lavavajillas 3VS506BP 60cm Blanco, 5 prog, 12 servicios, Motor extrasilencio Clase E Display",
+   "marca": "BALAY",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 60 CM (BLANCOS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 550.0
+  },
+  {
+   "modelo": "3VS506IP",
+   "modeloNorm": "3VS506IP",
+   "descripcion": "Lavavajillas 3VS506IP 60cm Inox, 5 prog, 12 servicios, Motor extrasilencio Clase E Display",
+   "marca": "BALAY",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 60 CM (BLANCOS E INOX)",
+   "reclamo": "OFERTA",
+   "cesion": 590.0
+  },
+  {
+   "modelo": "EDW6120WH",
+   "modeloNorm": "EDW6120WH",
+   "descripcion": "Lavavajillas Edesa EDW6120WH 12 servicios 4 programas Clase E 60 cm Blanco",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 60 CM (BLANCOS E INOX)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 438.0
+  },
+  {
+   "modelo": "EDW6130X",
+   "modeloNorm": "EDW6130X",
+   "descripcion": "Lavavajillas Edesa EDW6130X 13 servicios 6 programas Clase E 60 cm Inox",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 60 CM (BLANCOS E INOX)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "3VF304NP",
+   "modeloNorm": "3VF304NP",
+   "descripcion": "Lavavajillas 3VF304NP 12 Servicios 4 Programas Clase E Integración total 60 cm",
+   "marca": "BALAY",
+   "categoria": "LAVAVAJILLAS DE INTEGRACIÓN TOTAL 60 CM",
+   "reclamo": "OFERTA",
+   "cesion": 578.0
+  },
+  {
+   "modelo": "EDB6130-I",
+   "modeloNorm": "EDB6130I",
+   "descripcion": "Lavavajillas Edesa EDB-6130-I 13 servicios 5 programas Clase A+ 60 cm Integración Total",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS DE INTEGRACIÓN TOTAL 60 CM",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "3VN4031BA",
+   "modeloNorm": "3VN4031BA",
+   "descripcion": "Lavavajillas 3VN4031BA 4 prog. 10 serv. 45cm Blanco Clase D",
+   "marca": "BALAY",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 45 CM (BLANCOS E INOX)",
+   "reclamo": "(NOVEDAD)",
+   "cesion": 598.0
+  },
+  {
+   "modelo": "3VN4031IA",
+   "modeloNorm": "3VN4031IA",
+   "descripcion": "Lavavajillas 3VN4031IA 4 prog. 10 serv. 45cm Inox Clase D",
+   "marca": "BALAY",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 45 CM (BLANCOS E INOX)",
+   "reclamo": "(NOVEDAD)",
+   "cesion": 670.0
+  },
+  {
+   "modelo": "EDW4710X",
+   "modeloNorm": "EDW4710X",
+   "descripcion": "Lavavajillas Edesa EDW4710X 10 servicios 7 programas Clase E 45 cm Inox",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 45 CM (BLANCOS E INOX)",
+   "reclamo": "INTERESANTE",
+   "cesion": 618.0
+  },
+  {
+   "modelo": "EDW4610X",
+   "modeloNorm": "EDW4610X",
+   "descripcion": "Lavavajillas Edesa EDW4610X 10 servicios 6 programas Clase A+ 45 cm Inox",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 45 CM (BLANCOS E INOX)",
+   "reclamo": "INTERESANTE",
+   "cesion": 538.0
+  },
+  {
+   "modelo": "EDW4610WH",
+   "modeloNorm": "EDW4610WH",
+   "descripcion": "Lavavajillas Edesa EDW4610WH 10 servicios 6 programas Clase A+ 45 cm Blanco",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS LIBRE INSTALACIÓN 45 CM (BLANCOS E INOX)",
+   "reclamo": "OPORTUNIDAD",
+   "cesion": 478.0
+  },
+  {
+   "modelo": "3VT4032NA",
+   "modeloNorm": "3VT4032NA",
+   "descripcion": "Lavavajillas 3VT4032NA 10 Servicios 4 Programas Clase D Integración total 45 cm",
+   "marca": "BALAY",
+   "categoria": "LAVAVAJILLAS INTEGRACIÓN TOTAL 45 CM",
+   "reclamo": "(NOVEDAD)",
+   "cesion": 618.0
+  },
+  {
+   "modelo": "EDB4610-I",
+   "modeloNorm": "EDB4610I",
+   "descripcion": "Lavavajillas Edesa EDB-4610-I 10 servicios 5 programas Clase E 45 cm Integración Total",
+   "marca": "EDESA",
+   "categoria": "LAVAVAJILLAS INTEGRACIÓN TOTAL 45 CM",
+   "reclamo": "OFERTA",
+   "cesion": 518.0
+  },
+  {
+   "modelo": "122.0155.425",
+   "modeloNorm": "1220155425",
+   "descripcion": "Fregadero BMG ME 40.40 BE (40x40x19)",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "ÚLTIMAS UDS",
+   "cesion": 124.0
+  },
+  {
+   "modelo": "122.0155.407",
+   "modeloNorm": "1220155407",
+   "descripcion": "Fregadero BMG I 45.40 BE (45x40x19)",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "ÚLTIMAS UDS",
+   "cesion": 130.0
+  },
+  {
+   "modelo": "127.0715.191",
+   "modeloNorm": "1270715191",
+   "descripcion": "Fregadero SRX 110-40 BE (40x40x19)",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "NOVEDAD",
+   "cesion": 124.0
+  },
+  {
+   "modelo": "122.0739.760",
+   "modeloNorm": "1220739760",
+   "descripcion": "Fregadero SRX 110-45 BE (45x40x19)",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "NOVEDAD",
+   "cesion": 130.0
+  },
+  {
+   "modelo": "122.0375.818",
+   "modeloNorm": "1220375818",
+   "descripcion": "Fregadero BMG MU 50.40 PLUS RADIO 36",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 158.0
+  },
+  {
+   "modelo": "1190044833",
+   "modeloNorm": "1190044833",
+   "descripcion": "Dispensador de jabón NOVITA cromo",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "OFERTA",
+   "cesion": 78.0
+  },
+  {
+   "modelo": "112.0686.264",
+   "modeloNorm": "1120686264",
+   "descripcion": "Sifón Franke SF 1",
+   "marca": "FRANKE",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 26.0
+  },
+  {
+   "modelo": "37OKA01",
+   "modeloNorm": "37OKA01",
+   "descripcion": "Fregadero redondo con agujero",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 86.0
+  },
+  {
+   "modelo": "37OKA05",
+   "modeloNorm": "37OKA05",
+   "descripcion": "Fregadero redondo sin agujero",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 94.0
+  },
+  {
+   "modelo": "37OKA02",
+   "modeloNorm": "37OKA02",
+   "descripcion": "Fregadero 2 senos redondo con agujero",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 124.0
+  },
+  {
+   "modelo": "37OKA16",
+   "modeloNorm": "37OKA16",
+   "descripcion": "Fregadero 2 senos redondo sin agujero",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 124.0
+  },
+  {
+   "modelo": "37OKA13",
+   "modeloNorm": "37OKA13",
+   "descripcion": "Fregadero 1 seno cuadrado + escurre izquierda",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 106.0
+  },
+  {
+   "modelo": "37OKA14",
+   "modeloNorm": "37OKA14",
+   "descripcion": "Fregadero 1 seno cuadrado + escurre derecha",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 106.0
+  },
+  {
+   "modelo": "37OKA40",
+   "modeloNorm": "37OKA40",
+   "descripcion": "Fregadero 1 seno BE 40.40 (40x40x20)",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 100.0
+  },
+  {
+   "modelo": "37OKA49",
+   "modeloNorm": "37OKA49",
+   "descripcion": "Fregadero 1 seno BE 45.40 (45x40x20)",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 110.0
+  },
+  {
+   "modelo": "37OKA54",
+   "modeloNorm": "37OKA54",
+   "descripcion": "Fregadero 1 seno BE 50.40 (50x40x20)",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 130.0
+  },
+  {
+   "modelo": "37OKA07",
+   "modeloNorm": "37OKA07",
+   "descripcion": "Fregadero 1 seno cuadrado sobre encimera",
+   "marca": "OKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 104.0
+  },
+  {
+   "modelo": "144.0667.808",
+   "modeloNorm": "1440667808",
+   "descripcion": "Fregadero SQUARE 50.40 Blanco Bajo Encimera 50.40 para mueble de 60 cm",
+   "marca": "MEPAMSA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "MUY INTERESANTE",
+   "cesion": 290.0
+  },
+  {
+   "modelo": "144.0667.810",
+   "modeloNorm": "1440667810",
+   "descripcion": "Fregadero SQUARE 50.40 Negro Bajo Encimera 50.40 para mueble de 60 cm",
+   "marca": "MEPAMSA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "MUY INTERESANTE",
+   "cesion": 290.0
+  },
+  {
+   "modelo": "143.0699.601",
+   "modeloNorm": "1430699601",
+   "descripcion": "Fregadero ARCO 50.50 Negro Sobre Encimera Redondo para mueble de 45 cm",
+   "marca": "MEPAMSA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "OPORTUNIDAD (ÚLTIMAS UDS)",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "5300003",
+   "modeloNorm": "5300003",
+   "descripcion": "Grifo OKA Caño Alto Mod: ASTRAL Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 72.0
+  },
+  {
+   "modelo": "5300004",
+   "modeloNorm": "5300004",
+   "descripcion": "Grifo OKA Caño Alto Mod: ASTRAL Efecto Inox",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 82.0
+  },
+  {
+   "modelo": "5300007",
+   "modeloNorm": "5300007",
+   "descripcion": "Grifo OKA Caño Alto Mod: MAYA RECTO Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "5300010",
+   "modeloNorm": "5300010",
+   "descripcion": "Grifo OKA Caño Alto Mod: GRANADA Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 94.0
+  },
+  {
+   "modelo": "5300013",
+   "modeloNorm": "5300013",
+   "descripcion": "Grifo OKA Caño Alto Mod: SALOMÉ Blanco",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 130.0
+  },
+  {
+   "modelo": "5300014",
+   "modeloNorm": "5300014",
+   "descripcion": "Grifo OKA Caño Alto Mod: SALOMÉ Negro Mate",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 130.0
+  },
+  {
+   "modelo": "5300015",
+   "modeloNorm": "5300015",
+   "descripcion": "Grifo MARTI Mod: Rustic 1921 Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 84.0
+  },
+  {
+   "modelo": "5300017",
+   "modeloNorm": "5300017",
+   "descripcion": "Grifo MARTI Caño Alto Mod: AUCLAND Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 80.0
+  },
+  {
+   "modelo": "5300018",
+   "modeloNorm": "5300018",
+   "descripcion": "Grifo MARTI Ducha Extraible Mod: AUCLAND Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 106.0
+  },
+  {
+   "modelo": "5300019",
+   "modeloNorm": "5300019",
+   "descripcion": "Grifo OKA Caño Alto Mod: JUPITER Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 154.0
+  },
+  {
+   "modelo": "5300022",
+   "modeloNorm": "5300022",
+   "descripcion": "Grifo OKA Caño Alto Mod: TENDER Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 154.0
+  },
+  {
+   "modelo": "5300023",
+   "modeloNorm": "5300023",
+   "descripcion": "Grifo OKA Caño Alto Mod: FONTANA Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 162.0
+  },
+  {
+   "modelo": "5300024",
+   "modeloNorm": "5300024",
+   "descripcion": "Grifo OKA Caño Alto Mod: VISERA Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 194.0
+  },
+  {
+   "modelo": "5300025",
+   "modeloNorm": "5300025",
+   "descripcion": "Grifo OKA Ducha extraible Mod: TROMPETA Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 218.0
+  },
+  {
+   "modelo": "5300030",
+   "modeloNorm": "5300030",
+   "descripcion": "Grifo OKA Caño Alto Mod: AZORIN Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 188.0
+  },
+  {
+   "modelo": "5300032",
+   "modeloNorm": "5300032",
+   "descripcion": "Grifo OKA Ducha extraible Mod: HELMANTICA Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 226.0
+  },
+  {
+   "modelo": "5300033",
+   "modeloNorm": "5300033",
+   "descripcion": "Grifo OKA Caño Alto Mod: ALAGON Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 188.0
+  },
+  {
+   "modelo": "5300034",
+   "modeloNorm": "5300034",
+   "descripcion": "Grifo OKA Caño Alto Mod: TREMENDAL OVAL Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 226.0
+  },
+  {
+   "modelo": "5300035",
+   "modeloNorm": "5300035",
+   "descripcion": "Grifo OKA Caño Alto Mod: ARAPILES Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 182.0
+  },
+  {
+   "modelo": "5300036",
+   "modeloNorm": "5300036",
+   "descripcion": "Grifo OKA Caño Alto Mod: CURVO Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 182.0
+  },
+  {
+   "modelo": "5300041",
+   "modeloNorm": "5300041",
+   "descripcion": "LED Termico OKA Macho Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 42.0
+  },
+  {
+   "modelo": "5300042",
+   "modeloNorm": "5300042",
+   "descripcion": "LED Termico OKA Hembra Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 42.0
+  },
+  {
+   "modelo": "5300043",
+   "modeloNorm": "5300043",
+   "descripcion": "Dispensador de jabón OKA Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 40.0
+  },
+  {
+   "modelo": "5343404",
+   "modeloNorm": "5343404",
+   "descripcion": "Grifo OKA Caño Abatible Cromo Brillo",
+   "marca": "NOVAMIX",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 206.0
+  },
+  {
+   "modelo": "10111004",
+   "modeloNorm": "10111004",
+   "descripcion": "Fregadero Centroval redondo con agujero",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 138.0
+  },
+  {
+   "modelo": "10108035",
+   "modeloNorm": "10108035",
+   "descripcion": "Fregadero ERC redondo sin agujero",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 118.0
+  },
+  {
+   "modelo": "10107007",
+   "modeloNorm": "10107007",
+   "descripcion": "Fregadero Stylo 1C",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 118.0
+  },
+  {
+   "modelo": "10107017",
+   "modeloNorm": "10107017",
+   "descripcion": "Fregadero Stylo 1C 1E cuadrado seno + escurre",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "10107028",
+   "modeloNorm": "10107028",
+   "descripcion": "Fregadero Stylo 2C cuadrado 2 senos",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 190.0
+  },
+  {
+   "modelo": "10110005",
+   "modeloNorm": "10110005",
+   "descripcion": "Fregadero DR-80 1C. 1E redondo seno + escurre",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "10110006",
+   "modeloNorm": "10110006",
+   "descripcion": "Fregadero DR-80 2C redondo 2 senos",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 190.0
+  },
+  {
+   "modelo": "10125005",
+   "modeloNorm": "10125005",
+   "descripcion": "Fregadero BE 40.40 (40x40x18)",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 138.0
+  },
+  {
+   "modelo": "10125123",
+   "modeloNorm": "10125123",
+   "descripcion": "Fregadero BE 45.40 (45x40x20)",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "10125001",
+   "modeloNorm": "10125001",
+   "descripcion": "Fregadero BE 50.40",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 158.0
+  },
+  {
+   "modelo": "10125152",
+   "modeloNorm": "10125152",
+   "descripcion": "Fregadero BE 40.40 PLUS",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 170.0
+  },
+  {
+   "modelo": "10125122",
+   "modeloNorm": "10125122",
+   "descripcion": "Fregadero BE 50.40 PLUS",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 178.0
+  },
+  {
+   "modelo": "10125150",
+   "modeloNorm": "10125150",
+   "descripcion": "Fregadero BE 2C 765 Bajo Encimera de 2 cubetas para mueble de 80 cm",
+   "marca": "TEKA",
+   "categoria": "FREGADEROS Y ACCESORIOS",
+   "reclamo": "",
+   "cesion": 350.0
+  },
+  {
+   "modelo": "111720004",
+   "modeloNorm": "111720004",
+   "descripcion": "Termo EWH 100 C 100 Litros Redondo Blanco",
+   "marca": "TEKA",
+   "categoria": "TERMOS ELÉCTRICOS",
+   "reclamo": "ÚLTIMAS UDS",
+   "cesion": 318.0
+  },
+  {
+   "modelo": "111720003",
+   "modeloNorm": "111720003",
+   "descripcion": "Termo EWH 80 C 80 Litros Redondo Blanco",
+   "marca": "TEKA",
+   "categoria": "TERMOS ELÉCTRICOS",
+   "reclamo": "ÚLTIMAS UDS",
+   "cesion": 278.0
+  },
+  {
+   "modelo": "111720002",
+   "modeloNorm": "111720002",
+   "descripcion": "Termo EWH 50 C 50 Litros Redondo Blanco",
+   "marca": "TEKA",
+   "categoria": "TERMOS ELÉCTRICOS",
+   "reclamo": "ÚLTIMAS UDS",
+   "cesion": 218.0
+  },
+  {
+   "modelo": "MSM2610B",
+   "modeloNorm": "MSM2610B",
+   "descripcion": "Batidora de mano Bosch MSM2610B Potencia 600 W Negra",
+   "marca": "BOSCH",
+   "categoria": "PAE (BOSCH)",
+   "reclamo": "MUY INTERESANTE (ÚLTIMAS UDS)",
+   "cesion": 42.0
+  }
+ ]
+}

@@ -26,7 +26,8 @@ import {
   Copy, Layers, ArrowUpDown, ChevronRight, HelpCircle, Package,
   ClipboardList, CheckCircle2, ChevronDown, Boxes, Box, X, Printer, FileUp,
   User, Percent, Receipt, Phone, Building2, Tag, Calendar, ArrowLeft,
-  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play, List, ShoppingCart
+  Palette, Factory, Hammer, Clock, Wrench, ShieldCheck, Play, List, ShoppingCart,
+  Zap
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -680,6 +681,82 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     return out;
   }, [familias, pv]);
 
+  /* ─── ELECTRODOMÉSTICOS: SE TECLEA EL MODELO Y SALE LA LÍNEA ──────────────
+   *
+   *  El master, 07/09/2026: «un artículo para que metiendo el modelo meta el
+   *  precio, descripción y precio».
+   *
+   *  EL PRECIO ES EL PVP DEL CATÁLOGO DE ELECTROS, no el del papel del
+   *  proveedor. La PubliOferta trae la CESIÓN —lo que le cuesta a la casa, sin
+   *  IVA y sin portes—, y presupuestar por esa cifra es vender a coste. El
+   *  margen lo pone el master al volcar la tarifa, y de ahí sale este PVP.
+   *
+   *  UN APARATO SIN PVP NO SE PONE A CERO: entra la línea con el precio en
+   *  blanco y se avisa. Un 0,00 € en un presupuesto es un precio, y se firma
+   *  igual que cualquier otro (regla 7).
+   *
+   *  Y NO ES UN MUEBLE. La línea viaja con `familia: ELECTRODOMESTICO`, que es
+   *  la familia que `services/comisiones.py` deja FUERA de la comisión: un
+   *  aparato se compra hecho y se revende, así que ni cuenta como unidad ni su
+   *  importe puede empujar el tramo del comercial (regla 16). */
+  const [electroBusca, setElectroBusca] = useState('');
+  const [electroSug, setElectroSug] = useState([]);
+  const [electroFoco, setElectroFoco] = useState(false);
+  const [electroBuscando, setElectroBuscando] = useState(false);
+  const [electroVig, setElectroVig] = useState(null);
+
+  useEffect(() => {
+    const q = electroBusca.trim();
+    if (q.length < 2) { setElectroSug([]); return; }
+    let vivo = true;
+    const t = setTimeout(async () => {
+      setElectroBuscando(true);
+      try {
+        const r = await fetch(`${API_URL}/api/cascos/electros/catalogo?q=${encodeURIComponent(q)}`,
+          { headers: authHeaders() });
+        const d = await r.json().catch(() => ({}));
+        if (!vivo) return;
+        setElectroSug((d.articulos || []).slice(0, 12));
+        if (d.vigencia) setElectroVig(d.vigencia);
+      } catch { if (vivo) setElectroSug([]); }
+      finally { if (vivo) setElectroBuscando(false); }
+    }, 250);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [electroBusca]);
+
+  const añadirElectro = (a) => {
+    if (!a) return;
+    const pvp = Number(a.pvp);
+    const linea = {
+      _k: `electro-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      cod: a.modelo,
+      familia: 'ELECTRODOMESTICO',
+      tipo: 'ELECTRO',
+      // `desc` es el campo que PINTA la tabla. Estuvo puesto como `etiqueta`,
+      // que no lo lee nadie: la línea salía con el hueco vacío y el marcador de
+      // posición «ELECTRODOMESTICO» en vez de «Placa 3EB715LR 3 Fuegos…», que
+      // es justo la descripción que el master pidió que se rellenara sola.
+      desc: a.descripcion,
+      marca: a.marca,
+      categoriaElectro: a.categoria,
+      esElectro: true,
+      // La CESIÓN solo llega si quien mira puede ver el dinero del proveedor;
+      // si no viene, la línea sale «sin coste» en vez de con un cero.
+      costeElectro: a.cesion != null ? Number(a.cesion) : null,
+      vigencia: a.vigencia || (electroVig && electroVig.vigencia) || null,
+      ancho: null, alto: null, fondo: null, mano: '',
+      qty: 1,
+      pvp: Number.isFinite(pvp) && pvp > 0 ? pvp : null,
+      pvpManual: true,          // no lo recalcula la tarifa MV: no es un mueble
+      encontrado: false,
+      raw: a.modelo,
+    };
+    setMuebles(prev => [...prev, linea]);
+    setElectroBusca('');
+    setElectroFoco(false);
+    setElectroSug([]);
+  };
+
   const [sel, setSel] = useState(0);
   const [foco, setFoco] = useState(false);
   const sugerencias = useMemo(() => {
@@ -929,7 +1006,18 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   };
 
   const _MANO_SUFIJO = /(D\/I|D|I)$/;
-  const manoDe = (cod) => {
+  /** La mano (derecha/izquierda) que lleva escrita un CÓDIGO MV.
+   *
+   *  SE LE PASA LA LÍNEA, NO SOLO EL CÓDIGO, y esto no es un detalle: un
+   *  electrodoméstico no tiene mano, pero su modelo puede acabar en «I» —el
+   *  lavavajillas «EDB6130-I» de Edesa, sin ir más lejos—. Con solo el código,
+   *  la pantalla le sacaba el botón de girar la mano y pulsarlo REESCRIBÍA EL
+   *  MODELO a «EDB6130-D», que no existe en ninguna tarifa: el presupuesto
+   *  saldría pidiéndole al proveedor un aparato inventado. */
+  const manoDe = (codOLinea) => {
+    const linea = (codOLinea && typeof codOLinea === 'object') ? codOLinea : null;
+    if (linea && linea.esElectro) return undefined;
+    const cod = linea ? linea.cod : codOLinea;
     const m = _MANO_SUFIJO.exec(String(cod || '').toUpperCase());
     if (!m) return undefined;
     return m[1] === 'D/I' ? null : m[1];
@@ -939,7 +1027,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     setMuebles(prev => prev.map(m => {
       if (m._k !== k) return m;
       const cod = String(m.cod || '');
-      const cur = manoDe(cod);
+      const cur = manoDe(m);
       if (cur === undefined) return m;
       let nextMano = 'D';
       if (cur === null) nextMano = 'D';
@@ -951,13 +1039,13 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
   const fijarTodasManos = (mano) => {
     setMuebles(prev => prev.map(m => {
-      const cur = manoDe(m.cod);
+      const cur = manoDe(m);
       if (cur === undefined || cur !== null) return m;
       return { ...m, cod: String(m.cod).replace(/(D\/I)$/i, mano), mano: mano };
     }));
   };
 
-  const sinMano = muebles.filter(m => manoDe(m.cod) === null).length;
+  const sinMano = muebles.filter(m => manoDe(m) === null).length;
 
   const filas = muebles.map(m => {
     const desp = m.encontrado ? costeDetalladoDe(m, paramsCostes, tarifa, pv, acabadoCasco) : { costeTotal: 0, casco: 0, cascoPvp: 0, puerta: 0, puertaPvp: 0 };
@@ -965,7 +1053,15 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     // `costeTotal` viene `null` — que quiere decir «no se sabe»— y un `|| 0` lo
     // convierte en «cero euros», que es una afirmación. De ahí salía un margen
     // del 73,9 % en una columna cuyo casco vale 168 € de tarifa.
-    const coste = desp.costeTotal != null ? desp.costeTotal : null;
+    /* UN ELECTRO NO SE DESPIEZA: no tiene casco ni puertas. Su coste es la
+       CESIÓN del proveedor, y solo llega si quien mira puede ver ese dinero;
+       si no, la línea sale «sin coste» y se cuenta en el aviso de abajo — que
+       es la verdad. Con el cero de `desp` un aparato de 578 € habría enseñado
+       578 € de margen y un 100 %, y ese es el número por el que alguien fija
+       un precio de venta. */
+    const coste = m.esElectro
+      ? (m.costeElectro != null ? m.costeElectro : null)
+      : (desp.costeTotal != null ? desp.costeTotal : null);
     const pvp = Number(m.pvp) || 0;
     const margen = coste == null ? null : pvp - coste;
     // DESDE EL COSTE HASTA LA VENTA, no al revés (master, 31/08). Ver
@@ -2419,6 +2515,61 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             )}
           </div>
 
+          {/* ─── ELECTRODOMÉSTICOS (PubliOferta del proveedor) ──────────────
+              El master, 07/09/2026: metiendo el modelo, que salga la
+              descripción y el precio. El precio es el PVP del catálogo de
+              Electros; la tarifa del proveedor es COSTE y no se enseña aquí. */}
+          <div className="relative">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Zap size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-aviso-500" />
+                <input
+                  value={electroBusca}
+                  onChange={e => setElectroBusca(e.target.value)}
+                  onFocus={() => setElectroFoco(true)}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setElectroFoco(false);
+                    if (e.key === 'Enter' && electroSug.length === 1) { e.preventDefault(); añadirElectro(electroSug[0]); }
+                  }}
+                  placeholder="Electrodoméstico: escribe el MODELO (ej.: 3EB715LR, TD 3002 BK) o «campana», «lavavajillas»…"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium focus:border-aviso-500 focus:ring-2 focus:ring-aviso-100 outline-none transition-all shadow-inner bg-slate-50/50"
+                />
+                {electroBuscando && <Loader size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-aviso-600 animate-spin" />}
+              </div>
+            </div>
+            {electroVig && electroVig.caducada && (
+              <p className="mt-1.5 text-[11px] font-bold text-aviso-700">
+                Ojo: la PubliOferta cargada es de {electroVig.vigencia} y hoy es {electroVig.hoy}.
+                Los precios valen para el mes de la tarifa o hasta fin de existencias — confírmalos antes de cerrar.
+              </p>
+            )}
+            {electroFoco && electroSug.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-30 max-h-80 overflow-y-auto divide-y divide-slate-100">
+                {electroSug.map(a => (
+                  <button
+                    key={a.modeloNorm}
+                    type="button"
+                    onClick={() => añadirElectro(a)}
+                    className="w-full px-5 py-2.5 text-left flex items-center justify-between gap-3 text-xs hover:bg-aviso-50 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-aviso-700 text-sm">{a.modelo}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] text-slate-500 font-bold">{a.marca}</span>
+                      </div>
+                      <div className="text-slate-600 font-medium truncate">{a.descripcion}</div>
+                    </div>
+                    {/* SIN PVP NO SE PINTA UN CERO: se dice que falta, porque un
+                        0,00 € en un presupuesto es un precio y se firma igual. */}
+                    <span className="font-mono font-black text-dato-950 shrink-0">
+                      {a.pvp != null ? eur(a.pvp) : <span className="text-aviso-700 font-bold text-[11px]">sin PVP</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Paleta Rápida por Chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
             <span className="text-[10px] font-black text-slate-400 uppercase shrink-0">Atajos rápidos:</span>
@@ -2516,7 +2667,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               {filasFiltradas.map((m, idx) => {
                 const opcionesAlt = alturasDe(m);
                 const opcionesAnc = anchosDe(m);
-                const tieneMano = manoDe(m.cod);
+                const tieneMano = manoDe(m);
                 return (
                   <div key={m._k} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
                     {/* Cabecera de la ficha: nº, código y borrar */}
@@ -2790,7 +2941,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                 {filasFiltradas.map((m, idx) => {
                   const opcionesAlt = alturasDe(m);
                   const opcionesAnc = anchosDe(m);
-                  const tieneMano = manoDe(m.cod);
+                  const tieneMano = manoDe(m);
                   return (
                     <tr key={m._k} className="hover:bg-slate-50/80 transition-colors group">
                       <td className="py-3 px-2 text-center font-bold text-slate-400">{idx + 1}</td>

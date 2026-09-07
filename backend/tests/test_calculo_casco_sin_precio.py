@@ -231,9 +231,20 @@ def test_LAS_PANTALLAS_NO_CONVIERTEN_EL_HUECO_EN_UN_CERO(ruta, nombre):
     assert "desp.costeTotal || 0" not in cuerpo, (
         f"{nombre} convierte un coste desconocido en 0 €: el margen de esa "
         "línea sale inflado y no salta ningún error")
-    i = cuerpo.index("const coste = desp.costeTotal")
-    assert "!= null" in cuerpo[i:i + 90], (
-        f"{nombre} no distingue «no se sabe» de «cero»")
+    # El ancla es «const coste =», no la expresión entera: desde el 07/09/2026
+    # CocinaMontada3 tiene DOS caminos —un electrodoméstico no se despieza, su
+    # coste es la cesión del proveedor— y los dos tienen que distinguir «no se
+    # sabe» de «cero». Un ancla pegada a una sola forma de escribirlo se cae
+    # sola en cuanto alguien añade la segunda, y entonces se «arregla»
+    # aflojándola, que es como se pierde un candado.
+    i = cuerpo.index("const coste = ")
+    decision = cuerpo[i:cuerpo.index("const pvp", i)]
+    assert "desp.costeTotal != null" in decision, (
+        f"{nombre} no distingue «no se sabe» de «cero» en el coste del despiece")
+    if "esElectro" in decision:
+        assert "costeElectro != null" in decision, (
+            f"{nombre} da por cero el coste de un electrodoméstico del que no "
+            "se sabe la cesión: ese margen sale al 100 % y nadie lo ve raro")
     # Y el margen tampoco puede calcularse sobre un coste que no existe.
     # SOLO LA LÍNEA DEL MARGEN. Una ventana de 120 caracteres se comía la línea
     # siguiente (`margenPct`), que también dice `coste == null`, así que romper

@@ -1618,6 +1618,85 @@ async def seed_siemens_electros(user: dict = Depends(require_rentabilidad)):
     return {"success": True, "cargados": n}
 
 
+# ─── LA PUBLIOFERTA DE ELECTROSTOCK → EL CATÁLOGO DE ELECTROS ───────────────
+#
+# El master, 07/09/2026: «vuelca estas ofertas a la sección electros».
+#
+# LO QUE TRAE EL PAPEL ES LA CESIÓN: COSTE, sin IVA y SIN PORTES. Aquí se
+# convierte en un artículo del catálogo con su `costeUnitario` y su PVP.
+#
+# EL MARGEN NO SE INVENTA (regla 7). Llega en la petición, la pantalla lo pide
+# y lo enseña antes de escribir nada, y queda escrito en cada artículo de dónde
+# salió el PVP (`pvpOrigen`). El 10 % por defecto NO es una cifra elegida hoy:
+# es la que este mismo módulo ya aplica a los electros Siemens, para no meter
+# dos criterios distintos en el mismo catálogo. Si el master quiere otro, lo
+# teclea y se aplica ese.
+#
+# Y NO SE PISA UN PVP QUE YA HAYA PUESTO ALGUIEN A MANO. Volver a pulsar el
+# botón para actualizar los COSTES de una oferta nueva no puede deshacer en
+# silencio los precios de venta que el master haya ajustado uno a uno; para eso
+# está `recalcularPvp`, que es una decisión aparte y explícita.
+_ELECTROSTOCK_MARGEN_POR_DEFECTO = 10.0
+
+
+@router.post("/rentabilidad/electros/seed-electrostock")
+async def seed_electrostock(payload: Optional[dict] = None,
+                            user: dict = Depends(require_rentabilidad)):
+    """Vuelca la PubliOferta de Electrostock al catálogo de Electros. Solo master."""
+    if not any(user.get(f) for f in ("isAdmin", "isPrimaryAdmin", "isMaster")):
+        raise HTTPException(status_code=403,
+                            detail="Solo el master puede cargar la tarifa del proveedor.")
+    from services import electrostock as _es
+    datos = payload or {}
+    try:
+        margen = float(datos.get("margenPct", _ELECTROSTOCK_MARGEN_POR_DEFECTO))
+    except (TypeError, ValueError):
+        margen = _ELECTROSTOCK_MARGEN_POR_DEFECTO
+    if margen < 0:
+        raise HTTPException(status_code=400,
+                            detail="Un margen negativo vendería por debajo de coste.")
+    recalcular = bool(datos.get("recalcularPvp"))
+    cab = _es.cabecera()
+    ahora = datetime.now(timezone.utc).isoformat()
+    uname = (user or {}).get("username", "")
+    cargados = conservados = 0
+    for a in _es.catalogo(cesion=True):
+        norm = _normalize_ref(a["modelo"])
+        prev = await _get_db().article_costs.find_one({"codigoNorm": norm}, {"_id": 0}) or {}
+        pvp_previo = prev.get("pvp")
+        if pvp_previo is not None and not recalcular:
+            pvp, origen = pvp_previo, prev.get("pvpOrigen") or "manual"
+            conservados += 1
+        else:
+            pvp = _es.pvp_desde_cesion(a["cesion"], margen)
+            origen = f"cesion+{margen:g}%"
+        doc = {
+            "codigo": a["modelo"], "codigoNorm": norm,
+            "nombre": a["descripcion"],
+            # La CESIÓN es el coste. El catálogo ya lo oculta a quien no puede
+            # verlo (`article_costs` recorta `costeUnitario` si no es master).
+            "costeUnitario": round(a["cesion"], 4),
+            "pvp": pvp, "pvpOrigen": origen,
+            "marca": a["marca"].capitalize(), "categoria": a["categoria"],
+            "reclamo": a["reclamo"],
+            # LA OFERTA CADUCA, y eso viaja con el artículo: «válidos para el
+            # mes de Tarifa o fin de existencias». Un presupuesto sacado en
+            # diciembre con la tarifa de septiembre no da ningún error.
+            "vigencia": cab.get("vigencia"), "tarifaProveedor": cab.get("tarifa"),
+            "proveedor": cab.get("proveedor"),
+            "ivaIncluido": False, "transporteIncluido": False,
+            "imagen": prev.get("imagen"),          # conserva la que ya subieran
+            "esElectro": True, "source": "electrostock-seed",
+            "updatedAt": ahora, "updatedBy": uname,
+        }
+        await _get_db().article_costs.update_one(
+            {"codigoNorm": norm}, {"$set": doc}, upsert=True)
+        cargados += 1
+    return {"success": True, "cargados": cargados,
+            "pvpConservados": conservados, "margenPct": margen,
+            "vigencia": cab.get("vigencia"), "pie": cab.get("pie")}
+
+
 @router.delete("/rentabilidad/article-costs/{codigo}")
 async def delete_article_cost(codigo: str, user: dict = Depends(require_rentabilidad)):
     """Elimina un articulo del catalogo de costes (master)."""

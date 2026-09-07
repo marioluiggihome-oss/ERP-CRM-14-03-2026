@@ -172,6 +172,23 @@ def _familias_que_no_son_mueble() -> frozenset:
               "COSTADOS_COLOR", "COSTADOS_MELAMINA", "LATERALES_COLOR",
               "REGLETA_COLOR", "REGLETA_MELAMINA", "TECHO_COLOR",
               "ELEMENTOS_LINEALES"}
+    # UN ELECTRODOMÉSTICO NO ES UN MUEBLE (07/09/2026, al meter la PubliOferta
+    # de Electrostock en el presupuestador). Se compra hecho y se revende: la
+    # casa no lo fabrica ni lo monta como mueble, y la regla 6 ya lo dice de
+    # otra forma —«lavavajillas = electrodoméstico, va en hueco, SIN casco»—.
+    #
+    # Y AQUÍ SE NOTA POR PARTIDA DOBLE, igual que con las puertas: cuenta
+    # unidades que no son muebles (se paga de más por cada uno) Y su importe
+    # empuja el TRAMO de todos los demás. Una campana de isla de 2.198 € puede
+    # saltar sola un pedido de tramo sin que la casa haya fabricado nada.
+    #
+    # Sin esta línea NO daría ningún error: `familia_de` devolvería
+    # «ELECTRODOMESTICO», que no está en ninguna lista, y `es_mueble` diría que
+    # sí. Es la decisión conservadora del módulo — «pagar de menos se reclama,
+    # pagar de más no se devuelve»— y está PENDIENTE DE QUE EL MASTER LA
+    # CONFIRME: si decide que el comercial sí comisiona por los aparatos que
+    # vende, se quita de aquí y se dice en CLAUDE.md.
+    fuera |= {"ELECTRODOMESTICO", "ELECTRO", "ELECTROS"}
     return frozenset(fuera)
 
 

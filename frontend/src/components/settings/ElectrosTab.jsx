@@ -101,6 +101,44 @@ export default function ElectrosTab({ isMaster = false, isAdmin = false }) {
     } catch { alert('Error al cargar los electros Siemens'); }
   };
 
+  /** LA PUBLIOFERTA DE ELECTROSTOCK, VOLCADA AL CATÁLOGO (master, 07/09/2026).
+   *
+   *  El papel trae la CESIÓN, que es COSTE —sin IVA y sin portes—, no un
+   *  precio de venta. El margen NO lo elige el ERP: se pregunta, se enseña
+   *  antes de escribir nada y queda escrito en cada artículo de dónde sale el
+   *  PVP. El 10 % que viene puesto es el que este mismo catálogo ya aplica a
+   *  los Siemens, para no meter dos criterios en la misma tabla.
+   *
+   *  Y NO PISA UN PVP PUESTO A MANO: volver a pulsar para actualizar costes de
+   *  una oferta nueva no puede deshacer en silencio los precios que el master
+   *  haya ajustado uno a uno. Recalcularlos es una segunda pregunta. */
+  const cargarElectrostock = async () => {
+    const txt = window.prompt(
+      'PubliOferta ELECTROSTOCK (169 artículos).\n\n'
+      + 'Los precios del papel son de CESIÓN: lo que le cuesta a la casa, SIN IVA '
+      + 'y SIN PORTES («portes a consultar»), y valen para el mes de la tarifa o '
+      + 'hasta fin de existencias.\n\n'
+      + '¿Qué margen aplico sobre la cesión para el PVP? (en %)', '10');
+    if (txt === null) return;
+    const margenPct = Number(String(txt).replace(',', '.'));
+    if (!Number.isFinite(margenPct) || margenPct < 0) { alert('Margen no válido.'); return; }
+    const recalcularPvp = window.confirm(
+      'Los artículos que YA tengan un PVP puesto a mano se respetan.\n\n'
+      + 'Aceptar = recalcular TAMBIÉN esos PVP con el margen indicado.\n'
+      + 'Cancelar = conservarlos (recomendado).');
+    try {
+      const r = await fetch(`${BASE}/api/rentabilidad/electros/seed-electrostock`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ margenPct, recalcularPvp }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.success) { alert(data.detail || 'No se pudo cargar la tarifa'); return; }
+      alert(`${data.cargados} artículos de Electrostock cargados (vigencia ${data.vigencia}).\n`
+        + `${data.pvpConservados} conservaron su PVP anterior.\n\n${data.pie || ''}`);
+      await load();
+    } catch { alert('Error al cargar la tarifa de Electrostock'); }
+  };
+
   const quitarElectro = async (art) => {
     if (!window.confirm(`Quitar ${art.codigo} de Electros (no se borra del catálogo de costes).`)) return;
     try {
@@ -208,6 +246,11 @@ export default function ElectrosTab({ isMaster = false, isAdmin = false }) {
           {isMaster && (
             <button onClick={cargarSiemens} className="px-3 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold flex items-center gap-1.5">
               <Plus size={14} /> Cargar 7 Siemens
+            </button>
+          )}
+          {isMaster && (
+            <button onClick={cargarElectrostock} title="Vuelca la PubliOferta de Electrostock (169 artículos). Los precios del papel son de CESIÓN, sin IVA ni portes." className="px-3 py-2 bg-accion-50 text-accion-700 hover:bg-accion-100 rounded-lg text-xs font-bold flex items-center gap-1.5">
+              <Plus size={14} /> Cargar PubliOferta Electrostock
             </button>
           )}
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
