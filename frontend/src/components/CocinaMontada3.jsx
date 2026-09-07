@@ -667,7 +667,21 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     const cod = String(m.cod || '').toUpperCase();
     const base = cod.replace(/(D\/I|D|I)$/i, '');
     for (const clave of [cod, `${base}D/I`, base]) {
-      if (clave && items[clave] != null) return { info, e: items[clave] };
+      if (!clave) continue;
+      if (items[clave] != null) return { info, e: items[clave] };
+      /* UN CÓDIGO QUE ESTÁ EN LA TARIFA PERO SIN PRECIO NO SIGUE BUSCANDO.
+       *
+       * Se vio barriendo las 21 tarifas entera a entera (12.963 códigos, uno
+       * solo falló): en la T9, `MEDIACOLUMNA_VITRINA` trae `MV60: null` — un
+       * hueco de la transcripción o del papel; en T8 vale 273 y en T10, 249.
+       * Sin esta parada, la búsqueda seguía y encontraba `MV60D/I` = 230, o
+       * sea que un mueble de DOS puertas se presupuestaba al precio del de
+       * UNA: unos 30 € menos, sin error y sin que nadie lo mirara.
+       *
+       * `null` aquí significa «de este no se sabe el precio», y eso se
+       * enseña vacío para que alguien pregunte — no se sustituye por el del
+       * mueble de al lado (CLAUDE.md, regla 7). */
+      if (Object.prototype.hasOwnProperty.call(items, clave)) return { info, e: null };
     }
     return { info, e: null };
   };

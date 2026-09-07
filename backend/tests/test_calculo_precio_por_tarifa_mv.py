@@ -200,6 +200,58 @@ def test_un_codigo_que_NO_esta_devuelve_NADA_y_no_se_inventa_un_precio():
     assert e is None
 
 
+def test_LAS_VEINTIUNA_TARIFAS_ENTERAS_encuentran_su_precio():
+    """«Revisa por si hay alguno más» (master, 07/09/2026).
+
+    No se comprueban unos cuantos códigos: se recorren las 21 tarifas enteras,
+    los 12.963 códigos, cada uno de una puerta con sus dos manos. Es la única
+    forma de responder a esa pregunta con un número en vez de con una
+    impresión.
+    """
+    tfs = _tarifas()["tariffs"]
+    casos, esperados = [], []
+    for tarifa, fams in tfs.items():
+        for familia, v in fams.items():
+            for cod, pts in (v.get("items") or {}).items():
+                manos = ([cod[:-3] + "D", cod[:-3] + "I", cod]
+                         if cod.endswith("D/I") else [cod])
+                for c in manos:
+                    casos.append((tarifa, {"cod": c, "familia": familia}))
+                    esperados.append(pts)
+    assert len(casos) > 12000, f"solo se están comprobando {len(casos)} códigos"
+    fallos = []
+    for tarifa in tfs:
+        idx = [k for k, (t, _) in enumerate(casos) if t == tarifa]
+        obtenidos = _busca([casos[k][1] for k in idx], tarifa)
+        for k, obt in zip(idx, obtenidos):
+            if obt != esperados[k]:
+                fallos.append((tarifa, casos[k][1]["cod"], esperados[k], obt))
+    assert not fallos, (
+        f"{len(fallos)} códigos no devuelven el precio que está impreso; el "
+        f"primero: {fallos[0]}")
+
+
+def test_un_codigo_SIN_PRECIO_no_coge_el_del_mueble_de_al_lado():
+    """El otro que salió del barrido, y era silencioso.
+
+    En la T9, `MEDIACOLUMNA_VITRINA` trae `MV60: null` —un hueco: en T8 vale
+    273 y en T10, 249—. Sin parar ahí, la búsqueda seguía y encontraba
+    `MV60D/I` = 230: un mueble de DOS puertas presupuestado al precio del de
+    UNA, unos 30 € menos, sin error y sin que nadie lo mirara.
+
+    `null` significa «de este no se sabe el precio», y eso se enseña vacío para
+    que alguien pregunte (regla 7).
+    """
+    fams = _tarifas()["tariffs"]["T9"]["MEDIACOLUMNA_VITRINA"]["items"]
+    assert fams.get("MV60", "AUSENTE") is None, (
+        "ya no hay hueco en la T9: si se ha rellenado, esta prueba necesita "
+        "otro caso — pero el criterio sigue valiendo")
+    assert fams.get("MV60D/I") is not None, "sin el gemelo no hay a qué caerse"
+    (e,) = _busca([{"cod": "MV60", "familia": "MEDIACOLUMNA_VITRINA"}], "T9")
+    assert e is None, (
+        f"un código sin precio está cogiendo el del mueble de al lado ({e})")
+
+
 def test_HAY_UN_SOLO_BUSCADOR_para_el_precio_y_para_el_cambio_de_tarifa():
     """Aquí estaba el fallo: el cambio de tarifa llevaba su propia búsqueda,
     escrita a mano y distinta. Con dos, vuelven a separarse a la primera."""
