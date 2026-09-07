@@ -1409,7 +1409,22 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       ancho: c.ancho,
       alto: alto,
       fondo: c.familia?.startsWith('ALTO') ? 33 : 58,
-      mano: c.cod.endsWith('D') ? 'D' : c.cod.endsWith('I') ? 'I' : '',
+      /* «A60D/I» ACABA EN «I», Y ESO NO ES UNA MANO IZQUIERDA (master,
+         07/09/2026: «ten en cuenta que HAY muchos muebles que aparecen como
+         D/I»). Es un mueble de UNA puerta con la mano SIN DECIDIR, que es como
+         MV escribe casi todo su catálogo.
+
+         Con `endsWith('I')`, cada mueble añadido desde el desplegable nacía
+         con `mano: 'I'`. Y no se veía: el código seguía siendo «A60D/I», así
+         que la pantalla pintaba «⚠️ Sin Mano» —correcto, porque el rótulo sale
+         del CÓDIGO— mientras el pedido viajaba con `hand: 'I'`. O sea que la
+         pantalla decía «falta decidir» y la fábrica recibía «izquierda». Nadie
+         lo había decidido y no saltaba nada.
+
+         `manoDe` distingue las TRES situaciones: sin mano (no la lleva),
+         `null` (sin decidir) y decidida. Es el mismo arreglo que ya tenía
+         `RelacionReview`, que no se había traído aquí. */
+      mano: manoDe(c.cod) || '',
       qty: 1,
       pvp: pvp,
       encontrado: true,
@@ -1455,7 +1470,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       `*Muebles Totales:* ${totalUds} unidades`,
       `----------------------------------------`,
       ...muebles.map(m => {
-        const manoTxt = m.cod?.endsWith('D') ? ' [Dcha]' : m.cod?.endsWith('I') ? ' [Izq]' : '';
+        // Sin decidir se DICE, no se calla ni se inventa: quien lee esto por
+        // WhatsApp tiene que saber que falta elegir la mano.
+        const _mano = manoDe(m);
+        const manoTxt = _mano === 'D' ? ' [Dcha]' : _mano === 'I' ? ' [Izq]'
+          : _mano === null ? ' [MANO SIN DECIDIR]' : '';
         const obsTxt = m.obs?.trim() ? `\n   └ ✎ Obs: ${m.obs.trim()}` : '';
         return `• ${m.qty}x *${m.cod}* (${m.ancho || '—'}x${m.alto || '—'} cm)${manoTxt} -> ${eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}${obsTxt}`;
       }),
@@ -1529,7 +1548,11 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         // medida del desplegable y el taller fabricaba otra cosa.
         m.anchoReal ? `${m.anchoReal} cm *` : (m.ancho ? `${m.ancho} cm` : '—'),
         m.altoReal ? `${m.altoReal} cm *` : (m.alto ? `${m.alto} cm` : '—'),
-        m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—',
+        // EN EL PAPEL QUE SE FIRMA Y QUE LUEGO ES EL PEDIDO. Un «A60D/I» sin
+        // decidir se imprimía «Izq» y el taller lo fabricaba a la izquierda
+        // sin que nadie lo hubiera decidido.
+        (() => { const h = manoDe(m); return h === 'D' ? 'Dcha' : h === 'I' ? 'Izq'
+          : h === null ? 'SIN DECIDIR' : '—'; })(),
         eur(m.pvp),
         // EL DESCUENTO DE LA LÍNEA VA EN EL PAPEL. Si el PDF cobrara el bruto,
         // el presupuesto que firma el cliente diría un número y la pantalla
@@ -1714,7 +1737,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           productionNotes: payload.observaciones,
           items: muebles.map(m => ({
             code: m.cod, qty: Number(m.qty) || 1,
-            width: m.ancho, height: m.alto, hand: m.mano, notes: m.obs || '',
+            width: m.anchoReal ?? m.ancho, height: m.altoReal ?? m.alto,
+            /* LA MANO QUE VA A LA FÁBRICA SALE DEL CÓDIGO, que es la fuente de
+               la verdad en esta pantalla. `m.mano` es un campo de apoyo y podía
+               contradecirlo —se vio el 07/09: un «A60D/I» llegaba con
+               `hand: 'I'` mientras la pantalla decía «Sin Mano»—. Sin decidir
+               se manda VACÍO: es mejor que el taller pregunte a que fabrique la
+               mano que no es. */
+            hand: manoDe(m) || '', notes: m.obs || '',
           })),
         }),
       });
