@@ -63,14 +63,43 @@ def test_ninguna_edicion_guarda_una_imagen_agrandada():
         "detalle fino")
 
 
-def test_las_tres_ediciones_guardan_lo_que_devuelve_el_modelo():
-    """Decorador, aplicar cambio y variante de color: las tres."""
+# Las funciones que guardan un render editado. Se nombran una a una a
+# propósito: contar a bulto no dice CUÁL se ha quedado por el camino, y la que
+# se queda fuera es justo la que sigue perdiendo nitidez en cada vuelta.
+#
+# Desde el 07/09/2026 son CUATRO: se añadió «pintar encima del render»
+# (`aplicarPintado`), que también devuelve una imagen editada y por tanto tiene
+# el mismo problema.
+EDICIONES_QUE_GUARDAN = (
+    ("visitaDecorador", "Decorador/a"),
+    ("editRender", "Aplicar cambio"),
+    ("colorVariant", "Variante de color"),
+    ("aplicarPintado", "Pintar encima"),
+)
+
+
+def _funcion(codigo, nombre):
+    i = codigo.index(f"const {nombre} = ")
+    m = re.search(r"\n  const \w+ = ", codigo[i + 10:])
+    return codigo[i:i + 10 + m.start()] if m else codigo[i:]
+
+
+def test_TODAS_las_ediciones_guardan_lo_que_devuelve_el_modelo():
+    """Decorador, aplicar cambio, variante de color y pintar encima."""
     codigo = _codigo()
+    sin_guardar = [
+        etq for fn, etq in EDICIONES_QUE_GUARDAN
+        if "finalImg = await imageToDataUrl(finalImg)" not in _funcion(codigo, fn)]
+    assert not sin_guardar, (
+        f"estas ediciones NO guardan la imagen nativa del modelo, así que "
+        f"siguen perdiendo nitidez en cada vuelta: {sin_guardar}")
+    # Y que no aparezca una quinta sin pasar por aquí: una edición nueva que
+    # se olvide de esto no da ningún error, solo devuelve la imagen un poco
+    # peor cada vez.
     guardados = re.findall(r"finalImg = await imageToDataUrl\(finalImg\)", codigo)
-    assert len(guardados) == 3, (
-        f"hay {len(guardados)} ediciones guardando la imagen nativa y deberían "
-        f"ser 3 (Decorador, aplicar cambio y variante de color). Si una se ha "
-        f"quedado por el camino, esa sigue perdiendo nitidez en cada vuelta")
+    assert len(guardados) == len(EDICIONES_QUE_GUARDAN), (
+        f"hay {len(guardados)} guardados y {len(EDICIONES_QUE_GUARDAN)} "
+        f"ediciones declaradas: si has añadido una, nómbrala arriba")
 
 
 def test_el_render_se_sigue_viendo_escalado_por_el_navegador():

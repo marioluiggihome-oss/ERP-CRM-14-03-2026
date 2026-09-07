@@ -2273,7 +2273,9 @@ export default function AIRenderStudio({ state, setState }) {
       const desc = fichaPromptPorTipo(tipo3d);
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
-        body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+        body: JSON.stringify({
+          description: desc, style: params.style,
+          provider: providerOf(), referenceImage: dataUrl,
           // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
           // servidor se lo pasa al detector de croquis, y una cocina clara
           // —paredes, muebles y encimera claros— tiene poco color y mucho
@@ -2283,6 +2285,7 @@ export default function AIRenderStudio({ state, setState }) {
           // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
           // cambios; estos seis botones editan la misma imagen y no lo decian.
           editingRender: true,
+        }),
       });
       const data = await response.json();
       if (data.success) {
@@ -2364,7 +2367,9 @@ export default function AIRenderStudio({ state, setState }) {
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
-        body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+        body: JSON.stringify({
+          description: desc, style: params.style,
+          provider: providerOf(), referenceImage: dataUrl,
           // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
           // servidor se lo pasa al detector de croquis, y una cocina clara
           // —paredes, muebles y encimera claros— tiene poco color y mucho
@@ -2374,6 +2379,7 @@ export default function AIRenderStudio({ state, setState }) {
           // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
           // cambios; estos seis botones editan la misma imagen y no lo decian.
           editingRender: true,
+        }),
       });
       const data = await response.json();
       if (data.success) {
@@ -2423,7 +2429,9 @@ export default function AIRenderStudio({ state, setState }) {
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
-        body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+        body: JSON.stringify({
+          description: desc, style: params.style,
+          provider: providerOf(), referenceImage: dataUrl,
           // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
           // servidor se lo pasa al detector de croquis, y una cocina clara
           // —paredes, muebles y encimera claros— tiene poco color y mucho
@@ -2433,6 +2441,7 @@ export default function AIRenderStudio({ state, setState }) {
           // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
           // cambios; estos seis botones editan la misma imagen y no lo decian.
           editingRender: true,
+        }),
       });
       const data = await response.json();
       if (data.success) {
@@ -2464,16 +2473,19 @@ export default function AIRenderStudio({ state, setState }) {
         );
         const rr = await fetch(`${API_URL}/api/ai-engine/render`, {
           method: 'POST', headers: getAuthHeaders(),
-          body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
-          // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
-          // servidor se lo pasa al detector de croquis, y una cocina clara
-          // —paredes, muebles y encimera claros— tiene poco color y mucho
-          // brillo, que es justo la firma del papel: la toma por un dibujo a
-          // mano y se va por la rama de «construye lo que esta dibujado», o
-          // sea que REHACE la cocina entera en vez de respetarla. Ahi se
-          // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
-          // cambios; estos seis botones editan la misma imagen y no lo decian.
-          editingRender: true,
+          body: JSON.stringify({
+            description: desc, style: params.style,
+            provider: providerOf(), referenceImage: dataUrl,
+            // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
+            // servidor se lo pasa al detector de croquis, y una cocina clara
+            // —paredes, muebles y encimera claros— tiene poco color y mucho
+            // brillo, que es justo la firma del papel: la toma por un dibujo a
+            // mano y se va por la rama de «construye lo que esta dibujado», o
+            // sea que REHACE la cocina entera en vez de respetarla. Ahi se
+            // pierden los acabados aplicados. Lo tenia solo la linea de aplicar
+            // cambios; estos seis botones editan la misma imagen y no lo decian.
+            editingRender: true,
+          }),
         });
         const rd = await rr.json();
         if (rd.success) base = await imageToDataUrl(rd.result?.images?.[0]);
@@ -2497,6 +2509,245 @@ export default function AIRenderStudio({ state, setState }) {
       } else setError(ud.detail || ud.error || 'No se pudo generar la versión 4K.');
     } catch { setError('Error al generar la versión 4K.'); }
     finally { setEditing(false); }
+  };
+
+  /* ═══ PINTAR ENCIMA DEL RENDER ══════════════════════════════════════════
+   *
+   *  El master, 07/09/2026: «que pueda pulsar un botón de pintar y dibujar
+   *  encima del dibujo».
+   *
+   *  PARA QUÉ SIRVE: señalar SOBRE la imagen dónde va el cambio. Explicar por
+   *  escrito «el alto de la izquierda, el segundo, que sea chaflán» es lento y
+   *  ambiguo; un círculo rojo encima no lo es.
+   *
+   *  TRES DECISIONES QUE NO SON DE ADORNO:
+   *
+   *  1. LOS TRAZOS SE GUARDAN EN COORDENADAS DE 0 A 1, no en píxeles. Esto se
+   *     usa en una tablet de 8,6": al girarla, el lienzo cambia de tamaño, y
+   *     unos trazos en píxeles se quedarían desplazados o se perderían. En
+   *     proporción se redibujan donde estaban.
+   *
+   *  2. SE PINTA CON `pointer`, no con `mouse`, y con `touch-action: none`.
+   *     Con eventos de ratón no se puede dibujar con el dedo, que es como se
+   *     va a usar; y sin `touch-action` el navegador entiende el trazo como un
+   *     gesto de arrastrar la página y la mueve en vez de pintar.
+   *
+   *  3. LO PINTADO SE MANDA COMO ANOTACIÓN, NO COMO DISEÑO. Es lo único que
+   *     de verdad puede salir mal aquí: si al modelo le llega una imagen con
+   *     un churro rojo y nadie le dice qué es, PINTA EL CHURRO ROJO en la
+   *     cocina. El encargo dice, en primer lugar y en mayúsculas, que las
+   *     marcas de color son señales del diseñador y que no pueden aparecer en
+   *     la imagen final.
+   *
+   *  Y va con `editingRender: true` y con `memoriaDeCambios()`, como el resto
+   *  de botones que editan nuestro propio render: sin el primero el servidor
+   *  toma la imagen por un croquis y rehace la cocina entera, y sin la segunda
+   *  la vuelta se olvida de los acabados ya aplicados. */
+  const PINCEL_COLORES = [
+    { id: 'rojo', css: '#bc545d', label: 'Rojo' },
+    { id: 'azul', css: '#486eb9', label: 'Azul' },
+    { id: 'verde', css: '#5f986a', label: 'Verde' },
+    { id: 'amarillo', css: '#e4d095', label: 'Amarillo' },
+    { id: 'blanco', css: '#ffffff', label: 'Blanco' },
+    { id: 'negro', css: '#121824', label: 'Negro' },
+  ];
+  const [pintando, setPintando] = useState(false);
+  const [pincelColor, setPincelColor] = useState(PINCEL_COLORES[0].css);
+  const [pincelGrosor, setPincelGrosor] = useState(6);
+  const [trazos, setTrazos] = useState([]);        // [{color, grosor, puntos:[{x,y}]}]
+  const lienzoRef = useRef(null);
+  const trazoActivo = useRef(null);
+
+  /** Redibuja TODOS los trazos. Hace falta una función que repinte de cero
+   *  porque «deshacer» no se puede hacer borrando lo último de un lienzo: un
+   *  canvas no recuerda lo que hay debajo. */
+  const repintar = () => {
+    const c = lienzoRef.current;
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const t of trazos) {
+      if (!t.puntos.length) continue;
+      ctx.strokeStyle = t.color;
+      // El grosor va en proporción al ancho del lienzo por lo mismo que los
+      // puntos: en la tablet girada, un grosor en píxeles fijos se vería el
+      // doble de grueso.
+      ctx.lineWidth = Math.max(1, (t.grosor / 1000) * c.width);
+      ctx.beginPath();
+      ctx.moveTo(t.puntos[0].x * c.width, t.puntos[0].y * c.height);
+      for (const p of t.puntos.slice(1)) ctx.lineTo(p.x * c.width, p.y * c.height);
+      // Un toque suelto (un punto) no dibuja nada con `stroke`: se marca con
+      // un redondel, que es lo que espera quien da un toque para señalar.
+      if (t.puntos.length === 1) {
+        ctx.fillStyle = t.color;
+        ctx.beginPath();
+        ctx.arc(t.puntos[0].x * c.width, t.puntos[0].y * c.height,
+                Math.max(1, (t.grosor / 2000) * c.width), 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.stroke();
+      }
+    }
+  };
+
+  // El lienzo se ajusta a su hueco y se repinta: al girar la tablet o al
+  // cambiar de render, lo pintado sigue donde estaba.
+  useEffect(() => {
+    if (!pintando) return;
+    const c = lienzoRef.current;
+    if (!c) return;
+    const ajusta = () => {
+      const r = c.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      c.width = Math.max(1, Math.round(r.width * dpr));
+      c.height = Math.max(1, Math.round(r.height * dpr));
+      repintar();
+    };
+    ajusta();
+    window.addEventListener('resize', ajusta);
+    return () => window.removeEventListener('resize', ajusta);
+    // `repintar` se deja fuera de las dependencias a propósito: se redefine en
+    // cada render del componente, y meterla dentro volvería a montar el
+    // escuchador de `resize` continuamente. Lo que importa que cambie —los
+    // trazos y la imagen— sí está.
+  }, [pintando, trazos, renderResult?.result?.images?.[0]]);
+
+  const puntoDe = (e) => {
+    const c = lienzoRef.current;
+    if (!c) return null;
+    const r = c.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+  };
+
+  const pintarInicio = (e) => {
+    const p = puntoDe(e);
+    if (!p) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    trazoActivo.current = { color: pincelColor, grosor: pincelGrosor, puntos: [p] };
+    setTrazos(prev => [...prev, trazoActivo.current]);
+  };
+
+  const pintarMover = (e) => {
+    if (!trazoActivo.current) return;
+    const p = puntoDe(e);
+    if (!p) return;
+    trazoActivo.current.puntos.push(p);
+    // Se copia la lista para que React repinte; el trazo en curso es el mismo
+    // objeto, así que no se pierde nada al levantar el dedo.
+    setTrazos(prev => [...prev]);
+  };
+
+  const pintarFin = () => { trazoActivo.current = null; };
+
+  const deshacerTrazo = () => setTrazos(prev => prev.slice(0, -1));
+  const borrarPintura = () => setTrazos([]);
+  const salirDePintar = () => { setPintando(false); setTrazos([]); trazoActivo.current = null; };
+
+  /** Junta el render y lo pintado en UNA imagen, a la resolución del render.
+   *
+   *  Se compone a la resolución NATIVA de la imagen, no a la del lienzo en
+   *  pantalla: en una tablet el lienzo mide unos cientos de píxeles, y mandar
+   *  eso sería mandarle al modelo una miniatura de su propio render.
+   */
+  const componerPintado = async (dataUrl) => new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = im.naturalWidth; c.height = im.naturalHeight;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(im, 0, 0);
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (const t of trazos) {
+          if (!t.puntos.length) continue;
+          ctx.strokeStyle = t.color;
+          ctx.lineWidth = Math.max(1, (t.grosor / 1000) * c.width);
+          ctx.beginPath();
+          ctx.moveTo(t.puntos[0].x * c.width, t.puntos[0].y * c.height);
+          for (const p of t.puntos.slice(1)) ctx.lineTo(p.x * c.width, p.y * c.height);
+          if (t.puntos.length === 1) {
+            ctx.fillStyle = t.color;
+            ctx.beginPath();
+            ctx.arc(t.puntos[0].x * c.width, t.puntos[0].y * c.height,
+                    Math.max(1, (t.grosor / 2000) * c.width), 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.stroke();
+          }
+        }
+        resolve(c.toDataURL('image/png'));
+      } catch (err) { reject(err); }
+    };
+    im.onerror = () => reject(new Error('no se pudo leer el render para pintar encima'));
+    im.src = dataUrl;
+  });
+
+  const aplicarPintado = async () => {
+    const img = currentImage();
+    if (!img || editing || !trazos.length) return;
+    const orden = editInstruction.trim();
+    setEditing(true); setError(null);
+    try {
+      const base = await imageToDataUrl(img);
+      const pintada = await componerPintado(base);
+      const colores = [...new Set(trazos.map(t => (
+        (PINCEL_COLORES.find(c => c.css === t.color) || {}).label || t.color)))];
+      const desc = (
+        'AVISO PRIMERO, ANTES QUE NADA: la imagen adjunta es un render de esta '
+        + 'cocina SOBRE EL QUE EL DISEÑADOR HA PINTADO A MANO unas marcas de '
+        + `color (${colores.join(', ')}). Esas marcas NO son parte del mueble ni `
+        + 'de la decoración: son SEÑALES que indican DÓNDE hay que actuar. La '
+        + 'imagen final NO PUEDE CONTENER ninguna de esas marcas, ni trazos, ni '
+        + 'manchas, ni restos de color: se borran por completo y en su lugar '
+        + 'queda la cocina tal y como debe quedar.\n\n'
+        + 'QUÉ HAY QUE HACER EN LAS ZONAS MARCADAS:\n'
+        + (orden || 'Corrige o mejora lo que está señalado, manteniendo el estilo del resto.')
+        + '\n\nTODO LO DEMÁS SE CONSERVA EXACTAMENTE: distribución, módulos, '
+        + 'medidas, frentes, tiradores, encimera, electrodomésticos, suelo, '
+        + 'materiales, colores, cámara e iluminación. Fotorrealista, misma '
+        + 'perspectiva y misma calidad.'
+        + memoriaDeCambios()
+      );
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description: desc,
+          style: params.style,
+          provider: providerOf(),
+          referenceImage: pintada,
+          // La referencia es un render NUESTRO —pintado, pero nuestro—, y se
+          // dice. Sin esto el servidor se lo pasa al detector de croquis, y
+          // una imagen con trazos a mano encima es justo lo que ese detector
+          // busca: la tomaría por un dibujo y reharía la cocina entera.
+          editingRender: true,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        let finalImg = data.result?.images?.[0];
+        try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, la original */ }
+        const merged = {
+          ...data,
+          result: { ...data.result, images: [finalImg] },
+          description: `${renderResult?.description || description}\n[Cambios señalados sobre la imagen]`,
+        };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 14));
+        if (orden) setEditAppliedChanges(prev => [...prev, orden]);
+        salirDePintar();
+        setEditInstruction('');
+      } else {
+        setError(data.error || 'No se pudo aplicar lo señalado.');
+      }
+    } catch (e) {
+      setError(`Error al aplicar lo señalado: ${e?.message || 'error desconocido'}.`);
+    } finally {
+      setEditing(false);
+    }
   };
 
   const editRender = async (forcedLines = null) => {
@@ -4858,6 +5109,14 @@ export default function AIRenderStudio({ state, setState }) {
                   {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                   <span className="hidden sm:inline truncate">Decorador/a</span><span className="sm:hidden">Deco</span>
                 </button>
+                {/* PINTAR ENCIMA (master, 07/09/2026). Señalar sobre la imagen
+                    dónde va el cambio: un círculo rojo no es ambiguo y una
+                    frase describiendo cuál de los cuatro altos es, sí. */}
+                <button onClick={() => setPintando(v => !v)} disabled={editing || downloading || !currentImage()}
+                  title="Dibuja encima del render para señalar dónde hay que cambiar algo. Las marcas NO salen en la imagen final: solo indican la zona."
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black transition-colors disabled:opacity-50 ${pintando ? 'bg-error-600 text-white' : 'bg-error-100 text-error-800 hover:bg-error-200'}`}>
+                  <Palette size={12} /> <span className="hidden sm:inline">{pintando ? 'Cerrar pintura' : 'Pintar'}</span><span className="sm:hidden">Pintar</span>
+                </button>
                 <button onClick={mejorarIluminacion} disabled={editing || downloading || !currentImage()}
                   title="Aumenta la iluminación natural y artificial sin cambiar la distribución ni los materiales"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-50">
@@ -5181,6 +5440,27 @@ export default function AIRenderStudio({ state, setState }) {
                     }}
                     onError={() => setImgError(true)}
                   />
+                  {/* ═══ LIENZO PARA PINTAR ENCIMA ═══════════════════════
+                      Va sobre la imagen y ocupa exactamente su hueco: el
+                      contenedor lleva el `aspectRatio` del render y la imagen
+                      va con `object-contain`, así que los dos coinciden y lo
+                      pintado cae donde se ve.
+
+                      `touchAction: none` NO es opcional: sin él, en la tablet
+                      el navegador entiende el trazo como un gesto para
+                      arrastrar la página y la mueve en vez de pintar. */}
+                  {pintando && (
+                    <canvas
+                      ref={lienzoRef}
+                      className="absolute inset-0 z-20 w-full h-full"
+                      style={{ touchAction: 'none', cursor: 'crosshair' }}
+                      onPointerDown={pintarInicio}
+                      onPointerMove={pintarMover}
+                      onPointerUp={pintarFin}
+                      onPointerCancel={pintarFin}
+                      onPointerLeave={pintarFin}
+                    />
+                  )}
                   {/* Capa de marcas de instalaciones: icono + cota de altura (editable) */}
                   {!interactiveMode && marks.map((mk, i) => {
                     const t = MARK_TYPES[mk.type]; const Ic = t.Icon;
@@ -5249,6 +5529,63 @@ export default function AIRenderStudio({ state, setState }) {
                 )}
 
               </div>
+
+              {/* ═══ BARRA DE PINTURA ══════════════════════════════════════
+                  Sale SOLO al pintar, y debajo de la imagen: en la tablet de
+                  8,6" en vertical, cualquier cosa flotando sobre el render tapa
+                  justo lo que se está señalando. */}
+              {pintando && (
+                <div className="mt-2 rounded-2xl border-2 border-error-300 bg-error-50/70 p-2.5 flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-black text-error-800 uppercase tracking-wide">Señala sobre el render</span>
+                  <div className="flex items-center gap-1">
+                    {PINCEL_COLORES.map(c => (
+                      <button key={c.id} onClick={() => setPincelColor(c.css)} title={c.label}
+                        aria-label={`Pincel ${c.label}`}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform ${pincelColor === c.css ? 'border-slate-900 scale-110' : 'border-white'}`}
+                        style={{ background: c.css }} />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[3, 6, 12].map(g => (
+                      <button key={g} onClick={() => setPincelGrosor(g)} title={`Grosor ${g}`}
+                        aria-label={`Grosor ${g}`}
+                        className={`px-2 py-1 rounded-lg text-[11px] font-black ${pincelGrosor === g ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
+                        {g === 3 ? 'Fino' : g === 6 ? 'Medio' : 'Grueso'}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={deshacerTrazo} disabled={!trazos.length}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 flex items-center gap-1">
+                    <RotateCcw size={12} /> Deshacer
+                  </button>
+                  <button onClick={borrarPintura} disabled={!trazos.length}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 flex items-center gap-1">
+                    <Trash2 size={12} /> Borrar
+                  </button>
+                  <button onClick={salirDePintar}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100">
+                    Salir
+                  </button>
+                  <button onClick={aplicarPintado} disabled={editing || !trazos.length}
+                    title="Manda el render con tus marcas. Las marcas NO salen en la imagen final: solo dicen dónde actuar."
+                    className="ml-auto px-3 py-1.5 rounded-lg text-[11px] font-black bg-error-600 text-white hover:bg-error-700 disabled:opacity-50 flex items-center gap-1.5">
+                    {editing ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                    Aplicar lo señalado
+                  </button>
+                  {/* LA ORDEN ESCRITA ES LO QUE DA SENTIDO A LA MARCA. Un
+                      círculo dice DÓNDE; hace falta decir QUÉ. Se reutiliza el
+                      mismo campo de «aplicar cambios» a propósito: dos sitios
+                      para escribir la misma orden acaban con el usuario
+                      escribiendo en el que no es. */}
+                  <p className="w-full text-[11px] font-bold text-error-900/80">
+                    {trazos.length === 0
+                      ? 'Dibuja con el dedo o el ratón sobre la zona que quieras cambiar.'
+                      : (editInstruction.trim()
+                        ? `Se pedirá: «${editInstruction.trim()}» en lo señalado.`
+                        : 'Escribe abajo, en la línea de cambios, QUÉ hay que hacer en lo que has marcado.')}
+                  </p>
+                </div>
+              )}
               </>
               )}
 

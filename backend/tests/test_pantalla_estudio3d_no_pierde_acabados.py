@@ -89,6 +89,39 @@ def _envian_la_imagen_actual(cuerpo):
             and ("referenceImage: dataUrl" in b or "referenceImage: img" in b)}
 
 
+def _cuerpo_de_la_peticion(fn):
+    """El objeto que va DENTRO de `JSON.stringify(...)`, y solo ese.
+
+    Hace falta un emparejador de llaves de verdad —saltándose las cadenas y
+    las plantillas `${…}`— porque el fallo que esto vigila es de UN NIVEL de
+    anidamiento: la palabra está en la función, pero fuera del cuerpo. Buscar
+    por texto no distingue las dos cosas.
+    """
+    i = fn.find("JSON.stringify(")
+    if i < 0:
+        return ""
+    j = i + len("JSON.stringify(")
+    prof, comilla, salida = 1, "", []
+    while j < len(fn) and prof > 0:
+        c = fn[j]
+        if comilla:
+            if c == "\\":
+                salida.append(fn[j:j + 2]); j += 2; continue
+            if c == comilla:
+                comilla = ""
+        elif c in "\"'`":
+            comilla = c
+        elif c in "({[":
+            prof += 1
+        elif c in ")}]":
+            prof -= 1
+            if prof == 0:
+                break
+        salida.append(c)
+        j += 1
+    return "".join(salida)
+
+
 def test_TODO_BOTON_QUE_EDITA_NUESTRO_RENDER_LO_DECLARA():
     """Sin `editingRender`, el servidor le pasa el render al detector de
     croquis y una cocina clara se toma por un dibujo a mano: en vez de aplicar
@@ -104,9 +137,24 @@ def test_TODO_BOTON_QUE_EDITA_NUESTRO_RENDER_LO_DECLARA():
         f"el reconocedor solo encuentra {len(editores)} botones que editen el "
         f"render; algo ha cambiado de forma y esta prueba dejaría de mirar lo "
         f"que tiene que mirar: {sorted(editores)}")
-    sin_declarar = [n for n, b in editores.items() if "editingRender: true" not in b]
+    # NO BASTA CON QUE LA PALABRA ESTÉ EN LA FUNCIÓN: TIENE QUE IR DENTRO DEL
+    # CUERPO DE LA PETICIÓN. Se comprobó el 07/09/2026 y estaba mal en CUATRO
+    # de los seis botones:
+    #
+    #     body: JSON.stringify({ description: desc, ... }),
+    #     editingRender: true,          ← hermano de `method` y `headers`
+    #
+    # Ahí `editingRender` es una opción de `fetch`, que `fetch` ignora sin
+    # decir nada: al servidor no le llega el campo. O sea que el arreglo del
+    # 06/09 estaba escrito y no surtía efecto — el decorador seguía perdiendo
+    # los acabados, que es justo lo que el master había pedido que dejara de
+    # pasar. Y esta prueba pasaba en verde, porque buscaba el texto en la
+    # función entera.
+    sin_declarar = [n for n, b in editores.items()
+                    if "editingRender: true" not in _cuerpo_de_la_peticion(b)]
     assert not sin_declarar, (
-        f"estos botones mandan nuestro propio render y NO lo declaran, así que "
+        f"estos botones mandan nuestro propio render y NO lo declaran DENTRO "
+        f"del cuerpo de la petición, así que el campo no sale del navegador y "
         f"el servidor puede tomarlo por un croquis y rehacer la cocina "
         f"entera: {sorted(sin_declarar)}")
 
