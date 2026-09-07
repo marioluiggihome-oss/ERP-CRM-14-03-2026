@@ -140,8 +140,16 @@ def test_LAS_DOS_PANTALLAS_USAN_LA_MISMA_FUNCION():
     assert "margenSobreCoste" in imports and "SEMAFORO_MARGEN" in imports, (
         "el Presupuestador tiene su propia copia de la fórmula o de los umbrales")
     fila = _bloque(cm3, "const margenPct =", ";")
-    assert "margenSobreCoste(pvp, coste)" in fila, (
+    assert "margenSobreCoste(" in fila, (
         f"la fila calcula el margen por su cuenta: {fila.strip()}")
+    # Y CONTRA EL PRECIO NETO, no contra el de tarifa (07/09/2026, con el
+    # descuento por línea). Midiéndolo contra el bruto, aplicar un 20 % de
+    # descuento no movería el margen ni un punto: el semáforo seguiría verde
+    # con la línea ya en pérdidas — y el semáforo verde es justo el número por
+    # el que alguien decide que todavía puede rebajar un poco más.
+    assert "margenSobreCoste(pvpNeto, coste)" in fila, (
+        f"el margen se mide contra el PVP de tarifa, no contra lo que se "
+        f"cobra: {fila.strip()}")
 
 
 def test_LA_PANTALLA_DICE_QUE_ES_SOBRE_EL_COSTE():

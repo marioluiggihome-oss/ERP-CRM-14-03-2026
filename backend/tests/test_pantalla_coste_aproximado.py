@@ -192,7 +192,32 @@ def test_LAS_COLUMNAS_DE_COSTE_ESTAN_SIEMPRE_Y_NO_ENSANCHAN_LA_TABLA():
         "las celdas de coste no se tapan con un marcador: si se dejan vacías, "
         "la columna se estrecha y la tabla vuelve a moverse")
     i = cuerpo.index("const OCULTO")
-    assert "'•••'" in cuerpo[i:i + 60], "el marcador de tapado ha cambiado"
+    marcador = cuerpo[i:i + 200]
+    assert "•••" in marcador, (
+        "el marcador de tapado ha cambiado: son los mismos tres puntos para "
+        "que la columna mida EXACTAMENTE lo mismo abierta y cerrada")
+
+    # PERO NO SE LEEN (master, 07/09/2026: «el coste que aparece ahora que no
+    # aparezca hasta que yo toque candado, por si saco algún presupuesto con
+    # cliente delante, que eso no se vea»).
+    #
+    # Hasta ese día los tres puntos eran VISIBLES, debajo de un rótulo que
+    # ponía «Coste»: un cliente mirando por encima del hombro veía que ahí hay
+    # números escondidos y que la pantalla tiene un candado. Ahora ocupan lo
+    # mismo y no se ven — que es lo que hace compatibles las dos peticiones,
+    # la del 31/08 (la columna no se mueve) y la del 07/09 (no se lee).
+    assert "opacity-0" in marcador, (
+        "los tres puntos han vuelto a ser visibles: con un cliente delante, "
+        "anuncian que ahí hay un coste escondido")
+    assert 'aria-hidden' in marcador, (
+        "un lector de pantalla cantaría el marcador")
+
+    # Y EL RÓTULO DEL MARGEN TAMPOCO SE LEE CON EL CANDADO CERRADO, pero su
+    # columna sigue ahí: si se envolviera el `<th>` en un condicional
+    # volveríamos al ensanchado del 31/08.
+    i2 = cabecera.index("Margen s/coste")
+    assert "opacity-0" in cabecera[max(0, i2 - 400):i2], (
+        "«Margen s/coste» se sigue leyendo con el candado cerrado")
 
 
 def test_EL_MARGEN_LLEVA_SEMAFORO():

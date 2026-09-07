@@ -43,12 +43,27 @@ import { despieceDeFrentes, totalesDelDespiece } from '../utils/despieceFrentes'
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (n == null ? '—' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
 
-/** LO QUE SE VE EN LUGAR DEL COSTE CON EL CANDADO ECHADO.
- *  Puntos, NO una celda vacía: la columna sigue ocupando su sitio y la tabla no
- *  se mueve al abrir el candado — que es lo que hacía que la de antes se viera
- *  bien y la de ahora no. Y de paso se ve que ahí HAY algo, en vez de parecer
- *  un hueco sin rellenar. Sale del desglose original (14/08, RelacionReview). */
-const OCULTO = '•••';
+/** LO QUE OCUPA EL SITIO DEL COSTE CON EL CANDADO ECHADO — SIN QUE SE LEA.
+ *
+ *  DOS PETICIONES DEL MASTER QUE PARECEN CHOCAR Y NO CHOCAN:
+ *
+ *   · 31/08 — la columna NO puede desaparecer. Cuando aparecía y desaparecía
+ *     con el candado, la tabla se ensanchaba de golpe, la cabecera se salía y
+ *     el PVP —lo que se mira para vender— quedaba contra el borde.
+ *   · 07/09 — «el coste que aparece ahora que no aparezca hasta que yo toque
+ *     candado, por si saco algún presupuesto con cliente delante, que eso no
+ *     se vea».
+ *
+ *  Lo que molesta no es el hueco: es que se LEA. Hasta el 07/09 esto eran tres
+ *  puntos VISIBLES debajo de un rótulo que ponía «Coste», así que un cliente
+ *  mirando por encima del hombro veía que ahí hay números escondidos y que la
+ *  pantalla tiene un candado.
+ *
+ *  Siguen siendo los mismos tres puntos —misma anchura exacta, la tabla no se
+ *  mueve ni un píxel al abrir— pero en transparente: no se ven en pantalla, no
+ *  salen en una foto y no se pueden leer. `aria-hidden` para que un lector de
+ *  pantalla tampoco los cante. */
+const OCULTO = <span aria-hidden="true" className="select-none opacity-0">•••</span>;
 
 /** LO QUE SE LE PIDE A CADA PROVEEDOR, Y A QUÉ PRECIO (master, 31/08).
  *
@@ -966,6 +981,36 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     return { ...m, pvp: Math.round(n * 100) / 100, pvpManual: true };
   }));
 
+  /** EL DESCUENTO DE UNA LÍNEA.
+   *
+   *  El master, 07/09/2026: «que en ellos pueda meter un descuento en línea,
+   *  así como el descuento de los muebles que aparezca también en línea».
+   *
+   *  EL DE LA CABECERA ES EL DE POR DEFECTO; EL DE LA LÍNEA MANDA SOBRE ÉL.
+   *  No se suman los dos, y esto no es un matiz: sumándolos, poner un 10 % en
+   *  una línea de una cocina con un 20 % general la dejaría al 72 % — un 28 %
+   *  de descuento que nadie ha decidido, y sin dar ningún error.
+   *
+   *  UN 0 ESCRITO A PROPÓSITO SE RESPETA. Un electrodoméstico que se vende sin
+   *  descuento dentro de una cocina con el 20 % general es lo normal: se mira
+   *  si la cifra ESTÁ, no si es verdadera. Con un `||` ese 0 se caería al
+   *  descuento general y el aparato se vendería un 20 % más barato de lo que
+   *  se ha decidido. Es la misma trampa que la mano de obra del montador
+   *  (CLAUDE.md, regla 16).
+   *
+   *  Vaciar la casilla devuelve la línea al descuento general. */
+  const setDto = (k, v) => setMuebles(prev => prev.map(m => {
+    if (m._k !== k) return m;
+    const bruto = String(v ?? '').trim().replace(',', '.');   // teclado español
+    if (bruto === '') { const { dto, ...limpio } = m; return limpio; }
+    const n = Number(bruto);
+    if (!Number.isFinite(n) || n < 0 || n > 100) return m;
+    return { ...m, dto: Math.round(n * 100) / 100 };
+  }));
+
+  /** El descuento que se le aplica DE VERDAD a una línea. */
+  const dtoDe = (m) => (m && m.dto != null ? Number(m.dto) : (Number(descuento) || 0));
+
   /** El ancho y el alto de una línea que NO es lineal (un mueble de catálogo).
    *  Son las medidas que van al taller. NO tocan el precio: el precio de un
    *  mueble MV sale de su código, y si hiciera falta otro se escribe a mano
@@ -1096,10 +1141,18 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       ? (m.costeElectro != null ? m.costeElectro : null)
       : (desp.costeTotal != null ? desp.costeTotal : null);
     const pvp = Number(m.pvp) || 0;
-    const margen = coste == null ? null : pvp - coste;
+    /* EL MARGEN SE MIDE CONTRA LO QUE SE COBRA, NO CONTRA LA TARIFA. Si se
+       midiera contra el PVP bruto, aplicar un 20 % de descuento no movería el
+       margen ni un punto: la pantalla seguiría diciendo que la línea aguanta
+       cuando ya no aguanta. Y el semáforo verde es justo el número por el que
+       alguien decide que puede rebajar un poco más. */
+    const dtoAplicado = dtoDe(m);
+    const pvpNeto = Math.round(pvp * (1 - dtoAplicado / 100) * 100) / 100;
+    const importeLinea = Math.round(pvpNeto * (Number(m.qty) || 1) * 100) / 100;
+    const margen = coste == null ? null : pvpNeto - coste;
     // DESDE EL COSTE HASTA LA VENTA, no al revés (master, 31/08). Ver
     // `margenSobreCoste`: sin coste devuelve `null`, que se pinta «—».
-    const margenPct = coste == null ? null : margenSobreCoste(pvp, coste);
+    const margenPct = coste == null ? null : margenSobreCoste(pvpNeto, coste);
     /* EL PRECIO QUE TENDRÍA EN MV, para poner los dos al lado.
        Se calcula AQUÍ y no al importar porque la tarifa llega del servidor
        después de la importación: hecho allí saldría vacío siempre. Y así sigue
@@ -1110,13 +1163,33 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
        en vez de un número que cuadra solo (regla 7). */
     const pvpMv = m.pvpAlvic != null ? puntosLocal({ ...m, pvp: null }, m.alto) : null;
     const difMv = (pvpMv == null || !m.pvpAlvic) ? null : Math.round((pvpMv - m.pvpAlvic) * 100) / 100;
-    return { ...m, despiece: desp, coste, margen, margenPct, pvpMv, difMv };
+    return { ...m, despiece: desp, coste, margen, margenPct, pvpMv, difMv,
+             dtoAplicado, pvpNeto, importeLinea };
   });
 
+  /** EL RÓTULO DEL DESCUENTO NO PUEDE MENTIR.
+   *
+   *  Con un descuento general del 20 % y una línea al 0 %, poner «Dto. (20%)»
+   *  al pie es una explicación falsa: ese 20 % no se ha aplicado a todo. Se
+   *  dice el porcentaje SOLO cuando todas las líneas llevan el mismo; si no,
+   *  se dice «Dto.» a secas y el importe, que sí es verdad. Es la misma regla
+   *  que los tramos de comisión (CLAUDE.md, regla 16): el número bien y la
+   *  etiqueta mintiendo es peor que no poner etiqueta. */
+  const rotuloDescuento = () => {
+    const usados = [...new Set(filas.map(m => m.dtoAplicado))];
+    return usados.length === 1 && usados[0] > 0 ? `Descuento (${usados[0]}%)` : 'Descuento';
+  };
+
   const totalUds = muebles.reduce((s, m) => s + (Number(m.qty) || 1), 0);
+
   const subtotalBruto = filas.reduce((s, m) => s + m.pvp * (Number(m.qty) || 1), 0);
-  const importeDescuento = subtotalBruto * (Number(descuento) || 0) / 100;
-  const baseImponible = subtotalBruto - importeDescuento;
+  // LOS TOTALES SE SUMAN DESDE LAS LÍNEAS, no se recalculan aparte. Con un
+  // porcentaje único sobre el subtotal, una línea con su propio descuento
+  // enseñaría una cosa y el total cobraría otra, y nadie sabría cuál de las
+  // dos cifras es la buena. Sin descuentos de línea sale exactamente el mismo
+  // número que antes.
+  const baseImponible = filas.reduce((s, m) => s + m.importeLinea, 0);
+  const importeDescuento = subtotalBruto - baseImponible;
   const cuotaIva = baseImponible * (Number(ivaRate) || 0) / 100;
   const totalPvp = baseImponible + cuotaIva;
 
@@ -1272,6 +1345,42 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     setShowPegadoMasivo(false);
   };
 
+  /** UNA LÍNEA ESCRITA A MANO: descripción, precio y descuento libres.
+   *
+   *  El master, 07/09/2026: «que pueda meter líneas manuales escritas a mano y
+   *  que pueda poner el precio que quiera y el descuento que quiera».
+   *
+   *  Para lo que no está en ninguna tarifa: un transporte, un montaje, una
+   *  pieza que se encarga fuera, un ajuste pactado. Hasta ahora había que
+   *  disfrazarlo de mueble con un código inventado, y ese código acababa
+   *  viajando al pedido del proveedor.
+   *
+   *  VA SIN FAMILIA A PROPÓSITO, Y ESO ES DINERO. `services/comisiones.py`
+   *  trata una línea sin familia del catálogo como un SERVICIO y la deja fuera
+   *  de la comisión (regla 16: «las líneas manuales de servicios no llevan
+   *  compensación de ningún tipo»). Ponerle aquí una familia para que quedara
+   *  más bonita en la tabla metería un transporte de 300 € en la valoración
+   *  que decide el TRAMO del comercial.
+   *
+   *  Y nace con `pvpManual`, para que ni cambiar de tarifa ni tocar el alto
+   *  puedan pisarle el precio que se ha escrito. */
+  const añadirLineaManual = () => {
+    setMuebles(prev => [...prev, {
+      _k: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      cod: '',
+      familia: '',
+      tipo: 'MANUAL',
+      esManual: true,
+      desc: '',
+      ancho: null, alto: null, fondo: null, mano: '',
+      qty: 1,
+      pvp: null,
+      pvpManual: true,
+      encontrado: false,
+      raw: '',
+    }]);
+  };
+
   const añadirSugerencia = (c) => {
     if (!c) return;
     const info = familias?.[c.familia];
@@ -1338,7 +1447,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       }),
       `----------------------------------------`,
       `*Subtotal:* ${eur(subtotalBruto)}`,
-      ...(descuento > 0 ? [`*Descuento (${descuento}%):* -${eur(importeDescuento)}`] : []),
+      ...(importeDescuento > 0 ? [`*${rotuloDescuento()}:* -${eur(importeDescuento)}`] : []),
       `*Base Imponible:* ${eur(baseImponible)}`,
       `*IVA (${ivaRate}%):* ${eur(cuotaIva)}`,
       `*TOTAL FINAL:* ${eur(totalPvp)}`,
@@ -1387,6 +1496,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
 
     // Tabla de Muebles
     const tableBody = muebles.map((m, idx) => {
+      // Se coge la fila YA CALCULADA (`filas`), que es la que lleva el neto y
+      // el descuento aplicado. Recalcularlo aquí sería una segunda cuenta del
+      // mismo dinero, y acabarían diciendo cosas distintas.
+      const f = filas.find(x => x._k === m._k) || { dtoAplicado: 0, importeLinea: (Number(m.pvp) || 0) * (Number(m.qty) || 1) };
       const descBase = descDe(m);
       const descCompleta = m.obs?.trim() ? `${descBase}\n[Obs: ${m.obs.trim()}]` : descBase;
       return [
@@ -1394,21 +1507,34 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         m.qty,
         m.cod || '—',
         descCompleta,
-        m.ancho ? `${m.ancho} cm` : '—',
-        m.alto ? `${m.alto} cm` : '—',
+        // LA MEDIDA QUE SE IMPRIME ES LA DE FABRICACIÓN. Si hay una medida
+        // definitiva escrita, manda sobre el escalón de tarifa y se marca con
+        // un asterisco: el escalón dice lo que CUESTA, no lo que se corta
+        // (CLAUDE.md, «el escalón de la tarifa no es la medida»). Sin esto, el
+        // papel que firma el cliente —y que luego es el pedido— llevaba la
+        // medida del desplegable y el taller fabricaba otra cosa.
+        m.anchoReal ? `${m.anchoReal} cm *` : (m.ancho ? `${m.ancho} cm` : '—'),
+        m.altoReal ? `${m.altoReal} cm *` : (m.alto ? `${m.alto} cm` : '—'),
         m.cod?.endsWith('D') ? 'Dcha' : m.cod?.endsWith('I') ? 'Izq' : '—',
         eur(m.pvp),
-        eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))
+        // EL DESCUENTO DE LA LÍNEA VA EN EL PAPEL. Si el PDF cobrara el bruto,
+        // el presupuesto que firma el cliente diría un número y la pantalla
+        // otro — y el que se firma es este.
+        f.dtoAplicado > 0 ? `${f.dtoAplicado}%` : '—',
+        eur(f.importeLinea)
       ];
     });
 
     autoTable(doc, {
       startY: 72,
-      head: [['#', 'Cant', 'Código', 'Descripción / Observaciones', 'Ancho', 'Alto', 'Mano', 'PVP Ud.', 'Total']],
+      head: [['#', 'Cant', 'Código', 'Descripción / Observaciones', 'Ancho', 'Alto', 'Mano', 'PVP Ud.', 'Dto.', 'Total']],
       body: tableBody,
       theme: 'grid',
       headStyles: { fillColor: [67, 56, 202], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-      styles: { fontSize: 8, cellPadding: 3 },
+      // Más compacta a propósito: con `cellPadding: 3` una cocina de 20
+      // líneas se iba a la segunda hoja por dos filas.
+      styles: { fontSize: 7.5, cellPadding: 1.8, valign: 'middle' },
+      margin: { top: 20, bottom: 18 },
       columnStyles: {
         0: { halign: 'center', cellWidth: 10 },
         1: { halign: 'center', cellWidth: 14, fontStyle: 'bold' },
@@ -1417,11 +1543,43 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         5: { halign: 'center' },
         6: { halign: 'center' },
         7: { halign: 'right' },
-        8: { halign: 'right', fontStyle: 'bold' }
+        8: { halign: 'center' },
+        9: { halign: 'right', fontStyle: 'bold' }
       }
     });
 
-    const finalY = (doc.lastAutoTable?.finalY || 120) + 10;
+    let finalY = (doc.lastAutoTable?.finalY || 120) + 10;
+
+    // QUÉ SIGNIFICA EL ASTERISCO. Un asterisco sin explicar en un presupuesto
+    // que se firma es una duda; y estas son las medidas por las que se corta.
+    if (muebles.some(m => m.anchoReal || m.altoReal)) {
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text('* Medida definitiva de fabricación indicada expresamente.', 14, finalY - 4);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(9);
+    }
+
+    // EL PIE NO SE DIBUJA FUERA DE LA HOJA (master, 07/09/2026: «el pdf no
+    // cabe en una hoja, mira lo que pasa»).
+    //
+    // `autoTable` sí parte la TABLA en varias páginas, pero lo que va DESPUÉS
+    // —observaciones y totales— se pintaba en `finalY` sin mirar si quedaba
+    // sitio. Con una cocina larga, la tabla acababa abajo del todo y el cuadro
+    // de totales se dibujaba en el margen o directamente fuera del papel: el
+    // presupuesto salía SIN TOTAL, y jsPDF no da ningún error por pintar fuera
+    // de la página.
+    //
+    // El bloque necesita unos 50 mm; una A4 mide 297 y el margen de abajo son
+    // 15. Si no caben, hoja nueva.
+    const ALTO_DEL_PIE = 50;
+    const LIMITE = doc.internal.pageSize.getHeight() - 15;
+    if (finalY + ALTO_DEL_PIE > LIMITE) {
+      doc.addPage();
+      finalY = 20;
+    }
 
     // Observaciones Generales en PDF
     if (observacionesGenerales?.trim()) {
@@ -1431,7 +1589,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
       doc.text('Observaciones Generales de la Cocina / Montaje:', 14, finalY);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text(observacionesGenerales.trim(), 14, finalY + 5);
+      // SE PARTE EN LÍNEAS. `doc.text` con un texto largo NO lo corta: lo
+      // pinta en una sola línea que se sale por el borde derecho del papel y
+      // se pierde. El ancho útil hasta el cuadro de totales son 100 mm.
+      doc.text(doc.splitTextToSize(observacionesGenerales.trim(), 100), 14, finalY + 5);
     }
 
     // Resumen de Totales
@@ -1442,9 +1603,9 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.text(`Subtotal:`, 125, finalY + 8);
     doc.text(eur(subtotalBruto), 190, finalY + 8, { align: 'right' });
     
-    if (descuento > 0) {
+    if (importeDescuento > 0) {
       doc.setTextColor(220, 38, 38);
-      doc.text(`Descuento (${descuento}%):`, 125, finalY + 16);
+      doc.text(`${rotuloDescuento()}:`, 125, finalY + 16);
       doc.text(`-${eur(importeDescuento)}`, 190, finalY + 16, { align: 'right' });
       doc.setTextColor(15, 23, 42);
     }
@@ -1460,6 +1621,21 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     doc.setTextColor(67, 56, 202);
     doc.text(`TOTAL:`, 125, finalY + 36);
     doc.text(eur(totalPvp), 190, finalY + 36, { align: 'right' });
+
+    // NUMERAR LAS HOJAS. Un presupuesto de dos páginas sin numerar es un
+    // presupuesto del que se puede traspapelar la segunda sin que nadie lo
+    // note — y la segunda es donde va el total.
+    const hojas = doc.internal.getNumberOfPages();
+    if (hojas > 1) {
+      for (let i = 1; i <= hojas; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Página ${i} de ${hojas}`, 196,
+          doc.internal.pageSize.getHeight() - 8, { align: 'right' });
+      }
+    }
 
     doc.save(`Presupuesto_Cocina_${cliente || 'Cliente'}_${tarifa}.pdf`);
   };
@@ -1622,7 +1798,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           name: m.etiqueta || m.desc || m.cod || '',
           familia: m.familia || '',
           quantity: Number(m.qty) || 1,
+          // EL PRECIO QUE SE GUARDA ES EL BRUTO, Y EL DESCUENTO VIAJA APARTE.
+          // Guardar aquí el neto y además el `descuento` de la cabecera haría
+          // que la comisión descontara DOS VECES: `base_de_comision` aplica el
+          // porcentaje del pedido sobre lo que lee en `price`. Con el bruto y
+          // el `dtoPct` de la línea, cada una se descuenta una sola vez y por
+          // lo suyo (ver `services/comisiones.py`).
           price: (Number(m.pvp) || 0) * (Number(m.qty) || 1),
+          dtoPct: dtoDe(m),
           // Las medidas DEFINITIVAS, que no son el escalón de la tarifa. Van al
           // pedido porque son lo que se fabrica.
           anchoReal: m.anchoReal ?? null,
@@ -1685,7 +1868,14 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           name: m.etiqueta || m.desc || m.cod || '',
           familia: m.familia || '',
           quantity: Number(m.qty) || 1,
+          // EL PRECIO QUE SE GUARDA ES EL BRUTO, Y EL DESCUENTO VIAJA APARTE.
+          // Guardar aquí el neto y además el `descuento` de la cabecera haría
+          // que la comisión descontara DOS VECES: `base_de_comision` aplica el
+          // porcentaje del pedido sobre lo que lee en `price`. Con el bruto y
+          // el `dtoPct` de la línea, cada una se descuenta una sola vez y por
+          // lo suyo (ver `services/comisiones.py`).
           price: (Number(m.pvp) || 0) * (Number(m.qty) || 1),
+          dtoPct: dtoDe(m),
           anchoReal: m.anchoReal ?? null,
           altoReal: m.altoReal ?? null,
         })),
@@ -1746,6 +1936,45 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     setObservacionesGenerales(c.observaciones || '');
     setSavedId(o.id);            // volver a guardar ACTUALIZA, no duplica
     setPedidoId(null);           // es un presupuesto: su pedido se busca por referencia
+    setGuardados(null);
+    setAviso('');
+  };
+
+
+  /** EMPEZAR UN PRESUPUESTO NUEVO.
+   *
+   *  El master, 07/09/2026: «faltaría el botón de nuevo para generar otro
+   *  presupuesto». Sin él, para presupuestar al cliente siguiente había que
+   *  recargar la página o borrar las líneas una a una — y lo peligroso no son
+   *  las líneas: es que se quedaban el CLIENTE, la REFERENCIA y, sobre todo,
+   *  `savedId`. Con `savedId` puesto, «Guardar» ACTUALIZA el presupuesto
+   *  anterior en vez de crear uno: el del cliente de antes se sobrescribe con
+   *  la cocina del de ahora, y no salta ningún error.
+   *
+   *  SE PREGUNTA ANTES, siempre que haya algo escrito: esto no tiene deshacer.
+   *
+   *  NO se toca la TARIFA ni los ACABADOS: son los de la casa y los del
+   *  muestrario del día, no del cliente. Volverlos a poner obligaría a
+   *  reelegirlos en cada presupuesto. */
+  const nuevoPresupuesto = () => {
+    const hayAlgo = muebles.length || cliente.trim() || ref.trim()
+      || observacionesGenerales.trim();
+    if (hayAlgo && !window.confirm(
+      'Vas a empezar un presupuesto NUEVO y vaciar lo que hay en pantalla.\n\n'
+      + (savedId ? 'Lo que tienes guardado NO se borra: sigue en «Presupuestos».\n\n' : '')
+      + '¿Seguimos?')) return;
+    setMuebles([]);
+    setCliente('');
+    setRef('');
+    setTelefono('');
+    setDescuento(0);
+    setObservacionesGenerales('');
+    // LAS DOS MARCAS, LAS DOS. `savedId` es la que hace que «Guardar»
+    // actualice en vez de crear, y `pedidoId` la que enlaza con el pedido ya
+    // lanzado: dejar cualquiera de las dos puesta ata el presupuesto nuevo al
+    // cliente anterior.
+    setSavedId(null);
+    setPedidoId(null);
     setGuardados(null);
     setAviso('');
   };
@@ -1993,6 +2222,19 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
             title="Guardar presupuesto en el sistema"
           >
             {guardando ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Guardar
+          </button>
+          {/* NUEVO (master, 07/09/2026: «faltaría el botón de nuevo para
+              generar otro presupuesto»). Va DESPUÉS de Guardar a propósito:
+              es el final del ciclo —se guarda y se empieza otro—, y ponerlo
+              antes lo dejaría pegado a «Crear pedido», que es irreversible. */}
+          <button
+            onClick={nuevoPresupuesto}
+            disabled={guardando}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-black shadow-sm transition-all disabled:opacity-40"
+            title="Vaciar la pantalla y empezar un presupuesto nuevo. Lo guardado no se borra."
+            data-testid="cm3-nuevo-presupuesto"
+          >
+            <FileText size={12} /> Nuevo
           </button>
         </div>
       </div>
@@ -2524,6 +2766,17 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   ? <><Loader size={18} className="animate-spin" /> Añadiendo…</>
                   : <><Plus size={18} /> Añadir Mueble</>}
               </button>
+              {/* LA LÍNEA A MANO, para lo que no está en ninguna tarifa: un
+                  transporte, un montaje, una pieza de fuera. No es un mueble y
+                  no cuenta como tal (regla 16). */}
+              <button
+                onClick={añadirLineaManual}
+                title="Añade una línea en blanco: escribes tú la descripción, el precio y el descuento. Para transportes, montajes o piezas que no están en tarifa. No cuenta como mueble."
+                data-testid="cm3-linea-manual"
+                className="px-4 py-3 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-sm shadow-sm transition-all flex items-center gap-2 shrink-0"
+              >
+                <Plus size={18} /> <span className="hidden sm:inline">Línea a mano</span>
+              </button>
             </div>
 
             {/* Desplegable de Sugerencias */}
@@ -2952,20 +3205,60 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       Y son DOS, no seis. El detalle (casco, puertas, herrajes,
                       mano de obra) va en el `title` de la celda, que es donde
                       se mira cuando hace falta y no estorba cuando no. */}
-                  <th className="py-2.5 px-3 text-right whitespace-nowrap">
+                  {/* CON EL CANDADO CERRADO, AQUÍ NO SE LEE NADA — PERO LA
+                      COLUMNA SE QUEDA.
+
+                      Son DOS peticiones del master que parecen chocar y no
+                      chocan:
+
+                        · 31/08: las columnas ESTÁN SIEMPRE. Cuando aparecían y
+                          desaparecían con el candado, la tabla se ensanchaba de
+                          golpe, la cabecera se salía y el PVP —lo que se mira
+                          para vender— quedaba contra el borde.
+                        · 07/09: «el coste que aparece ahora que no aparezca
+                          hasta que yo toque candado, por si saco algún
+                          presupuesto con cliente delante, que eso no se vea».
+
+                      Lo que le molesta no es el hueco: es que se LEA. Antes,
+                      cerrado, ponía «•••» debajo de «Coste» y «Margen s/coste»
+                      — o sea que un cliente mirando por encima del hombro veía
+                      que ahí hay números escondidos. Ahora, cerrado, las dos
+                      columnas se quedan (mismo ancho, la tabla no se mueve) y
+                      no dicen absolutamente nada: ni cifra, ni «•••», ni
+                      rótulo, ni `title` al pasar el ratón.
+
+                      El candado se queda SIEMPRE, discreto y sin la palabra
+                      «coste» al lado: si se fuera con las columnas, no habría
+                      forma de volver a abrirlas. */}
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap w-20">
                     <button type="button" {...handlersCandado.props} onClick={clicCandado}
-                      title={`Coste de fábrica. ${AYUDA_CANDADO}. Va escondido a propósito para poder enseñar esta pantalla con un cliente delante.`}
+                      title={verCoste
+                        ? `Coste de fábrica a la vista. ${AYUDA_CANDADO} para volver a esconderlo.`
+                        : `Ver el coste de fábrica y el margen. ${AYUDA_CANDADO}. Van escondidos a propósito para poder enseñar esta pantalla con un cliente delante.`}
                       data-testid="cm3-candado-coste"
                       className="inline-flex items-center gap-1 text-slate-400 hover:text-master-700">
-                      {verCoste ? <Unlock size={12} /> : <Lock size={12} />} Coste
+                      {verCoste ? <><Unlock size={12} /> Coste</> : <Lock size={12} />}
                     </button>
                   </th>
-                  <th className="py-2.5 px-3 text-right">
+                  {/* LA COLUMNA SE QUEDA; EL RÓTULO SE APAGA. No se envuelve
+                      el `<th>` en un `verCoste &&` a propósito: eso quita la
+                      columna, la tabla se ensancha al abrir el candado y el
+                      PVP acaba contra el borde — lo que el master pidió
+                      deshacer el 31/08. Lo que se apaga es el TEXTO, que es lo
+                      que no puede leer un cliente. */}
+                  <th className="py-2.5 px-3 text-right w-24">
                     <button type="button" {...handlersCandado.props} onClick={clicCandado}
-                      title={`Margen sobre el COSTE: lo que se sube desde lo que cuesta hasta lo que se vende. ${AYUDA_CANDADO}.`}
-                      className="text-slate-400 hover:text-master-700">Margen s/coste</button>
+                      aria-hidden={!verCoste} tabIndex={verCoste ? 0 : -1}
+                      title={verCoste ? `Margen sobre el COSTE: lo que se sube desde lo que cuesta hasta lo que se vende. ${AYUDA_CANDADO}.` : ''}
+                      className={verCoste
+                        ? 'text-slate-400 hover:text-master-700'
+                        : 'opacity-0 select-none pointer-events-none'}>Margen s/coste</button>
                   </th>
                   <th className="py-2.5 px-3 text-right">PVP Ud.</th>
+                  {/* EL DESCUENTO, EN LÍNEA. El de la cabecera es el de por
+                      defecto y sale escrito en cada línea; el que se teclee
+                      aquí manda sobre él para ESA línea. */}
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap" title="Descuento de esta línea. Vacío = el descuento general de la cabecera. Un 0 escrito a mano se respeta: la línea va sin descuento.">Dto.</th>
                   <th className="py-2.5 px-3 text-right">Total</th>
                   <th className="py-2.5 px-2 text-center w-10"></th>
                 </tr>
@@ -3103,15 +3396,48 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                             title="Alto definitivo. No cambia el precio."
                             className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-[11px] outline-none focus:border-dato-400" />
                         ) : opcionesAlt ? (
-                          <select
-                            value={m.alto || opcionesAlt[0]}
-                            onChange={e => setAlto(m._k, e.target.value)}
-                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-dato-400"
-                          >
-                            {opcionesAlt.map(a => <option key={a} value={a}>{a} cm</option>)}
-                          </select>
+                          /* EL ESCALÓN ARRIBA, LA MEDIDA DE VERDAD DEBAJO —lo
+                             mismo que ya tenían los costados (master, 28/08) y
+                             que el 07/09 pidió para todos: «igual que en
+                             costados, que deje cambiar altura de los muebles y
+                             anchura».
+
+                             Sin esta casilla, un alto de 35 solo se podía
+                             apuntar como observación —«ALTURA ESPECIAL 35»—, y
+                             una medida escrita en un texto libre no la lee el
+                             pedido: la fabricación se hacía con la altura del
+                             desplegable.
+
+                             El desplegable sigue decidiendo el PRECIO (un alto
+                             de 60 vale 156,51 € a 70 y 169,83 € a 90, regla
+                             13); la medida definitiva viaja aparte y NO puede
+                             mover el importe. */
+                          <div className="flex flex-col items-center gap-1">
+                            <select
+                              value={m.alto || opcionesAlt[0]}
+                              onChange={e => setAlto(m._k, e.target.value)}
+                              title="El escalón de tarifa que decide el PRECIO."
+                              className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-xs outline-none focus:border-dato-400"
+                            >
+                              {opcionesAlt.map(a => <option key={a} value={a}>{a} cm</option>)}
+                            </select>
+                            <input type="number" min="0" step="any" placeholder="cm reales"
+                              value={m.altoReal ?? ''}
+                              onChange={e => setMedidaReal(m._k, 'altoReal', e.target.value)}
+                              title="Alto DEFINITIVO de fabricación, si no es el del escalón. No cambia el precio; viaja con el pedido."
+                              data-testid="cm3-alto-real-mueble"
+                              className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-800 text-[11px] outline-none focus:border-dato-400" />
+                          </div>
                         ) : (
-                          <span className="font-bold text-slate-700">{m.alto ? `${m.alto} cm` : '—'}</span>
+                          /* Sin escalones que elegir, el alto se teclea y ya:
+                             un guion fijo obligaba a apuntarlo como
+                             observación. */
+                          <input type="number" min="0" step="any" placeholder="—"
+                            value={m.alto ?? ''}
+                            onChange={e => setMedidaMueble(m._k, 'alto', e.target.value)}
+                            title="Alto de fabricación, en cm. No cambia el precio: el de un mueble MV sale de su código."
+                            data-testid="cm3-alto-linea"
+                            className="w-16 px-1.5 py-1 rounded-lg border border-transparent bg-transparent text-center font-bold text-slate-700 text-xs outline-none hover:border-slate-200 focus:border-indigo-400 focus:bg-white" />
                         )}
                       </td>
 
@@ -3146,22 +3472,27 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           un número: es la misma regla que el desglose original
                           ya traía («m.encontrado ? eur(m.coste) : "—"»). */}
                       <td className="py-3 px-3 text-right font-mono text-slate-600"
-                        title={m.coste == null ? `Sin coste: el despiece no conoce «${m.familia || m.tipo || '?'}»` :
-                          `Casco ${eur(m.despiece?.casco)}${m.despiece?.cascoOtroAcabado ? ' (otra gama)' : ''} · Puertas ${eur(m.despiece?.puerta)} · Herrajes ${eur(herrajesDe(m))} · M. obra ${eur(m.despiece?.mo)}`}>
+                        title={!verCoste ? '' : (m.coste == null ? `Sin coste: el despiece no conoce «${m.familia || m.tipo || '?'}»` :
+                          `Casco ${eur(m.despiece?.casco)}${m.despiece?.cascoOtroAcabado ? ' (otra gama)' : ''} · Puertas ${eur(m.despiece?.puerta)} · Herrajes ${eur(herrajesDe(m))} · M. obra ${eur(m.despiece?.mo)}`)}>
+                        {/* CERRADO NO SE PINTA NI «•••»: con un cliente
+                            delante, ese «•••» anuncia que ahí hay un número
+                            escondido. Y el `title` también se calla: en un
+                            portátil, pasar el ratón por encima enseñaría el
+                            desglose entero del coste con el candado cerrado. */}
                         {verCoste ? (m.coste == null ? <span className="text-aviso-600">—</span> : eur(m.coste)) : OCULTO}
                       </td>
                       {/* MARGEN, CON SEMÁFORO. Solo el porcentaje, como en el
                           desglose original: los euros del margen por línea no
                           se miran, lo que se mira es si la línea aguanta. */}
                       <td className={`py-3 px-3 text-right font-mono font-bold ${
-                        !verCoste ? 'text-slate-400'
+                        !verCoste ? ''
                         : m.margenPct == null ? 'text-aviso-600'
                         : m.margenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'
                         : m.margenPct >= SEMAFORO_MARGEN.regular ? 'text-aviso-600'
                         : 'text-error-600'}`}
-                        title={m.margenPct == null
+                        title={!verCoste ? '' : (m.margenPct == null
                           ? 'Sin coste: no se puede calcular el margen'
-                          : `${eur(m.margen)} de incremento sobre un coste de ${eur(m.coste)} — se vende a ${eur(m.pvp)}`}>
+                          : `${eur(m.margen)} de incremento sobre un coste de ${eur(m.coste)} — se vende a ${eur(m.pvpNeto)}${m.dtoAplicado ? ` (con el ${m.dtoAplicado}% ya descontado)` : ''}`)}>
                         {verCoste ? (m.margenPct == null ? '—' : `${m.margenPct.toFixed(0)}%`) : OCULTO}
                       </td>
 
@@ -3208,8 +3539,43 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           </div>
                         )}
                       </td>
+                      {/* EL DESCUENTO, EN LA LÍNEA (master, 07/09/2026).
+                          Vacío = el general de la cabecera, y se ENSEÑA en
+                          gris para que se vea qué se está aplicando: «que el
+                          descuento de los muebles aparezca también en línea».
+                          Escrito = manda sobre el general para esta línea, y
+                          se pinta en negro para distinguir el que se ha
+                          decidido del que se hereda. */}
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <input type="number" min="0" max="100" step="any"
+                            value={m.dto ?? ''}
+                            onChange={e => setDto(m._k, e.target.value)}
+                            placeholder={String(Number(descuento) || 0)}
+                            data-testid="cm3-dto-linea"
+                            title={m.dto != null
+                              ? 'Descuento propio de esta línea: manda sobre el general. Bórralo para volver al general.'
+                              : `Sin descuento propio: se le aplica el general (${Number(descuento) || 0}%). Escribe uno para esta línea.`}
+                            className={`w-14 px-1 py-1 rounded-lg border text-right font-mono font-bold text-sm outline-none transition-all ${
+                              m.dto != null
+                                ? 'border-master-300 bg-master-50 text-master-800'
+                                : 'border-transparent bg-transparent text-slate-400 hover:border-slate-200 focus:border-indigo-400 focus:bg-white placeholder:text-slate-400'
+                            }`} />
+                          <span className="text-[10px] text-slate-400">%</span>
+                        </div>
+                      </td>
+                      {/* EL TOTAL ES LO QUE SE COBRA, con el descuento ya
+                          dentro. Sin esto, la línea enseñaría el bruto y el
+                          pie del presupuesto otra cifra, y nadie sabría cuál
+                          de las dos es la buena. */}
                       <td className="py-3 px-3 text-right font-mono font-black text-slate-900 text-sm">
-                        {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
+                        {eur(m.importeLinea)}
+                        {m.dtoAplicado > 0 && (
+                          <div className="text-[9px] font-bold text-slate-400 leading-none mt-0.5"
+                            title={`PVP ${eur(m.pvp)} × ${m.qty} con un ${m.dtoAplicado}% de descuento`}>
+                            −{m.dtoAplicado}% · antes {eur((Number(m.pvp) || 0) * (Number(m.qty) || 1))}
+                          </div>
+                        )}
                       </td>
 
                       {/* Eliminar */}
@@ -3309,7 +3675,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
           <div className="flex items-center gap-6">
             <div className="text-right space-y-0.5 text-xs text-slate-600">
               <div>Subtotal: <span className="font-mono font-bold text-slate-800">{eur(subtotalBruto)}</span></div>
-              {descuento > 0 && <div className="text-dato-600 font-bold">Dto. ({descuento}%): -{eur(importeDescuento)}</div>}
+              {importeDescuento > 0 && <div className="text-dato-600 font-bold">{rotuloDescuento()}: -{eur(importeDescuento)}</div>}
               <div>Base Imponible: <span className="font-mono font-bold text-slate-800">{eur(baseImponible)}</span></div>
               <div>IVA ({ivaRate}%): <span className="font-mono font-bold text-slate-800">{eur(cuotaIva)}</span></div>
             </div>

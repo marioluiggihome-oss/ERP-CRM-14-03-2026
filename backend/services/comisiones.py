@@ -264,6 +264,46 @@ def es_mueble(linea: dict) -> bool:
     return familia_de(linea) not in FAMILIAS_SIN_COMISION if familia_de(linea) else False
 
 
+def dto_de(linea: dict, descuento_pct: float = 0.0) -> float:
+    """El descuento que se le aplica DE VERDAD a una línea, en porcentaje.
+
+    El del PEDIDO es el de por defecto; el de la LÍNEA manda sobre él. No se
+    suman: sumándolos, un 10 % de línea dentro de un pedido al 20 % dejaría esa
+    línea al 72 % — un 28 % que nadie ha decidido.
+
+    UN 0 ESCRITO A PROPÓSITO SE RESPETA: se mira si la cifra ESTÁ, no si es
+    verdadera. Un electrodoméstico que se vende sin descuento dentro de una
+    cocina al 20 % es lo normal, y con un `or` ese 0 se caería al descuento del
+    pedido — el aparato entraría en la comisión un 20 % más barato de lo que se
+    ha vendido. Es la misma trampa que la mano de obra del montador (regla 16).
+    """
+    l = linea or {}
+    for clave in ("dtoPct", "descuentoPct", "dto"):
+        if l.get(clave) is not None:
+            try:
+                v = float(l[clave])
+            except (TypeError, ValueError):
+                continue
+            # UNA CIFRA ROTA CAE AL ESCALÓN SIGUIENTE, no a cero. Un «150 %» o
+            # un «-3» no son un descuento: son un dato corrupto, y tratarlos
+            # como «sin descuento» subiría la base y pagaría comisión de MÁS
+            # sobre un importe que nadie cobró. Se pasa al del pedido, que es
+            # lo que se habría aplicado si la línea no dijera nada (regla 16).
+            if 0 <= v <= 100:
+                return v
+            continue
+    try:
+        v = float(descuento_pct or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return v if 0 <= v <= 100 else 0.0
+
+
+def importe_neto_de(linea: dict, descuento_pct: float = 0.0) -> float:
+    """Lo que se COBRA por esa línea: su PVP menos su descuento, sin IVA."""
+    return round(importe_de(linea) * (1 - dto_de(linea, descuento_pct) / 100.0), 2)
+
+
 def base_de_comision(lineas, descuento_pct: float = 0.0) -> dict:
     """Las unidades y la valoración que entran en la comisión: SOLO muebles.
 
@@ -275,7 +315,13 @@ def base_de_comision(lineas, descuento_pct: float = 0.0) -> dict:
     pvp_muebles = pvp_fuera = 0.0
     for l in (lineas or []):
         qty = unidades_de(l)
-        pvp = importe_de(l)
+        # CADA LÍNEA SE DESCUENTA POR LO SUYO. Desde el 07/09/2026 el
+        # presupuestador deja poner un descuento por línea (el master: «que en
+        # ellos pueda meter un descuento en línea»), así que el porcentaje del
+        # pedido ya no vale para todas. Se aplica aquí, línea a línea, y luego
+        # `base_imponible` recibe un 0: descontar otra vez el general sobre un
+        # importe ya neto sería descontarlo DOS VECES y pagar de menos.
+        pvp = importe_neto_de(l, descuento_pct)
         if es_mueble(l):
             muebles += qty
             pvp_muebles += pvp
@@ -286,7 +332,8 @@ def base_de_comision(lineas, descuento_pct: float = 0.0) -> dict:
     sin_clasificar = sum(1 for l in lineas_lista if not familia_de(l))
     return {
         "muebles": muebles,
-        "baseImponible": base_imponible(pvp_muebles, descuento_pct),
+        # Ya viene neto de `importe_neto_de`: aquí NO se vuelve a descontar.
+        "baseImponible": round(pvp_muebles, 2),
         "pvpMuebles": round(pvp_muebles, 2),
         "sinComision": {"unidades": uds_fuera, "pvp": round(pvp_fuera, 2)},
         # Cuántas líneas no se ha podido saber qué eran. Si son TODAS, el pedido
