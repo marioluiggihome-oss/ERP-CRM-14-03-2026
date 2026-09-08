@@ -528,6 +528,7 @@ class Render3DService:
         project_type: Optional[str] = None,
         room_photo: bool = False,
         editing_render: bool = False,
+        edit_contract: Optional[dict] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -751,6 +752,25 @@ class Render3DService:
             # se lo indicamos al modelo para que incorpore ESE elemento a la cocina.
             extra_imgs = [i for i in (reference_images or []) if i]
             elemento_note = ""
+            contrato_note = ""
+            if editing_render and isinstance(edit_contract, dict):
+                objetivo = str(edit_contract.get("objetivo") or "la propiedad indicada").strip()
+                zona = str(edit_contract.get("zona") or "la zona indicada").strip()
+                conservar = [str(v).strip() for v in (edit_contract.get("conservar") or []) if str(v).strip()]
+                contexto = str(edit_contract.get("contexto_aprobado") or "").strip()
+                contrato_note = (
+                    "\n\nCONTRATO DE EDICIÓN LOCALIZADA — OBLIGATORIO:\n"
+                    + ("- ESTO NO ES UN REDISEÑO: es una edición quirúrgica de tiradores. Cambia únicamente el tirador o gola de los frentes existentes de la zona autorizada; no cambies la carpintería.\n" if objetivo.lower() == "tiradores" else "")
+                    + f"- Propiedad que sí puede cambiar: {objetivo}.\n"
+                    f"- Zona autorizada: {zona}.\n"
+                    "- Todo lo que esté fuera de esa propiedad y zona es INMUTABLE. No lo rediseñes, no lo sustituyas, no lo abras, no lo cierres y no lo mejores.\n"
+                    + "".join(f"- Debe conservarse: {item}.\n" for item in conservar)
+                    + (f"- Contexto aprobado ya existente; úsalo solo para conservarlo, no para añadir elementos: {contexto}\n" if contexto else "")
+                    + "- Si la petición no menciona repisas, nichos, baldas o decoración, el resultado no puede contener ninguna nueva.\n"
+                    + "- Si la petición afecta solo a tiradores, los muebles altos deben conservar exactamente sus puertas, divisiones, color y posición; queda prohibido convertirlos en repisas o nichos abiertos.\n"
+                    + "- Si el lavavajillas existente es integrable, debe seguir siendo integrable; nunca lo conviertas en semi-integrable por una orden que no lo pida.\n"
+                    + "- Antes de terminar, compara la imagen con la referencia y elimina cualquier cambio fuera del contrato."
+                )
             if extra_imgs:
                 elemento_note = (
                     "\n\nADDITIONAL reference image(s) are provided AFTER the main one: they show a "
@@ -774,7 +794,7 @@ class Render3DService:
                 "and doors, and the SAME camera angle, framing and perspective. Do NOT redesign, "
                 "reorganize, add, remove, move, resize or 'improve' anything the request is silent "
                 "about."
-                + elemento_note + "\n\n"
+                + elemento_note + contrato_note + "\n\n"
                 "MEASUREMENTS IN THE REQUEST ARE EXACT, ESPECIALLY THE NARROW ONES:\n"
                 "- A width given in cm is that width. A 15 cm unit is 15 cm: a SLIM vertical strip, "
                 "roughly a quarter the width of a 60 cm unit next to it. Bottle racks, spice "

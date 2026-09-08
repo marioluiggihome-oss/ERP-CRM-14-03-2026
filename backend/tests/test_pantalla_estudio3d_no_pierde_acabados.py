@@ -216,3 +216,41 @@ def test_LA_ORBITA_NO_LE_CUELA_UN_CAMPO_QUE_SU_RUTA_NO_TIENE():
     assert "/render/orbit" in orb
     assert "editingRender" not in orb, (
         "se le está mandando `editingRender` a una ruta que no lo declara")
+
+
+def test_LA_EDICION_LOCALIZADA_BLOQUEA_LO_NO_SOLICITADO():
+    """Una orden de tiradores en bajos debe viajar con zona, propiedad e
+    invariantes explícitas; el prompt genérico por sí solo ya demostró que no
+    basta: añadió repisas y alteró los muebles altos."""
+    cuerpo = sin_comentarios(_lee())
+    assert "const contratoEdicion = (lineas)" in cuerpo
+    assert "editContract: contratoEdicion(allLines)" in cuerpo
+    for texto in ("muebles altos", "lavavajillas", "integrable", "repisas", "módulos bajos"):
+        assert texto in cuerpo, f"falta el bloqueo explícito de {texto}"
+
+
+def test_EL_EDITOR_MOVIL_RESERVA_EL_ESPACIO_DEL_TECLADO():
+    """En una tableta vertical la última línea no puede quedar detrás del
+    teclado virtual; el panel debe medir el viewport visual y desplazar el
+    campo enfocado con relleno inferior."""
+    cuerpo = sin_comentarios(_lee())
+    for texto in ("visualViewport", "keyboardInset", "scrollPaddingBottom", "enfocarCampoEdicion"):
+        assert texto in cuerpo, f"falta la protección móvil {texto}"
+    assert "onFocus={e => enfocarCampoEdicion(e.currentTarget)}" in cuerpo
+
+
+def test_EL_BACKEND_APLICA_EL_CONTRATO_LOCALIZADO():
+    ruta = os.path.join(RAIZ, "backend", "services", "luiggi_ai", "render_3d.py")
+    with open(ruta, encoding="utf-8") as f:
+        servicio = f.read()
+    assert "edit_contract: Optional[dict]" in servicio
+    for texto in ("CONTRATO DE EDICIÓN LOCALIZADA", "INMUTABLE", "semi-integrable", "repisas"):
+        assert texto in servicio, f"falta la regla backend {texto}"
+
+
+def test_LA_RUTA_ACEPTA_Y_PROPAGA_EL_CONTRATO():
+    ruta = os.path.join(RAIZ, "backend", "routes", "ai_engine.py")
+    with open(ruta, encoding="utf-8") as f:
+        router = f.read()
+    assert "editContract: Optional[dict]" in router
+    assert "edit_contract=request.editContract" in router
