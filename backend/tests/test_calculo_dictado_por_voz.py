@@ -353,18 +353,49 @@ def test_rendirse_SE_DICE_al_usuario():
         "sería un aviso permanente por algo que no es un problema.")
 
 
-def test_las_pantallas_ENSENIAN_el_aviso():
-    """Un mensaje que no se pinta es un mensaje que no existe."""
-    for nombre in ("AIRenderStudio.jsx", "Estudio3DLab.jsx"):
-        ruta = os.path.join(RAIZ, "frontend", "src", "components", nombre)
-        if not os.path.exists(ruta):
-            continue
-        src = _leer(ruta)
-        assert "speechError" in src, (
-            f"{nombre} no recoge el aviso del dictado: quedarse sin permiso de "
-            f"micrófono no diría nada")
-        assert re.search(r"if \(speechError\) setError\(speechError\)", src), (
-            f"{nombre} recibe el aviso y no lo pinta")
+# LAS DOS VERSIONES DEL ESTUDIO 3D, a petición del master (09/09): «arreglarlo
+# en la versión estudio 3D y en la versión estudio 3D prueba».
+LAS_DOS_PANTALLAS = ("AIRenderStudio.jsx", "Estudio3DLab.jsx")
+
+
+def _pantalla(nombre):
+    return os.path.join(RAIZ, "frontend", "src", "components", nombre)
+
+
+def test_las_dos_versiones_del_estudio_3d_usan_el_MISMO_dictado():
+    """La de producción y la de pruebas. Si una se montara el suyo, se
+    arreglaría una y la otra seguiría rota — y comparar motores dictando en las
+    dos daría cosas distintas por un motivo que no es el motor."""
+    for nombre in LAS_DOS_PANTALLAS:
+        assert os.path.exists(_pantalla(nombre)), f"falta {nombre}"
+        src = _leer(_pantalla(nombre))
+        assert "useSpeechRecognition" in src, (
+            f"{nombre} ya no usa el hook del dictado")
+        assert "webkitSpeechRecognition" not in src, (
+            f"{nombre} se ha vuelto a montar su propio dictado: el arreglo se "
+            f"hace en el hook o no se hace")
+
+
+def test_TODOS_los_microfonos_de_las_dos_pantallas_avisan():
+    """CADA PANTALLA TIENE DOS MICRÓFONOS, no uno: el de la descripción y el de
+    «Dictar el cambio». Son dos instancias distintas del hook, cada una con su
+    permiso y su error.
+
+    Avisar solo en uno es el fallo del `editingRender` otra vez (regla 1): un
+    arreglo puesto en un sitio y no en el otro no es un arreglo. Y se CUENTAN,
+    para que un micrófono nuevo no pueda entrar mudo: comprobar «que aparezca
+    speechError» pasaría con tres micros y un solo aviso."""
+    for nombre in LAS_DOS_PANTALLAS:
+        src = _leer(_pantalla(nombre))
+        micros = len(re.findall(r"useSpeechRecognition\s*\(", src))
+        avisos = len(re.findall(r"if \((?:\w+\.)?speechError\) setError\(", src))
+        assert micros >= 2, (
+            f"{nombre} ya no tiene los dos micrófonos (descripción y cambio): "
+            f"se encontraron {micros}")
+        assert avisos == micros, (
+            f"{nombre} tiene {micros} micrófonos y solo {avisos} avisan. El que "
+            f"falta se quedará mudo al perder el permiso y el usuario dictará "
+            f"contra una pantalla sorda, que es justo lo que se arregló.")
 
 
 # ─── 5. Que siga habiendo UN solo dictado, y ejecutable ─────────────────────

@@ -1208,6 +1208,16 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      —sin `window`, por eso se puede ejecutar— y el candado la corre EN NODE,
      conduciendo la sesión entera: hablar, que Android corte, reanudar,
      errores, parar.
+   - **CADA PANTALLA DEL ESTUDIO 3D TIENE DOS MICRÓFONOS, NO UNO** (el master:
+     «arreglarlo en la versión estudio 3D y en la versión estudio 3D prueba»).
+     El de la descripción y el de «Dictar el cambio» son dos instancias
+     distintas del hook, cada una con su permiso y su error — y el aviso se
+     había puesto solo en el primero. Es el fallo del `editingRender` otra vez
+     (regla 1): un arreglo puesto en un sitio y no en el otro no es un arreglo.
+     El candado los **CUENTA** y exige un aviso por micrófono: comprobar solo
+     «que aparezca `speechError`» pasaría con tres micros y un solo aviso.
+     El arreglo del ESTADO llega a las dos versiones solo, porque vive en el
+     hook compartido — y de paso a Armarios, Parte Diario y 3D Estudio.
    - **Y CUATRO MUTACIONES SOBREVIVIERON A LA PRIMERA**, que es lo que enseñó
      dónde estaban los huecos: sumar provisionales solo se nota con VARIOS en
      el mismo evento (con uno, sumar y asignar dan igual), y sumar lo firme o

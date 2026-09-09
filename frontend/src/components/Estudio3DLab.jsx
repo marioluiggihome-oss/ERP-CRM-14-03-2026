@@ -1198,6 +1198,13 @@ export default function Estudio3DLab({ state, setState }) {
       setEditInstruction(base ? `${base.trim()} ${editSp.transcript}` : editSp.transcript);
     }
   }, [editSp.transcript]);
+  // EL SEGUNDO MICRÓFONO TAMBIÉN AVISA. Se me quedó fuera al arreglar el
+  // dictado: quedarse sin permiso dictando un CAMBIO no decía nada, igual que
+  // pasaba antes en la descripción.
+  useEffect(() => {
+    if (editSp.speechError) setError(editSp.speechError);
+  }, [editSp.speechError]);
+
   const toggleEditMic = () => {
     if (editSp.isListening) { editSp.stopListening(); return; }
     editBaseRef.current = editInstruction || '';
