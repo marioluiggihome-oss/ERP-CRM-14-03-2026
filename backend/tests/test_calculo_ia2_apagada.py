@@ -158,7 +158,10 @@ def test_la_botonera_de_motores_es_SOLO_DEL_MASTER():
     codigo = _codigo_jsx()
     inicio = codigo.index("{isMaster && (", codigo.index("Acción principal"))
     fila = _botonera_de_motores()
-    for motor in ("'ia0'", "'ia3'", "'ia5'", "'ia7'"):
+    # IA 3 e IA 5 se apagaron el 09/09/2026 («quita IA3 e IA5»); su candado es
+    # `test_calculo_ia3_ia5_apagadas.py`. Lo que aquí se vigila no es QUIÉNES
+    # están, sino que los que estén estén DENTRO del `isMaster`.
+    for motor in ("'ia0'", "'ia7'"):
         assert motor in fila, (
             f"{motor} ya no esta en la botonera del master; si se ha movido "
             f"fuera del `isMaster`, lo ve todo el mundo")

@@ -505,9 +505,10 @@ export default function AIRenderStudio({ state, setState }) {
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
   // Motor de render: 'ia0' = camino histórico del 11/07/2026,
-  // 'ia1' = motor estándar, 'ia3' = prompt ultra-premium,
-  // 'ia5' = el encargo del 22/07/2026, 'ia7' = motor Pro.
-  // ('ia2' e 'ia4' están apagadas.)
+  // 'ia1' = motor estándar, 'ia7' = motor Pro.
+  // ('ia2', 'ia3', 'ia4' e 'ia5' están apagadas: siguen traduciéndose en
+  //  `providerOf()` para que los proyectos guardados abran, pero no tienen
+  //  botón.)
   const [motor, setMotor] = useState('ia0');
   // ─── LO QUE VA A COSTAR, ANTES DE PULSAR ─────────────────────────────────
   //
@@ -576,7 +577,12 @@ export default function AIRenderStudio({ state, setState }) {
     // guardado en una pestaña vieja, cae al motor de siempre y rinde igual.
     // IA 0: prueba histórica del render usado el 11/07/2026.
     if (motor === 'ia0') return 'julio11';
-    if (motor === 'ia3') return 'gemini_premium'; // Gemini con prompt ultra-fotorrealista (gratis)
+    // IA 3 APAGADA el 09/09/2026, a petición del master («quita IA3 e IA5»).
+    // Era Gemini con un prefijo de prompt ultra-fotorrealista; el motor de
+    // imagen es el MISMO que el de IA 1. La correspondencia se queda: hay
+    // proyectos guardados con motor 'ia3' y al abrirlos tienen que seguir
+    // dando el mismo render. Lo que se quita es el botón.
+    if (motor === 'ia3') return 'gemini_premium';
     // IA 4 APAGADA el 24/08/2026, a peticion del master. No era un motor: en
     // `_render_dispatch` hacia `model_override="gemini-2.5-flash-image"`, que es
     // EXACTAMENTE el modelo que la IA 1 ya usa por defecto. Mismo modelo, mismo
@@ -586,10 +592,11 @@ export default function AIRenderStudio({ state, setState }) {
     // La correspondencia se queda: hay proyectos guardados con motor 'ia4' y al
     // abrirlos tienen que seguir dando el mismo render de siempre (el de IA 1).
     if (motor === 'ia4') return 'gemini_flash';
-    // IA 5: el camino del 22/07/2026, literal. Mismo motor (Gemini), otro
-    // encargo. Está para PROBAR, no para adornar: el master dijo que aquello
-    // funcionaba mejor y con este botón se rinde el mismo croquis por los dos
-    // caminos y se miran las dos imágenes, en vez de discutirlo.
+    // IA 5 APAGADA el 09/09/2026, a petición del master («quita IA3 e IA5»).
+    // Era el encargo del 22/07/2026 con el motor de siempre (Gemini), puesto
+    // para comparar los dos caminos con el mismo croquis. Comparado y visto:
+    // el botón se retira. La correspondencia se queda por los proyectos ya
+    // guardados con motor 'ia5'.
     if (motor === 'ia5') return 'julio';
     // IA 7: copia de IA0 con reglas estrictas de geometría/vanos y una
     // referencia visual de mayor calidad. IA0 permanece congelada.
@@ -4588,8 +4595,6 @@ export default function AIRenderStudio({ state, setState }) {
                       {[
                         ['ia0', 'IA0', 'Configuración estable'],
                         ['ia1', 'IA1', 'Configuración estándar'],
-                        ['ia3', 'IA3', 'Configuración alternativa'],
-                        ['ia5', 'IA5', 'Configuración histórica alternativa'],
                         ['ia7', 'IA7', 'Configuración mejorada de prueba'],
                       ].map(([id, label, title]) => (
                         <button key={id} type="button" onClick={() => setMotor(id)} title={title}

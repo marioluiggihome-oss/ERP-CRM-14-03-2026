@@ -67,8 +67,14 @@ import pytest
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Los motores que viajan TAL CUAL desde la pantalla hasta `_render_dispatch`.
-# IA 2 e IA 4 (apagadas) e IA 5 (camino histórico alternativo) tienen su
-# propio candado; ver la nota de arriba.
+# IA 2, IA 3, IA 4 e IA 5 están apagadas y tienen su propio candado; ver la
+# nota de arriba.
+#
+# IA 3 SIGUE AQUÍ AUNQUE YA NO TENGA BOTÓN, y es a propósito: apagar un motor
+# es quitarle el botón, no romper el camino. Un proyecto guardado con
+# `motor: 'ia3'` se sigue abriendo y tiene que dar el mismo render que daba —
+# si el reparto dejara de llevarlo a `gemini_premium`, caería al motor por
+# defecto SIN dar ningún error y el render saldría distinto al guardado.
 MOTORES = {
     "IA 0": "julio11",
     "IA 1": "gemini",
@@ -202,8 +208,13 @@ def test_la_botonera_de_perfiles_es_solo_para_master_y_no_revela_proveedores():
     inicio = fuente.index("{isMaster && (", fuente.index("Acción principal"))
     fin = fuente.index("</div>\n                )}", inicio)
     botonera = fuente[inicio:fin]
-    for label in ("IA0", "IA1", "IA3", "IA5", "IA7"):
+    for label in ("IA0", "IA1", "IA7"):
         assert f"'{label}'" in botonera
+    # Apagadas el 09/09/2026 a petición del master: «quita IA3 e IA5».
+    for label in ("IA3", "IA5"):
+        assert f"'{label}'" not in botonera, (
+            f"{label} ha vuelto a la botonera: se apagó el 09/09 a petición "
+            f"del master")
     assert "Render 3D IA" not in fuente
     assert ">Motor<" not in fuente
     assert "Motor principal (Gemini)" not in fuente

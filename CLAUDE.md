@@ -111,9 +111,10 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
 
 1. **Motor de render del Estudio 3D.** El motor elegido en pantalla manda
    siempre, por cualquier camino (texto, referencia, plano+bocetos):
-   `IA 0 → julio11` · `IA 1 → gemini` · `IA 3 → gemini_premium` ·
-   `IA 7 → julio11_plus`. Todo render pasa por `_render_dispatch`; nadie llama
-   directo a un motor.
+   `IA 0 → julio11` · `IA 1 → gemini` · `IA 7 → julio11_plus`. Todo render pasa
+   por `_render_dispatch`; nadie llama directo a un motor. (Las apagadas —`IA 2
+   → manus`, `IA 3 → gemini_premium`, `IA 4 → gemini_flash`, `IA 5 → julio`—
+   siguen traduciéndose en `providerOf()`, sin botón: ver abajo.)
    - **EL ESTUDIO 3D ESTÁ CONGELADO desde el 04/09/2026.** El master, viendo
      los renders: «me gusta cómo está renderizando ahora, los últimos cambios
      realizados están perfectos en Estudio 3D, los ha realizado MANUS... eso no
@@ -193,10 +194,27 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      `ia4 → gemini_flash` se queda en `providerOf()` para que los proyectos ya
      guardados sigan abriendo; lo que se quitó es el botón. Candado:
      `test_calculo_ia4_apagada.py`.
-   - **IA 5 no es un motor: es el ENCARGO del 22/07/2026** con el motor de
-     siempre (Gemini). Está para comparar los dos caminos con el mismo croquis
-     en vez de discutirlo.
-   - Esta lista la vigila `test_la_pantalla_ofrece_exactamente_estos_motores`.
+   - **IA 3 (gemini_premium) e IA 5 (julio) están APAGADAS** desde el 09/09, a
+     petición del master: «quita IA3 e IA5». Ninguna de las dos era un motor
+     distinto —las dos pintan con el mismo modelo que la IA 1
+     (`gemini-2.5-flash-image`)—; lo que cambiaba era el ENCARGO: IA 3 le ponía
+     por delante un prefijo ultra-fotorrealista y IA 5 era el encargo del
+     22/07/2026, puesto para comparar los dos caminos con el mismo croquis en
+     vez de discutirlo. Comparado y visto.
+     - **SE APAGA EL BOTÓN, NO EL CAMINO**, igual que con IA 2 e IA 4. Las
+       correspondencias `ia3 → gemini_premium` e `ia5 → julio` se quedan en
+       `providerOf()`: hay proyectos guardados con esos motores y borrarlas no
+       daría un error — caerían al `return 'gemini'` del final y devolverían
+       una imagen DISTINTA a la guardada, con otro encargo y sin decir nada.
+       Ese es el fallo del 03/08 otra vez.
+     - Candado: `test_calculo_ia3_ia5_apagadas.py`. Cuenta los botones que
+       quedan (IA0, IA1, IA7) además de mirar que no vuelvan los dos: sin el
+       recuento, apagar estos dos y encender otro en el mismo sitio pasaría en
+       verde. Y mira la botonera RECORTADA, no el fichero entero, porque
+       «IA3» e «IA5» siguen escritos en los comentarios que explican por qué
+       están apagadas.
+   - Esta lista la vigila `test_la_botonera_de_perfiles_es_solo_para_master_y_no_revela_proveedores`
+     (en `test_calculo_motores_render.py`).
      Si se añade o se quita un motor y no se actualiza aquí, el CI se pone
      rojo — que es justo lo que faltó del 18 al 23/08, cuando esta regla estuvo
      cinco días diciendo `IA 2 → manus` con la prueba en verde.

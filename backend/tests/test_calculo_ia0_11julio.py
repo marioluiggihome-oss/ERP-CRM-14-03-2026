@@ -135,7 +135,7 @@ def test_botonera_ia_es_solo_master_y_mantiene_ia0_por_defecto():
     inicio = ui.index("{isMaster && (", ui.index("Acción principal"))
     fin = ui.index("</div>\n                )}", inicio)
     botonera = ui[inicio:fin]
-    for perfil in ("IA0", "IA1", "IA3", "IA5", "IA7"):
+    for perfil in ("IA0", "IA1", "IA7"):
         assert f"'{perfil}'" in botonera
     assert "const [motor, setMotor] = useState('ia0');" in ui
     assert "Probar mejoras" not in ui
