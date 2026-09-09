@@ -7,101 +7,69 @@
 /**
  * useSpeechRecognition — dictado por voz (Web Speech API del navegador).
  *
- * ÚNICO sitio donde vive este hook. Estaba copiado en AIRenderStudio y en
- * EstudioCocinas, y los dos arrastraban el mismo fallo: al dictar salía
- * «cuandocuandocuandocuando dicto» en vez de «cuando dicto».
+ * ÚNICO sitio donde vive el dictado. Estuvo copiado en AIRenderStudio y en
+ * EstudioCocinas, y las dos copias arrastraban el mismo fallo.
  *
- * POR QUÉ PASABA. La versión anterior iba SUMANDO trozos:
+ * LA LÓGICA NO ESTÁ AQUÍ: está en `frontend/src/dictado.js`, que no depende de
+ * `window` y por eso se puede EJECUTAR en el candado. Aquí queda solo lo que
+ * únicamente puede hacer el navegador — abrir el micro y traer eventos.
+ * Léete la cabecera de aquel fichero: ahí está por qué el dictado se rompía y
+ * por qué el candado no lo veía.
  *
- *     for (let i = event.resultIndex; i < event.results.length; i++)
- *         if (result.isFinal) finalRef.current += result[0].transcript;
+ * ── TRES VUELTAS, Y LA TERCERA ES LA QUE IMPORTA ────────────────────────────
  *
- * Eso da por hecho que cada resultado final llega EXACTAMENTE UNA VEZ. En
- * Chrome de Android no se cumple: con `continuous` los resultados se
- * reentregan y `resultIndex` no es de fiar, así que la misma palabra se sumaba
- * en cada evento y el texto crecía en progresión.
+ * 1ª (jul.) «cuandocuandocuando dicto»: se SUMABAN los trozos dando por hecho
+ *    que cada final llega una sola vez. Se arregló rehaciendo el texto entero
+ *    en cada evento — idempotente, da igual cuántas veces reentregue Android.
  *
- * CÓMO SE ARREGLA. No se suman trozos: en cada evento se REHACE el texto
- * entero leyendo `event.results` de principio a fin. Así la operación es
- * idempotente — que el navegador entregue el mismo resultado dos, tres o diez
- * veces da igual, porque el resultado es el mismo. Se ataca la causa (depender
- * de que no haya repeticiones) en vez de intentar detectarlas.
+ * 2ª (09/08) «elelelel bajoel bajoel bajo fre»: rehacerlo entero vale para los
+ *    FINALES, pero los PROVISIONALES son el navegador pensando en voz alta y
+ *    manda la frase a medias una y otra vez. Del provisional solo vale EL
+ *    ÚLTIMO, y no se suma nunca.
  *
- * Lo único que sí hay que acumular entre SESIONES: `continuous` se corta solo
- * cada pocos segundos en Android. Cuando eso pasa, `event.results` empieza de
- * cero, así que lo dicho hasta ahí se guarda en `previoRef` al cerrarse la
- * sesión y se antepone a lo siguiente. Si no, cada corte borraría lo dicho.
+ * 3ª (09/09) EL BOTÓN MENTÍA SOBRE SÍ MISMO, que es lo que el master notaba
+ *    como «no funciona bien». En Android, Chrome lanza `no-speech` a los pocos
+ *    segundos de silencio: es lo normal. El hook hacía `setIsListening(false)`
+ *    ante CUALQUIER error y, acto seguido, `onend` reabría el micro y salía con
+ *    un `return` sin reponer el estado. El botón decía «Dictar» con el micro
+ *    grabando — y `onstart` no estaba conectado, así que no se recuperaba.
+ *    Desde ahí, cada pulsación hacía lo contrario de lo que parecía.
  *
- * ─────────────────────────────────────────────────────────────────────────
- * SEGUNDA VUELTA (09/08). Seguía saliendo mal en la tablet:
+ *    Ahora quien dice si el micro está abierto es el NAVEGADOR (`onstart` /
+ *    `onend`), nunca lo que nosotros creíamos que iba a pasar.
  *
- *     «elelelel bajoel bajoel bajoel bajo fre»
+ * Y DOS COSAS MÁS DE LA TERCERA VUELTA:
  *
- * Lo de arriba arreglaba una cosa y dejaba otra viva. Rehacer el texto desde
- * `event.results` es correcto SOLO si se leen los resultados FINALES. Los
- * PROVISIONALES son otra cosa: son el navegador pensando en voz alta, y va
- * mandando la frase a medias una y otra vez —«el», «el bajo», «el bajo fre»—.
- * Sumarlos todos da exactamente ese churro: cada versión intermedia pegada
- * detrás de la anterior.
- *
- * La regla, ahora sí:
- *
- *   · LOS FINALES SE SUMAN (rehaciéndolos enteros cada vez: sigue siendo
- *     idempotente, que era lo bueno de la primera vuelta).
- *   · DEL PROVISIONAL SOLO VALE EL ÚLTIMO, y no se suma NUNCA: se enseña
- *     detrás para que se vea que el micro está oyendo, y en cuanto llega el
- *     final se sustituye por él.
- *
- * Y una cosa más que no era un fallo pero lo parecía: en Android el dictado se
- * corta solo cada pocos segundos. Antes eso paraba el micro y había que volver
- * a tocarlo a media frase. Ahora, mientras el usuario no diga que para, se
- * vuelve a arrancar solo y lo dicho se conserva.
+ *  · REANUDAR NO PUEDE SER EN EL MISMO INSTANTE. Llamar a `start()` dentro del
+ *    propio `onend` lanza `InvalidStateError` a menudo: el reconocedor aún no
+ *    se ha soltado. Aquel `catch` se lo tragaba y el dictado se moría en
+ *    silencio a media frase. Se reanuda en el tick siguiente y, si tampoco
+ *    puede, se reintenta UNA vez más antes de rendirse.
+ *  · RENDIRSE SE DICE. Antes, quedarse sin permiso de micrófono no producía ni
+ *    un aviso: el botón volvía a su sitio y el usuario hablaba contra una
+ *    pantalla que no le oía.
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { MotorDeDictado } from '../dictado';
 
-// Une dos tramos con UN solo espacio. La versión anterior concatenaba a pelo y
-// por eso salía todo pegado además de repetido.
-const unir = (a, b) => {
-  const x = (a || '').trim();
-  const y = (b || '').trim();
-  if (!x) return y;
-  if (!y) return x;
-  return `${x} ${y}`;
-};
+// Cuánto se espera para reabrir el micro cuando Android corta la sesión. No es
+// un número mágico: hace falta CEDER EL TURNO al navegador para que suelte el
+// reconocedor. Con 0 ya vale; 250 ms es el segundo intento, más holgado.
+const REANUDAR_MS = 0;
+const REANUDAR_MS_REINTENTO = 250;
 
-/**
- * Convierte lo que manda el navegador en texto. Es la regla entera, aparte para
- * poder mirarla sin tener que leer el hook.
- *
- * Devuelve { firme, provisional }:
- *   firme       — lo que el navegador ya da por bueno. Se rehace ENTERO en cada
- *                 evento, así que da igual cuántas veces reentregue lo mismo.
- *   provisional — lo que está oyendo ahora mismo. SOLO EL ÚLTIMO, y no se suma
- *                 jamás: sumarlos era lo que producía «elelelel bajoel bajoel».
- */
-export function leerResultados(resultados) {
-  let firme = '';
-  let provisional = '';
-  for (let i = 0; i < (resultados?.length || 0); i++) {
-    const r = resultados[i];
-    const texto = r?.[0]?.transcript || '';
-    if (r?.isFinal) firme = unir(firme, texto);
-    else provisional = texto;   // asignación, NUNCA suma
-  }
-  return { firme, provisional };
-}
+export { leerResultados, unir } from '../dictado';
 
 export default function useSpeechRecognition({ lang = 'es-ES' } = {}) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(false);
+  const [speechError, setSpeechError] = useState('');
 
   const recognitionRef = useRef(null);
-  const previoRef = useRef('');   // lo dicho en sesiones ya cerradas
-  const sesionRef = useRef('');   // lo FIRME de la sesión en curso
-  // ¿El usuario sigue queriendo dictar? Android corta la sesión solo cada pocos
-  // segundos; mientras esto sea true, se vuelve a arrancar sin que él lo note.
-  const quiereEscuchar = useRef(false);
+  const motorRef = useRef(null);
+  if (!motorRef.current) motorRef.current = new MotorDeDictado();
+  const temporizadorRef = useRef(null);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -113,68 +81,84 @@ export default function useSpeechRecognition({ lang = 'es-ES' } = {}) {
     recognition.interimResults = true;
     recognition.lang = lang;
 
+    const motor = motorRef.current;
+
+    // Reabrir el micro cediendo antes el turno al navegador, con UN reintento.
+    // Si ninguno entra, se para de verdad en vez de dejar el botón encendido
+    // sobre un micrófono que ya no graba.
+    const reanudar = (espera = REANUDAR_MS, segundoIntento = false) => {
+      clearTimeout(temporizadorRef.current);
+      temporizadorRef.current = setTimeout(() => {
+        if (!motor.quiereEscuchar) return;
+        try {
+          recognition.start();
+        } catch (_) {
+          if (!segundoIntento) { reanudar(REANUDAR_MS_REINTENTO, true); return; }
+          setIsListening(motor.alNoPoderReanudar().escuchando);
+        }
+      }, espera);
+    };
+
+    // EL NAVEGADOR manda sobre el estado del botón.
+    recognition.onstart = () => setIsListening(motor.alArrancar().escuchando);
+
     recognition.onresult = (event) => {
-      const { firme, provisional } = leerResultados(event.results);
-      // Solo lo FIRME se guarda. Lo provisional se enseña, pero no se queda:
-      // en cuanto el navegador se decida, llegará como firme.
-      sesionRef.current = firme;
-      setTranscript(unir(unir(previoRef.current, firme), provisional));
+      setTranscript(motor.alResultado(event.results).texto);
     };
 
     recognition.onerror = (e) => {
-      // Si es que no hay permiso o no hay micro, no se insiste: reintentar en
-      // bucle contra un permiso denegado no lo concede, solo calienta el móvil.
-      if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed'
-          || e?.error === 'audio-capture') {
-        quiereEscuchar.current = false;
+      const { rendirse, mensaje } = motor.alError(e?.error);
+      if (mensaje) setSpeechError(mensaje);
+      // NO se toca `isListening` aquí: lo dirá `onend`. Suponerlo era el fallo
+      // que apagaba el botón con el micro grabando.
+      if (rendirse) {
+        try { recognition.stop(); } catch (_) { /* ya parado */ }
       }
-      setIsListening(false);
     };
 
     recognition.onend = () => {
-      // La sesión se cierra (el usuario para, o Android la corta solo): lo
-      // FIRME pasa a ser definitivo para que la siguiente no lo pise.
-      previoRef.current = unir(previoRef.current, sesionRef.current);
-      sesionRef.current = '';
-      if (quiereEscuchar.current) {
-        // Android corta cada pocos segundos. Se vuelve a abrir enseguida: antes
-        // esto dejaba el micro parado a media frase y había que tocarlo otra vez.
-        try { recognition.start(); return; } catch (_) { /* no ha dejado */ }
-      }
-      setIsListening(false);
+      const { reanudar: hayQueReanudar, escuchando } = motor.alCerrarse();
+      if (hayQueReanudar) { reanudar(); return; }
+      setIsListening(escuchando);
     };
 
     recognitionRef.current = recognition;
     return () => {
-      quiereEscuchar.current = false;   // si no, el `onend` del cierre lo revive
+      motor.quiereEscuchar = false;   // si no, el `onend` del cierre lo revive
+      clearTimeout(temporizadorRef.current);
       try { recognition.abort(); } catch (_) { /* ya parado */ }
     };
   }, [lang]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
-    previoRef.current = '';
-    sesionRef.current = '';
-    quiereEscuchar.current = true;
+    motorRef.current.alPulsarDictar();
     setTranscript('');
+    setSpeechError('');
+    // NO se pone `isListening` a true aquí: lo pone `onstart` cuando el micro
+    // esté abierto de verdad. Si `start()` fallara, el botón diría que escucha
+    // sin escuchar — el mismo fallo del revés.
     try { recognitionRef.current.start(); } catch (_) { /* ya estaba escuchando */ }
-    setIsListening(true);
   }, []);
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
-    // PRIMERO se quita la intención y luego se para: al revés, el `onend` que
-    // llega justo después volvería a arrancarlo y el micro no se apagaría.
-    quiereEscuchar.current = false;
+    motorRef.current.alPulsarParar();
+    clearTimeout(temporizadorRef.current);
     try { recognitionRef.current.stop(); } catch (_) { /* ya estaba parado */ }
+    // Aquí sí se apaga en el acto: el usuario ha pedido parar y la pantalla
+    // tiene que responderle ya, aunque el `onend` tarde un instante en llegar.
     setIsListening(false);
   }, []);
 
   const resetTranscript = useCallback(() => {
-    previoRef.current = '';
-    sesionRef.current = '';
+    motorRef.current.limpiar();
     setTranscript('');
+    setSpeechError('');
   }, []);
 
-  return { isListening, transcript, isSupported, startListening, stopListening, resetTranscript, setTranscript };
+  return {
+    isListening, transcript, isSupported, speechError,
+    startListening, stopListening, resetTranscript, setTranscript,
+  };
 }

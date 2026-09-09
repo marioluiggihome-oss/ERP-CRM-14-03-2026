@@ -1175,6 +1175,45 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - Candados: `test_calculo_ia_premium_chatgpt.py` y
      `test_pantalla_clon_estudio3d.py`.
 
+34. **EL BOTÓN DE DICTAR MENTÍA SOBRE SÍ MISMO** (09/09). El master: «el botón
+   de dictar no dicta bien, no funciona bien». Es la TERCERA vuelta de este
+   botón, y las dos anteriores miraban el TEXTO cuando el problema era el
+   ESTADO.
+   - En Android, Chrome lanza **`no-speech` a los pocos segundos de silencio**:
+     es lo normal, no una avería. El hook hacía `setIsListening(false)` ante
+     CUALQUIER error y, acto seguido, `onend` reabría el micro y salía con un
+     `return` sin reponer el estado. **El botón decía «Dictar» con el micrófono
+     grabando.** Y `onstart` no estaba conectado, así que no se recuperaba
+     nunca: desde ahí, cada pulsación hacía lo contrario de lo que parecía —la
+     siguiente PARABA en vez de arrancar—.
+   - **Quien dice si el micro está abierto es el NAVEGADOR** (`onstart` /
+     `onend`), nunca lo que nosotros creíamos que iba a pasar. Al reanudar NO
+     se enciende el botón por adelantado: si `start()` fallara, diría que
+     escucha sin escuchar — la misma mentira del revés.
+   - **REANUDAR NO PUEDE SER EN EL MISMO INSTANTE.** `start()` dentro del propio
+     `onend` lanza `InvalidStateError` a menudo —el reconocedor no se ha
+     soltado— y aquel `catch` se lo tragaba: el dictado se moría en silencio a
+     media frase. Se cede el turno y se reintenta UNA vez; si tampoco entra, se
+     para de verdad.
+   - **RENDIRSE SE DICE.** Quedarse sin permiso de micrófono no producía ni un
+     aviso: el usuario hablaba contra una pantalla sorda. Solo avisan los
+     errores que paran de verdad (`not-allowed`, `service-not-allowed`,
+     `audio-capture`); `no-speech` no puede avisar, o sería un aviso permanente.
+   - **EL CANDADO ERA UNA COPIA EN PYTHON Y NO PROTEGÍA NADA.**
+     `test_calculo_dictado_por_voz.py` traía `leer_resultados` **reescrita a
+     mano en Python** y no llamaba al JavaScript ni una vez: podía estar en
+     verde con el dictado roto, y lo estuvo. Mismo fallo que costó la caída de
+     la tarifa ACB (regla 31) y que dejó el área del cooperativista sin
+     consolidar (regla 17). Ahora la lógica vive en `frontend/src/dictado.js`
+     —sin `window`, por eso se puede ejecutar— y el candado la corre EN NODE,
+     conduciendo la sesión entera: hablar, que Android corte, reanudar,
+     errores, parar.
+   - **Y CUATRO MUTACIONES SOBREVIVIERON A LA PRIMERA**, que es lo que enseñó
+     dónde estaban los huecos: sumar provisionales solo se nota con VARIOS en
+     el mismo evento (con uno, sumar y asignar dan igual), y sumar lo firme o
+     guardar el provisional solo se ven **al CERRAR la sesión** — en pantalla
+     se veía bien y el churro aparecía después. Hay prueba para cada uno.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

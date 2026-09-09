@@ -869,7 +869,7 @@ export default function AIRenderStudio({ state, setState }) {
     });
   }, []);
 
-  const { isListening, transcript, isSupported, startListening, stopListening, resetTranscript, setTranscript } = useSpeechRecognition();
+  const { isListening, transcript, isSupported, speechError, startListening, stopListening, resetTranscript, setTranscript } = useSpeechRecognition();
   const textareaRef = useRef(null);
   // Texto que había en el campo al empezar a dictar: la voz se AÑADE a él, no lo pisa.
   const baseTextRef = useRef('');
@@ -1138,6 +1138,15 @@ export default function AIRenderStudio({ state, setState }) {
     } catch (e) { setError('No se pudo generar el esquema: ' + (e.message || '')); }
     finally { setDownloading(false); }
   };
+
+  // SI EL DICTADO SE RINDE, SE DICE. Hasta el 09/09 no se decía: quedarse sin
+  // permiso de micrófono dejaba el botón como si nada y el usuario seguía
+  // hablando contra una pantalla que no le oía. Solo llegan aquí los errores
+  // que paran de verdad —permiso denegado, sin micro—; `no-speech` y los demás
+  // son el día a día de Android y se reanudan solos.
+  useEffect(() => {
+    if (speechError) setError(speechError);
+  }, [speechError]);
 
   // La transcripción se concatena al texto base (lo escrito antes de dictar).
   useEffect(() => {
