@@ -38,10 +38,13 @@ USO = os.path.join(RAIZ, "backend", "services", "ai_usage.py")
 PRODUCCION = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
 CLON = os.path.join(RAIZ, "frontend", "src", "components", "Estudio3DLab.jsx")
 PERMISOS = os.path.join(RAIZ, "frontend", "src", "modulePermissions.js")
+PANEL = os.path.join(RAIZ, "frontend", "src", "components", "SettingsModal.jsx")
+RUTA_IA = os.path.join(RAIZ, "backend", "routes", "ai_engine.py")
 APP = os.path.join(RAIZ, "frontend", "src", "App.js")
 
 MOTOR = "chatgpt"
 MODELO = "gpt-image-1"
+PERMISO = "canUseIAPremium"
 
 
 def _leer(ruta):
@@ -90,20 +93,98 @@ def test_el_clon_SI_lo_ofrece_y_lo_traduce():
         "y pintaría con otro SIN dar ningún error")
 
 
-def test_el_laboratorio_es_SOLO_DEL_MASTER_en_permiso_y_en_enrutado():
-    """Las dos mitades. Cerrar solo el botón es un cierre de adorno: bastaría
-    con llegar a la pestaña para que la pantalla se pintara (regla 27)."""
+def test_el_laboratorio_se_abre_por_SU_casilla_y_no_por_la_del_estudio_3d():
+    """Las dos mitades: la pantalla Y el enrutado.
+
+    Cerrar solo el botón del menú es un cierre de adorno — bastaría con llegar
+    a la pestaña para que se pintara (regla 27, que se destapó con
+    `landingStudio`)."""
     permisos = _leer(PERMISOS)
     m = re.search(r"if \(tab === 'estudio3dLab'\) \{(.*?)\}", permisos, re.S)
     assert m, "el laboratorio ya no tiene puerta propia en `canAccessTab`"
-    assert "esMasterSistema(u)" in m.group(1), \
-        "la puerta del laboratorio ya no es solo del master"
-    assert "canUseAIAnalysis" not in m.group(1), (
+    puerta = m.group(1)
+    assert "esMasterSistema(u)" in puerta, (
+        "el master ha dejado de entrar en su propio banco de pruebas")
+    assert PERMISO in puerta, (
+        f"la puerta del laboratorio ya no mira «{PERMISO}»: la casilla de "
+        f"permisos de usuario quedaría sin efecto")
+    assert "canUseAIAnalysis" not in puerta, (
         "el laboratorio ha pasado a colgar del permiso del Estudio 3D de "
         "producción: quitarle uno le quitaría el otro (regla 26)")
     assert "canOpenTab('estudio3dLab')" in _leer(APP), (
         "el enrutado del laboratorio ya no comprueba el permiso: se pintaría "
         "con solo llegar a esa pestaña")
+
+
+def test_la_casilla_EXISTE_en_el_panel_master_y_dice_lo_que_cuesta():
+    """Un permiso que no se puede marcar no reparte nada (regla 8c), y uno que
+    no dice lo que abre se marca sin saberlo (regla 26).
+
+    Aquí encima cuesta DINERO: 7 créditos por render contra 1."""
+    panel = _leer(PANEL)
+    assert f"'{PERMISO}'" in panel, (
+        f"«{PERMISO}» no está en la lista de capacidades del panel Master: no "
+        f"se guardaría al crear un usuario ni se limpiaría al pasar a Controller")
+    assert f"userForm.{PERMISO}" in panel, (
+        "la casilla de IA PREMIUM ha desaparecido del panel Master: el permiso "
+        "existe en el servidor y no hay forma de dárselo a nadie")
+    m = re.search(r"<span title=\"([^\"]*)\"[^>]*>([^<]*IA PREMIUM[^<]*)</span>", panel)
+    assert m, "la casilla de IA PREMIUM ya no lleva rótulo visible"
+    rotulo, ayuda = m.group(2), m.group(1)
+    assert "Lab" in rotulo, (
+        "el rótulo de la casilla ya no nombra la pantalla que abre: quien "
+        "quiera quitarla no sabrá cuál buscar (regla 26)")
+    # EL PRECIO VA EN EL RÓTULO VISIBLE, NO EN EL `title`. La primera versión
+    # aceptaba cualquiera de los dos y por eso una mutación se le escapó: en la
+    # tablet con la que trabaja el master NO HAY HOVER, así que un aviso que
+    # solo vive en el tooltip es un aviso que puede no verse nunca. Y el que
+    # marca esta casilla es justo quien tiene que enterarse de lo que cuesta.
+    assert "crédito" in rotulo, (
+        "el rótulo VISIBLE de la casilla ya no dice lo que cuesta. Abre el "
+        "motor más caro del ERP —7 créditos por render contra 1—, y en una "
+        "tablet no hay hover: si solo lo dice el tooltip, se marca sin saberlo.")
+    assert "7" in rotulo, (
+        "el rótulo ya no dice CUÁNTOS créditos. «Consume créditos» lo pone "
+        "todo; lo que hay que ver aquí es que son siete veces más.")
+    assert "crédito" in ayuda, (
+        "la ayuda de la casilla ya no explica el coste")
+
+
+def test_LA_CASILLA_ABRE_EL_MOTOR_EN_EL_SERVIDOR_no_solo_el_boton():
+    """CANDADO DURO. Es la mitad que se olvida siempre.
+
+    Si el servidor no leyera la casilla, el usuario vería IA PREMIUM, la
+    pulsaría, SE LE COBRARÍA, y recibiría un render del motor de siempre sin
+    que nada diera error. Es el fallo del 03/08 y por lo que existe la regla
+    11."""
+    ruta = _leer(RUTA_IA)
+    m = re.search(r"MOTORES_POR_PERMISO = \{(.*?)\}", ruta, re.S)
+    assert m, (
+        "`MOTORES_POR_PERMISO` ha desaparecido: el servidor vuelve a rebajar a "
+        "TODO el que no sea master, y la casilla se queda de adorno")
+    tabla = m.group(1)
+    assert f'"{MOTOR}": "{PERMISO}"' in tabla, (
+        f"el servidor ya no abre «{MOTOR}» con «{PERMISO}»")
+    # Y SOLO ese. Los motores históricos son del master a secas (regla 1).
+    for prohibido in ("julio11", "julio11_plus", "banana_pro", "flux"):
+        assert prohibido not in tabla, (
+            f"«{prohibido}» se reparte ahora por casilla. Los bancos de pruebas "
+            f"del master no se abren «ya que estamos»: cuestan 3,3x por render "
+            f"y esa decisión es suya (regla 1).")
+
+
+def test_un_permiso_TORCIDO_no_abre_el_motor_caro():
+    """`is True`, no un `if` a secas.
+
+    Una ficha puede traer la clave con cualquier cosa dentro —un "false" de
+    texto, un 1, un dict— y sobre un permiso que gasta dinero no se acepta un
+    "algo que parece verdadero"."""
+    ruta = _leer(RUTA_IA)
+    i = ruta.index("MOTORES_POR_PERMISO.get(")
+    bloque = ruta[i:i + 400]
+    assert "is True" in bloque, (
+        "el permiso de IA PREMIUM se comprueba por lo que «parece verdadero». "
+        "Un 'false' de texto en la ficha abriría el motor de 7 créditos.")
 
 
 # ─── 2. Que el croquis llegue al modelo ─────────────────────────────────────

@@ -1134,10 +1134,29 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      `frontend/src/costeDeRender.js`. Con dos pantallas que renderizan, una
      tabla copiada en cada una se separa el día que se añada un motor, y la
      que se olvide avisará «1 crédito» de uno que cobra siete.
-   - **EL LABORATORIO ES SOLO DEL MASTER**, en el permiso Y en el enrutado, y
-     **sin casilla propia** — como carpinter.io y Studio3K (regla 27). No
-     cuelga de `canUseAIAnalysis`: compartirlo haría que quitar uno quitara el
-     otro (regla 26).
+   - **SE REPARTE POR CASILLA: `canUseIAPremium`** (09/09, el mismo día: «la IA
+     premium métela en permisos de usuario para poderla activar a ciertos
+     usuarios»). Nació solo del master y lo abrió a continuación.
+     - **LA CASILLA ABRE EL MOTOR EN EL SERVIDOR, NO SOLO EL BOTÓN.** Es la
+       mitad que se olvida siempre: `motor_permitido()` rebajaba a TODO el que
+       no fuera master (regla 11), así que con solo la pantalla el usuario
+       habría visto IA PREMIUM, la habría pulsado, **se le habría cobrado** y
+       habría recibido un render del motor de siempre sin un solo error. El
+       fallo del 03/08 otra vez.
+     - **UN MOTOR, NO LA PUERTA.** `MOTORES_POR_PERMISO` es `{"chatgpt":
+       "canUseIAPremium"}` y nada más: IA 0 e IA 7 siguen siendo del master a
+       secas (regla 1). Una lista de UNO obliga a que añadir el segundo sea una
+       decisión, no un efecto secundario.
+     - **`is True`, no un `if` a secas.** Una ficha puede traer la clave con un
+       `"false"` de texto o un `1`, y sobre un permiso que gasta dinero no se
+       acepta un «algo que parece verdadero».
+     - **El rótulo dice lo que abre Y lo que cuesta**, en el texto VISIBLE y no
+       solo en el `title`: en la tablet del master no hay hover, así que un
+       aviso que solo vive en el tooltip puede no verse nunca — y quien marca
+       la casilla es justo quien tiene que enterarse de los 7 créditos. Una
+       mutación se escapó por aceptar el tooltip; el candado está apretado.
+     - No cuelga de `canUseAIAnalysis`: compartirlo haría que quitar uno
+       quitara el otro (regla 26).
    - **IA PREMIUM cobra 7 créditos**, no 1. Al proveedor se le paga ~0,25 €/
      imagen contra los 0,036 € del motor de producción. El precio de
      `MODEL_PRICES` está **pendiente de cuadrar con la primera factura de

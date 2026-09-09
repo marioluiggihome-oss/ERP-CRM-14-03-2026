@@ -726,13 +726,41 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
 MOTOR_DE_PRODUCCION = "gemini"
 
 
+# EL ÚNICO MOTOR QUE SE PUEDE REPARTIR POR CASILLA, Y SOLO ESE.
+#
+# El master, 09/09/2026: «la IA premium métela en permisos de usuario para
+# poderla activar a ciertos usuarios».
+#
+# Se abre `chatgpt` y NADA MÁS. Los motores históricos —IA 0 y IA 7— siguen
+# siendo del master a secas: son bancos de pruebas suyos (regla 1) y abrirlos
+# «ya que estamos» es justo lo que no se hace con un permiso que cuesta dinero.
+# Una lista de UNO obliga a que añadir el segundo sea una decisión, no un
+# efecto secundario.
+MOTORES_POR_PERMISO = {"chatgpt": "canUseIAPremium"}
+
+
 def motor_permitido(user, pedido):
-    """Qué motor se usa de verdad. Para quien no es master, siempre el de producción."""
+    """Qué motor se usa de verdad. Para quien no es master, el de producción —
+    salvo que tenga la casilla del motor que pide."""
     from routes.cascos import _es_master
     if not pedido:
         return None            # sin motor pedido, manda el de por defecto de siempre
     if _es_master(user):
         return pedido
+
+    # LA CASILLA ABRE EL MOTOR DE VERDAD, no solo el botón. Si esto no
+    # estuviera, el usuario vería IA PREMIUM en su pantalla, la pulsaría, se le
+    # cobraría, y el servidor le devolvería un render del motor de siempre SIN
+    # decir nada: un botón que no elige nada, que es el fallo del 03/08 y por
+    # el que se apagaron IA 2 e IA 4.
+    #
+    # `is True` y no un `if` a secas: la ficha puede traer la clave con
+    # cualquier cosa dentro, y sobre un permiso que gasta dinero no se acepta
+    # un "algo que parece verdadero".
+    clave = MOTORES_POR_PERMISO.get(str(pedido).strip().lower())
+    if clave and (user or {}).get(clave) is True:
+        return str(pedido).strip().lower()
+
     if str(pedido).strip().lower() != MOTOR_DE_PRODUCCION:
         logger.info(
             "%s ha pedido el motor '%s' sin ser master; se rinde con %s.",

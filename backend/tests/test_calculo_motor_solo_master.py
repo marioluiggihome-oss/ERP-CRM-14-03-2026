@@ -122,3 +122,71 @@ def test_las_cuatro_rutas_de_render_pasan_por_el_candado():
     assert cuerpo.count("provider=motor_permitido(user, request.provider)") == 4, (
         "deberían ser CUATRO las rutas de render que pasan por el candado: "
         "render, render/compose, render/orbit y render/params")
+
+
+# ─── IA PREMIUM: EL ÚNICO MOTOR QUE SE REPARTE POR CASILLA (09/09/2026) ──────
+#
+# El master: «la IA premium métela en permisos de usuario para poderla activar a
+# ciertos usuarios». Es la primera grieta a propósito en la regla 11, así que se
+# ejerce LLAMANDO a la función, no leyendo el fichero: aquí lo que importa es lo
+# que el servidor DEVUELVE.
+CON_PREMIUM = {"id": "u-5", "username": "diseñadora", "canUseIAPremium": True}
+# La misma persona con la casilla TORCIDA. Una ficha puede traer cualquier cosa
+# dentro de la clave, y sobre un permiso que gasta dinero no vale un "algo que
+# parece verdadero".
+PREMIUM_TORCIDO = ({"id": "u-6", "username": "x", "canUseIAPremium": "false"},
+                   {"id": "u-7", "username": "y", "canUseIAPremium": 1},
+                   {"id": "u-8", "username": "z", "canUseIAPremium": None})
+
+
+def test_con_la_casilla_marcada_SI_llega_el_motor_premium():
+    """Si el servidor no lo dejara pasar, el usuario vería el botón, lo
+    pulsaría, SE LE COBRARÍA y recibiría el render del motor de siempre sin
+    que nada diera error."""
+    assert motor_permitido(CON_PREMIUM, "chatgpt") == "chatgpt", (
+        "la casilla IA PREMIUM se ha quedado de adorno: el servidor rebaja al "
+        "usuario al motor de producción y el botón no elige nada")
+
+
+def test_la_casilla_premium_NO_abre_los_motores_del_master():
+    """Se abrió UN motor, no la puerta. IA 0 e IA 7 cuestan 3,3x y son bancos
+    de pruebas del master (regla 1)."""
+    for motor in MOTORES_DE_PRUEBAS + ("julio11", "julio11_plus"):
+        elegido = motor_permitido(CON_PREMIUM, motor)
+        assert elegido == MOTOR_DE_PRODUCCION, (
+            f"la casilla de IA PREMIUM ha abierto también '{motor}' (ha salido "
+            f"'{elegido}'). Se abrió un motor concreto a petición del master, "
+            f"no todos los de pruebas.")
+
+
+def test_sin_la_casilla_no_se_llega_al_motor_premium():
+    for usuario in (COMERCIAL, GERENTE):
+        assert motor_permitido(usuario, "chatgpt") == MOTOR_DE_PRODUCCION, (
+            f"«{usuario['username']}» ha llegado al motor premium sin tener la "
+            f"casilla: es el más caro del ERP, 7 créditos por render.")
+
+
+def test_una_casilla_TORCIDA_no_abre_el_motor_caro():
+    for usuario in PREMIUM_TORCIDO:
+        valor = usuario["canUseIAPremium"]
+        assert motor_permitido(usuario, "chatgpt") == MOTOR_DE_PRODUCCION, (
+            f"una ficha con canUseIAPremium={valor!r} ha abierto el motor de 7 "
+            f"créditos. Se mira `is True`, no lo que parezca verdadero.")
+
+
+def test_el_master_sigue_llegando_al_premium_sin_casilla():
+    """La otra mitad: repartir un permiso no puede dejar fuera al dueño."""
+    for usuario in (MASTER, ADMIN):
+        assert motor_permitido(usuario, "chatgpt") == "chatgpt", (
+            "al master se le ha cerrado su propio motor premium")
+
+
+def test_el_premium_se_COBRA_mas_caro_a_quien_lo_tiene_por_casilla():
+    """El cobro va por el motor que se usa DE VERDAD (regla 32). Si se cobrara
+    por el pedido, o si el premium cobrara 1, repartir la casilla saldría gratis
+    en el contador y caro en la factura."""
+    usado = motor_permitido(CON_PREMIUM, "chatgpt")
+    rebajado = motor_permitido(COMERCIAL, "chatgpt")
+    assert coste_de_motor("render", 1, usado) > coste_de_motor("render", 1, rebajado), (
+        "renderizar con el motor premium cuesta lo mismo que con el de "
+        "producción, y al proveedor se le paga bastante más por imagen")
