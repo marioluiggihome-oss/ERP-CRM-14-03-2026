@@ -1113,6 +1113,49 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      genera UNA imagen aunque haya varias variantes pedidas.
    - Candado: `test_calculo_todo_render_se_cobra.py`.
 
+33. **EL CLON DEL ESTUDIO 3D: DONDE SE PRUEBAN LOS MOTORES NUEVOS** (09/09).
+   El master: «podemos meter chatgpt con un botón de IA PREMIUM... quiero clonar
+   estudio 3D y en ese clon tenemos la IA de chatGPT para probarla».
+   `Estudio3DLab.jsx` es una copia de `AIRenderStudio.jsx` con UNA cosa más: el
+   botón **IA PREMIUM** (motor `chatgpt`, modelo `gpt-image-1`).
+   - **ES UNA COPIA A PROPÓSITO, y eso no contradice el resto del repo.** Aquí
+     no se copia una TABLA —de esas, las que se copian se separan y mienten—:
+     se copia una PANTALLA para que el original pueda estar congelado de
+     verdad. Meterle un `if modoLab` por dentro sería tocarlo en cada prueba,
+     que es justo lo que la congelación del 04/09 impide.
+   - **PERO LA SEPARACIÓN SE MIDE.** `test_pantalla_clon_estudio3d.py` compara
+     los dos ficheros línea a línea y se pone rojo por encima de 80 líneas de
+     diferencia, además de exigir que el clon conserve las piezas que DECIDEN
+     el render (`editingRender`, `memoriaDeCambios()`, el encadenado sobre la
+     imagen base, la calidad de la referencia). Si el clon se aleja, comparar
+     los dos renders deja de medir el MOTOR y pasa a medir lo que alguien haya
+     metido por el camino — y la conclusión sale al revés sin que nada falle.
+   - **LA TABLA DE CRÉDITOS SALIÓ DE LA PANTALLA** a
+     `frontend/src/costeDeRender.js`. Con dos pantallas que renderizan, una
+     tabla copiada en cada una se separa el día que se añada un motor, y la
+     que se olvide avisará «1 crédito» de uno que cobra siete.
+   - **EL LABORATORIO ES SOLO DEL MASTER**, en el permiso Y en el enrutado, y
+     **sin casilla propia** — como carpinter.io y Studio3K (regla 27). No
+     cuelga de `canUseAIAnalysis`: compartirlo haría que quitar uno quitara el
+     otro (regla 26).
+   - **IA PREMIUM cobra 7 créditos**, no 1. Al proveedor se le paga ~0,25 €/
+     imagen contra los 0,036 € del motor de producción. El precio de
+     `MODEL_PRICES` está **pendiente de cuadrar con la primera factura de
+     OpenAI**: va escrito porque un motor sin precio cuenta 0,00 € en Consumo
+     de IA y el más caro sería el que menos parece gastar.
+   - **DOS LLAMADAS DISTINTAS Y SOLO UNA ADMITE EL CROQUIS.** Con referencias
+     va por `images.edit`; sin ellas, por `images.generate`. Mandar el croquis
+     por `generate` NO da error: devuelve una cocina bonita que no es la del
+     cliente (regla 2). Y las referencias viajan como FICHERO con `.name`,
+     porque OpenAI no admite base64 en el cuerpo como hace Gemini.
+   - **SIN `OPENAI_API_KEY` NO SE RINDE CON OTRO MOTOR: se avisa.** Caer al de
+     siempre devolvería una imagen de otro motor con la etiqueta de este, que
+     es el fallo del 03/08. Ojo: OpenAI suele exigir VERIFICAR LA ORGANIZACIÓN
+     para `gpt-image-1`; sin eso la clave vale para texto y falla para imagen,
+     y el error habla de permisos, no de la clave.
+   - Candados: `test_calculo_ia_premium_chatgpt.py` y
+     `test_pantalla_clon_estudio3d.py`.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

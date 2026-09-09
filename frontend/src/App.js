@@ -38,6 +38,7 @@ const UserManualModal = lazy(() => import('./components/UserManualModal'));
 const MisPedidos = lazy(() => import('./components/MisPedidos'));
 const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
+const Estudio3DLab = lazy(() => import('./components/Estudio3DLab'));
 const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
@@ -1930,6 +1931,14 @@ const App = () => {
             {/* Render 3D Studio */}
             {state.currentTab === 'renderStudio' && canOpenTab('renderStudio') && (
               <ErrorBoundary><AIRenderStudio state={state} setState={setState} /></ErrorBoundary>
+            )}
+            {/* Estudio 3D — Laboratorio: el clon donde se prueban motores
+                nuevos. SOLO EL MASTER (`canAccessTab`). El cierre va también
+                aquí, en el enrutado, y no solo en el botón del menú: si solo
+                se escondiera el botón, bastaría con llegar a esta pestaña para
+                que se pintara (regla 27, que se destapó con `landingStudio`). */}
+            {state.currentTab === 'estudio3dLab' && canOpenTab('estudio3dLab') && (
+              <ErrorBoundary><Estudio3DLab state={state} setState={setState} /></ErrorBoundary>
             )}
             {/* Kitchen 3D Designer - Panel de proyectos (mantenido por compatibilidad) */}
             {state.currentTab === 'kitchenDesigner' && canOpenTab('kitchenDesigner') && (

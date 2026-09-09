@@ -136,6 +136,22 @@ PRO_KITCHEN_DESIGN_PRINCIPLES = (
 
 
 # Prefijo de prompt para IA 3 (Gemini premium / fallback de Flux)
+# ─── IA PREMIUM (OpenAI) ─────────────────────────────────────────────────────
+#
+# El modelo de imagen de OpenAI. Se escribe AQUÍ, en una constante y no dentro
+# de la llamada, por lo que manda la regla 10 de CLAUDE.md: un modelo cambiado
+# no rompe nada —sigue saliendo una imagen— y solo empeora el resultado, así
+# que si no está en un sitio que alguien mire, cambia solo y nadie se entera.
+#
+# `gpt-image-1` es el único de OpenAI que PINTA y además acepta imágenes de
+# ENTRADA, que aquí no es un extra: sin eso el croquis del cliente no llega al
+# modelo y la cocina que sale no es la suya (regla 2).
+#
+# OJO: OpenAI suele exigir VERIFICAR LA ORGANIZACIÓN para dejar usar este
+# modelo. Sin esa verificación la clave vale para texto y falla para imagen —
+# y el error que devuelve habla de permisos, no de la clave.
+_MODELO_OPENAI_IMAGEN = "gpt-image-1"
+
 _PREMIUM_PROMPT_PREFIX = (
     "ULTRA-PREMIUM PHOTOREALISTIC KITCHEN RENDER. "
     "Professional architectural photography, shot with Phase One IQ4 150MP medium format camera, "
@@ -1926,6 +1942,130 @@ class Render3DService:
                 "engine": self.config.brand_name,
             }
 
+    async def _render_with_openai(self, task_prompt: str, prompt: str,
+                                  parsed_params: Optional[Dict[str, Any]] = None,
+                                  reference_image_base64: Optional[str] = None,
+                                  reference_mime: str = "image/png",
+                                  reference_images: Optional[List[str]] = None,
+                                  openai_key: str = "") -> Dict[str, Any]:
+        """IA PREMIUM — el render con `gpt-image-1` de OpenAI.
+
+        SOLO SE USA DESDE EL CLON del Estudio 3D (`Estudio3DLab.jsx`). El
+        Estudio 3D de producción está congelado desde el 04/09/2026 y este
+        motor no aparece por ninguno de sus caminos.
+
+        DOS LLAMADAS DISTINTAS, Y NO ES UN DETALLE:
+          · SIN croquis ni referencia → `images.generate` (crear desde cero).
+          · CON croquis o referencia  → `images.edit`, que es la ÚNICA de las
+            dos que acepta imágenes de entrada. Si se mandara todo por
+            `generate`, el croquis del cliente se perdería EN SILENCIO: saldría
+            una cocina bonita que no es la suya, sin un solo error. Es
+            exactamente el fallo que la regla 2 de CLAUDE.md existe para
+            impedir.
+
+        LA REFERENCIA VIAJA COMO FICHERO, NO COMO TEXTO. La API de imágenes de
+        OpenAI no admite base64 en el cuerpo como hace Gemini: quiere el binario
+        subido. Por eso se decodifica a `BytesIO` con un nombre y un tipo — sin
+        el `.name`, la librería no sabe qué está subiendo y la llamada se cae.
+
+        Devuelve el MISMO diccionario que los demás motores (`success`,
+        `result.images` como data URL), porque quien lo llama no puede tener que
+        saber qué motor le tocó.
+        """
+        import base64
+        import io as _io
+        start = time.time()
+        try:
+            import openai
+        except Exception:
+            return {
+                "success": False, "status": "failed",
+                "error": "El motor premium no está disponible en este servidor.",
+                "engine": self.config.brand_name,
+            }
+
+        if not openai_key:
+            # NI UNA PALABRA EN SILENCIO. Sin clave no se cae al motor de
+            # siempre: eso devolvería una imagen de OTRO motor con la etiqueta
+            # de este, que es el fallo del 03/08. Se dice que no se puede.
+            logger.warning(
+                "Se ha pedido el motor premium y no hay OPENAI_API_KEY en el "
+                "entorno. No se rinde con otro motor: se avisa.")
+            return {
+                "success": False, "status": "failed",
+                "error": "El motor premium no está configurado en el servidor.",
+                "engine": self.config.brand_name,
+            }
+
+        # Todas las referencias que haya: el plano, los bocetos por pared y la
+        # foto de acabado. El tope de 7 es el de la regla 3.
+        refs: List[str] = []
+        for b64 in ([reference_image_base64] if reference_image_base64 else []) + list(reference_images or []):
+            if b64 and b64 not in refs:
+                refs.append(b64)
+        refs = refs[:7]
+
+        def _a_fichero(b64: str, n: int):
+            limpio = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+            crudo = base64.b64decode(limpio)
+            fich = _io.BytesIO(crudo)
+            # El nombre importa: la librería deduce de él el tipo que sube.
+            fich.name = f"referencia_{n}.png"
+            return fich
+
+        try:
+            client = openai.AsyncOpenAI(api_key=openai_key, timeout=180.0)
+            if refs:
+                resp = await client.images.edit(
+                    model=_MODELO_OPENAI_IMAGEN,
+                    image=[_a_fichero(b, i) for i, b in enumerate(refs)],
+                    prompt=task_prompt[:32000],
+                    size="1536x1024",
+                    quality="high",
+                )
+            else:
+                resp = await client.images.generate(
+                    model=_MODELO_OPENAI_IMAGEN,
+                    prompt=task_prompt[:32000],
+                    size="1536x1024",
+                    quality="high",
+                )
+
+            datos = list(getattr(resp, "data", None) or [])
+            img_b64 = getattr(datos[0], "b64_json", None) if datos else None
+            if not img_b64:
+                raise RuntimeError("el motor premium no devolvió ninguna imagen")
+
+            # El contador de consumo es BEST-EFFORT: la imagen ya está
+            # generada y ya se ha pagado al proveedor, así que un fallo
+            # apuntándola no puede tumbar la respuesta.
+            try:
+                from services.ai_usage import record_ai_tokens
+                await record_ai_tokens("render", _MODELO_OPENAI_IMAGEN, 0, 0, 1, count=False)
+            except Exception as e:
+                logger.warning(f"No se pudo apuntar el consumo del render premium: {e}")
+
+            out = {
+                "success": True,
+                "status": "completed",
+                "result": {"images": [f"data:image/png;base64,{img_b64}"]},
+                "engine": self.config.brand_name,
+                "duration_seconds": round(time.time() - start, 1),
+                "prompt_used": prompt,
+                "motorUsado": _MODELO_OPENAI_IMAGEN,
+            }
+            if parsed_params is not None:
+                out["parsed_params"] = parsed_params
+            return out
+
+        except Exception as e:
+            logger.error(f"Render (premium) error: {e}")
+            return {
+                "success": False, "status": "failed",
+                "error": f"El motor premium no pudo generar el render: {str(e)[:200]}",
+                "engine": self.config.brand_name,
+            }
+
     async def _render_with_manus(self, task_prompt: str, prompt: str,
                                  parsed_params: Optional[Dict[str, Any]] = None,
                                  reference_image_base64: Optional[str] = None,
@@ -2077,6 +2217,32 @@ class Render3DService:
                 reference_mime=reference_mime,
                 reference_images=reference_images,
                 model_override="gemini-3-pro-image-preview",
+            )
+
+        # ─── IA PREMIUM — ChatGPT (OpenAI), SOLO en el clon del Estudio 3D ───
+        #
+        # El master, 09/09/2026: «podemos meter chatgpt con un botón de IA
+        # PREMIUM... quiero clonar estudio 3D y en ese clon tenemos la IA de
+        # chatGPT para probarla».
+        #
+        # ESTE MOTOR NO EXISTE PARA EL ESTUDIO 3D DE PRODUCCIÓN. Ese está
+        # congelado desde el 04/09 y su pantalla no ofrece este botón; el clon
+        # (`Estudio3DLab.jsx`) es el único sitio desde el que se pide. Aquí
+        # abajo la rama es nueva y no toca ninguna de las que ya había: un
+        # motor que se añade quitándole algo a otro no es un motor nuevo, es
+        # una avería.
+        #
+        # La clave es la MISMA `OPENAI_API_KEY` que ya lee la configuración
+        # para el dictado por voz. No se inventa una variable nueva: dos
+        # nombres para la misma clave acaban con uno puesto y el otro no, y el
+        # que falta no da un error que se entienda.
+        if provider == "chatgpt":
+            return await self._render_with_openai(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64,
+                reference_mime=reference_mime,
+                reference_images=reference_images,
+                openai_key=os.environ.get("OPENAI_API_KEY", "").strip(),
             )
 
         # IA 2: Manus

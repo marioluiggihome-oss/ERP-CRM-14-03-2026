@@ -38,6 +38,7 @@ export const TAB_PERMISSION_KEYS = Object.freeze({
   'gastos': 'canAccessGastos',
   'visualizer': 'canUseAIAnalysis',
   'renderStudio': 'canUseAIAnalysis',
+  'estudio3dLab': null,   // solo el master; sin casilla — ver `canAccessTab`
   'kitchenDesigner': 'canUseKitchenDesigner',
   'armarios': 'canAccessArmarios',
   'armarios2': 'canUseArmarios2',
@@ -66,6 +67,21 @@ export const canAccessTab = (tab, u, settings = {}) => {
   }
   if (tab === 'agendaNegocios') {
     return esMasterSistema(u) || u.isPrescriptor === true;
+  }
+  // ESTUDIO 3D — LABORATORIO: SOLO EL MASTER, y no lleva casilla propia.
+  //
+  // Es el banco de pruebas de motores nuevos (el master, 09/09: «quiero clonar
+  // estudio 3D y en ese clon tenemos la IA de chatGPT»). Dentro hay un motor
+  // que cuesta SIETE créditos por render contra uno, así que no puede abrirse
+  // por una casilla que alguien marque sin saberlo — misma decisión que con
+  // carpinter.io y Studio3K (regla 27: «la puerta de carpinter y studio3k,
+  // sólo la veo yo»).
+  //
+  // Y NO reutiliza `canUseAIAnalysis`, que es el del Estudio 3D de producción:
+  // si lo compartieran, dar de baja el laboratorio a alguien le cerraría de
+  // paso el Estudio 3D de verdad, y al revés (regla 26).
+  if (tab === 'estudio3dLab') {
+    return esMasterSistema(u);
   }
   if (tab === 'presupuestador') {
     return esMasterSistema(u) || puedeEntrarPresupuestador(u);

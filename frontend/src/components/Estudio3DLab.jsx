@@ -4,6 +4,34 @@
  * Prohibida su copia, distribución, modificación o uso sin autorización
  * escrita del titular.
  */
+
+/**
+ * ESTUDIO 3D — LABORATORIO. El clon donde se prueban motores nuevos.
+ *
+ * El master, 09/09/2026: «quiero clonar estudio 3D y en ese clon tenemos la IA
+ * de chatGPT para probarla».
+ *
+ * POR QUÉ ES UNA COPIA Y NO UNA BANDERA DENTRO DE LA PANTALLA BUENA:
+ * el Estudio 3D de producción está CONGELADO desde el 04/09/2026 («eso no se
+ * toca ya, para nada»). Meterle un `if modoLab` por dentro sería tocarlo en
+ * cada prueba que se quiera hacer, que es justo lo que la congelación impide.
+ * Copiándolo, el original se queda quieto de verdad y aquí se puede romper lo
+ * que haga falta sin que un cliente vea nada.
+ *
+ * LO QUE ESTA COPIA CUESTA, DICHO CLARO: un arreglo hecho en el original NO
+ * llega aquí solo. Es el precio de la separación y se asume a sabiendas — el
+ * original está congelado, así que no debería moverse. Para que la separación
+ * al menos se VEA, `test_pantalla_clon_estudio3d.py` mide cuánto se han
+ * alejado los dos ficheros y se pone rojo si el clon se queda sin las piezas
+ * que de verdad importan.
+ *
+ * LO ÚNICO QUE CAMBIA RESPECTO AL ORIGINAL:
+ *   · el botón IA PREMIUM (motor `chatgpt`), que aquí existe y allí no;
+ *   · el nombre del componente.
+ * Todo lo demás es idéntico A PROPÓSITO: si se cambiara algo más, comparar los
+ * renders de los dos no mediría el motor, mediría las diferencias que hubiera
+ * metido yo.
+ */
 // Barra de progreso de un análisis. Una llamada a la IA no informa de su avance,
 // así que poner un porcentaje seria inventarlo: la barra se mueve para decir
 // "sigo", y al lado va el TIEMPO transcurrido y, cuando se procesan varias
@@ -32,7 +60,7 @@ function BarraAnalisis({ texto, hechas, total }) {
 }
 
 /**
- * AIRenderStudio - Componente de Render 3D con Voz + Texto
+ * Estudio3DLab - Componente de Render 3D con Voz + Texto
  * =========================================================
  * Permite al usuario describir una cocina por voz (micrófono) o texto,
  * y genera un render 3D fotorrealista usando el motor LuiggiAI.
@@ -363,7 +391,7 @@ const PLACEHOLDER_TIPO = {
   otro: "Describe el mueble a medida. Ej: 'Estantería de salón a medida en roble con módulos cerrados y hueco para TV'",
 };
 
-export default function AIRenderStudio({ state, setState }) {
+export default function Estudio3DLab({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
   const canUseRender360 = true; // Visor 360° interactivo siempre disponible
@@ -604,6 +632,11 @@ export default function AIRenderStudio({ state, setState }) {
     // IA 7: copia de IA0 con reglas estrictas de geometría/vanos y una
     // referencia visual de mayor calidad. IA0 permanece congelada.
     if (motor === 'ia7') return 'julio11_plus';
+    // IA PREMIUM — SOLO EXISTE EN ESTE CLON. El Estudio 3D de producción no
+    // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta al
+    // master (regla 11). Es el motor más caro de todos: 7 créditos por render
+    // contra 1, porque al proveedor se le paga unas 7 veces más por imagen.
+    if (motor === 'premium') return 'chatgpt';
     return 'gemini';
   };
   const [attached, setAttached] = useState(false);
@@ -4599,6 +4632,7 @@ export default function AIRenderStudio({ state, setState }) {
                         ['ia0', 'IA0', 'Configuración estable'],
                         ['ia1', 'IA1', 'Configuración estándar'],
                         ['ia7', 'IA7', 'Configuración mejorada de prueba'],
+                        ['premium', 'IA PREMIUM', 'Configuración premium en pruebas'],
                       ].map(([id, label, title]) => (
                         <button key={id} type="button" onClick={() => setMotor(id)} title={title}
                           className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-accion-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>

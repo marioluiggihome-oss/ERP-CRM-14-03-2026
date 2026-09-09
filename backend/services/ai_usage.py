@@ -33,6 +33,15 @@ MODEL_PRICES = {
     "gemini-2.5-flash-image":        {"in": 0.28, "out": 2.30, "img": 0.036},
     "gemini-2.5-flash-image-preview":{"in": 0.28, "out": 2.30, "img": 0.036},
     "gemini-3-pro-image-preview":    {"in": 2.00, "out": 12.0, "img": 0.12},
+    # IA PREMIUM (OpenAI). El precio por imagen es el de `gpt-image-1` en
+    # calidad ALTA a 1536x1024, que es lo que pide `_render_with_openai`.
+    #
+    # PENDIENTE DE CONFIRMAR CON LA FACTURA REAL. Va escrito aquí porque un
+    # motor sin precio cuenta como 0,00 € en el informe de Consumo de IA: no
+    # daría ningún error, simplemente el motor más caro sería el que menos
+    # parece gastar. Mejor una cifra marcada como aproximada que un cero que
+    # miente. Cuando llegue la primera factura de OpenAI, se cuadra.
+    "gpt-image-1":                   {"in": 5.00, "out": 40.0, "img": 0.25},
 }
 # Coste estimado por TIPO de llamada cuando no se miden tokens reales.
 DEFAULT_COST_PER = {"render": 0.12, "vision": 0.003, "otro": 0.003}
@@ -403,6 +412,13 @@ async def añadir_saldo(user_id: str, renders: int) -> int:
 # render». Se redondea HACIA ARRIBA al descontar, que es como se cobra: nadie
 # regala el trozo suelto.
 COSTE_POR_MOTOR = {
+    # IA PREMIUM (ChatGPT). Es el motor más caro de todos y por eso NO cobra 1
+    # como los demás: al proveedor se le pagan ~0,25 € por imagen frente a los
+    # 0,036 € del motor de producción, o sea unas 7 veces. Solo lo usa el
+    # master desde el clon del Estudio 3D (regla 11), así que esto no le toca
+    # el bolsillo a ningún usuario; pero un motor caro cobrando como el barato
+    # es justo lo que hace que nadie relacione la factura con el botón.
+    "chatgpt": 7.0,
     "julio11": 1.0,
     "julio11_plus": 1.0,
     "banana_pro": 3.3,

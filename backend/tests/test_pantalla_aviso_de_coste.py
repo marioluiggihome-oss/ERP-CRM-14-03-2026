@@ -112,9 +112,15 @@ def test_la_tabla_de_costes_de_la_pantalla_dice_lo_MISMO_que_la_del_servidor():
     """Están en dos sitios porque una avisa y la otra cobra. No pueden separarse."""
     from services.ai_usage import COSTE_POR_MOTOR
 
-    cuerpo = _codigo()
-    linea = re.search(r"const COSTE_CREDITOS = \{([^}]*)\}", cuerpo)
-    assert linea, "ya no está la tabla de costes de la pantalla"
+    # La tabla salió de dentro de la pantalla el 09/09/2026, al aparecer una
+    # SEGUNDA pantalla que renderiza (el clon de pruebas del Estudio 3D). Con
+    # una copia en cada una, añadir un motor obligaba a acordarse de tocar las
+    # dos, y la que se olvidara avisaría «1 crédito» de un motor que cobra 7.
+    compartida = os.path.join(RAIZ, "frontend", "src", "costeDeRender.js")
+    with open(compartida, encoding="utf-8") as f:
+        cuerpo = f.read()
+    linea = re.search(r"export const COSTE_CREDITOS = \{(.*?)\};", cuerpo, re.S)
+    assert linea, "ya no está la tabla de costes compartida (costeDeRender.js)"
     pantalla = {}
     for trozo in linea.group(1).split(","):
         if ":" not in trozo:
@@ -140,3 +146,22 @@ def test_se_avisa_cuando_NO_llegan_los_creditos():
     assert "Te faltan créditos" in cuerpo, (
         "ya no se avisa de que la tanda no cabe en los créditos que quedan: se "
         "pulsaría para nada")
+
+
+def test_las_dos_pantallas_usan_la_TABLA_COMPARTIDA_y_no_una_copia():
+    """Un fichero compartido que nadie importa no protege de nada.
+
+    La prueba de arriba compara `costeDeRender.js` con el servidor. Si una
+    pantalla se dejara su propia tabla dentro, esa comparación seguiría en
+    verde y la pantalla seguiría avisando con números viejos."""
+    for nombre in ("AIRenderStudio.jsx", "Estudio3DLab.jsx"):
+        ruta = os.path.join(RAIZ, "frontend", "src", "components", nombre)
+        if not os.path.exists(ruta):
+            continue
+        with open(ruta, encoding="utf-8") as f:
+            pantalla = f.read()
+        assert "from '../costeDeRender'" in pantalla, (
+            f"{nombre} ya no usa la tabla de costes compartida")
+        assert "const COSTE_CREDITOS = {" not in pantalla, (
+            f"{nombre} ha vuelto a tener su propia tabla de costes dentro: se "
+            f"separará de la del servidor y avisará de un precio que no es")
