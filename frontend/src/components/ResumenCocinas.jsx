@@ -9,10 +9,28 @@ import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, 
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Cuentas bancarias para reflejar en el presupuesto (titular PUBLIOFERTA S.L.).
+// LAS CUENTAS EN LAS QUE COBRA LA CASA.
+//
+// El prefijo del nombre dice DE QUIÉN es la cuenta, y por eso va delante: es lo
+// primero que se lee en el desplegable y lo que evita elegir la de la otra
+// sociedad (master, 09/09/2026: «pon delante JA... las otras dos pon PBL»).
+//
+//   PBL → PUBLIOFERTA S.L.
+//   JA  → la cuenta de Caja Rural
+//
+// EL IBAN VA EN UN PAPEL CON EL QUE UN CLIENTE PAGA, así que los tres están
+// comprobados por su dígito de control (el `mod 97` del IBAN, que es justo lo
+// que existe para cazar una cifra mal copiada). Y la entidad cuadra con el
+// nombre: 0049 Santander, 0182 BBVA, 3016 Caja Rural. Candado:
+// `test_calculo_cuentas_bancarias.py`.
 const BANCOS = [
-  { id: 'santander', nombre: 'Banco Santander', titular: 'PUBLIOFERTA S.L.', iban: 'ES13 0049 5558 0020 1635 1274', swift: 'BSCHESMM' },
-  { id: 'bbva', nombre: 'BBVA', titular: 'PUBLIOFERTA S.L.', iban: 'ES38 0182 5581 9302 0159 9858', swift: 'BBVAESMMXXX' },
+  { id: 'santander', nombre: 'PBL Banco Santander', titular: 'PUBLIOFERTA S.L.', iban: 'ES13 0049 5558 0020 1635 1274', swift: 'BSCHESMM' },
+  { id: 'bbva', nombre: 'PBL BBVA', titular: 'PUBLIOFERTA S.L.', iban: 'ES38 0182 5581 9302 0159 9858', swift: 'BBVAESMMXXX' },
+  // TITULAR PENDIENTE: el master dio el número y el nombre, no la razón social.
+  // Se queda vacío a propósito y el papel NO escribe «Titular:» en blanco —
+  // inventar aquí un nombre de sociedad es ponerle al cliente un dato falso en
+  // el documento con el que hace la transferencia (regla 7).
+  { id: 'cajarural', nombre: 'JA CAJA RURAL', titular: '', iban: 'ES26 3016 0618 6122 3373 2128', swift: '' },
 ];
 
 // Resumen por cocinas: junta partidas a mano (Muebles, Electrodomésticos,
@@ -313,7 +331,8 @@ const ResumenCocinas = ({ state }) => {
         pdf.setFontSize(11); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
         pdf.text('Forma de pago: Transferencia a:', M, y); pdf.setFont(undefined, 'normal'); y += 6;
         pdf.setFontSize(10.5); pdf.setTextColor(60);
-        pdf.text(`${banco.nombre} — Titular: ${banco.titular}`, M + 4, y); y += 6;
+        pdf.text(banco.titular ? `${banco.nombre} — Titular: ${banco.titular}`
+                                : banco.nombre, M + 4, y); y += 6;
         pdf.setFont(undefined, 'bold'); pdf.text(`IBAN: ${banco.iban}`, M + 4, y);
         pdf.setFont(undefined, 'normal');
         if (banco.swift) pdf.text(`SWIFT: ${banco.swift}`, W - M - 2, y, { align: 'right' });
@@ -542,7 +561,7 @@ const ResumenCocinas = ({ state }) => {
               {BANCOS.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
             </select>
             {(() => { const b = BANCOS.find(x => x.id === bancoId); return b ? (
-              <span className="text-xs text-slate-500">{b.titular} · <span className="font-bold text-slate-700">{b.iban}</span></span>
+              <span className="text-xs text-slate-500">{b.titular ? `${b.titular} · ` : ''}<span className="font-bold text-slate-700">{b.iban}</span></span>
             ) : <span className="text-[11px] text-slate-400">Elige la cuenta que se mostrará en el presupuesto.</span>; })()}
           </div>
         </div>
