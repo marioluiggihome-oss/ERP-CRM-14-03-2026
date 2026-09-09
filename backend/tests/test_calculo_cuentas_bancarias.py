@@ -25,8 +25,10 @@ IBAN válido pero pegado en la cuenta que no es sería igual de malo, y el dígi
 de control no lo vería: sería un número perfectamente correcto de otro banco.
 
 EL PREFIJO DICE DE QUIÉN ES. Va DELANTE porque es lo primero que se lee en el
-desplegable, y es lo que evita elegir la cuenta de la otra sociedad. PBL es
-PUBLIOFERTA; JA es la de Caja Rural.
+desplegable, y es lo que evita elegir la cuenta de la otra sociedad. **PBL es
+PUBLIOFERTA S.L. y JA es Estudio de Cocina José Ángel** — son dos titulares
+distintos, y por eso el titular de una no puede copiarse de la otra por estar
+justo encima en la lista.
 """
 import os
 import re
@@ -64,9 +66,9 @@ def _iban_valido(iban):
 # a mano a propósito: es la comprobación de que el IBAN está en la cuenta que le
 # toca, y un IBAN válido del banco equivocado el dígito de control no lo caza.
 ESPERADAS = {
-    "santander": ("PBL Banco Santander", "0049"),
-    "bbva": ("PBL BBVA", "0182"),
-    "cajarural": ("JA CAJA RURAL", "3016"),
+    "santander": ("PBL Banco Santander", "0049", "PUBLIOFERTA S.L."),
+    "bbva": ("PBL BBVA", "0182", "PUBLIOFERTA S.L."),
+    "cajarural": ("JA CAJA RURAL", "3016", "Estudio de Cocina José Ángel"),
 }
 
 
@@ -91,7 +93,7 @@ def test_EL_IBAN_ES_DEL_BANCO_QUE_DICE_SER():
     """Un IBAN válido pegado en la cuenta que no es sería igual de malo, y el
     dígito de control no lo vería: es un número correcto de otro banco."""
     for c in _cuentas():
-        nombre, entidad = ESPERADAS[c["id"]]
+        nombre, entidad, _ = ESPERADAS[c["id"]]
         real = c["iban"].replace(" ", "")[4:8]
         assert real == entidad, (
             f"«{c['id']}» dice ser {nombre} y su IBAN es de la entidad {real}, "
@@ -102,7 +104,7 @@ def test_EL_PREFIJO_DICE_DE_QUIEN_ES_LA_CUENTA():
     """Va delante porque es lo primero que se lee en el desplegable, y es lo que
     evita elegir la de la otra sociedad."""
     for c in _cuentas():
-        nombre, _ = ESPERADAS[c["id"]]
+        nombre, _, _ = ESPERADAS[c["id"]]
         assert c["nombre"] == nombre, (
             f"«{c['id']}» se llama «{c['nombre']}» y tiene que llamarse «{nombre}»")
     assert all(c["nombre"].split()[0] in ("PBL", "JA") for c in _cuentas()), (
@@ -126,6 +128,17 @@ def test_SIN_TITULAR_NO_SE_IMPRIME_UN_TITULAR_VACIO():
         "el PDF vuelve a escribir «Titular:» aunque no se sepa quién es")
     assert "b.titular ? `${b.titular} · ` : ''" in src, (
         "la pantalla vuelve a pintar un titular vacío")
+
+
+def test_CADA_CUENTA_VA_A_NOMBRE_DE_QUIEN_ES():
+    """El titular se imprime en el presupuesto, debajo del nombre del banco, y
+    es lo que el cliente ve al hacer la transferencia. Las PBL son de
+    PUBLIOFERTA; la JA es de José Ángel (master, 09/09/2026)."""
+    for c in _cuentas():
+        _, _, titular = ESPERADAS[c["id"]]
+        assert c["titular"] == titular, (
+            f"«{c['nombre']}» sale a nombre de «{c['titular']}» y es de "
+            f"«{titular}»")
 
 
 def test_LA_CUENTA_DE_JA_NO_SE_PONE_A_NOMBRE_DE_PUBLIOFERTA():

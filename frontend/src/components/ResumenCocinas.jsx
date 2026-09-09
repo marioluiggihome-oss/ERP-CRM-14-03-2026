@@ -26,11 +26,10 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const BANCOS = [
   { id: 'santander', nombre: 'PBL Banco Santander', titular: 'PUBLIOFERTA S.L.', iban: 'ES13 0049 5558 0020 1635 1274', swift: 'BSCHESMM' },
   { id: 'bbva', nombre: 'PBL BBVA', titular: 'PUBLIOFERTA S.L.', iban: 'ES38 0182 5581 9302 0159 9858', swift: 'BBVAESMMXXX' },
-  // TITULAR PENDIENTE: el master dio el número y el nombre, no la razón social.
-  // Se queda vacío a propósito y el papel NO escribe «Titular:» en blanco —
-  // inventar aquí un nombre de sociedad es ponerle al cliente un dato falso en
-  // el documento con el que hace la transferencia (regla 7).
-  { id: 'cajarural', nombre: 'JA CAJA RURAL', titular: '', iban: 'ES26 3016 0618 6122 3373 2128', swift: '' },
+  // El «JA» es por José Ángel, que es de quien es la cuenta (master,
+  // 09/09/2026). El SWIFT no lo ha dado nadie y no se inventa: el PDF ya solo
+  // lo escribe si está.
+  { id: 'cajarural', nombre: 'JA CAJA RURAL', titular: 'Estudio de Cocina José Ángel', iban: 'ES26 3016 0618 6122 3373 2128', swift: '' },
 ];
 
 // Resumen por cocinas: junta partidas a mano (Muebles, Electrodomésticos,
