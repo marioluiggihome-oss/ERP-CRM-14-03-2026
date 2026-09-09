@@ -488,6 +488,7 @@ class RenderRequest(BaseModel):
     projectType: Optional[str] = Field(None, description="Tipo de proyecto elegido por el usuario: cocina|armario|bano|otro. Fuerza el sujeto del render.")
     roomPhoto: Optional[bool] = Field(False, description="La imagen de referencia es una FOTO de la estancia REAL (vacía o a reformar): diseñar el mueble DENTRO de ella respetando su arquitectura.")
     editingRender: Optional[bool] = Field(False, description="La referencia es un render que ha generado el propio ERP y se le esta aplicando un cambio. Marca la PROCEDENCIA: asi no hay que adivinar si es un croquis, y una cocina blanca no se toma por un dibujo a mano.")
+    editContract: Optional[dict] = Field(None, description="Contrato interno de alcance: propiedad y zona que se pueden modificar, más elementos que deben conservarse.")
 
 
 class RenderComposeRequest(BaseModel):
@@ -700,6 +701,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
         project_type=request.projectType,
         room_photo=bool(request.roomPhoto),
         editing_render=bool(request.editingRender),
+        edit_contract=request.editContract,
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")

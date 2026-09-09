@@ -492,6 +492,12 @@ export default function AIRenderStudio({ state, setState }) {
   // el prompt, en vez de volver a enviar el render regenerado anterior.
   const [editBaseImage, setEditBaseImage] = useState(null);
   const [editAppliedChanges, setEditAppliedChanges] = useState([]);
+  // Campo activo del editor y margen que ocupa el teclado virtual en móvil.
+  // Se usa para que las líneas adicionales de la tabla nunca queden debajo del
+  // teclado en una tableta vertical.
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const focusedEditFieldRef = useRef(null);
+  const editLineRefs = useRef([]);
   // Imagen de un ELEMENTO a copiar (una puerta, un mueble…) para incorporarlo.
   const [editRefImage, setEditRefImage] = useState(null);
   // Electrodomésticos, cámara y nº de variaciones (Tanda 3).
@@ -719,6 +725,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [showMedidas, setShowMedidas] = useState(false);
   // Ref para auto-scroll al panel de render en móvil
   const renderPanelRef = useRef(null);
+
   // Ancho de la ventana COMO ESTADO: antes se leía window.innerWidth durante el
   // render, así que al girar el móvil o cambiar el tamaño la pantalla se
   // quedaba con el ancho de antes.
@@ -731,6 +738,49 @@ export default function AIRenderStudio({ state, setState }) {
     return () => window.removeEventListener('resize', mirar);
   }, []);
   const isWide = () => anchoVentana >= 1024;
+
+  const asegurarCampoEdicionVisible = (node = focusedEditFieldRef.current) => {
+    if (!node || anchoVentana >= 1024) return;
+    const panel = renderPanelRef.current;
+    const viewport = window.visualViewport;
+    const bottomViewport = viewport ? viewport.height : window.innerHeight;
+    const rect = node.getBoundingClientRect();
+    const limiteInferior = Math.min(bottomViewport, panel?.getBoundingClientRect().bottom || bottomViewport) - 18;
+    const limiteSuperior = Math.max(8, panel?.getBoundingClientRect().top || 0) + 8;
+    if (rect.bottom > limiteInferior || rect.top < limiteSuperior) {
+      const delta = rect.bottom > limiteInferior
+        ? rect.bottom - limiteInferior + 24
+        : rect.top - limiteSuperior - 24;
+      if (panel) panel.scrollBy({ top: delta, behavior: 'smooth' });
+      else node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  };
+
+  const enfocarCampoEdicion = (node) => {
+    focusedEditFieldRef.current = node;
+    window.setTimeout(() => asegurarCampoEdicionVisible(node), 120);
+  };
+
+  // En Android el viewport visual se reduce al abrir el teclado, pero el
+  // viewport de layout puede conservar la altura anterior. Medimos esa
+  // diferencia y dejamos un relleno real al final del panel para que la última
+  // fila de la tabla pueda subir por encima del teclado.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport || anchoVentana >= 1024) { setKeyboardInset(0); return undefined; }
+    const medir = () => {
+      const diferencia = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
+      setKeyboardInset(diferencia);
+      if (diferencia > 0) window.setTimeout(() => asegurarCampoEdicionVisible(), 80);
+    };
+    medir();
+    viewport.addEventListener('resize', medir);
+    viewport.addEventListener('scroll', medir);
+    return () => {
+      viewport.removeEventListener('resize', medir);
+      viewport.removeEventListener('scroll', medir);
+    };
+  }, [anchoVentana]);
   // Barra de acciones EN COLUMNA a la derecha. Solo compensa cuando sobra ancho
   // de verdad: el render es 16:9 y casi siempre lo limita el ALTO, así que
   // quitarle 120px de ancho solo sale a cuenta si aun así lo sigue limitando el
@@ -1475,6 +1525,39 @@ export default function AIRenderStudio({ state, setState }) {
          + editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n') + '\n')
       : ''
   );
+
+  // Declara el alcance de una edición localizada. El servidor lo usa como
+  // contrato, no como sugerencia: si solo se piden tiradores en los bajos, los
+  // altos, electrodomésticos, repisas y acabados quedan fuera del alcance.
+  const contratoEdicion = (lineas) => {
+    const texto = (lineas || []).join(' ').toLowerCase();
+    const esTirador = /(tirador|tiradores|gola|manilla|asa)\b/.test(texto);
+    const esBajo = /(\bbajo\b|\bbajos\b|abajo|parte baja|de abajo|módulo bajo|módulos bajos|inferior|inferiores)/.test(texto);
+    if (esTirador) {
+      return {
+        alcance: 'propiedad_localizada',
+        objetivo: 'tiradores',
+        zona: esBajo ? 'módulos bajos' : 'módulos indicados expresamente',
+        conservar: [
+          'muebles altos y sus frentes, puertas, cajones y divisiones',
+          'lavavajillas y su tipo de instalación; si es integrable, debe seguir siendo integrable',
+          'distribución, columnas, electrodomésticos, encimera, suelo, paredes, ventanas y cámara',
+          'no añadir repisas, nichos, baldas decorativas ni elementos de madera no solicitados',
+        ],
+        contexto_aprobado: [description, ...editAppliedChanges].filter(Boolean).join('\n'),
+      };
+    }
+    return {
+      alcance: 'solo_lo_solicitado',
+      objetivo: 'la propiedad y zona descritas en la orden',
+      conservar: [
+        'todo elemento no mencionado expresamente en la orden',
+        'tipo de instalación de los electrodomésticos, incluida la integración del lavavajillas',
+        'distribución, módulos, materiales, cámara e iluminación',
+      ],
+      contexto_aprobado: [description, ...editAppliedChanges].filter(Boolean).join('\n'),
+    };
+  };
 
   // Genera una variante del render actual cambiando SOLO el color de los muebles.
   const colorVariant = async (colorInput) => {
@@ -2811,6 +2894,9 @@ export default function AIRenderStudio({ state, setState }) {
           // Solo una imagen aportada expresamente por el usuario se envía como
           // elemento adicional; no se reintroduce el render anterior como apoyo.
           referenceImages: editRefImage ? [editRefImage] : [],
+          // Contrato de alcance: una orden de tiradores en los bajos no puede
+          // tocar altos, electrodomésticos, repisas ni distribución.
+          editContract: contratoEdicion(allLines),
           // La imagen es un render NUESTRO: se dice, no se deja adivinar. Sin
           // esto el servidor se lo pasaba al detector de croquis, y una cocina
           // blanca —paredes, muebles y encimera blancos— tiene poco color y
@@ -4700,7 +4786,8 @@ export default function AIRenderStudio({ state, setState }) {
             debajo. El master, 25/08, en una tablet de 8,6": «no se ve la
             pantalla completa y no me deja hacer scroll hacia abajo».
             Se recorta solo a lo ancho, que es lo que sí hay que contener. */}
-        <div ref={renderPanelRef} className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 min-h-0 overflow-y-auto overflow-x-hidden bg-slate-50">
+        <div ref={renderPanelRef} className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 min-h-0 overflow-y-auto overflow-x-hidden bg-slate-50"
+          style={keyboardInset > 0 ? { paddingBottom: `${keyboardInset + 32}px`, scrollPaddingBottom: `${keyboardInset + 32}px` } : undefined}>
           {/* Barra superior del área render: botón abrir opciones (móvil) + info */}
           <div className="flex items-center gap-2 mb-2 shrink-0">
             {/* Botón flotante para abrir el drawer de opciones en móvil/tablet */}
@@ -5663,6 +5750,7 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   )}
                   <input value={editInstruction} onChange={e => setEditInstruction(e.target.value)}
+                    onFocus={e => enfocarCampoEdicion(e.currentTarget)}
                     onKeyDown={e => { if (e.key === 'Enter' && !editing && (editInstruction.trim() || editRefImage)) editRender(); }}
                     onPaste={captureClipboardImage}
                     placeholder={editRefImage ? "Opcional: dónde/cómo colocar el elemento…" : "Editar o pega una imagen (Ctrl+V): 'cambia a azul navy', 'añade campana de isla'…"}
@@ -5697,7 +5785,8 @@ export default function AIRenderStudio({ state, setState }) {
                   {editLines.map((line, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-purple-400 w-4 text-center">{idx + 2}</span>
-                      <input value={line} onChange={e => { const copy = [...editLines]; copy[idx] = e.target.value; setEditLines(copy); }}
+                      <input ref={node => { editLineRefs.current[idx] = node; if (node === document.activeElement) focusedEditFieldRef.current = node; }} value={line} onChange={e => { const copy = [...editLines]; copy[idx] = e.target.value; setEditLines(copy); }}
+                        onFocus={e => enfocarCampoEdicion(e.currentTarget)}
                         placeholder={`Cambio adicional ${idx + 2}...`}
                         className="flex-1 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
                       <button onClick={() => setEditLines(prev => prev.filter((_, i) => i !== idx))} title="Eliminar línea"

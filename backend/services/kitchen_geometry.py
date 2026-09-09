@@ -41,7 +41,7 @@ LIMITES = {
     "fondo":          (20, 70),
 }
 
-COLUMNAS_IDS = {"frigorifico", "congelador", "columna_hornos", "despensa", "vinoteca"}
+COLUMNAS_IDS = {"frigorifico", "frigorifico_frances", "congelador", "columna_hornos", "columna_escobero", "despensa", "vinoteca"}
 
 # PIEZAS A MEDIDA: su ancho es el que sea, y NO se ajusta a un estándar de
 # catálogo. No son muebles: son tableros.
@@ -63,7 +63,7 @@ def es_a_medida(elem_id: str) -> bool:
     """¿Es un tablero a medida en vez de un mueble de catálogo?"""
     t = str(elem_id or "").lower()
     return any(p in t for p in PIEZAS_A_MEDIDA)
-ALTOS_IDS = {"microondas"}
+ALTOS_IDS = {"microondas", "sobremodulo", "sobremodulos", "sobre_modulo", "sobre_modulos"}
 
 # Palabras que delatan un mueble ALTO (va colgado a la pared). Importa mucho más
 # de lo que parece: un alzado tiene DOS filas independientes —la de suelo y la
@@ -71,7 +71,7 @@ ALTOS_IDS = {"microondas"}
 # cuela en la fila de suelo, roba sitio a los bajos y la pared "se alarga": es
 # justo lo que pasaba el 05/08 (415 cm de módulos en una pared de 324).
 _PISTAS_ALTO = ("alto", "alacena", "colgado", "sobreencimera", "sobre_encimera",
-                "vitrina", "campana", "extractor", "microondas", "altillo",
+                "vitrina", "campana", "extractor", "microondas", "altillo", "sobremodulo", "sobremódulo", "sobre_modulo", "sobre módulo",
                 "escurreplatos", "cubretermo")
 # ...salvo que la palabra "alto" venga de otra cosa (un "bajo alto" no existe,
 # pero "columna" y "bajo" sí mandan sobre la pista).
@@ -162,7 +162,7 @@ ANCHOS_APARATO = {
     "horno": (60,),
     "microondas": (60,),
     "columna_hornos": (60,),
-    "frigorifico": (60, 90, 120),      # el de 120 es el side by side
+    "frigorifico": (60, 84, 90, 120),   # 84 cm: frigorífico francés; 120: side by side
     "congelador": (60,),
     "vinoteca": (15, 30, 60),
 }
@@ -320,7 +320,12 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             else:
                 anc_snap = int(round(anc))
         else:
-            anc_snap = snap_ancho(anc)
+            # Una cota escrita en el texto/croquis es un dato del proyecto, no
+            # una sugerencia para aproximar al catálogo. Se conserva incluso si
+            # no coincide con los anchos estándar; la validación posterior dirá
+            # si la composición cabe, pero nunca cambia 84 por 80 ni 115 por
+            # 120 silenciosamente.
+            anc_snap = anc if e.get("medida_escrita") else snap_ancho(anc)
             if sin_ancho:
                 # Se dice lo que pasa de verdad, que no es que la medida sea
                 # mala: es que no hay medida. Antes ponía «ancho 0 cm no es
@@ -346,7 +351,16 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         # LA FILA DE UN RINCÓN LA DICE SU TIPO, no una pista en el texto. Un
         # «bajo_rincon_escuadra» lleva la palabra «rincón» y un
         # «alto_rincon_chaflan» también: adivinarlo por el texto es jugársela.
-        fila = _rincones().fila_de(eid) or ("alto" if es_alto(eid, etiqueta) else "bajo")
+        fila_explicita = str(e.get("fila") or "").strip().lower()
+        fila = _rincones().fila_de(eid) or (fila_explicita if fila_explicita in {"alto", "bajo"} else ("alto" if es_alto(eid, etiqueta) else "bajo"))
+        fondo_explicito = e.get("fondo")
+        try:
+            fondo_explicito = float(fondo_explicito) if fondo_explicito not in (None, "") else None
+        except (TypeError, ValueError):
+            fondo_explicito = None
+        if fondo_explicito is not None and not en_rango(fondo_explicito, "fondo"):
+            avisos.append(f"Módulo «{etiqueta}»: fondo {fondo_explicito:g} cm fuera de rango; se conserva solo si se corrige.")
+            fondo_explicito = None
         elementos.append({
             "id": eid,
             "label": etiqueta,
@@ -360,7 +374,7 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             "posicion_cm": max(0, int(round(pos))),
             "ancho": anc_snap,
             "alto": ALTOS_ALTURAS[0] if fila == "alto" else altura_modulo(eid),
-            "fondo": FONDO_ALTOS if fila == "alto" else fondo_modulo(eid),
+            "fondo": (fondo_explicito if fondo_explicito is not None else (FONDO_ALTOS if fila == "alto" else fondo_modulo(eid))),
         })
 
     # ── DE DÓNDE SALE EL ANCHO DE LA PARED ──────────────────────────────────
@@ -592,11 +606,14 @@ def _cuadrar_fila(grupo, pared, pidx, fila, avisos):
             factor = libre / suma_flex if suma_flex else 1
             # Solo se reescala si el ajuste es razonable (±35%). Un desfase mayor
             # significa que faltan o sobran módulos, no que midan otra cosa.
-            if 0.65 <= factor <= 1.35:
+            if 0.65 <= factor <= 1.35 and not any(e.get("medida_escrita") for e in flex):
                 for e in flex:
                     e["ancho"] = snap_ancho(e["ancho"] * factor)
                 avisos.append(f"Pared {pidx+1} ({etiqueta_fila}): módulos ajustados "
                               f"para cuadrar con {objetivo} cm.")
+            elif any(e.get("medida_escrita") for e in flex):
+                avisos.append(f"Pared {pidx+1} ({etiqueta_fila}): se conservan las cotas escritas; "
+                              "no se reescala ningún módulo para hacerlas encajar.")
             elif fila == "bajo" or suma_fijos + suma_flex > objetivo:
                 # En la fila de suelo un descuadre es un problema. En la de altos
                 # NO: es normalísimo que los altos ocupen solo parte de la pared

@@ -2930,13 +2930,18 @@ async def distribucion_desde_texto(payload: dict):
         "estructurada que tenga medidas explícitas. RESPETA LITERALMENTE cada módulo, su orden y sus cotas. "
         "NO completes anchos, fondos, alturas o paredes con medidas típicas ni por conocimiento de catálogo: "
         "si una medida no aparece en la descripción o en el campo medidas, devuelve ese dato como null y no inventes.\n"
+        "REGLA DE PRIORIDAD: si la descripción dice expresamente que es LINEAL o de una sola pared, devuelve tipo=\\\"lineal\\\" y pared_idx=0 para todos los módulos. No conviertas una composición lineal en L, U, paralela o isla por la presencia de columnas, frigorífico o sobremódulos.\n"
+        "La secuencia de cada grupo es literal y se conserva de izquierda a derecha. No ordenes por tamaño, no agrupes módulos parecidos y no dupliques un módulo.\n"
+        "SEPARA LOS NIVELES: los bajos y electrodomésticos apoyados llevan fila=\\\"bajo\\\"; los muebles altos colgados llevan fila=\\\"alto\\\"; los sobremódulos/altillos superiores llevan fila=\\\"alto\\\" y un id que contenga sobremodulo. Una columna de horno o escobero es columna de suelo, fila=\\\"bajo\\\", aunque llegue hasta el techo.\n"
+        "Conserva el fondo solo cuando esté escrito: por ejemplo, un alto de 35 cm y un sobremódulo de 60 cm deben viajar como fondo=35 y fondo=60. Si no está escrito, fondo=null; no lo completes.\n"
+        "Conserva descriptores que cambian el mueble: frigorífico francés, negro, lavavajillas totalmente integrable, dos gavetas, puerta, puertas abatibles horizontales, cajón inferior. Esos descriptores van en label y no autorizan a inventar otros módulos.\n"
         + escala +
         "Devuelve SOLO un JSON con esta forma exacta:\n"
         "{\"tipo\":\"lineal\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":null,\"alto\":null}],"
-        "\"elementos\":[{\"id\":\"cajonera\",\"label\":\"1 cajón + 2 gavetas\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":null}]}.\n"
+        "\"elementos\":[{\"id\":\"cajonera\",\"label\":\"bajo 90 cm, 2 gavetas\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":90,\"fila\":\"bajo\",\"fondo\":null}]}.\n"
         "REGLAS del campo 'id' (palabras clave que entiende el dibujo): frigorifico, congelador, "
-        "columna_hornos, horno, microondas, lavavajillas, fregadero, placa, campana, despensa, vinoteca, "
-        "cajonera (para módulos con cajones/gavetas), mueble (bajo/alto de puerta normal). "
+        "frigorifico_frances, columna_hornos, columna_escobero, horno, microondas, lavavajillas, fregadero, placa, campana, despensa, vinoteca, "
+        "sobremodulo, alto, cajonera (para módulos con cajones/gavetas), mueble (bajo/alto de puerta normal). "
         "No rellenes con anchos estándar: un campo null significa que falta el dato y debe rechazarse. "
         "Para un módulo con cajones/gavetas usa id='cajonera' y en 'label' escribe el recuento EXACTO "
         "(p. ej. '1 cajón + 2 gavetas') para que se dibujen los frentes correctos.\n"
@@ -2962,10 +2967,22 @@ async def distribucion_desde_texto(payload: dict):
     elementos_datos = data.get("elementos") if isinstance(data, dict) else None
     if not isinstance(paredes_datos, list) or not paredes_datos or not isinstance(elementos_datos, list) or not elementos_datos:
         raise HTTPException(status_code=422, detail="La descripción no contiene una distribución medible: faltan paredes o módulos.")
-    if any(_num(p.get("ancho")) <= 0 for p in paredes_datos):
-        raise HTTPException(status_code=422, detail="Falta el ancho real de una pared; no se puede generar un alzado con cotas fiables.")
     if any(_num(e.get("ancho")) <= 0 for e in elementos_datos):
         raise HTTPException(status_code=422, detail="Falta el ancho real de uno o más módulos; no se puede generar un alzado con cotas fiables.")
+    # Si la descripción no da el total de la pared pero sí da todos los bajos
+    # explícitos de una composición lineal, el total se deriva de esa suma. Es
+    # una consecuencia aritmética de datos aportados, no una medida inventada.
+    # Los altos y sobremódulos NO entran en la suma de suelo.
+    if any(_num(p.get("ancho")) <= 0 for p in paredes_datos):
+        if str(data.get("tipo") or "lineal").lower() == "lineal":
+            bajos = [e for e in elementos_datos if str(e.get("fila") or "bajo").lower() == "bajo"]
+            if bajos and all(_num(e.get("ancho")) > 0 for e in bajos):
+                paredes_datos[0]["ancho"] = int(round(sum(_num(e.get("ancho")) for e in bajos)))
+                paredes_datos[0]["ancho_derivado_de_modulos"] = True
+            else:
+                raise HTTPException(status_code=422, detail="Falta el ancho real de una pared; no se puede generar un alzado con cotas fiables.")
+        else:
+            raise HTTPException(status_code=422, detail="Falta el ancho real de una pared; no se puede generar un alzado con cotas fiables.")
     # Una cifra producida por la interpretación no basta por sí sola. Para que
     # pueda entrar en un plano acotado debe estar escrita en el texto o venir en
     # el campo de medidas del formulario. Así no se convierten anchos típicos en
@@ -2979,7 +2996,7 @@ async def distribucion_desde_texto(payload: dict):
         numeros_explicitos.add(ancho_real)
     for pared in paredes_datos:
         ancho_pared = int(round(_num(pared.get("ancho"))))
-        if ancho_pared not in numeros_explicitos and not ancho_real:
+        if ancho_pared not in numeros_explicitos and not ancho_real and not pared.get("ancho_derivado_de_modulos"):
             raise HTTPException(status_code=422, detail="El ancho de una pared no aparece como medida explícita; no se puede generar un alzado fiable.")
         pared["ancho_escrito"] = True
     for elemento in elementos_datos:
