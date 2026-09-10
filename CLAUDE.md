@@ -1224,6 +1224,72 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      guardar el provisional solo se ven **al CERRAR la sesión** — en pantalla
      se veía bien y el churro aparecía después. Hay prueba para cada uno.
 
+35. **AUDITORÍA EXTERNA DEL 10/09/2026 — los nueve hallazgos eran ciertos.**
+   El master trajo un informe hecho por otra IA sobre el commit `ab3e60ca`. Se
+   comprobaron los nueve uno a uno contra el código antes de tocar nada: **los
+   nueve, reales**. Lo que tenían en común es lo de siempre en este repo —
+   ninguno daba un error. El ERP devolvía 200 mientras guardaba una contraseña,
+   doblaba un saldo o dejaba entrar a una sesión cerrada.
+   - **CERRADOS (los cuatro que no tocan permisos, así que no pueden dejar a
+     nadie fuera):**
+     - **Las contraseñas iban al log de errores.** `_log_request_error`
+       guardaba 2.000 caracteres del cuerpo sin filtrar, y solo registra
+       POST/PUT/PATCH/DELETE — que es EXACTAMENTE donde viajan las
+       credenciales. Cada login mal tecleado dejaba la contraseña en claro en
+       `error_log`, sin caducidad. Ahora `services/redaccion_logs.py`: las
+       rutas de credenciales no guardan cuerpo NINGUNO, y en las demás se
+       redacta por NOMBRE de campo, recursivamente y sin separadores
+       (`new_password`, `newPassword` y `api-key` caen con la misma regla). Un
+       cuerpo que no sea JSON no se copia: si no se puede mirar campo a campo,
+       no se puede saber qué lleva.
+     - **Se aceptaban cobros NEGATIVOS.** Solo había tope por arriba, así que
+       un −25 dejaba la factura con `totalPaid = -25` en estado «parcial». No
+       es solo contabilidad: «cobrado del TODO» es una de las dos condiciones
+       que liberan la comisión de un socio (regla 17), así que un cobro
+       negativo mete el pedido en un limbo del que no sale. Cerrado en el
+       servicio Y en el modelo de entrada (`Field(gt=0)`). Un `inf` también se
+       rechaza: pasa cualquier «mayor que cero» y envenena toda suma que toque.
+     - **Y de paso, `to_list(100)` en CUATRO sitios.** Con más de 100 cobros la
+       suma se quedaba corta y la factura parecía a medias para siempre. El
+       candado cazó que había arreglado solo uno.
+     - **Una compra abonaba los renders DOS VECES.** Stripe reintenta los
+       webhooks y puede entregar el mismo evento a la vez; el «mirar si ya está
+       y si no abonar» no basta, porque entre mirar y abonar caben las dos.
+       **Se arregla cambiando el ORDEN**: primero se RESERVA con un
+       `update_one(upsert=True)` —una sola operación atómica— y solo quien la
+       crea abona. El abono se marca aparte (`abonadoAt`), y eso cierra la otra
+       forma de repetir: una caída entre reservar y abonar deja la reserva sin
+       abonar y el reintento la termina. Un índice único NO habría bastado:
+       llega después del abono, así que impide el segundo registro pero no
+       deshace los renders ya dados.
+     - **«Cerrar sesiones» no cerraba nada.** `require_auth` comprobaba la
+       revocación y el refresh NO: el token de acceso caduca en minutos, pero
+       con el de renovación vivo se pedía otro y se seguía dentro. Cada uno
+       tenía la mitad del cierre —el refresh miraba `isActive` y `require_auth`
+       no—.
+   - **PENDIENTES, y son del master porque aprietan permisos o cambian lo que
+     recibe la fábrica:** clientes ajenos que se pueden modificar y borrar; el
+     Excel de presupuestos que saca `projects.find({})` **con coste y margen de
+     toda la casa** —el candado de Rentabilidad rodeado por otra puerta—; las
+     cuentas desactivadas que siguen entrando; **el diseñador aprobando paredes
+     sin medir e inventando 300 × 260** (`m.get("wall_width", 300) or 300`, que
+     además convierte un 0 escrito a propósito en 300); y el bajo fregadero
+     tarifado a 155 puntos en vez de 170 porque `"bajo" in "bajo fregadero"`
+     casa antes que su propia tabla.
+   - **UN DOBLE DE PRUEBA NO PUEDE SER MENOS CAPAZ QUE LA PIEZA REAL.** El
+     `update_one` del doble de Mongo devolvía `None`, así que mirar
+     `upserted_id` —la única forma de saber quién creó el documento en una
+     carrera— reventaba en la prueba y funcionaba en producción. Un doble corto
+     obliga a escribir el código peor de lo que se puede.
+   - **Y EL CANDADO SE ENGAÑÓ CON SU PROPIO COMENTARIO, otra vez.** Buscaba
+     `upsert=True` en el fichero entero y lo encontraba en la nota que EXPLICA
+     el arreglo, 700 caracteres antes que en el código: la mutación «abona
+     antes de reservar» pasaba en verde. Tercera vez en el repo (reglas 24 y
+     34). Los candados que miran ORDEN de ejecución tienen que quitar los
+     comentarios primero — y comprobar que el recorte no se ha comido el
+     código, o pasarían por no encontrar nada.
+   - Candado: `test_calculo_auditoria_10sep.py`. 19 mutaciones, las 19 muertas.
+
 El candado no es esta nota: es `backend/tests/test_calculo_motores_render.py` y
 el resto de `test_calculo_*.py`. Si alguien cambia una de estas cosas, el CI se
 pone en rojo. Ponerlo verde borrando la prueba es exactamente lo que no hay que

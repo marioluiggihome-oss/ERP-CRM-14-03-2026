@@ -196,6 +196,7 @@ from fastapi.responses import JSONResponse as _JSONResponse
 from starlette.exceptions import HTTPException as _StarletteHTTPException
 
 async def _log_request_error(request, status_code, detail, body_text=None):
+    from services.redaccion_logs import cuerpo_para_el_log
     try:
         from datetime import datetime as _dt, timezone as _tz
         doc = {
@@ -204,7 +205,12 @@ async def _log_request_error(request, status_code, detail, body_text=None):
             "path": str(request.url.path),
             "status": status_code,
             "detail": detail,
-            "body": (body_text or "")[:2000],
+            # NUNCA EL CUERPO EN CRUDO. Hasta el 10/09/2026 se guardaban 2.000
+            # caracteres tal cual, y como solo se registran POST/PUT/PATCH/
+            # DELETE —que es donde viajan las credenciales—, cada login fallido
+            # dejaba la CONTRASEÑA EN CLARO en `error_log`. Sin dar un error y
+            # sin caducidad. Ver `services/redaccion_logs.py`.
+            "body": cuerpo_para_el_log(request.url.path, body_text),
         }
         # Solo registrar escrituras (POST/PUT/PATCH/DELETE) para no llenar.
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):

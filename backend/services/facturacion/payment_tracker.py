@@ -7,6 +7,7 @@ Payment Tracker - Gestión de cobros parciales y conciliación
 Permite registrar pagos parciales, calcular deuda pendiente,
 y detectar facturas vencidas automáticamente.
 """
+import math
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
 import uuid
@@ -52,10 +53,36 @@ class PaymentTracker:
         if invoice.get("status") == "cancelled":
             raise ValueError("No se puede registrar un cobro en una factura anulada")
 
+        # UN COBRO ES DINERO QUE ENTRA. Solo había tope por ARRIBA («supera el
+        # pendiente»), así que un -25 pasaba entero: la factura se quedaba con
+        # `totalPaid = -25` y en estado «parcial». Encontrado en la auditoría
+        # externa del 10/09/2026.
+        #
+        # Importa más de lo que parece: «cobrado del TODO» es una de las dos
+        # condiciones que liberan la comisión de un cooperativista (regla 17).
+        # Un cobro negativo mete un pedido en un limbo del que no sale — ni
+        # cobrado ni sin cobrar — y ahí no hay nadie a quien reclamar porque no
+        # salta ningún error.
+        #
+        # Una DEVOLUCIÓN es otra operación, con su motivo y su rastro. No se
+        # hace metiendo un número en negativo por la puerta del cobro.
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            raise ValueError("El importe del cobro no es un número")
+        if not math.isfinite(amount):
+            raise ValueError("El importe del cobro no es un número válido")
+        if amount <= 0:
+            raise ValueError(
+                f"El importe de un cobro tiene que ser mayor que cero (llegó {amount:.2f}€). "
+                "Para una devolución, usa la operación de devolución.")
+
         # Calcular total ya cobrado
         existing_payments = await self.db.payments.find(
             {"invoiceId": invoice_id, "status": "confirmed"}
-        ).to_list(100)
+        ).to_list(None)   # SIN TOPE: con `to_list(100)`, el pago 101 no
+        # entraba en la suma y la factura se quedaba «a medias» para siempre —
+        # y con ella la comisión que espera a que esté cobrada del todo.
         total_paid = sum(p.get("amount", 0) for p in existing_payments)
 
         invoice_total = invoice.get("total", 0)
@@ -117,7 +144,7 @@ class PaymentTracker:
         payments = await self.db.payments.find(
             {"invoiceId": invoice_id},
             {"_id": 0}
-        ).sort("paidAt", -1).to_list(100)
+        ).sort("paidAt", -1).to_list(None)
         return payments
 
     async def get_balance(self, invoice_id: str, invoice_filter: Optional[Dict] = None) -> dict:
@@ -127,10 +154,14 @@ class PaymentTracker:
         if not invoice:
             raise ValueError("Factura no encontrada")
 
+        # SIN TOPE: es el BALANCE de la factura. Con un tope, el pago que se
+        # quedara fuera haria que una factura cobrada del todo pareciera a
+        # medias — y una factura a medias congela la comision del socio para
+        # siempre (regla 17), sin dar ningun error.
         payments = await self.db.payments.find(
             {"invoiceId": invoice_id, "status": "confirmed"},
             {"_id": 0}
-        ).to_list(100)
+        ).to_list(None)
 
         total_paid = sum(p.get("amount", 0) for p in payments)
         invoice_total = invoice.get("total", 0)
@@ -171,7 +202,7 @@ class PaymentTracker:
         # Recalcular estado de la factura
         confirmed = await self.db.payments.find(
             {"invoiceId": invoice_id, "status": "confirmed"}
-        ).to_list(100)
+        ).to_list(None)
         total_paid = sum(p.get("amount", 0) for p in confirmed)
 
         invoice_total = invoice.get("total", 0)

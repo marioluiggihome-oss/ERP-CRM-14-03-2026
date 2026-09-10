@@ -26,6 +26,15 @@ class Cur:
     async def to_list(self, n): return [dict(d) for d in self.docs[:n]]
 
 
+class _Resultado:
+    """Lo que devuelve `update_one` en Motor: `upserted_id` es lo que dice si
+    ESTA llamada creó el documento o se encontró uno que ya estaba."""
+    def __init__(self, matched=0, upserted_id=None):
+        self.matched_count = matched
+        self.modified_count = matched
+        self.upserted_id = upserted_id
+
+
 class Coll:
     def __init__(self): self.docs = []
     async def find_one(self, flt, proj=None):
@@ -35,14 +44,24 @@ class Coll:
     def find(self, flt=None, proj=None): return Cur([d for d in self.docs if _match(d, flt or {})])
     async def insert_one(self, d): self.docs.append(dict(d))
     async def update_one(self, flt, upd, upsert=False):
+        # DEVUELVE UN RESULTADO, COMO EL DRIVER DE VERDAD. Antes devolvía
+        # `None`, así que este doble era MENOS CAPAZ que Mongo: cualquier
+        # código que mirase `upserted_id` —que es la única forma de saber quién
+        # creó el documento en una carrera— reventaba aquí y funcionaba en
+        # producción. Un doble que no sabe hacer lo que hace la pieza real
+        # obliga a escribir el código peor de lo que se puede, o esconde que se
+        # ha escrito mejor. (10/09/2026, al hacer idempotente el abono.)
         for d in self.docs:
             if _match(d, flt):
                 for k, v in upd.get('$inc', {}).items(): d[k] = d.get(k, 0) + v
-                d.update(upd.get('$set', {})); return
+                d.update(upd.get('$set', {}))
+                return _Resultado(matched=1, upserted_id=None)
         if upsert:
             nd = dict(flt); nd.update(upd.get('$setOnInsert', {})); nd.update(upd.get('$set', {}))
             for k, v in upd.get('$inc', {}).items(): nd[k] = nd.get(k, 0) + v
             self.docs.append(nd)
+            return _Resultado(matched=0, upserted_id=nd.get('id') or 'nuevo')
+        return _Resultado(matched=0, upserted_id=None)
 
 
 class DB:

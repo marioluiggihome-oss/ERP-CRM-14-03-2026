@@ -118,29 +118,67 @@ async def webhook(request: Request):
         return {"received": True, "ignorado": True}
 
     db = get_db()
-    # Stripe REINTENTA los webhooks. Sin esto, un reintento abonaria el pack dos
-    # veces. El id de sesion es unico por compra.
-    ya = await db.render_pack_purchases.find_one({"sessionId": datos["sessionId"]}, {"_id": 0, "id": 1})
-    if ya:
-        return {"received": True, "duplicado": True}
+
+    # ─── QUE UNA COMPRA ABONE UNA VEZ, Y SOLO UNA ────────────────────────────
+    #
+    # Stripe REINTENTA los webhooks, y puede entregar el mismo evento DOS VECES
+    # A LA VEZ. Aqui habia un «mirar si ya esta y si no abonar», que parece
+    # bastar y no basta: entre MIRAR y ABONAR caben las dos entregas, las dos
+    # ven que no esta, y las dos abonan. Un pack de 20 se convierte en 40.
+    # Encontrado en la auditoria externa del 10/09/2026, reproducido con dos
+    # entregas simultaneas.
+    #
+    # SE ARREGLA CAMBIANDO EL ORDEN, no anadiendo comprobaciones. Primero se
+    # RESERVA la compra con un `update_one(upsert=True)` sobre el id de sesion:
+    # es UNA sola operacion atomica en Mongo, asi que de dos entregas a la vez
+    # solo una la crea. Y solo la que la crea abona.
+    #
+    # EL ABONO SE MARCA APARTE (`abonadoAt`), y eso cierra la otra forma de
+    # repetir: si el servidor se cae entre reservar y abonar, el reintento de
+    # Stripe encuentra la reserva SIN abonar y termina el trabajo. Con el orden
+    # de antes, una caida en ese hueco dejaba el saldo dado y la compra sin
+    # registrar, asi que el siguiente reintento volvia a abonar.
+    #
+    # Un indice unico en `sessionId` NO habria bastado: llega despues del abono,
+    # o sea que impide el segundo REGISTRO pero no deshace los renders ya dados.
+    reserva = await db.render_pack_purchases.update_one(
+        {"sessionId": datos["sessionId"]},
+        {"$setOnInsert": {
+            "id": f"pack-{uuid.uuid4().hex[:8]}",
+            "sessionId": datos["sessionId"],
+            "user_id": datos["user_id"],
+            "renders": datos["renders"],
+            "pack": datos["pack_id"],
+            "price": datos["importe"],
+            "name": (stripe_pagos.RENDER_PACKS.get(datos["pack_id"]) or {}).get("name", ""),
+            "email": datos.get("email", ""),
+            "origen": "stripe",
+            "grantedBy": "",
+            "plataforma": datos.get("plataforma") or "cooperativa",
+            "organizationId": datos.get("organization_id") or "",
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "abonadoAt": None,
+        }},
+        upsert=True,
+    )
+
+    if reserva.upserted_id is None:
+        # Ya existia: o se abono del todo, o se quedo a medias por una caida.
+        previa = await db.render_pack_purchases.find_one(
+            {"sessionId": datos["sessionId"]}, {"_id": 0, "abonadoAt": 1}) or {}
+        if previa.get("abonadoAt"):
+            return {"received": True, "duplicado": True}
+        logger.warning(
+            "render-packs webhook: la compra %s estaba reservada SIN abonar "
+            "(caida entre reservar y abonar). Se termina ahora.",
+            datos["sessionId"])
 
     from services.ai_usage import añadir_saldo
     saldo = await añadir_saldo(datos["user_id"], datos["renders"])
-    await db.render_pack_purchases.insert_one({
-        "id": f"pack-{uuid.uuid4().hex[:8]}",
-        "sessionId": datos["sessionId"],
-        "user_id": datos["user_id"],
-        "renders": datos["renders"],
-        "pack": datos["pack_id"],
-        "price": datos["importe"],
-        "name": (stripe_pagos.RENDER_PACKS.get(datos["pack_id"]) or {}).get("name", ""),
-        "email": datos.get("email", ""),
-        "origen": "stripe",
-        "grantedBy": "",
-        "plataforma": datos.get("plataforma") or "cooperativa",
-        "organizationId": datos.get("organization_id") or "",
-        "createdAt": datetime.now(timezone.utc).isoformat(),
-    })
+    await db.render_pack_purchases.update_one(
+        {"sessionId": datos["sessionId"]},
+        {"$set": {"abonadoAt": datetime.now(timezone.utc).isoformat()}},
+    )
     logger.info("render-packs: abonados %d renders a %s (saldo %d)",
                 datos["renders"], datos["user_id"], saldo)
     return {"received": True, "renders": datos["renders"], "saldo": saldo}

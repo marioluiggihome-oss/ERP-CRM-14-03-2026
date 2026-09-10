@@ -13,7 +13,7 @@ from pymongo import ReturnDocument
 import re as _re
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import logging
 import os
 import io
@@ -879,7 +879,10 @@ async def export_accounting(req: ExportRequest, current_user: dict = Depends(req
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class PaymentCreate(BaseModel):
-    amount: float
+    # `gt=0`: los DOS cierres, aquí y en el servicio. El modelo rechaza antes de
+    # llegar y da un mensaje claro; el servicio protege a quien lo llame por
+    # otro camino. Un cierre solo en la puerta se rodea por la ventana.
+    amount: float = Field(gt=0, description="Importe del cobro, en euros. Siempre positivo.")
     paymentMethod: str = "transferencia"
     reference: Optional[str] = None
     notes: Optional[str] = None

@@ -218,6 +218,15 @@ async def refresh_token(request: Request, data: dict):
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no encontrado")
         
+        # LA MISMA PUERTA QUE EL RESTO. `require_auth` sí comprobaba la
+        # revocación y el refresh NO, así que «cerrar todas las sesiones» no
+        # cerraba nada: el token de acceso caduca en minutos, pero con el de
+        # renovación todavía vivo se pedía otro y se seguía dentro. El corte
+        # parecía hecho y no lo estaba. Auditoría externa del 10/09/2026.
+        from services.sesiones import token_revocado
+        if await token_revocado(payload):
+            raise HTTPException(status_code=401, detail="Sesión cerrada. Vuelve a entrar.")
+
         if not user.get("isActive", True):
             raise HTTPException(status_code=401, detail="Cuenta desactivada")
         
