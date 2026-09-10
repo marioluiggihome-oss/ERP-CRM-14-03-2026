@@ -29,6 +29,8 @@ import re
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ORIGINAL = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
 CLON = os.path.join(RAIZ, "frontend", "src", "components", "Estudio3DLab.jsx")
+PANEL_PREMIUM = os.path.join(RAIZ, "frontend", "src", "components", "premium", "PremiumDesignPanel.jsx")
+LAYOUT_PREMIUM = os.path.join(RAIZ, "frontend", "src", "components", "premium", "premiumLayout.js")
 
 # Las piezas que DECIDEN qué imagen sale. Si una se pierde en el clon, los dos
 # renders dejan de ser comparables aunque la pantalla siga funcionando.
@@ -162,3 +164,26 @@ def test_el_clon_SE_REGENERA_con_la_herramienta():
     assert r.returncode == 0, (
         "el clon NO está al día con el original:\n" + r.stdout + r.stderr +
         "\nEjecuta: python3 herramientas/sincronizar_clon_estudio3d.py")
+
+
+def test_premium_revisa_una_sola_distribucion_antes_de_gastar_creditos():
+    """El panel no puede volver a ser un cuestionario ornamental desconectado.
+
+    La distribución que el usuario corrige es la misma que se serializa como
+    contrato obligatorio y el render con croquis queda bloqueado hasta que se
+    confirme explícitamente.
+    """
+    clon = _leer(CLON)
+    panel = _leer(PANEL_PREMIUM)
+    layout = _leer(LAYOUT_PREMIUM)
+    assert "Leer croquis y módulos" in panel
+    assert "Confirmar esta distribución" in panel
+    assert "premiumLayoutConfirmation !== JSON.stringify(distDetectada.distribucion)" in clon
+    assert "detectedDistributionPrompt(distribution)" in clon
+    assert "DISTRIBUCIÓN REVISADA Y CONFIRMADA POR EL USUARIO" in layout
+
+
+def test_premium_no_muestra_el_antiguo_panel_teorico():
+    panel = _leer(PANEL_PREMIUM)
+    for texto in ("Diseñado para vivir", "CRITERIOS DEL ENCARGO", "Descargar encargo", "Recuperar copia"):
+        assert texto not in panel, f"ha vuelto al panel PREMIUM el bloque sin uso: {texto}"
