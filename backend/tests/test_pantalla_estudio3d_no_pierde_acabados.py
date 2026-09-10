@@ -254,3 +254,59 @@ def test_LA_RUTA_ACEPTA_Y_PROPAGA_EL_CONTRATO():
         router = f.read()
     assert "editContract: Optional[dict]" in router
     assert "edit_contract=request.editContract" in router
+
+
+def test_LA_ORDEN_NUEVA_NO_REEJECUTA_EL_HISTORIAL():
+    """El historial conserva contexto visual, pero no vuelve como orden activa."""
+    cuerpo = sin_comentarios(_lee())
+    inicio = cuerpo.index("const editRender = async")
+    bloque = cuerpo[inicio:cuerpo.index("const mejorarIluminacion", inicio)]
+    assert "const cambio = `NUEVO CAMBIO QUE DEBES APLICAR AHORA:" in bloque
+    assert "const cambio = `${historial}" not in bloque
+
+
+def test_LA_EDICION_AMBIGUA_SE_BLOQUEA_ANTES_DE_ENVIAR():
+    """Una línea sin propiedad concreta no debe consumir un render ni rediseñar."""
+    cuerpo = sin_comentarios(_lee())
+    assert "alcance: 'bloqueado'" in cuerpo
+    assert "No se aplicó ningún cambio para evitar alterar el diseño" in cuerpo
+    assert "const contratoActual = contratoEdicion(allLines)" in cuerpo
+
+
+def test_EL_CONTRATO_NO_REENVIA_CONTEXTO_TEXTUAL_HISTORICO():
+    ruta = os.path.join(RAIZ, "backend", "services", "luiggi_ai", "render_3d.py")
+    with open(ruta, encoding="utf-8") as f:
+        servicio = f.read()
+    assert "La imagen principal aprobada es la autoridad visual" in servicio
+    assert "Contexto aprobado ya existente; úsalo solo" not in servicio
+
+
+def test_LA_FOTO_BORRADA_NO_SE_REINSERTA_EN_EL_AUTO_GUARDADO():
+    cuerpo = sin_comentarios(_lee())
+    assert "const histBorradas = useRef(new Set())" in cuerpo
+    assert "histBorradas.current.has(src)" in cuerpo
+    assert "histBorradas.current.add(src)" in cuerpo
+    assert "histBorradasIds.current.add(item.guardadaId)" in cuerpo
+    assert "histBorradasIds.current.has(im.id)" in cuerpo
+    assert "histVistas.current.delete(src)" in cuerpo
+
+
+def test_AL_ABRIR_SOLO_SE_USA_EL_HISTORIAL_PERSISTENTE_VIGENTE():
+    cuerpo = sin_comentarios(_lee())
+    assert "setRenderResult(null)" in cuerpo
+    assert "const fotosValidas = await cargarHistorialGuardado(dsg.id, 0)" in cuerpo
+    assert "setRenderResult(fotosValidas[0])" in cuerpo
+    assert "setRenderResult(null)" in cuerpo
+
+
+def test_COMPARAR_USA_SIEMPRE_EL_DIBUJO_INICIAL():
+    cuerpo = sin_comentarios(_lee())
+    assert "const referenciaInicial = originalRef || refImage;" in cuerpo
+    assert "compareOn && referenciaInicial && renderResult?.result?.images?.[0]" in cuerpo
+    assert "pdfComparePreview || referenciaInicial" in cuerpo
+    assert 'alt="Dibujo inicial"' in cuerpo
+
+
+def test_EL_GUARDADO_PERSISTE_LA_PRIMERA_REFERENCIA():
+    cuerpo = sin_comentarios(_lee())
+    assert "referenceImage: originalRef ? await shrinkForSave(originalRef) : refSave" in cuerpo
