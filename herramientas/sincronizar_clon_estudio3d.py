@@ -27,6 +27,7 @@ dos sean comparables.
 Lo vigila `test_pantalla_clon_estudio3d.py`, que mide la distancia entre los
 dos y exige que el clon conserve las piezas que deciden el render.
 """
+from extensiones_estudio_premium import CAMBIOS_PREMIUM
 import argparse
 import os
 import sys
@@ -54,7 +55,9 @@ CABECERA = '''
  * LO ÚNICO QUE CAMBIA RESPECTO AL ORIGINAL:
  *   · el botón IA PREMIUM (motor `chatgpt`), que aquí existe y allí no;
  *   · el nombre del componente.
- * Todo lo demás es idéntico A PROPÓSITO.
+ * PREMIUM incorpora dirección de diseño y revisión de módulos autorizadas
+ * por Mario (10/09/2026), desde extensiones_estudio_premium.py.
+ * Los otros motores conservan su flujo original.
  */'''
 
 # Las DOS diferencias, con su ancla. Si un ancla ya no aparece exactamente una
@@ -90,7 +93,7 @@ def generar():
     i = src.index("*/") + 2
     src = src[:i] + CABECERA + src[i:]
 
-    for que, viejo, nuevo in CAMBIOS:
+    for que, viejo, nuevo in CAMBIOS + CAMBIOS_PREMIUM:
         n = src.count(viejo)
         if n != 1:
             raise SystemExit(

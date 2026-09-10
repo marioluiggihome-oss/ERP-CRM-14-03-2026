@@ -101,7 +101,7 @@ def test_el_clon_se_llama_distinto_y_no_pisa_al_original():
         "nada que mirar")
 
 
-def test_lo_UNICO_que_los_separa_es_el_boton_premium():
+def test_el_clon_limita_las_extensiones_a_premium():
     """Se MIDE la distancia, no se confía en que nadie la mueva.
 
     Si alguien empieza a mejorar el clon «ya que es de pruebas», esta prueba se
@@ -114,8 +114,9 @@ def test_lo_UNICO_que_los_separa_es_el_boton_premium():
     cambiadas = [l for l in dif if (l.startswith("+") or l.startswith("-"))
                  and not l.startswith(("+++", "---"))]
     # Cabecera del clon (~26 líneas), el nombre del componente, el botón y su
-    # traducción, y el comentario que los explica. Con holgura: 80.
-    assert len(cambiadas) <= 80, (
+    # traducción y extensiones PREMIUM autorizadas el 10/09. El original
+    # permanece intacto y la regeneración exacta se verifica por separado.
+    assert len(cambiadas) <= 150, (
         f"el clon y el original se han separado en {len(cambiadas)} líneas. El "
         f"clon existe para comparar MOTORES con todo lo demás igual; con esta "
         f"distancia, lo que se vea en los dos renders ya no es el motor. "
