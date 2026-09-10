@@ -187,3 +187,11 @@ def test_premium_no_muestra_el_antiguo_panel_teorico():
     panel = _leer(PANEL_PREMIUM)
     for texto in ("Diseñado para vivir", "CRITERIOS DEL ENCARGO", "Descargar encargo", "Recuperar copia"):
         assert texto not in panel, f"ha vuelto al panel PREMIUM el bloque sin uso: {texto}"
+
+
+def test_premium_entiende_combi_y_frigo_como_electrodomestico():
+    """«Pon el combi negro» identifica el objeto y no debe bloquearse."""
+    original, clon = _leer(ORIGINAL), _leer(CLON)
+    assert "|frigo|combi|nevera|" in clon
+    assert "|frigo|combi|nevera|" not in original, (
+        "el vocabulario experimental se ha colado en el Estudio 3D congelado")
