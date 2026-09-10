@@ -26,6 +26,39 @@ export function layoutPrompt(rows = []) {
   const { groups } = layoutReview(rows);
   return 'RELACIÓN DE MÓDULOS DEL USUARIO (orden de izquierda a derecha en cada pared y nivel):\n' + groups.map(g => `${g.label}: ${g.rows.map(r => `${r.type || 'tipo pendiente'} · ${r.width || '?'} cm${r.detail ? ` · ${r.detail}` : ''}${r.confirmed ? '' : ' [PENDIENTE, NO INVENTAR]'}`).join(' → ')}`).join('\n') + '\nLos anchos de niveles distintos no se suman entre sí. Una columna ocupa también la altura: no colocar altos encima de ella salvo indicación expresa. Los totales son sumas de módulos, no medidas de pared ni validaciones de encaje.';
 }
+
+export function detectedDistributionPrompt(distribution) {
+  if (!distribution || !Array.isArray(distribution.paredes) || !Array.isArray(distribution.elementos)) return '';
+  const levelOf = item => /sobrem[oó]dulo|altillo/i.test(`${item.id || ''} ${item.label || ''}`)
+    ? 'Sobremódulos'
+    : item.fila === 'alto' ? 'Altos' : 'Bajos y columnas';
+  const lines = [];
+  distribution.paredes.forEach((wall, wallIndex) => {
+    const wallName = String(wall.nombre || `Pared ${wallIndex + 1}`).trim();
+    const width = Number(wall.ancho);
+    const wallMeasure = Number.isFinite(width) && width > 0
+      ? ` · ancho ${width} cm${wall.ancho_escrito || wall.ancho_corregido ? ' confirmado' : ' estimado'}`
+      : '';
+    lines.push(`${wallName}${wallMeasure}`);
+    ['Bajos y columnas', 'Altos', 'Sobremódulos'].forEach(level => {
+      const items = distribution.elementos
+        .filter(item => Number(item.pared_idx || 0) === wallIndex && levelOf(item) === level)
+        .sort((a, b) => Number(a.posicion_cm || 0) - Number(b.posicion_cm || 0));
+      if (!items.length) return;
+      lines.push(`  ${level}, de izquierda a derecha: ${items.map(item => {
+        const itemWidth = Number(item.ancho);
+        const measure = Number.isFinite(itemWidth) && itemWidth > 0 ? `${itemWidth} cm` : 'ancho no indicado';
+        return `${String(item.label || item.id || 'módulo').trim()} · ${measure}`;
+      }).join(' → ')}`);
+    });
+  });
+  return [
+    'DISTRIBUCIÓN REVISADA Y CONFIRMADA POR EL USUARIO — CONTRATO OBLIGATORIO:',
+    distribution.tipo ? `Forma: ${String(distribution.tipo).toUpperCase()}.` : '',
+    ...lines,
+    'Conservar exactamente estas paredes, niveles, secuencias y módulos. No añadir, suprimir, fusionar, duplicar ni trasladar elementos.',
+  ].filter(Boolean).join('\n');
+}
 export function moveModule(rows, id, direction) {
   const next = [...rows], at = next.findIndex(r => r.id === id);
   const to = at + direction;

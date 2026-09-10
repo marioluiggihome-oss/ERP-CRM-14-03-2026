@@ -1,11 +1,10 @@
 /* © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT] */
 .premium-design{margin:12px;border:1px solid #d8d4cb;border-radius:18px;background:#fcfaf6;color:#263d39;overflow:hidden;flex-shrink:0;font-family:inherit}
-.premium-design__header{padding:22px 20px;background:#203d38;color:#fff}
+.premium-design__header{padding:13px 15px;background:#203d38;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .premium-design__eyebrow{font-size:10px;letter-spacing:.22em;color:#d7c7a6;font-weight:700}
-.premium-design h2{font-size:24px;line-height:1.2;letter-spacing:-.035em;margin:12px 0;font-weight:600}
-.premium-design h2 em{font-family:Georgia,serif;font-weight:400;color:#e7d9be}
-.premium-design__header p{font-size:12px;line-height:1.6;color:#e1e9e5;margin:0 0 14px}
-.premium-design__local{display:inline-block;border:1px solid #6d857b;border-radius:20px;padding:5px 9px;font-size:10px;color:#f2eadb}
+.premium-design__header strong{font-size:13px;color:#fff;margin-top:3px}
+.premium-design__status{font-size:9px;line-height:1.25;text-align:center;border:1px solid #a98e5e;border-radius:14px;padding:5px 8px;color:#f2eadb;max-width:108px}
+.premium-design__status.is-ready{background:#dcecdf;border-color:#8eb398;color:#1f5130}
 .premium-design__tabs{display:flex;border-bottom:1px solid #dedbd3;padding:0 10px;background:#f1eee7}
 .premium-design__tabs button{flex:1;padding:13px 4px;font-size:12px;font-weight:600;border-bottom:2px solid transparent;color:#52605a}
 .premium-design__tabs button[aria-pressed=true]{color:#203d38;border-color:#203d38;background:#fcfaf6}
@@ -43,6 +42,11 @@
 .premium-design__add{width:100%;padding:11px;border:1px dashed #6d8373;border-radius:9px;font-size:12px;color:#203d38;background:#edf1e9}
 .premium-design__group{margin-top:12px;font-size:11px}.premium-design__group svg{width:100%;margin-top:6px}.premium-design__group span{display:block;margin-top:3px;color:#58665e}
 .premium-design__empty{font-size:12px;padding:15px;border:1px dashed #c8cec3;border-radius:9px;line-height:1.7}
+.premium-design__workflow{border:1px solid #d4d9d0;border-radius:12px;padding:12px;background:#fff;margin-top:14px}
+.premium-design__workflow p{margin:0 0 10px}.premium-design__workflow p span,.premium-design__detected span{display:block;font-size:10px;line-height:1.5;color:#5d6962;margin-top:3px}
+.premium-design__workflow>button,.premium-design__detected button{width:100%;border:0;border-radius:9px;padding:10px;background:#4f55b5;color:#fff;font-size:11px;font-weight:800}
+.premium-design__detected{margin-top:11px;padding-top:11px;border-top:1px solid #e2e5df}.premium-design__detected button{margin-top:9px;background:#203d38}.premium-design__detected button.is-ready{background:#2f7045}
+.premium-design__warning{font-size:10px;line-height:1.55;background:#fff4dc;border:1px solid #ecd39c;color:#76581c;border-radius:9px;padding:9px;margin:10px 0 0}
 .premium-design__transfer{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px;font-size:11px}
 .premium-design__transfer button,.premium-design__transfer label{border:1px solid #c8cec3;padding:8px;border-radius:7px;cursor:pointer;background:white}
 .premium-design__transfer input{display:block;max-width:100%;font-size:10px;margin-top:6px}
