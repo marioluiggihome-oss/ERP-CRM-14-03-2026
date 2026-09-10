@@ -70,7 +70,7 @@ function BarraAnalisis({ texto, hechas, total }) {
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import PremiumDesignPanel from './premium/PremiumDesignPanel';
 import { withPremiumDirection, normalizeBrief } from './premium/premiumBrief';
-import { layoutReview } from './premium/premiumLayout';
+import { detectedDistributionPrompt } from './premium/premiumLayout';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap, Printer } from 'lucide-react';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
@@ -539,6 +539,7 @@ export default function Estudio3DLab({ state, setState }) {
   //  botón.)
   const [motor, setMotor] = useState('ia0');
   const [premiumBrief, setPremiumBrief] = useState(null);
+  const [premiumLayoutConfirmation, setPremiumLayoutConfirmation] = useState('');
   // ─── LO QUE VA A COSTAR, ANTES DE PULSAR ─────────────────────────────────
   //
   // El coste en créditos depende del motor (25/08). Pero el aviso NO PUEDE
@@ -1516,7 +1517,12 @@ export default function Estudio3DLab({ state, setState }) {
     const extra = `${medidasTexto()}${rinconTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
     const conExtra = extra ? `${extra}\n${desc}` : desc;
     // Contexto de tipo de mueble (permisos por partidas): guía al motor de IA.
-    return withPremiumDirection(motor, `[Tipo de proyecto: ${tipoActual.label}]\n${conExtra}`, premiumBrief);
+    const distribution = distDetectada?.distribucion;
+    const confirmedLayout = motor === 'premium' && distribution && premiumLayoutConfirmation === JSON.stringify(distribution)
+      ? detectedDistributionPrompt(distribution) : '';
+    const prompt = `[Tipo de proyecto: ${tipoActual.label}]\n${confirmedLayout ? `${confirmedLayout}\n` : ''}${conExtra}`;
+    const directedBrief = confirmedLayout ? { ...normalizeBrief(premiumBrief), modules: [] } : premiumBrief;
+    return withPremiumDirection(motor, prompt, directedBrief);
   };
 
   // Estimación de precio ORIENTATIVA a partir de medidas + materiales + equipamiento.
@@ -3657,7 +3663,7 @@ export default function Estudio3DLab({ state, setState }) {
     } catch (e) { setError(`No se pudo cargar la lista de proyectos: ${e.message || 'error de conexión'}`); }
   };
   const loadDesign = async (dsg) => {
-    setPremiumBrief(null);
+    setPremiumBrief(null); setPremiumLayoutConfirmation('');
     setCliente(dsg.cliente || ''); setRef(dsg.ref || ''); setDescription(dsg.description || '');
     if (dsg.style) elegirParams({ style: dsg.style });
     setSavedId(dsg.id); setSavedList(null);
@@ -3840,7 +3846,7 @@ export default function Estudio3DLab({ state, setState }) {
   };
 
   const nuevoProyecto = () => {
-    setPremiumBrief(null);
+    setPremiumBrief(null); setPremiumLayoutConfirmation('');
     setCliente(''); setRef(''); setSavedId(null); setRenderResult(null); setRenderHistory([]);
     setDescription(''); setRefImage(null); setRefImages([]); setSameProjectRefs(false); setOriginalRef(null); setFloorPlan(null); setWallSketches([]);
     setEditInstruction(''); setEditLines([]); setEditRefImage(null);
@@ -4036,8 +4042,7 @@ export default function Estudio3DLab({ state, setState }) {
       const brief = normalizeBrief(premiumBrief);
       if (brief.scene === 'obra' && !refImage && !refImages.length) { setError('Añade la foto de obra en las referencias del proyecto.'); return; }
       if (brief.scene === 'croquis' && !floorPlan && !wallSketches.length && !refImage && !refImages.length) { setError('Añade el croquis en planos o referencias del proyecto.'); return; }
-      const pending = layoutReview(brief.modules).issues;
-      if (pending.length) { setError(`Revisa la relación PREMIUM: ${pending.slice(0, 3).join(' ')}`); return; }
+      if (brief.scene === 'croquis' && (!distDetectada?.distribucion || premiumLayoutConfirmation !== JSON.stringify(distDetectada.distribucion))) { setError('Lee el croquis, revisa la distribución detectada y pulsa «Confirmar esta distribución» antes de gastar créditos.'); return; }
     }
     if (!floorPlan && wallSketches.length === 0) return;
     resetEditChain();
@@ -4085,8 +4090,7 @@ export default function Estudio3DLab({ state, setState }) {
       const brief = normalizeBrief(premiumBrief);
       if (brief.scene === 'obra' && !refImage && !refImages.length) { setError('Añade la foto de obra en las referencias del proyecto.'); return; }
       if (brief.scene === 'croquis' && !floorPlan && !wallSketches.length && !refImage && !refImages.length) { setError('Añade el croquis en planos o referencias del proyecto.'); return; }
-      const pending = layoutReview(brief.modules).issues;
-      if (pending.length) { setError(`Revisa la relación PREMIUM: ${pending.slice(0, 3).join(' ')}`); return; }
+      if (brief.scene === 'croquis' && (!distDetectada?.distribucion || premiumLayoutConfirmation !== JSON.stringify(distDetectada.distribucion))) { setError('Lee el croquis, revisa la distribución detectada y pulsa «Confirmar esta distribución» antes de gastar créditos.'); return; }
     }
     const hasRef = Boolean(refImage || refImages.length || floorPlan || wallSketches.length);
     if (!description.trim() && !hasRef) {
@@ -4236,8 +4240,7 @@ export default function Estudio3DLab({ state, setState }) {
       const brief = normalizeBrief(premiumBrief);
       if (brief.scene === 'obra' && !refImage && !refImages.length) { setError('Añade la foto de obra en las referencias del proyecto.'); return; }
       if (brief.scene === 'croquis' && !floorPlan && !wallSketches.length && !refImage && !refImages.length) { setError('Añade el croquis en planos o referencias del proyecto.'); return; }
-      const pending = layoutReview(brief.modules).issues;
-      if (pending.length) { setError(`Revisa la relación PREMIUM: ${pending.slice(0, 3).join(' ')}`); return; }
+      if (brief.scene === 'croquis' && (!distDetectada?.distribucion || premiumLayoutConfirmation !== JSON.stringify(distDetectada.distribucion))) { setError('Lee el croquis, revisa la distribución detectada y pulsa «Confirmar esta distribución» antes de gastar créditos.'); return; }
     }
     if (!refImage) { setError('Sube primero la FOTO de la estancia real (botón «Subir imagen(es) de referencia»).'); return; }
     if (isGenerating) return;
@@ -4481,7 +4484,7 @@ export default function Estudio3DLab({ state, setState }) {
               <X size={18} />
             </button>
           </div>
-          {motor === 'premium' && <PremiumDesignPanel value={premiumBrief} onChange={setPremiumBrief} disabled={isGenerating || editing} />}
+          {motor === 'premium' && <PremiumDesignPanel value={premiumBrief} onChange={setPremiumBrief} disabled={isGenerating || editing} onDetectLayout={detectarDistribucion} detectingLayout={detectandoDist} detectedLayout={distDetectada} layoutConfirmed={Boolean(distDetectada?.distribucion) && premiumLayoutConfirmation === JSON.stringify(distDetectada.distribucion)} onConfirmLayout={() => distDetectada?.distribucion && setPremiumLayoutConfirmation(JSON.stringify(distDetectada.distribucion))} />}
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-4 gap-3 bg-slate-50/50">
