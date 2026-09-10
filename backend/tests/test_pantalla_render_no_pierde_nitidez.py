@@ -70,11 +70,22 @@ def test_ninguna_edicion_guarda_una_imagen_agrandada():
 # Desde el 07/09/2026 son CUATRO: se añadió «pintar encima del render»
 # (`aplicarPintado`), que también devuelve una imagen editada y por tanto tiene
 # el mismo problema.
+#
+# Y desde el 10/09/2026 son CINCO: «Mejorar a acabado PREMIUM»
+# (`mejorarAcabadoPremium`), que coge el render aprobado y lo devuelve mejorado.
+# Es una edición como las demás y guarda lo que devuelve el modelo.
+#
+# LA LISTA ESTÁ ESCRITA A MANO Y ESO TIENE UN PRECIO: se queda corta el día que
+# alguien añade un botón, y entonces el candado no protege al botón nuevo — que
+# es justo el que más falta le hace. Por eso el recuento de abajo compara el
+# número de guardados REALES con el de la lista: si aparece uno sin declarar,
+# esto se pone rojo y obliga a nombrarlo. Es la red que cazó este quinto.
 EDICIONES_QUE_GUARDAN = (
     ("visitaDecorador", "Decorador/a"),
     ("editRender", "Aplicar cambio"),
     ("colorVariant", "Variante de color"),
     ("aplicarPintado", "Pintar encima"),
+    ("mejorarAcabadoPremium", "Acabado PREMIUM"),
 )
 
 

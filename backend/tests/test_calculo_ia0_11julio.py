@@ -126,7 +126,19 @@ def test_comparar_pdf_usa_preview_sin_sustituir_el_original():
     assert "pdf_base64_to_png_base64(stripped, dpi=180, max_pages=1)" in ruta
     assert "const [pdfComparePreview, setPdfComparePreview] = useState(null);" in ui
     assert "body: JSON.stringify({ fileBase64: referencia })" in ui
-    assert "pdfComparePreview || originalRef || refImage" in ui
+    # Lo que importa es que la vista previa del PDF MANDE sobre la referencia,
+    # no cómo se llame la referencia. El 10/09 `originalRef || refImage` se
+    # extrajo a una variable con nombre y esto se puso rojo sin que nada se
+    # hubiera roto.
+    # SE CUENTAN LOS DOS SITIOS. La comparativa pinta la referencia en DOS
+    # puntos, y comprobar que exista «alguno» dejaba pasar romper uno: una
+    # mutación quitó la vista previa de una de las dos y el candado siguió
+    # verde. Los dos o ninguno.
+    veces = len(re.findall(r"pdfComparePreview \|\| \w+", ui))
+    assert veces >= 2, (
+        f"la vista previa del PDF manda sobre la referencia en {veces} sitio(s) "
+        f"y tiene que hacerlo en los DOS de la comparativa: por el que falte se "
+        f"intentará pintar el PDF en crudo")
     assert "setOriginalRef(prev => prev || b64)" in ui
 
 

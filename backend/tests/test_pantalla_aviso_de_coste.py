@@ -85,7 +85,15 @@ def test_el_aviso_sale_TAMBIEN_con_cupo_ilimitado():
     trozo = cuerpo[i:i + 1400]
     assert "aiCredits.ilimitado" in trozo and "cupo ilimitado" in trozo, (
         "el aviso ya no dice nada cuando el cupo es ilimitado")
-    assert "!aiCredits.ilimitado &&" not in cuerpo, (
+    # SOLO DENTRO DEL AVISO. Prohibir el patrón en TODO el fichero era pasarse:
+    # el 10/09 un botón nuevo lo usó para decidir si se DESHABILITA —«no te
+    # deshabilito el botón si tienes cupo ilimitado»—, que es correcto y lo
+    # contrario de esconder el aviso. El candado se puso rojo por código bueno.
+    #
+    # Lo que no puede volver es esconder el AVISO a quien tiene cupo ilimitado
+    # (master, 25/08: «no sale lo de créditos en mi pantalla»), y eso vive
+    # dentro de `AvisoDeCoste`.
+    assert "!aiCredits.ilimitado &&" not in trozo, (
         "ha vuelto la condición que esconde el aviso a quien tiene cupo "
         "ilimitado")
 

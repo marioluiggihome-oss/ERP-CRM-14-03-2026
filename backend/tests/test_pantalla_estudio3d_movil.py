@@ -259,11 +259,27 @@ def test_la_comparativa_no_arrastra_lo_de_debajo(bloque, ancla):
         f"imágenes, que es a lo que se entra. Condición: {condicion.strip()[:120]}")
 
 
+def _bloque_de_la_comparativa(fuente):
+    """El trozo que pinta la comparativa, buscado por LO QUE HACE.
+
+    Antes se buscaba la expresión literal `{compareOn && (originalRef ||
+    refImage)`. El 10/09 esa condición se extrajo a una variable con nombre
+    —un cambio legítimo y para mejor— y el candado se puso rojo diciendo «ha
+    desaparecido la comparativa» cuando estaba intacta.
+
+    Un candado que se ancla en CÓMO ESTÁ ESCRITO el código se pone rojo por
+    cada refactorización honesta, y entonces se aprende a ignorarlo: que es la
+    única forma de que un candado deje de proteger. Se ancla en `compareOn`,
+    que es la condición de verdad, y se lee hasta el siguiente bloque."""
+    import re as _re
+    m = _re.search(r"\{compareOn && [^\n]*\?", fuente)
+    assert m, "ha desaparecido la comparativa (ya no hay un bloque con `compareOn`)"
+    return fuente[m.start():m.start() + 500]
+
+
 def test_la_comparativa_tiene_alto_minimo():
     fuente = _fuente_estudio()
-    i = fuente.find("{compareOn && (originalRef || refImage)")
-    assert i != -1, "ha desaparecido la comparativa"
-    bloque = fuente[i:i + 400]
+    bloque = _bloque_de_la_comparativa(fuente)
     assert "min-h-[" in bloque, (
         "la comparativa reparte «el alto que sobre», y lo que sobra puede ser "
         "cero: sin alto mínimo el visor se queda en nada, igual que pasó dos "
@@ -272,8 +288,6 @@ def test_la_comparativa_tiene_alto_minimo():
 
 def test_las_dos_imagenes_siguen_una_al_lado_de_la_otra():
     """Apiladas dejarían de ser una comparativa."""
-    fuente = _fuente_estudio()
-    i = fuente.find("{compareOn && (originalRef || refImage)")
-    bloque = fuente[i:i + 400]
+    bloque = _bloque_de_la_comparativa(_fuente_estudio())
     assert "grid-cols-2" in bloque, (
         "el dibujo y el render se han apilado; comparar es verlos al lado")
