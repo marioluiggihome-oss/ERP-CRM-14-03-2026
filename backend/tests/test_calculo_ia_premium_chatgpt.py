@@ -300,3 +300,17 @@ def test_el_motor_premium_pasa_por_el_REPARTIDOR_como_todos():
         f"`_render_with_openai` aparece {llamadas} veces (se esperan 2: la "
         f"definición y la llamada del repartidor). Una llamada de más es un "
         f"camino que se salta el reparto de motores y el cobro.")
+
+
+def test_la_lectura_verificada_gobierna_la_traduccion_visual():
+    """La lectura correcta debe gobernar paredes, módulos, orden y cotas."""
+    fuente = _leer(DESPACHO)
+    i = fuente.index("async def generate_render_composed")
+    j = fuente.index("\n    async def ", i + 10)
+    cuerpo = fuente[i:j]
+    assert "AUTHORITATIVE WRITTEN LAYOUT CONTRACT" in cuerpo
+    assert "governs the translation into the render" in cuerpo
+    assert "modules, columns, appliances, openings, order and explicit widths" in cuerpo
+    assert "finishes-only request" in cuerpo
+    assert "No verified written layout was supplied" in cuerpo
+    assert "Apply ONLY these finishes/changes" not in cuerpo

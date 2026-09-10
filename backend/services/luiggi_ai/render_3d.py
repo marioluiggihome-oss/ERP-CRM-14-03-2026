@@ -781,7 +781,10 @@ class Render3DService:
                     f"- Zona autorizada: {zona}.\n"
                     "- Todo lo que esté fuera de esa propiedad y zona es INMUTABLE. No lo rediseñes, no lo sustituyas, no lo abras, no lo cierres y no lo mejores.\n"
                     + "".join(f"- Debe conservarse: {item}.\n" for item in conservar)
-                    + (f"- Contexto aprobado ya existente; úsalo solo para conservarlo, no para añadir elementos: {contexto}\n" if contexto else "")
+                    # El contexto histórico no se inserta en el encargo activo:
+                    # puede contener órdenes ya ejecutadas y ser reinterpretado
+                    # como un cambio nuevo. La imagen aprobada es la autoridad.
+                    + "- La imagen principal aprobada es la autoridad visual; no reconstruyas ni añadas elementos a partir de contexto textual histórico.\n"
                     + "- Si la petición no menciona repisas, nichos, baldas o decoración, el resultado no puede contener ninguna nueva.\n"
                     + "- Si la petición afecta solo a tiradores, los muebles altos deben conservar exactamente sus puertas, divisiones, color y posición; queda prohibido convertirlos en repisas o nichos abiertos.\n"
                     + "- Si el lavavajillas existente es integrable, debe seguir siendo integrable; nunca lo conviertas en semi-integrable por una orden que no lo pida.\n"
@@ -1465,9 +1468,11 @@ class Render3DService:
             "- Do NOT add, remove, move, merge, duplicate or restyle anything that is not "
             "explicitly requested below. Reproduce the SAME number of doors/drawers and the same "
             "appliance positions; nothing from the references may be missing.\n"
-            + (f"- Apply ONLY these finishes/changes, keep everything else identical to the references: {brief_txt}\n"
+            + (f"- AUTHORITATIVE WRITTEN LAYOUT CONTRACT — this is the verified reading of the drawing and it governs the translation into the render: {brief_txt}\n"
+               "  Use it to place the walls, modules, columns, appliances, openings, order and explicit widths. "
+               "Do not treat this text as inspiration or as a finishes-only request. If the image and this verified reading appear to differ, preserve the verified module sequence and dimensions and do not invent a compromise layout.\n"
                if brief_txt else
-               "- Keep the same finishes, colors and materials shown in the references.\n")
+               "- No verified written layout was supplied: do not infer missing modules or dimensions; preserve only what is visibly demonstrated by the drawings.\n")
             + "- Masterpiece ultra-sharp 8K architectural interior photograph, pin-sharp tack focus across entire depth of field, maximum clarity on every line, joint, edge and seam. Extreme micro-detail PBR materials: razor-sharp wood grain, ultra-crisp marble veining, pristine reflections on glass and metal, clean gola channels. Balanced natural daylight, soft realistic shadows, 16:9. Zero blur, no compression noise, no plastic or CGI look. No text, watermarks, logos, people or invented extra objects."
         )
         prompt = task_prompt
