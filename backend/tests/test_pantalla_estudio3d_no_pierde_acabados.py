@@ -273,6 +273,19 @@ def test_LA_EDICION_AMBIGUA_SE_BLOQUEA_ANTES_DE_ENVIAR():
     assert "const contratoActual = contratoEdicion(allLines)" in cuerpo
 
 
+def test_QUITAR_MEDIDAS_ES_UN_CAMBIO_VALIDO_Y_NO_UNA_ORDEN_AMBIGUA():
+    """Las cotas dibujadas son una propiedad visible y eliminable; quitarlas
+    no autoriza a reconstruir ni alterar el mobiliario que hay debajo."""
+    cuerpo = sin_comentarios(_lee())
+    for texto in (
+        "const esAnotacionTecnica",
+        "alcance: 'eliminar_anotaciones_tecnicas'",
+        "medidas, cotas, cifras, líneas de cota o rótulos",
+        "no añadir, eliminar, mover ni sustituir ningún elemento del diseño",
+    ):
+        assert texto in cuerpo, f"falta el contrato para quitar anotaciones: {texto}"
+
+
 def test_EL_CONTRATO_NO_REENVIA_CONTEXTO_TEXTUAL_HISTORICO():
     ruta = os.path.join(RAIZ, "backend", "services", "luiggi_ai", "render_3d.py")
     with open(ruta, encoding="utf-8") as f:
