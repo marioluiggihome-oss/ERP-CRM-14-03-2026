@@ -3003,10 +3003,18 @@ export default function AIRenderStudio({ state, setState }) {
       setError('Este render tiene acabado PREMIUM, pero tu usuario no tiene permiso para continuar editándolo en ese modo.');
       return;
     }
-    if (premiumFinishActive) {
-      const palabra = premiumFinishCost === 1 ? 'crédito' : 'créditos';
-      if (!window.confirm(`Este cambio se aplicará con acabado PREMIUM y consumirá ${premiumFinishCost} ${palabra}. ¿Continuar?`)) return;
-    }
+    // SIN VENTANA TAMBIÉN AQUÍ (master, 10/09/2026). Aplicar un cambio estando
+    // en modo PREMIUM sacaba el mismo `confirm` con la cifra de créditos: en
+    // una tablet se come la pantalla y corta el trabajo en cada vuelta, que es
+    // justo donde más vueltas se dan.
+    //
+    // EL COBRO SIGUE INTACTO: lo hace el servidor (`cobrar_render`, regla 32),
+    // y el motor sigue siendo el premium mientras el render lo sea — eso lo
+    // decide `premiumFinishActive` unas líneas más abajo, no esta ventana.
+    //
+    // LO QUE NO SE QUITA es el CIERRE de arriba: sin permiso, un render con
+    // acabado PREMIUM no se sigue editando en ese modo. Eso no es un aviso,
+    // es una puerta.
     // Instantánea de lo que se APLICA ahora, para luego borrar SOLO eso y conservar
     // lo que el usuario escriba mientras se procesa (poder encolar órdenes).
     const snapMain = editInstruction;

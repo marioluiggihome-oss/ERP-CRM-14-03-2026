@@ -142,13 +142,50 @@ def test_acabado_premium_usa_el_render_actual_y_no_el_selector_de_motor():
         "pidió quitarla el 10/09")
 
 
-def test_los_cambios_posteriores_conservan_el_modo_premium_y_avisan_del_coste():
+def test_los_cambios_posteriores_CONSERVAN_el_modo_premium():
+    """Un render con acabado PREMIUM se sigue editando en PREMIUM.
+
+    Si al aplicar un cambio se volviera al motor normal, la imagen perdería el
+    acabado por el que se pagó y nadie lo relacionaría con haber pulsado
+    «aplicar cambio».
+
+    YA NO AVISA DEL COSTE (master, 10/09/2026: «cuando aplicas cambios desde
+    premium»). Se le quitó la ventana igual que al botón: en una tablet corta
+    el trabajo en cada vuelta, y aquí es donde más vueltas se dan. El COBRO no
+    cambia — lo hace el servidor (regla 32)."""
     produccion = _leer(PRODUCCION)
     assert "premiumFinish: true" in produccion
     assert "const premiumFinishActive = renderResult?.premiumFinish === true" in produccion
-    assert "provider: premiumFinishActive ? 'chatgpt' : providerOf()" in produccion
-    assert "Este cambio se aplicará con acabado PREMIUM" in produccion
-    assert "PREMIUM · ${premiumFinishCost} créditos" in produccion
+    assert "provider: premiumFinishActive ? 'chatgpt' : providerOf()" in produccion, (
+        "un cambio sobre un render PREMIUM ya no se aplica con el motor "
+        "premium: perdería el acabado por el que se pagó")
+
+
+def test_editar_en_premium_SIN_PERMISO_se_sigue_cerrando():
+    """Quitar el AVISO no puede quitar la PUERTA.
+
+    Al retirar las dos ventanas de confirmación había que comprobar que no se
+    llevaran por delante el cierre que hay al lado: sin la casilla, un render
+    con acabado PREMIUM no se sigue editando en ese modo. Un aviso se quita
+    porque molesta; un permiso no."""
+    produccion = _leer(PRODUCCION)
+    assert "premiumFinishActive && !canUsePremiumFinish" in produccion, (
+        "ha desaparecido el cierre: cualquiera podría seguir editando en modo "
+        "PREMIUM un render que lo tenga, gastando el motor más caro sin la "
+        "casilla que lo autoriza")
+
+
+def test_ya_NO_hay_ventanas_de_confirmacion_de_premium():
+    """CANDADO DE LA DECISIÓN. Eran dos y las dos se quitaron el 10/09; que no
+    vuelvan una por una sin que el master lo pida."""
+    produccion = _leer(PRODUCCION)
+    ventanas = produccion.count("window.confirm")
+    premium = [l for l in produccion.splitlines()
+               if "window.confirm" in l and "PREMIUM" in l]
+    assert not premium, (
+        f"han vuelto ventanas de confirmación de PREMIUM: {premium}")
+    assert ventanas == 0 or "PREMIUM" not in produccion.split("window.confirm")[0][-300:], (
+        "hay una confirmación nueva junto al acabado PREMIUM")
 
 
 def test_el_clon_SI_lo_ofrece_y_lo_traduce():
