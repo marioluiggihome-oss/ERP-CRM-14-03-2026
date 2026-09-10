@@ -9,10 +9,10 @@ estudio 3D y en ese clon tenemos la IA de chatGPT para probarla».
 
 LO QUE ESTE CANDADO PROTEGE, EN ORDEN DE LO QUE CUESTA SI SE ROMPE:
 
-1. **QUE NO SE CUELE EN PRODUCCIÓN.** El Estudio 3D de producción está
-   congelado (04/09) y es el único que ve un usuario que no sea master
-   (regla 1). Si el botón premium apareciera allí, un render pasaría de 0,036 €
-   a ~0,25 € — unas SIETE veces — sin que nadie lo hubiera decidido.
+1. **QUE EL MOTOR PREMIUM NO APAREZCA COMO MOTOR DE DISEÑO EN PRODUCCIÓN.**
+   Desde el 10/09 el Estudio 3D normal sí ofrece una pasada final de acabado
+   PREMIUM sobre un render aprobado, con permiso y coste visibles. No abre el
+   selector experimental ni permite generar el diseño inicial con ese motor.
 
 2. **QUE EL CROQUIS LLEGUE AL MODELO.** La API de imágenes de OpenAI tiene DOS
    llamadas y solo UNA acepta imágenes de entrada. Si el croquis se mandara por
@@ -81,6 +81,37 @@ def test_produccion_no_sabe_ni_traducir_el_motor_premium():
     un 'premium' guardado en una pestaña vieja renderizaría con él."""
     assert f"return '{MOTOR}'" not in _leer(PRODUCCION), (
         "el Estudio 3D de producción puede volver a pedir el motor premium")
+
+
+def test_produccion_ofrece_el_acabado_premium_con_permiso_y_coste_visible():
+    produccion = _leer(PRODUCCION)
+    assert "canUsePremiumFinish" in produccion
+    assert "currentUser?.canUseIAPremium === true" in produccion
+    assert "Acabado PREMIUM · {premiumFinishCost} créditos" in produccion
+    assert "creditosDeUnRender('chatgpt')" in produccion
+
+
+def test_acabado_premium_usa_el_render_actual_y_no_el_selector_de_motor():
+    produccion = _leer(PRODUCCION)
+    i = produccion.index("const mejorarAcabadoPremium")
+    j = produccion.index("\n  };", i) + len("\n  };")
+    cuerpo = produccion[i:j]
+    assert "const img = currentImage()" in cuerpo
+    assert "provider: 'chatgpt'" in cuerpo
+    assert "referenceImage: dataUrl" in cuerpo
+    assert "editingRender: true" in cuerpo
+    assert "referenceIsSketch: false" in cuerpo
+    assert "No rediseñes" in cuerpo
+    assert "window.confirm" in cuerpo
+
+
+def test_los_cambios_posteriores_conservan_el_modo_premium_y_avisan_del_coste():
+    produccion = _leer(PRODUCCION)
+    assert "premiumFinish: true" in produccion
+    assert "const premiumFinishActive = renderResult?.premiumFinish === true" in produccion
+    assert "provider: premiumFinishActive ? 'chatgpt' : providerOf()" in produccion
+    assert "Este cambio se aplicará con acabado PREMIUM" in produccion
+    assert "PREMIUM · ${premiumFinishCost} créditos" in produccion
 
 
 def test_el_clon_SI_lo_ofrece_y_lo_traduce():
