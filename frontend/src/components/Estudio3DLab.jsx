@@ -22,7 +22,9 @@
  * LO ÚNICO QUE CAMBIA RESPECTO AL ORIGINAL:
  *   · el botón IA PREMIUM (motor `chatgpt`), que aquí existe y allí no;
  *   · el nombre del componente.
- * Todo lo demás es idéntico A PROPÓSITO.
+ * PREMIUM incorpora dirección de diseño y revisión de módulos autorizadas
+ * por Mario (10/09/2026), desde extensiones_estudio_premium.py.
+ * Los otros motores conservan su flujo original.
  */
 // Barra de progreso de un análisis. Una llamada a la IA no informa de su avance,
 // así que poner un porcentaje seria inventarlo: la barra se mueve para decir
@@ -66,6 +68,9 @@ function BarraAnalisis({ texto, hechas, total }) {
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import PremiumDesignPanel from './premium/PremiumDesignPanel';
+import { withPremiumDirection, normalizeBrief } from './premium/premiumBrief';
+import { layoutReview } from './premium/premiumLayout';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp, Ruler, Box, Zap, Printer } from 'lucide-react';
 import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
@@ -533,6 +538,7 @@ export default function Estudio3DLab({ state, setState }) {
   //  `providerOf()` para que los proyectos guardados abran, pero no tienen
   //  botón.)
   const [motor, setMotor] = useState('ia0');
+  const [premiumBrief, setPremiumBrief] = useState(null);
   // ─── LO QUE VA A COSTAR, ANTES DE PULSAR ─────────────────────────────────
   //
   // El coste en créditos depende del motor (25/08). Pero el aviso NO PUEDE
@@ -1510,7 +1516,7 @@ export default function Estudio3DLab({ state, setState }) {
     const extra = `${medidasTexto()}${rinconTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
     const conExtra = extra ? `${extra}\n${desc}` : desc;
     // Contexto de tipo de mueble (permisos por partidas): guía al motor de IA.
-    return `[Tipo de proyecto: ${tipoActual.label}]\n${conExtra}`;
+    return withPremiumDirection(motor, `[Tipo de proyecto: ${tipoActual.label}]\n${conExtra}`, premiumBrief);
   };
 
   // Estimación de precio ORIENTATIVA a partir de medidas + materiales + equipamiento.
@@ -3353,7 +3359,7 @@ export default function Estudio3DLab({ state, setState }) {
   const sesionRef = useRef(null);
   sesionRef.current = {
     cliente, ref, savedId, description, renderResult, renderHistory,
-    refImage, originalRef, floorPlan, params, medidas, tipo3d, histInfo,
+    refImage, originalRef, floorPlan, params, medidas, tipo3d, histInfo, premiumBrief,
   };
   const estadoRef = useRef(state); estadoRef.current = state;
   const setEstadoRef = useRef(setState); setEstadoRef.current = setState;
@@ -3361,6 +3367,7 @@ export default function Estudio3DLab({ state, setState }) {
   useEffect(() => {
     const g = leerSesion(estadoRef.current, 'estudio3d');
     if (g) {
+      setPremiumBrief(g.premiumBrief || null);
       if (g.cliente) setCliente(g.cliente);
       if (g.ref) setRef(g.ref);
       if (g.savedId) setSavedId(g.savedId);
@@ -3623,6 +3630,7 @@ export default function Estudio3DLab({ state, setState }) {
           medidas, tipo3d,
           distribucion: distAceptada.current || null,
           relacionMV: relacionParaGuardar(),
+          ...(motor === 'premium' ? { premiumBrief: normalizeBrief(premiumBrief) } : {}),
         }),
       });
       let d = null;
@@ -3649,6 +3657,7 @@ export default function Estudio3DLab({ state, setState }) {
     } catch (e) { setError(`No se pudo cargar la lista de proyectos: ${e.message || 'error de conexión'}`); }
   };
   const loadDesign = async (dsg) => {
+    setPremiumBrief(null);
     setCliente(dsg.cliente || ''); setRef(dsg.ref || ''); setDescription(dsg.description || '');
     if (dsg.style) elegirParams({ style: dsg.style });
     setSavedId(dsg.id); setSavedList(null);
@@ -3669,6 +3678,7 @@ export default function Estudio3DLab({ state, setState }) {
       if (r.ok) {
         const d = await r.json();
         const full = d.design || {};
+        setPremiumBrief(full.premiumBrief ? normalizeBrief(full.premiumBrief) : null);
         // No rehidratamos `full.images`: puede contener una copia antigua de
         // fotos que ya se borraron del historial persistente.
         if (full.referenceImage) { setRefImage(full.referenceImage); setOriginalRef(full.referenceImage); }
@@ -3830,6 +3840,7 @@ export default function Estudio3DLab({ state, setState }) {
   };
 
   const nuevoProyecto = () => {
+    setPremiumBrief(null);
     setCliente(''); setRef(''); setSavedId(null); setRenderResult(null); setRenderHistory([]);
     setDescription(''); setRefImage(null); setRefImages([]); setSameProjectRefs(false); setOriginalRef(null); setFloorPlan(null); setWallSketches([]);
     setEditInstruction(''); setEditLines([]); setEditRefImage(null);
@@ -4021,6 +4032,13 @@ export default function Estudio3DLab({ state, setState }) {
   };
   const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
   const handleGenerateComposed = async () => {
+    if (motor === 'premium') {
+      const brief = normalizeBrief(premiumBrief);
+      if (brief.scene === 'obra' && !refImage && !refImages.length) { setError('Añade la foto de obra en las referencias del proyecto.'); return; }
+      if (brief.scene === 'croquis' && !floorPlan && !wallSketches.length && !refImage && !refImages.length) { setError('Añade el croquis en planos o referencias del proyecto.'); return; }
+      const pending = layoutReview(brief.modules).issues;
+      if (pending.length) { setError(`Revisa la relación PREMIUM: ${pending.slice(0, 3).join(' ')}`); return; }
+    }
     if (!floorPlan && wallSketches.length === 0) return;
     resetEditChain();
     const err = guardTipo(description);
@@ -4063,6 +4081,13 @@ export default function Estudio3DLab({ state, setState }) {
 
   // ─── Generar render por descripción natural ─────────────────────────────
   const handleGenerateNatural = async () => {
+    if (motor === 'premium') {
+      const brief = normalizeBrief(premiumBrief);
+      if (brief.scene === 'obra' && !refImage && !refImages.length) { setError('Añade la foto de obra en las referencias del proyecto.'); return; }
+      if (brief.scene === 'croquis' && !floorPlan && !wallSketches.length && !refImage && !refImages.length) { setError('Añade el croquis en planos o referencias del proyecto.'); return; }
+      const pending = layoutReview(brief.modules).issues;
+      if (pending.length) { setError(`Revisa la relación PREMIUM: ${pending.slice(0, 3).join(' ')}`); return; }
+    }
     const hasRef = Boolean(refImage || refImages.length || floorPlan || wallSketches.length);
     if (!description.trim() && !hasRef) {
       setError('Escribe una descripción o sube una imagen/foto de referencia.');
@@ -4207,6 +4232,13 @@ export default function Estudio3DLab({ state, setState }) {
 
   // ─── Amueblado virtual: diseñar el mueble SOBRE la foto de la estancia real ──
   const amueblarEstanciaReal = async () => {
+    if (motor === 'premium') {
+      const brief = normalizeBrief(premiumBrief);
+      if (brief.scene === 'obra' && !refImage && !refImages.length) { setError('Añade la foto de obra en las referencias del proyecto.'); return; }
+      if (brief.scene === 'croquis' && !floorPlan && !wallSketches.length && !refImage && !refImages.length) { setError('Añade el croquis en planos o referencias del proyecto.'); return; }
+      const pending = layoutReview(brief.modules).issues;
+      if (pending.length) { setError(`Revisa la relación PREMIUM: ${pending.slice(0, 3).join(' ')}`); return; }
+    }
     if (!refImage) { setError('Sube primero la FOTO de la estancia real (botón «Subir imagen(es) de referencia»).'); return; }
     if (isGenerating) return;
     resetEditChain();
@@ -4236,6 +4268,7 @@ export default function Estudio3DLab({ state, setState }) {
 
   // ─── Generar render por parámetros ──────────────────────────────────────
   const handleGenerateParams = async () => {
+    if (motor === 'premium') { await handleGenerateNatural(); return; }
     const err = guardTipo('cocina');
     if (err) { setError(err); return; }
     resetEditChain();
@@ -4288,7 +4321,7 @@ export default function Estudio3DLab({ state, setState }) {
               <Wand2 size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide leading-tight whitespace-nowrap">Estudio 3D</h1>
+              <h1 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide leading-tight whitespace-nowrap">{motor === 'premium' ? 'Estudio 3D Premium' : 'Estudio 3D'}</h1>
               <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Diseño y visualización</p>
             </div>
             {/* Créditos de IA del usuario (bolsa mensual).
@@ -4448,6 +4481,7 @@ export default function Estudio3DLab({ state, setState }) {
               <X size={18} />
             </button>
           </div>
+          {motor === 'premium' && <PremiumDesignPanel value={premiumBrief} onChange={setPremiumBrief} disabled={isGenerating || editing} />}
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-4 gap-3 bg-slate-50/50">

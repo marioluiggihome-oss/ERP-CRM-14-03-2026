@@ -202,6 +202,14 @@ async def save_render_design(payload: dict, current_user: dict = Depends(require
     if isinstance(p.get("relacionMV"), dict):
         doc["relacionMV"] = p["relacionMV"]
 
+    # Optional Premium metadata: callers from other studios never overwrite it.
+    if "premiumBrief" in p:
+        from services.premium_design import validate_premium_brief
+        try:
+            doc["premiumBrief"] = validate_premium_brief(p["premiumBrief"])
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     await _db.render3d_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
     doc.pop("_id", None)
     return {"success": True, "design": doc}
