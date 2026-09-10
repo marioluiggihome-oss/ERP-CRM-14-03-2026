@@ -365,6 +365,10 @@ const PLACEHOLDER_TIPO = {
 
 export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
+  // Puente autorizado el 10/09/2026: un diseño ya aprobado puede recibir una
+  // pasada final PREMIUM sin abrir aquí el banco de pruebas ni sus motores.
+  const canUsePremiumFinish = isMaster || state?.currentUser?.canUseIAPremium === true;
+  const premiumFinishCost = creditosDeUnRender('chatgpt');
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
   const canUseRender360 = true; // Visor 360° interactivo siempre disponible
   const canUse4K = true; // Exportación 8K / 4K Ultra-HD siempre disponible
@@ -452,6 +456,10 @@ export default function AIRenderStudio({ state, setState }) {
   const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderResult, setRenderResult] = useState(null);
+  // Un render que ya ha pasado por el acabado PREMIUM conserva ese nivel en
+  // las ediciones de lenguaje natural posteriores. La marca viaja con el
+  // propio resultado para que también funcione al recuperarlo del historial.
+  const premiumFinishActive = renderResult?.premiumFinish === true;
   const [renderHistory, setRenderHistory] = useState([]);
   const [error, setErrorInterno] = useState(null);
   const setError = useCallback((valor) => {
@@ -1565,7 +1573,8 @@ export default function AIRenderStudio({ state, setState }) {
     const texto = (lineas || []).join(' ').toLowerCase();
     const esTirador = /(tirador|tiradores|gola|manilla|asa)\b/.test(texto);
     const esBajo = /(\bbajo\b|\bbajos\b|abajo|parte baja|de abajo|módulo bajo|módulos bajos|inferior|inferiores)/.test(texto);
-    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|mueble|muebles|iluminación|iluminacion|luz|luces|suelo|pared|ventana|ventanas|decoración|decoracion|color|acabado|material|repisas|baldas)/.test(texto);
+    const esAnotacionTecnica = /(medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
+    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|mueble|muebles|iluminación|iluminacion|luz|luces|suelo|pared|ventana|ventanas|decoración|decoracion|color|acabado|material|repisas|baldas|medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
     if (!texto && editRefImage) {
       return {
         alcance: 'referencia_adicional',
@@ -1581,6 +1590,20 @@ export default function AIRenderStudio({ state, setState }) {
         objetivo: '',
         zona: '',
         conservar: [],
+        contexto_aprobado: '',
+      };
+    }
+    if (esAnotacionTecnica) {
+      return {
+        alcance: 'eliminar_anotaciones_tecnicas',
+        objetivo: 'medidas, cotas, cifras, líneas de cota o rótulos indicados en la orden',
+        zona: 'anotaciones visibles del render; no el mobiliario representado',
+        conservar: [
+          'distribución, módulos, frentes, puertas, cajones, gavetas y tiradores',
+          'electrodomésticos, encimera, aplacado, suelo, paredes, ventanas y huecos',
+          'materiales, colores, iluminación, cámara, perspectiva y encuadre',
+          'no añadir, eliminar, mover ni sustituir ningún elemento del diseño',
+        ],
         contexto_aprobado: '',
       };
     }
@@ -2587,6 +2610,73 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // ACABADO PREMIUM: toma el render ACTUAL como autoridad visual y mejora
+  // únicamente su calidad de representación. No vuelve a interpretar el
+  // croquis y no autoriza cambios de diseño. El proveedor va explícito porque
+  // esta acción es independiente del motor con el que se creó la imagen.
+  const mejorarAcabadoPremium = async () => {
+    const img = currentImage();
+    if (!img || editing || !canUsePremiumFinish) return;
+    const palabra = premiumFinishCost === 1 ? 'crédito' : 'créditos';
+    if (!window.confirm(`Mejorar a acabado PREMIUM consumirá ${premiumFinishCost} ${palabra}. ¿Continuar?`)) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const desc = (
+        'ACABADO PREMIUM FINAL SOBRE EL DISEÑO APROBADO. Mejora únicamente el fotorrealismo, '
+        + 'la fidelidad de los materiales, la textura, los reflejos, la exposición y la nitidez fina. '
+        + 'La imagen recibida es la autoridad absoluta: conserva exactamente la misma distribución, '
+        + 'número, orden, tamaño y posición de módulos; las mismas puertas, cajones, gavetas, tiradores, '
+        + 'electrodomésticos, encimera, aplacado, suelo, paredes, ventanas y huecos; y la misma cámara, '
+        + 'perspectiva, encuadre y proporción. No añadas decoración, muebles, luces, repisas ni objetos. '
+        + 'No elimines, sustituyas, abras, cierres ni desplaces ningún elemento. No rediseñes: realiza '
+        + 'solo una mejora fotográfica y material del render existente.'
+      );
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description: desc,
+          style: params.style,
+          provider: 'chatgpt',
+          projectType: tipo3d,
+          referenceImage: dataUrl,
+          referenceIsSketch: false,
+          editingRender: true,
+          editContract: {
+            alcance: 'acabado_premium_sin_redisenar',
+            objetivo: 'fotorrealismo, materialidad, exposición y nitidez',
+            zona: 'imagen completa, sin modificar ningún elemento del proyecto',
+            conservar: [
+              'distribución, módulos, frentes, puertas, cajones, gavetas y tiradores',
+              'electrodomésticos, encimera, aplacado, suelo, paredes, ventanas y huecos',
+              'cámara, perspectiva, encuadre, proporción, colores y diseño aprobado',
+              'no añadir decoración, muebles, luces, repisas ni objetos',
+            ],
+            contexto_aprobado: '',
+          },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 402) { setError(data.detail || 'Sin créditos disponibles.'); return; }
+      if (!response.ok || !data.success) { setError(data.detail || data.error || 'No se pudo aplicar el acabado PREMIUM.'); return; }
+      let finalImg = data.result?.images?.[0];
+      try { finalImg = await imageToDataUrl(finalImg); } catch { /* se conserva la respuesta nativa */ }
+      const merged = {
+        ...data,
+        premiumFinish: true,
+        result: { ...data.result, images: [finalImg] },
+        description: `${renderResult?.description || description}\n[Acabado PREMIUM final]`,
+      };
+      setRenderResult(merged);
+      setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+    } catch (e) {
+      setError(`No se pudo aplicar el acabado PREMIUM: ${e?.message || 'error de conexión'}.`);
+    } finally {
+      setEditing(false);
+      fetchCredits();
+    }
+  };
+
   // Genera la imagen a resolución 4K real (3840 px): primero un pase de nitidez con
   // IA para añadir detalle fino, y después un reescalado determinista a 4K. La deja
   // como render actual y la descarga automáticamente.
@@ -2899,6 +2989,14 @@ export default function AIRenderStudio({ state, setState }) {
       setError('La instrucción no identifica con suficiente precisión qué propiedad y qué zona deben cambiar. No se aplicó ningún cambio para evitar alterar el diseño.');
       return;
     }
+    if (premiumFinishActive && !canUsePremiumFinish) {
+      setError('Este render tiene acabado PREMIUM, pero tu usuario no tiene permiso para continuar editándolo en ese modo.');
+      return;
+    }
+    if (premiumFinishActive) {
+      const palabra = premiumFinishCost === 1 ? 'crédito' : 'créditos';
+      if (!window.confirm(`Este cambio se aplicará con acabado PREMIUM y consumirá ${premiumFinishCost} ${palabra}. ¿Continuar?`)) return;
+    }
     // Instantánea de lo que se APLICA ahora, para luego borrar SOLO eso y conservar
     // lo que el usuario escriba mientras se procesa (poder encolar órdenes).
     const snapMain = editInstruction;
@@ -2945,7 +3043,10 @@ export default function AIRenderStudio({ state, setState }) {
           // contradecirse.
           description: cambio,
           style: params.style,
-          provider: providerOf(),
+          // Después de elevar un render a PREMIUM, «Aplicar cambio» no vuelve
+          // al motor con el que se creó: mantiene la cadena de calidad y cobra
+          // el coste PREMIUM, avisado antes de entrar aquí.
+          provider: premiumFinishActive ? 'chatgpt' : providerOf(),
           // El último diseño aprobado debe ser la referencia principal. Antes se
           // enviaba aquí la base original y el diseño actual quedaba como imagen
           // secundaria de acabado; así una nueva orden podía recuperar tiradores,
@@ -2988,7 +3089,12 @@ export default function AIRenderStudio({ state, setState }) {
         // de píxeles de mentira. Para tener MÁS resolución de verdad está el
         // botón de HD/4K, que la genera en vez de estirarla.
         try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, se usa la original */ }
-        const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
+        const merged = {
+          ...data,
+          premiumFinish: premiumFinishActive,
+          result: { ...data.result, images: [finalImg] },
+          description: `${renderResult?.description || description}\n[Edición] ${cambio}`,
+        };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
         setEditAppliedChanges(prev => [...prev, ...allLines]);
@@ -5311,6 +5417,15 @@ export default function AIRenderStudio({ state, setState }) {
                   {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />} 📷 Render 4K
                 </button>
                 )}
+                {canUsePremiumFinish && motor !== 'premium' && !premiumFinishActive && (
+                <button onClick={mejorarAcabadoPremium}
+                  disabled={editing || downloading || !currentImage() || Boolean(aiCredits && !aiCredits.ilimitado && premiumFinishCost > (aiCredits.restantes ?? 0))}
+                  title={`Mejora el render aprobado sin cambiar su diseño. Consume ${premiumFinishCost} créditos.`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90 shadow-md disabled:opacity-50">
+                  {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>Acabado PREMIUM · {premiumFinishCost} créditos</span>
+                </button>
+                )}
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 {/* Grupo descarga/export */}
@@ -5864,8 +5979,11 @@ export default function AIRenderStudio({ state, setState }) {
                     <Plus size={16} />
                   </button>
                   <button onClick={() => editRender()} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-accion-600 text-white rounded-lg text-xs font-bold hover:bg-accion-700 disabled:opacity-50 shrink-0">
-                    {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}</>}
+                    title={premiumFinishActive ? `Se aplicará con acabado PREMIUM y consumirá ${premiumFinishCost} créditos.` : 'Aplicar el cambio al render actual'}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-white rounded-lg text-xs font-bold disabled:opacity-50 shrink-0 ${premiumFinishActive ? 'bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90' : 'bg-accion-600 hover:bg-accion-700'}`}>
+                    {editing
+                      ? <><Loader size={14} className="animate-spin" /> Aplicando…</>
+                      : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}{premiumFinishActive ? ` · PREMIUM · ${premiumFinishCost} créditos` : ''}</>}
                   </button>
                 </div>
               )}
