@@ -86,9 +86,19 @@ def test_el_clon_se_llama_distinto_y_no_pisa_al_original():
     assert re.search(r"export default function Estudio3DLab\b", clon) or (
         "const Estudio3DLab" in clon and "export default Estudio3DLab" in clon), (
         "el clon no exporta un componente propio llamado Estudio3DLab")
-    assert "AIRenderStudio" not in clon, (
-        "en el clon ha vuelto a aparecer el nombre del original: o se ha "
-        "reimportado, o la copia se hizo a medias")
+    # SIN COMENTARIOS. La cabecera del clon NOMBRA al original a propósito
+    # («sale de AIRenderStudio.jsx, no lo edites a mano»), así que mirar el
+    # fichero entero se pone rojo por su propia explicación. Cuarta vez en el
+    # repo con esta trampa (reglas 24, 34 y 35).
+    codigo = "\n".join(
+        l.split("//")[0] for l in clon.splitlines()
+        if not l.strip().startswith(("*", "/*", "*/")))
+    assert "AIRenderStudio" not in codigo, (
+        "en el CÓDIGO del clon ha vuelto a aparecer el nombre del original: o "
+        "se ha reimportado, o la copia se hizo a medias")
+    assert "Estudio3DLab" in codigo, (
+        "el recorte se ha comido el código: la prueba pasaría por no encontrar "
+        "nada que mirar")
 
 
 def test_lo_UNICO_que_los_separa_es_el_boton_premium():
@@ -129,3 +139,25 @@ def test_ninguno_de_los_dos_tiene_hooks_por_debajo_de_un_return():
     assert "components" in fuente, (
         "el barrido de hooks ya no mira el directorio de componentes, así que "
         "el clon quedaría sin vigilar")
+
+
+def test_el_clon_SE_REGENERA_con_la_herramienta():
+    """La deriva no se arregla copiando a mano — eso es garantizar que un día
+    se copie a medias.
+
+    El 10/09, al día siguiente de crear el clon, otra sesión mejoró el original
+    y los dos se separaron en 148 líneas de golpe. La herramienta regenera el
+    clon desde el original volviendo a aplicar las DOS únicas diferencias que
+    puede tener; si un ancla ya no encaja, falla en voz alta en vez de dejar un
+    clon a medias."""
+    import subprocess
+    import sys
+    guion = os.path.join(RAIZ, "herramientas", "sincronizar_clon_estudio3d.py")
+    assert os.path.exists(guion), (
+        "ha desaparecido la herramienta que sincroniza el clon: sin ella la "
+        "deriva se arregla a mano y un día se hará a medias")
+    r = subprocess.run([sys.executable, guion, "--verificar"],
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, (
+        "el clon NO está al día con el original:\n" + r.stdout + r.stderr +
+        "\nEjecuta: python3 herramientas/sincronizar_clon_estudio3d.py")

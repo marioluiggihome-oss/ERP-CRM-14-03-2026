@@ -8,29 +8,21 @@
 /**
  * ESTUDIO 3D — LABORATORIO. El clon donde se prueban motores nuevos.
  *
- * El master, 09/09/2026: «quiero clonar estudio 3D y en ese clon tenemos la IA
- * de chatGPT para probarla».
+ * ESTE FICHERO SE GENERA. No se edita a mano:
+ *     python3 herramientas/sincronizar_clon_estudio3d.py
+ * Sale de `AIRenderStudio.jsx` con UNA cosa más, el botón IA PREMIUM. Tocarlo
+ * aquí es separarlo del original, y entonces comparar los dos renders deja de
+ * medir el MOTOR y pasa a medir lo que alguien haya metido por el camino.
  *
  * POR QUÉ ES UNA COPIA Y NO UNA BANDERA DENTRO DE LA PANTALLA BUENA:
  * el Estudio 3D de producción está CONGELADO desde el 04/09/2026 («eso no se
  * toca ya, para nada»). Meterle un `if modoLab` por dentro sería tocarlo en
  * cada prueba que se quiera hacer, que es justo lo que la congelación impide.
- * Copiándolo, el original se queda quieto de verdad y aquí se puede romper lo
- * que haga falta sin que un cliente vea nada.
- *
- * LO QUE ESTA COPIA CUESTA, DICHO CLARO: un arreglo hecho en el original NO
- * llega aquí solo. Es el precio de la separación y se asume a sabiendas — el
- * original está congelado, así que no debería moverse. Para que la separación
- * al menos se VEA, `test_pantalla_clon_estudio3d.py` mide cuánto se han
- * alejado los dos ficheros y se pone rojo si el clon se queda sin las piezas
- * que de verdad importan.
  *
  * LO ÚNICO QUE CAMBIA RESPECTO AL ORIGINAL:
  *   · el botón IA PREMIUM (motor `chatgpt`), que aquí existe y allí no;
  *   · el nombre del componente.
- * Todo lo demás es idéntico A PROPÓSITO: si se cambiara algo más, comparar los
- * renders de los dos no mediría el motor, mediría las diferencias que hubiera
- * metido yo.
+ * Todo lo demás es idéntico A PROPÓSITO.
  */
 // Barra de progreso de un análisis. Una llamada a la IA no informa de su avance,
 // así que poner un porcentaje seria inventarlo: la barra se mueve para decir
@@ -508,6 +500,8 @@ export default function Estudio3DLab({ state, setState }) {
   const [histInfo, setHistInfo] = useState({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
   const [histSubiendo, setHistSubiendo] = useState(false);
   const histYaSubidas = useRef(new Set()); // srcs ya guardados del proyecto abierto
+  const histBorradas = useRef(new Set());   // srcs borrados: nunca se vuelven a auto-guardar
+  const histBorradasIds = useRef(new Set()); // ids borrados: evita reaparición durante una recarga
   const histEnCurso = useRef(false);       // evita dos subidas a la vez
   const [downloading, setDownloading] = useState(false);
   // Captura de medidas de la estancia (para proporción/escala reales).
@@ -633,9 +627,9 @@ export default function Estudio3DLab({ state, setState }) {
     // referencia visual de mayor calidad. IA0 permanece congelada.
     if (motor === 'ia7') return 'julio11_plus';
     // IA PREMIUM — SOLO EXISTE EN ESTE CLON. El Estudio 3D de producción no
-    // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta al
-    // master (regla 11). Es el motor más caro de todos: 7 créditos por render
-    // contra 1, porque al proveedor se le paga unas 7 veces más por imagen.
+    // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta a
+    // quien tenga la casilla `canUseIAPremium` (regla 33). Es el motor más
+    // caro: 7 créditos por render contra 1.
     if (motor === 'premium') return 'chatgpt';
     return 'gemini';
   };
@@ -1259,10 +1253,14 @@ export default function Estudio3DLab({ state, setState }) {
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
 
-  // El PDF original se conserva para generar. Comparar utiliza únicamente una
-  // copia PNG de la primera página, preparada por el backend.
+  // La comparación siempre parte de la primera referencia del proyecto.
+  // `refImage` puede cambiar al subir una vista adicional; no puede sustituir
+  // al dibujo inicial que debe permanecer en el lado «Referencia».
+  const referenciaInicial = originalRef || refImage;
+  // El PDF inicial se conserva para generar. Comparar utiliza únicamente una
+  // copia PNG de su primera página, preparada por el backend.
   useEffect(() => {
-    const referencia = originalRef || refImage;
+    const referencia = referenciaInicial;
     const esPdf = typeof referencia === 'string'
       && referencia.slice(0, 80).toLowerCase().startsWith('data:application/pdf');
     if (!esPdf) {
@@ -1282,7 +1280,7 @@ export default function Estudio3DLab({ state, setState }) {
       .catch(() => { if (activa) setPdfComparePreview(null); })
       .finally(() => { if (activa) setPdfPreviewLoading(false); });
     return () => { activa = false; };
-  }, [originalRef, refImage]);
+  }, [referenciaInicial]);
 
   // Créditos de IA del usuario: se consultan al montar y tras cada generación.
   // FALLAR EN SILENCIO NO ES LO MISMO QUE NO ROMPER NADA.
@@ -1592,6 +1590,25 @@ export default function Estudio3DLab({ state, setState }) {
     const texto = (lineas || []).join(' ').toLowerCase();
     const esTirador = /(tirador|tiradores|gola|manilla|asa)\b/.test(texto);
     const esBajo = /(\bbajo\b|\bbajos\b|abajo|parte baja|de abajo|módulo bajo|módulos bajos|inferior|inferiores)/.test(texto);
+    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|mueble|muebles|iluminación|iluminacion|luz|luces|suelo|pared|ventana|ventanas|decoración|decoracion|color|acabado|material|repisas|baldas)/.test(texto);
+    if (!texto && editRefImage) {
+      return {
+        alcance: 'referencia_adicional',
+        objetivo: 'elemento de la imagen adicional',
+        zona: 'zona coherente con el diseño existente',
+        conservar: ['todo el diseño existente salvo el elemento de referencia solicitado'],
+        contexto_aprobado: '',
+      };
+    }
+    if (!tienePropiedad) {
+      return {
+        alcance: 'bloqueado',
+        objetivo: '',
+        zona: '',
+        conservar: [],
+        contexto_aprobado: '',
+      };
+    }
     if (esTirador) {
       return {
         alcance: 'propiedad_localizada',
@@ -1603,7 +1620,7 @@ export default function Estudio3DLab({ state, setState }) {
           'distribución, columnas, electrodomésticos, encimera, suelo, paredes, ventanas y cámara',
           'no añadir repisas, nichos, baldas decorativas ni elementos de madera no solicitados',
         ],
-        contexto_aprobado: [description, ...editAppliedChanges].filter(Boolean).join('\n'),
+        contexto_aprobado: '',
       };
     }
     return {
@@ -2902,6 +2919,11 @@ export default function Estudio3DLab({ state, setState }) {
     // conservar la base original y el historial de cambios.
     const allLines = forcedLines || [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
     if (!img || (!allLines.length && !editRefImage)) return;
+    const contratoActual = contratoEdicion(allLines);
+    if (contratoActual.alcance === 'bloqueado') {
+      setError('La instrucción no identifica con suficiente precisión qué propiedad y qué zona deben cambiar. No se aplicó ningún cambio para evitar alterar el diseño.');
+      return;
+    }
     // Instantánea de lo que se APLICA ahora, para luego borrar SOLO eso y conservar
     // lo que el usuario escriba mientras se procesa (poder encolar órdenes).
     const snapMain = editInstruction;
@@ -2931,7 +2953,11 @@ export default function Estudio3DLab({ state, setState }) {
            ? allLines[0]
            : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : ''));
       const historial = `\n\nEL ÚLTIMO DISEÑO APROBADO ES LA AUTORIDAD VISUAL:\nConserva exactamente todos los elementos que ya aparecen en la imagen de referencia más reciente: incluidos tiradores, frentes, puertas, cajones, electrodomésticos, encimera, colores, materiales, iluminación, decoración y distribución. La nueva orden solo puede modificar lo que se pide expresamente.\n${editAppliedChanges.length ? `\nCAMBIOS YA APLICADOS QUE DEBES CONSERVAR:\n${editAppliedChanges.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n` : ''}`;
-      const cambio = `${historial}\nNUEVO CAMBIO QUE DEBES APLICAR AHORA:\n${cambioNuevo}`;
+      // El historial sirve para construir la memoria de conservación, pero NO
+      // se envía como una orden nueva. Mezclarlo con la petición activa hacía
+      // que cambios antiguos pudieran reinterpretarse y producir modificaciones
+      // aleatorias en otras zonas del diseño.
+      const cambio = `NUEVO CAMBIO QUE DEBES APLICAR AHORA:\n${cambioNuevo}`;
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -3406,7 +3432,7 @@ export default function Estudio3DLab({ state, setState }) {
   const histVistas = useRef(new Map()); // src → {descripcion, tipo}
   const fotosDelProyecto = () => {
     const meter = (src, descripcion, tipo) => {
-      if (typeof src !== 'string' || !src || histVistas.current.has(src)) return;
+      if (typeof src !== 'string' || !src || histBorradas.current.has(src) || histVistas.current.has(src)) return;
       if (histVistas.current.size >= 200) return; // freno de memoria
       histVistas.current.set(src, { descripcion: descripcion || '', tipo: tipo || 'render' });
     };
@@ -3421,7 +3447,7 @@ export default function Estudio3DLab({ state, setState }) {
 
   const subirFotosPendientes = async (designId, fotos, avisar) => {
     if (!designId || histEnCurso.current) return;
-    const nuevas = (fotos || []).filter(f => !histYaSubidas.current.has(f.src));
+    const nuevas = (fotos || []).filter(f => !histBorradas.current.has(f.src) && !histYaSubidas.current.has(f.src));
     if (!nuevas.length) return;
     histEnCurso.current = true; setHistSubiendo(true);
     try {
@@ -3483,11 +3509,11 @@ export default function Estudio3DLab({ state, setState }) {
       const r = await fetch(
         `${API_URL}/api/ai-engine/designs/${designId}/imagenes?desde=${desde}&limite=12`,
         { headers: getAuthHeaders() });
-      if (!r.ok) return;
+      if (!r.ok) return [];
       const d = await r.json();
       // Si la foto grande está en Drive, `dataUrl` es solo la miniatura: la
       // grande se pide al ERP cuando hace falta (verla, PDF, descargar).
-      const items = (d.imagenes || []).map(im => ({
+      const items = (d.imagenes || []).filter(im => !histBorradasIds.current.has(im.id) && !histBorradas.current.has(im.dataUrl)).map(im => ({
         success: true, guardadaId: im.id, tipo: im.tipo || 'render',
         description: im.descripcion || '',
         timestamp: im.createdAt ? new Date(im.createdAt) : new Date(),
@@ -3507,7 +3533,10 @@ export default function Estudio3DLab({ state, setState }) {
       });
       setHistInfo({ total: d.total || items.length, hayMas: !!d.hayMas,
         cargadas: desde + items.length, enDrive: items.some(it => it.enDrive) });
-    } catch (_) { /* el proyecto se abre igual aunque el historial falle */ }
+      return items;
+    } catch (_) { /* el proyecto se abre igual aunque el historial falle */
+      return [];
+    }
   };
 
   // La X del historial: si la foto está guardada en el proyecto, se borra
@@ -3530,8 +3559,23 @@ export default function Estudio3DLab({ state, setState }) {
         }));
       } catch (e) { setError(`No se pudo borrar la foto del proyecto: ${e.message || 'error de conexión'}`); return; }
     }
-    if (src) histYaSubidas.current.delete(src);
-    setRenderHistory(prev => prev.filter((_, idx) => idx !== i));
+    if (src) {
+      // La marca de borrado debe hacerse ANTES de actualizar el estado: el efecto
+      // de auto-guardado escucha renderHistory/renderResult y, sin este candado,
+      // podía volver a subir la foto eliminada como si fuera nueva.
+      histBorradas.current.add(src);
+      if (item?.guardadaId) histBorradasIds.current.add(item.guardadaId);
+      histYaSubidas.current.delete(src);
+      histVistas.current.delete(src);
+    }
+    const siguiente = renderHistory.filter((_, idx) => idx !== i);
+    const activa = renderResult?.result?.images?.[0];
+    if (src && activa === src) {
+      const reemplazo = siguiente.find(x => x?.result?.images?.[0]);
+      setRenderResult(reemplazo || null);
+      setEditBaseImage(null);
+    }
+    setRenderHistory(siguiente);
   };
 
   // Referencia viva a la subida, para que el efecto de auto-guardado no tenga
@@ -3572,7 +3616,10 @@ export default function Estudio3DLab({ state, setState }) {
         body: JSON.stringify({
           id: savedId || undefined, cliente, ref,
           description: renderResult?.description || description,
-          style: params.style, images: [imgSave], referenceImage: refSave,
+          style: params.style, images: [imgSave],
+          // La referencia persistida para Comparar es siempre la primera subida,
+          // no la última vista adicional usada para generar.
+          referenceImage: originalRef ? await shrinkForSave(originalRef) : refSave,
           medidas, tipo3d,
           distribucion: distAceptada.current || null,
           relacionMV: relacionParaGuardar(),
@@ -3607,10 +3654,13 @@ export default function Estudio3DLab({ state, setState }) {
     setSavedId(dsg.id); setSavedList(null);
     // Historial: se parte de cero y se rellena con las fotos guardadas de ESTE
     // proyecto, para no mezclarlas con las del proyecto anterior.
-    histYaSubidas.current = new Set(); histVistas.current = new Map();
+    histYaSubidas.current = new Set(); histBorradas.current = new Set(); histBorradasIds.current = new Set(); histVistas.current = new Map();
     setRenderHistory([]);
     setHistInfo({ total: 0, hayMas: false, cargadas: 0, enDrive: false });
-    if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
+    // Las imágenes del documento principal son una copia heredada y no son la
+    // fuente de verdad: una foto borrada del historial no puede reaparecer desde
+    // aquí. La vista activa se elegirá después desde /imagenes.
+    setRenderResult(null);
     // La lista ya no trae el referenceImage (payload); se carga el detalle completo
     // para poder Comparar con el plano/referencia original guardado.
     setRefImage(null); setOriginalRef(null);
@@ -3619,7 +3669,8 @@ export default function Estudio3DLab({ state, setState }) {
       if (r.ok) {
         const d = await r.json();
         const full = d.design || {};
-        if (full.images?.length) setRenderResult({ success: true, result: { images: full.images }, description: full.description });
+        // No rehidratamos `full.images`: puede contener una copia antigua de
+        // fotos que ya se borraron del historial persistente.
         if (full.referenceImage) { setRefImage(full.referenceImage); setOriginalRef(full.referenceImage); }
         // Y LAS MEDIDAS DE VUELTA. Es la otra mitad del arreglo del 25/08:
         // guardarlas no sirve de nada si al abrir el proyecto no se recuperan.
@@ -3654,7 +3705,14 @@ export default function Estudio3DLab({ state, setState }) {
         }
       }
     } catch { /* si falla el detalle, se queda con la miniatura de la lista */ }
-    await cargarHistorialGuardado(dsg.id, 0);
+    const fotosValidas = await cargarHistorialGuardado(dsg.id, 0);
+    if (fotosValidas.length) {
+      setRenderResult(fotosValidas[0]);
+    } else {
+      // Proyecto sin fotos vigentes: no dejar una imagen huérfana activa.
+      setRenderResult(null);
+      setEditBaseImage(null);
+    }
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
@@ -5333,7 +5391,7 @@ export default function Estudio3DLab({ state, setState }) {
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 {/* Grupo visor */}
-                {(originalRef || refImage) && (
+                {referenciaInicial && (
                   <button onClick={() => setCompareOn(v => !v)}
                     className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                     title="Comparar la imagen original subida con el render">
@@ -5391,11 +5449,11 @@ export default function Estudio3DLab({ state, setState }) {
                   Alto mínimo, además, porque «lo que sobre» puede ser cero: ya
                   pasó dos veces con el render en el móvil apaisado, y un visor
                   que se queda en nada no da error, sencillamente no se ve. */}
-              {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
+              {compareOn && referenciaInicial && renderResult?.result?.images?.[0] ? (
                 <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 min-h-[45vh]">
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
-                    {(pdfComparePreview || originalRef || refImage).startsWith('data:image') ? (
-                      <img src={pdfComparePreview || originalRef || refImage} alt="Referencia original" className="max-w-full max-h-full object-contain" />
+                    {(pdfComparePreview || referenciaInicial).startsWith('data:image') ? (
+                      <img src={pdfComparePreview || referenciaInicial} alt="Dibujo inicial" className="max-w-full max-h-full object-contain" />
                     ) : (
                       <div className="text-center p-4">
                         {pdfPreviewLoading
