@@ -83,12 +83,44 @@ def test_produccion_no_sabe_ni_traducir_el_motor_premium():
         "el Estudio 3D de producción puede volver a pedir el motor premium")
 
 
-def test_produccion_ofrece_el_acabado_premium_con_permiso_y_coste_visible():
+def test_produccion_ofrece_el_acabado_premium_SOLO_CON_PERMISO():
+    """El botón se abre con la misma casilla que el motor (regla 33).
+
+    EL RÓTULO YA NO DICE LOS CRÉDITOS (master, 10/09/2026: «que no ponga lo de
+    los siete créditos»). Es una decisión suya y no contradice la regla 15 —
+    esa prohíbe decir QUÉ IA se usa, no obliga a poner el precio.
+
+    LO QUE NO SE PUEDE PERDER es el COBRO, que es otra cosa: sigue viviendo en
+    `cobrar_render` en el servidor (regla 32). Quitar un aviso es cosmético;
+    quitar el cobro sería renderizar gratis con el motor más caro del ERP. Por
+    eso aquí abajo se sigue exigiendo que el coste se CALCULE, aunque no se
+    enseñe: de él depende que el botón se deshabilite sin saldo."""
     produccion = _leer(PRODUCCION)
     assert "canUsePremiumFinish" in produccion
     assert "currentUser?.canUseIAPremium === true" in produccion
-    assert "Acabado PREMIUM · {premiumFinishCost} créditos" in produccion
-    assert "creditosDeUnRender('chatgpt')" in produccion
+    assert ">Acabado PREMIUM<" in produccion, (
+        "ha desaparecido el botón de acabado PREMIUM del Estudio 3D")
+    assert "créditos</span>" not in produccion.split(">Acabado PREMIUM<")[0][-200:], (
+        "ha vuelto la cifra de créditos al rótulo del botón (master, 10/09)")
+    assert "creditosDeUnRender('chatgpt')" in produccion, (
+        "ya no se calcula lo que cuesta: sin ese número el botón no puede "
+        "deshabilitarse cuando no quedan créditos, que es la única defensa que "
+        "queda desde que no hay ventana de confirmación")
+
+
+def test_el_boton_premium_SE_DESHABILITA_SIN_SALDO():
+    """CANDADO NUEVO, y hace falta justo desde hoy.
+
+    Al quitar la ventana de confirmación se quedó sin la pregunta que frenaba
+    una pulsación sin querer. Lo único que impide gastar 7 créditos de un toque
+    es que el botón esté apagado cuando no llegan."""
+    produccion = _leer(PRODUCCION)
+    m = re.search(r"disabled=\{editing[^}]*premiumFinishCost > \(aiCredits\.restantes",
+                  produccion)
+    assert m, (
+        "el botón de acabado PREMIUM ya no se apaga cuando no quedan créditos. "
+        "Sin ventana de confirmación, era lo último que quedaba entre un toque "
+        "y quedarse a cero.")
 
 
 def test_acabado_premium_usa_el_render_actual_y_no_el_selector_de_motor():
@@ -102,7 +134,12 @@ def test_acabado_premium_usa_el_render_actual_y_no_el_selector_de_motor():
     assert "editingRender: true" in cuerpo
     assert "referenceIsSketch: false" in cuerpo
     assert "No rediseñes" in cuerpo
-    assert "window.confirm" in cuerpo
+    # SIN VENTANA DE CONFIRMACIÓN (master, 10/09/2026: «que no salga la pantalla
+    # de momento»). En una tablet ese `confirm` se come la pantalla entera y
+    # corta el trabajo. Se comprueba que NO vuelva sola.
+    assert "window.confirm" not in cuerpo, (
+        "ha vuelto la ventana de confirmación al acabado PREMIUM; el master "
+        "pidió quitarla el 10/09")
 
 
 def test_los_cambios_posteriores_conservan_el_modo_premium_y_avisan_del_coste():

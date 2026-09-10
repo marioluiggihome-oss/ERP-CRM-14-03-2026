@@ -2617,8 +2617,18 @@ export default function AIRenderStudio({ state, setState }) {
   const mejorarAcabadoPremium = async () => {
     const img = currentImage();
     if (!img || editing || !canUsePremiumFinish) return;
-    const palabra = premiumFinishCost === 1 ? 'crédito' : 'créditos';
-    if (!window.confirm(`Mejorar a acabado PREMIUM consumirá ${premiumFinishCost} ${palabra}. ¿Continuar?`)) return;
+    // SIN VENTANA DE CONFIRMACIÓN NI CIFRA DE CRÉDITOS EN EL BOTÓN (master,
+    // 10/09/2026: «que no ponga lo de los siete créditos y que no salga la
+    // pantalla de momento»). En una tablet ese `confirm` se come la pantalla
+    // entera y corta el trabajo a cada pulsación.
+    //
+    // EL COBRO NO SE TOCA: lo hace el servidor en `cobrar_render` (regla 32) y
+    // se sigue descontando igual. Lo que se quita es el aviso, no el precio —
+    // que son dos cosas distintas y confundirlas sería renderizar gratis.
+    //
+    // Y el botón SIGUE deshabilitándose si no quedan créditos suficientes: sin
+    // ventana de confirmación, esa es la única defensa que queda contra pulsar
+    // y quedarse a cero.
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -5420,10 +5430,10 @@ export default function AIRenderStudio({ state, setState }) {
                 {canUsePremiumFinish && motor !== 'premium' && !premiumFinishActive && (
                 <button onClick={mejorarAcabadoPremium}
                   disabled={editing || downloading || !currentImage() || Boolean(aiCredits && !aiCredits.ilimitado && premiumFinishCost > (aiCredits.restantes ?? 0))}
-                  title={`Mejora el render aprobado sin cambiar su diseño. Consume ${premiumFinishCost} créditos.`}
+                  title="Mejora el render aprobado sin cambiar su diseño."
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90 shadow-md disabled:opacity-50">
                   {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                  <span>Acabado PREMIUM · {premiumFinishCost} créditos</span>
+                  <span>Acabado PREMIUM</span>
                 </button>
                 )}
                 {/* Separador visual */}
