@@ -1602,7 +1602,7 @@ export default function Estudio3DLab({ state, setState }) {
     const texto = (lineas || []).join(' ').toLowerCase();
     const esTirador = /(tirador|tiradores|gola|manilla|asa)\b/.test(texto);
     const esBajo = /(\bbajo\b|\bbajos\b|abajo|parte baja|de abajo|módulo bajo|módulos bajos|inferior|inferiores)/.test(texto);
-    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|mueble|muebles|iluminación|iluminacion|luz|luces|suelo|pared|ventana|ventanas|decoración|decoracion|color|acabado|material|repisas|baldas)/.test(texto);
+    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|frigorífico|frigorifico|frigo|combi|nevera|horno|microondas|campana|mueble|muebles|iluminación|iluminacion|luz|luces|suelo|pared|ventana|ventanas|decoración|decoracion|color|acabado|material|repisas|baldas)/.test(texto);
     if (!texto && editRefImage) {
       return {
         alcance: 'referencia_adicional',
