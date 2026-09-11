@@ -922,14 +922,14 @@ export default function Estudio3DLab({ state, setState }) {
   // Preset entrante (p. ej. desde el Presupuestador de Armarios): fija el tipo y
   // rellena la descripción para arrancar el render de ese mueble. Se consume una vez.
   useEffect(() => {
-    const preset = state?.estudio3dPreset;
+    const preset = state?.estudio3dPremiumPreset;
     if (!preset) return;
     if (preset.tipo) setTipo3d(preset.tipo);
     if (preset.description) setDescription(preset.description);
     if (preset.cliente) setCliente(preset.cliente);
     if (preset.ref) setRef(preset.ref);
-    if (setState) setState(p => { const { estudio3dPreset, ...rest } = p; return rest; });
-  }, [state?.estudio3dPreset]); // eslint-disable-line
+    if (setState) setState(p => { const { estudio3dPremiumPreset, ...rest } = p; return rest; });
+  }, [state?.estudio3dPremiumPreset]); // eslint-disable-line
 
   // Detección AUTOMÁTICA de instalaciones: analiza la imagen que está viendo
   // el usuario y coloca marcas editables. No debe activar B/N por su cuenta.
@@ -1839,14 +1839,10 @@ export default function Estudio3DLab({ state, setState }) {
     // detectado, se dibuja ESO: es lo que ha visto y ha dado por bueno. Y de
     // paso se ahorra una llamada a la IA por cada vía.
     if (distAceptada.current) return distAceptada.current;
-    const croquis = originalRef || refImage;
-    if (croquis) {
-      try {
-        const dataUrl = await imageToDataUrl(croquis);
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
-      } catch (e) { anota('del croquis', e); }
-    }
+    // En el Estudio 3D normal se prioriza el render visible, que es el flujo
+    // rápido y estable utilizado anteriormente. El plano original queda como
+    // respaldo cuando todavía no existe un render. Premium mantiene su propio
+    // flujo de lectura y no entra por esta ruta.
     const img = currentImage();
     if (img) {
       try {
@@ -1854,6 +1850,14 @@ export default function Estudio3DLab({ state, setState }) {
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
       } catch (e) { anota('del render', e); }
+    }
+    const croquis = originalRef || refImage;
+    if (croquis) {
+      try {
+        const dataUrl = await imageToDataUrl(croquis);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
+      } catch (e) { anota('del croquis', e); }
     }
     if ((description || '').trim()) {
       try {
@@ -3495,7 +3499,7 @@ export default function Estudio3DLab({ state, setState }) {
   const setEstadoRef = useRef(setState); setEstadoRef.current = setState;
 
   useEffect(() => {
-    const g = leerSesion(estadoRef.current, 'estudio3d');
+    const g = leerSesion(estadoRef.current, 'estudio3dPremium');
     if (g) {
       setPremiumBrief(g.premiumBrief || null);
       if (g.cliente) setCliente(g.cliente);
@@ -3519,7 +3523,7 @@ export default function Estudio3DLab({ state, setState }) {
     }
     return () => {
       const f = setEstadoRef.current;
-      if (f) guardarSesion(f, 'estudio3d', sesionRef.current);
+      if (f) guardarSesion(f, 'estudio3dPremium', sesionRef.current);
     };
   }, []);
 

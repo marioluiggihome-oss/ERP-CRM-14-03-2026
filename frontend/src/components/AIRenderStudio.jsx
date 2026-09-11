@@ -1802,14 +1802,10 @@ export default function AIRenderStudio({ state, setState }) {
     // detectado, se dibuja ESO: es lo que ha visto y ha dado por bueno. Y de
     // paso se ahorra una llamada a la IA por cada vía.
     if (distAceptada.current) return distAceptada.current;
-    const croquis = originalRef || refImage;
-    if (croquis) {
-      try {
-        const dataUrl = await imageToDataUrl(croquis);
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
-      } catch (e) { anota('del croquis', e); }
-    }
+    // En el Estudio 3D normal se prioriza el render visible, que es el flujo
+    // rápido y estable utilizado anteriormente. El plano original queda como
+    // respaldo cuando todavía no existe un render. Premium mantiene su propio
+    // flujo de lectura y no entra por esta ruta.
     const img = currentImage();
     if (img) {
       try {
@@ -1817,6 +1813,14 @@ export default function AIRenderStudio({ state, setState }) {
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
       } catch (e) { anota('del render', e); }
+    }
+    const croquis = originalRef || refImage;
+    if (croquis) {
+      try {
+        const dataUrl = await imageToDataUrl(croquis);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
+      } catch (e) { anota('del croquis', e); }
     }
     if ((description || '').trim()) {
       try {

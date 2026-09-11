@@ -15,6 +15,12 @@ CAMBIOS_PREMIUM = [
 ('save briefing', '          relacionMV: relacionParaGuardar(),', "          relacionMV: relacionParaGuardar(),\n          ...(motor === 'premium' ? { premiumBrief: normalizeBrief(premiumBrief) } : {}),"),
 ('restore saved briefing', '        const full = d.design || {};', '        const full = d.design || {};\n        setPremiumBrief(full.premiumBrief ? normalizeBrief(full.premiumBrief) : null);'),
 ('premium appliance vocabulary', '|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|', '|lavavajillas|lavadora|frigorífico|frigorifico|frigo|combi|nevera|horno|microondas|campana|'),
+# Premium must not share the production module's transient preset or session key.
+('premium preset isolation', "    const preset = state?.estudio3dPreset;", "    const preset = state?.estudio3dPremiumPreset;"),
+('premium preset cleanup isolation', "    if (setState) setState(p => { const { estudio3dPreset, ...rest } = p; return rest; });", "    if (setState) setState(p => { const { estudio3dPremiumPreset, ...rest } = p; return rest; });"),
+('premium preset dependency isolation', "  }, [state?.estudio3dPreset]); // eslint-disable-line", "  }, [state?.estudio3dPremiumPreset]); // eslint-disable-line"),
+('premium session read isolation', "    const g = leerSesion(estadoRef.current, 'estudio3d');", "    const g = leerSesion(estadoRef.current, 'estudio3dPremium');"),
+('premium session write isolation', "      if (f) guardarSesion(f, 'estudio3d', sesionRef.current);", "      if (f) guardarSesion(f, 'estudio3dPremium', sesionRef.current);")
 ]
 
 PRECHECK = """    if (motor === 'premium') {
