@@ -807,7 +807,7 @@ const App = () => {
   // ── Studio3K: entrando por studio3k.io / estudio3k.io (o ?brand=studio3k)
   // muestra la landing comercial de Studio3K. Publicada por defecto.
   const _isStudio3kEntry = _platformEntry?.key === 'studio3k';
-  const STUDIO3K_LANDING_PUBLISHED = false;
+  const STUDIO3K_LANDING_PUBLISHED = true;
   const _studio3kPreview = (() => {
     try {
       const sp = new URLSearchParams(window.location.search);

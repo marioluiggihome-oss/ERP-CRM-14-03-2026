@@ -21,19 +21,19 @@ import {
 /* ─── DATOS ──────────────────────────────────────────────────────────────── */
 const NAV_LINKS = [
   { label: "Producto", href: "#producto" },
-  { label: "IA", href: "#ia" },
+  { label: "Visualización", href: "#visualizacion" },
   { label: "Precios", href: "#precios" },
   { label: "Vídeo", href: "#video" },
   { label: "Contacto", href: "#contacto" },
 ];
 
 const FEATURES = [
-  { icon: Image, cota: "01", title: "Del boceto al render en segundos", desc: "El cliente dibuja a mano alzada o describe la cocina. Studio3K genera un render fotorrealista de calidad de estudio en menos de 10 segundos, sin software externo." },
-  { icon: Layers, cota: "02", title: "Catálogo vivo de productos", desc: "Tus acabados, puertas y electrodomésticos siempre actualizados. El vendedor configura en tiempo real y el render se actualiza al instante." },
-  { icon: TrendingUp, cota: "03", title: "Presupuesto automático", desc: "Cada configuración genera su presupuesto al momento. Precio, margen y coste de fabricación en una sola pantalla. Sin Excel, sin errores." },
+  { icon: Image, cota: "01", title: "Del boceto al render en la misma visita", desc: "El cliente dibuja a mano alzada o describe la cocina y tu equipo obtiene una propuesta visual para revisarla juntos, sin instalar programas." },
+  { icon: Layers, cota: "02", title: "Tu catálogo, tus acabados", desc: "Organiza puertas, acabados y electrodomésticos de tu tienda para trabajar con una base coherente y presentar cada propuesta con tu criterio comercial." },
+  { icon: TrendingUp, cota: "03", title: "De la propuesta al presupuesto", desc: "Relaciona la propuesta visual con la información comercial del proyecto y revisa precio, margen y fabricación antes de presentarlo al cliente." },
   { icon: Users, cota: "04", title: "Gestión de clientes y proyectos", desc: "Historial completo de cada cliente: visitas, presupuestos, renders y estado del pedido. Tu equipo siempre al día, desde cualquier dispositivo." },
   { icon: Eye, cota: "05", title: "Presentación inmersiva", desc: "Muestra el proyecto al cliente en modo presentación: pantalla completa, renders en alta resolución y comparativa antes/después con un solo clic." },
-  { icon: Globe, cota: "06", title: "Tu marca, tu dominio", desc: "La herramienta trabaja bajo tu nombre. El cliente ve tu tienda, no la nuestra. Personalización completa de colores, logo y dominio." },
+  { icon: Globe, cota: "06", title: "Tu marca, tu forma de trabajar", desc: "Presenta el proyecto con la identidad de tu tienda y adapta la experiencia a tu equipo, tus clientes y tu manera de vender." },
 ];
 
 const PLANS = [
@@ -41,9 +41,9 @@ const PLANS = [
     name: "Showroom",
     price: "149",
     anual: "1.490",
-    desc: "Para tiendas que quieren empezar a vender con IA",
-    credits: "30 renders IA/mes",
-    features: ["Presupuestos ilimitados", "Hasta 3 vendedores", "30 renders IA/mes", "Catálogo de productos", "Gestión de clientes", "Soporte por email"],
+    desc: "Para tiendas que quieren empezar a presentar propuestas visuales",
+    credits: "30 propuestas/mes",
+    features: ["Presupuestos ilimitados", "Hasta 3 vendedores", "30 propuestas/mes", "Catálogo de productos", "Gestión de clientes", "Soporte por email"],
     highlight: false,
   },
   {
@@ -51,8 +51,8 @@ const PLANS = [
     price: "299",
     anual: "2.990",
     desc: "Para tiendas en crecimiento con equipo comercial",
-    credits: "100 renders IA/mes",
-    features: ["Todo lo de Showroom", "Hasta 10 vendedores", "100 renders IA/mes", "Presentación inmersiva", "Comparativa antes/después", "Soporte prioritario"],
+    credits: "100 propuestas/mes",
+    features: ["Todo lo de Showroom", "Hasta 10 vendedores", "100 propuestas/mes", "Presentación inmersiva", "Comparativa antes/después", "Soporte prioritario"],
     highlight: true,
   },
   {
@@ -67,16 +67,16 @@ const PLANS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Laura Vidal", role: "Directora comercial · Cocinas Vidal, Barcelona", text: "Antes el cliente se iba a casa a pensárselo y no volvía. Ahora ve su cocina en 3D en la misma visita y firma el mismo día. Hemos subido el cierre un 40%." },
-  { name: "Roberto Sanz", role: "Propietario · Estudio Cocinas Sanz, Madrid", text: "El render es tan bueno que los clientes piensan que ya está montada. La confianza que genera es brutal. Y el presupuesto sale solo, sin errores." },
-  { name: "Carmen Iglesias", role: "Gerente · Grupo Cocinas del Norte, Bilbao", text: "Lo usamos en las tres tiendas. Cada vendedor tiene su acceso y el catálogo siempre actualizado. Antes tardábamos días en preparar una presentación." },
+  { name: "Presentación en tienda", role: "Para equipos comerciales", text: "El cliente puede ver una propuesta de su cocina durante la visita y tomar decisiones con más claridad, sin esperar a una presentación posterior." },
+  { name: "Catálogo y propuesta", role: "Para tiendas de cocinas", text: "La tienda trabaja con sus acabados, productos y criterios comerciales para mantener una propuesta coherente de principio a fin." },
+  { name: "Trabajo en equipo", role: "Para redes y grupos de tiendas", text: "Cada usuario puede trabajar dentro del proyecto que le corresponde y el equipo mantiene una visión ordenada de clientes, propuestas y presupuestos." },
 ];
 
 const FAQS = [
   { q: "¿Necesito instalar algo?", a: "No. Studio3K funciona completamente en el navegador. Solo necesitas una conexión a internet. Funciona en ordenador, tablet y móvil." },
-  { q: "¿Cómo se integra con mi catálogo?", a: "Nuestro equipo configura tu catálogo de productos, acabados y precios contigo en la primera sesión. En menos de 48 horas estás operativo." },
-  { q: "¿Los renders son realmente fotorrealistas?", a: "Sí. Usamos el mismo motor de IA que estudios de arquitectura e interiorismo profesional. El resultado es indistinguible de una fotografía real." },
-  { q: "¿Puedo usar mi propia marca?", a: "Sí. En los planes Studio y Cadena la herramienta va completamente bajo tu nombre, tu logo y tu dominio. El cliente nunca ve Studio3K." },
+  { q: "¿Cómo se integra con mi catálogo?", a: "Definimos contigo los productos, acabados y datos comerciales que necesita tu equipo. La puesta en marcha se adapta al catálogo y al proceso real de tu tienda." },
+  { q: "¿Qué nivel de detalle puedo presentar?", a: "La plataforma está pensada para crear propuestas visuales claras y presentables. El resultado debe revisarse siempre junto con la distribución, los acabados y las medidas del proyecto." },
+  { q: "¿Puedo usar mi propia marca?", a: "La personalización depende del plan y de la configuración contratada. Podemos adaptar la experiencia visual para que encaje con la identidad y el proceso de tu tienda." },
   { q: "¿Hay permanencia?", a: "No. Puedes cancelar en cualquier momento. Sin letra pequeña, sin penalizaciones." },
 ];
 
@@ -130,8 +130,8 @@ function Nav({ onEnter }) {
         {/* Logo wordmark */}
         <a href="#top" className="s3k-logo-link">
           <img
-            src={scrolled ? "/studio3k-logo-light.png" : "/studio3k-logo-white.png"}
-            alt="studio3k"
+            src="/studio3k-logo-white.png"
+            alt="STUDIO3K.IO"
             className="s3k-logo-img"
           />
         </a>
@@ -171,14 +171,13 @@ function Hero({ onEnter }) {
       <div className="s3k-hero-bg" style={{ backgroundImage: "url(/studio3k-hero-bg.jpg)" }} />
       <div className="s3k-hero-overlay" />
       <div className="s3k-wrap s3k-hero-content">
-        <Eyebrow light>DISEÑO DE COCINAS · INTELIGENCIA ARTIFICIAL</Eyebrow>
+        <Eyebrow light>DISEÑO DE COCINAS · VISUALIZACIÓN PROFESIONAL</Eyebrow>
         <h1 className="s3k-hero-h1">
           El cliente ve su cocina.<br />
           <span className="s3k-hero-accent">Antes de que exista.</span>
         </h1>
         <p className="s3k-hero-sub">
-        Studio3K convierte un dibujo a mano alzada en un render fotorrealista de cocina en segundos.
-        Cierra más ventas, en la misma visita.
+        Studio3K convierte un dibujo a mano alzada en una propuesta visual de cocina para que el cliente pueda decidir contigo, en la misma visita.
         </p>
         <div className="s3k-hero-actions">
           <a href="#contacto" className="s3k-btn-solid s3k-btn-lg">
@@ -189,11 +188,11 @@ function Hero({ onEnter }) {
           </a>
         </div>
         <div className="s3k-hero-stats">
-          <div className="s3k-stat"><span className="s3k-stat-num">+40%</span><span className="s3k-stat-label">tasa de cierre</span></div>
+          <div className="s3k-stat"><span className="s3k-stat-num">1 visita</span><span className="s3k-stat-label">de la idea a la propuesta</span></div>
           <div className="s3k-stat-sep" />
-          <div className="s3k-stat"><span className="s3k-stat-num">&lt;10s</span><span className="s3k-stat-label">por render</span></div>
+          <div className="s3k-stat"><span className="s3k-stat-num">0 instalaciones</span><span className="s3k-stat-label">para empezar</span></div>
           <div className="s3k-stat-sep" />
-          <div className="s3k-stat"><span className="s3k-stat-num">100%</span><span className="s3k-stat-label">en tu navegador</span></div>
+          <div className="s3k-stat"><span className="s3k-stat-num">360°</span><span className="s3k-stat-label">para presentar mejor</span></div>
         </div>
       </div>
     </section>
@@ -223,7 +222,7 @@ function DemoSection() {
           </div>
           <div className="s3k-demo-badge s3k-demo-badge-right">
             <Sparkles size={14} />
-            <span className="s3k-demo-badge-label">Render IA · 8 segundos</span>
+            <span className="s3k-demo-badge-label">Propuesta visual para revisar</span>
           </div>
         </div>
         {/* Prompt de ejemplo */}
@@ -243,7 +242,7 @@ function DemoSection() {
           </div>
           <div className="s3k-prompt-result">
             <Zap size={14} />
-            <span>Render generado · Presupuesto: <strong>18.450 €</strong> · Margen: <strong>38%</strong></span>
+            <span>Propuesta visual lista · Revisa acabados, distribución y presupuesto con el cliente</span>
           </div>
         </div>
       </div>
@@ -281,19 +280,18 @@ function Features() {
 
 function AISection() {
   return (
-    <section className="s3k-sec s3k-sec-white" id="ia">
+    <section className="s3k-sec s3k-sec-white" id="visualizacion">
       <div className="s3k-wrap s3k-ai-grid">
         <div className="s3k-ai-text" data-reveal>
-          <Eyebrow>INTELIGENCIA ARTIFICIAL</Eyebrow>
-          <h2 className="s3k-sec-h2">El cliente decide.<br /><span className="s3k-accent">La IA lo visualiza.</span></h2>
+          <Eyebrow>VISUALIZACIÓN INTELIGENTE</Eyebrow>
+          <h2 className="s3k-sec-h2">El cliente decide.<br /><span className="s3k-accent">Tú lo visualizas.</span></h2>
           <p className="s3k-sec-lead">
-            No necesitas fotógrafo, ni renderista, ni esperar días. Tu vendedor configura
-            la cocina con el cliente en la tienda y Studio3K genera el render en el momento.
+            Tu equipo puede configurar la propuesta con el cliente y revisarla en el momento, sin depender de un proceso separado de visualización.
           </p>
           <ul className="s3k-ai-list">
             {[
-              "Renders fotorrealistas en menos de 10 segundos",
-              "Compatible con cualquier catálogo de acabados",
+              "Propuestas visuales para presentar en la misma visita",
+              "Trabaja con los acabados y productos de tu tienda",
               "Múltiples ángulos y variantes de iluminación",
               "Exportación en alta resolución para el cliente",
             ].map((item) => (
@@ -310,12 +308,12 @@ function AISection() {
         <div className="s3k-ai-img-wrap" data-reveal>
           <img
             src="/studio3k-kitchen2.jpg"
-            alt="Cocina de diseño generada con IA"
+            alt="Cocina de diseño presentada en Studio3K"
             className="s3k-ai-img"
           />
           <div className="s3k-ai-badge">
             <Sparkles size={14} />
-            <span>Generado con Studio3K IA</span>
+            <span>Presentación visual Studio3K</span>
           </div>
         </div>
       </div>
@@ -434,7 +432,7 @@ function VideoSection() {
           Véalo en <span className="s3k-accent">acción.</span>
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.55)', marginBottom: 32, maxWidth: 520 }}>
-          Del boceto a mano alzada al render fotorrealista. En menos de 10 segundos.
+          Del boceto a mano alzada a una propuesta visual que puedes revisar con tu cliente.
         </p>
         <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(59,91,219,0.3)', boxShadow: '0 0 60px rgba(59,91,219,0.15)' }}>
           <video
@@ -474,6 +472,13 @@ function ContactForm() {
   const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(59,91,219,0.25)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' };
   const handleFocus = e => (e.currentTarget.style.borderColor = 'var(--s3k-indigo)');
   const handleBlur = e => (e.currentTarget.style.borderColor = 'rgba(59,91,219,0.25)');
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const subject = `Solicitud de información Studio3K — ${form.empresa || form.nombre}`;
+    const body = [`Nombre: ${form.nombre}`, `Empresa: ${form.empresa}`, `Email: ${form.email}`, `Teléfono: ${form.telefono}`, '', form.mensaje].join('\\n');
+    window.location.href = `mailto:hola@studio3k.io?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setSent(true);
+  };
   if (sent) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '24px 0' }}>
@@ -481,14 +486,14 @@ function ContactForm() {
           <Check size={22} color="#fff" />
         </div>
         <div>
-          <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>Mensaje enviado</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '4px 0 0' }}>Te respondemos en menos de 24h.</p>
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>Solicitud preparada</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '4px 0 0' }}>Se ha preparado el mensaje en tu correo para enviarlo a nuestro equipo.</p>
         </div>
       </div>
     );
   }
   return (
-    <form onSubmit={e => { e.preventDefault(); setSent(true); }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Nombre</label>
@@ -529,7 +534,7 @@ function CTASection({ onEnter }) {
           <span className="s3k-accent">Solo falta que entres.</span>
         </h2>
         <p className="s3k-cta-sub">
-          Cuéntanos tu proyecto y te respondemos en menos de 24h.
+          Cuéntanos tu proyecto y te indicaremos los siguientes pasos.
         </p>
         <ContactForm />
       </div>
@@ -543,13 +548,13 @@ function Footer() {
       <div className="s3k-wrap s3k-footer-inner">
         <div className="s3k-footer-brand">
           <img src="/studio3k-logo-white.png" alt="studio3k" className="s3k-footer-logo" />
-          <p className="s3k-footer-tagline">Diseño de cocinas con inteligencia artificial.<br />Para tiendas que quieren vender más.</p>
+          <p className="s3k-footer-tagline">Visualización y gestión de propuestas de cocina.<br />Para tiendas que quieren vender mejor.</p>
         </div>
         <div className="s3k-footer-links">
           <div className="s3k-footer-col">
             <span className="s3k-footer-col-title">Producto</span>
             <a href="#producto">Características</a>
-            <a href="#ia">IA</a>
+            <a href="#visualizacion">Visualización</a>
             <a href="#precios">Precios</a>
           </div>
           <div className="s3k-footer-col">
@@ -561,7 +566,7 @@ function Footer() {
       </div>
       <div className="s3k-footer-bottom">
         <span>© {new Date().getFullYear()} Studio3K · studio3k.io</span>
-        <span>Hecho con IA · Diseñado para vender</span>
+        <span>Diseñado para ayudar a vender mejor</span>
       </div>
     </footer>
   );
@@ -645,17 +650,17 @@ const CSS = `
 
 /* NAV */
 .s3k-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; transition: background .3s, box-shadow .3s; }
-.s3k-nav-solid { background: rgba(255,255,255,.94); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(26,26,46,.08); }
+.s3k-nav-solid { background: rgba(10,10,18,.96); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(255,255,255,.1); }
 .s3k-nav-inner { display: flex; align-items: center; gap: 32px; height: 64px; }
 .s3k-logo-link { display: flex; align-items: center; }
-.s3k-logo-img { height: 26px; width: auto; object-fit: contain; }
+.s3k-logo-img { display: block; height: 34px; width: 148px; object-fit: contain; object-position: left center; }
 .s3k-nav-links { display: flex; align-items: center; gap: 28px; margin-left: auto; }
 .s3k-nav-links a { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); transition: color .2s; }
-.s3k-nav-solid .s3k-nav-links a { color: var(--s3k-ink); }
+.s3k-nav-solid .s3k-nav-links a { color: rgba(255,255,255,.9); }
 .s3k-nav-links a:hover { color: var(--s3k-indigo) !important; }
 .s3k-nav-actions { display: flex; align-items: center; gap: 10px; }
 .s3k-nav-burger { display: none; background: none; border: none; cursor: pointer; padding: 6px; color: #fff; }
-.s3k-nav-solid .s3k-nav-burger { color: var(--s3k-ink); }
+.s3k-nav-solid .s3k-nav-burger { color: #fff; }
 .s3k-nav-mobile { background: var(--s3k-white); border-top: 1px solid var(--s3k-stone-2); padding: 14px 24px; display: flex; flex-direction: column; gap: 6px; }
 .s3k-nav-mobile a { font-size: 15px; font-weight: 600; color: var(--s3k-ink); padding: 8px 0; border-bottom: 1px solid var(--s3k-stone); }
 
@@ -666,8 +671,8 @@ const CSS = `
 .s3k-btn-outline:hover { background: var(--s3k-indigo); color: #fff; }
 .s3k-btn-ghost { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid rgba(255,255,255,.35); color: rgba(255,255,255,.85); font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 10px; transition: .2s; background: transparent; cursor: pointer; }
 .s3k-btn-ghost:hover { border-color: rgba(255,255,255,.7); color: #fff; }
-.s3k-nav-solid .s3k-btn-ghost { border-color: rgba(26,26,46,.25); color: var(--s3k-ink); }
-.s3k-nav-solid .s3k-btn-ghost:hover { border-color: var(--s3k-indigo); color: var(--s3k-indigo); }
+.s3k-nav-solid .s3k-btn-ghost { border-color: rgba(255,255,255,.35); color: rgba(255,255,255,.9); }
+.s3k-nav-solid .s3k-btn-ghost:hover { border-color: var(--s3k-indigo); color: #fff; }
 .s3k-btn-ghost-light { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid rgba(255,255,255,.35); color: rgba(255,255,255,.85); font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 10px; transition: .2s; background: transparent; cursor: pointer; }
 .s3k-btn-ghost-light:hover { border-color: rgba(255,255,255,.7); color: #fff; }
 .s3k-btn-white { display: inline-flex; align-items: center; gap: 8px; background: #fff; color: var(--s3k-indigo); font-weight: 700; font-size: 14px; padding: 11px 22px; border-radius: 10px; transition: .2s; cursor: pointer; }
@@ -810,6 +815,7 @@ const CSS = `
   .s3k-footer-inner { grid-template-columns: 1fr; gap: 40px; }
 }
 @media (max-width: 640px) {
+  .s3k-logo-img { height: 28px; width: 122px; }
   .s3k-nav-links, .s3k-nav-actions { display: none; }
   .s3k-nav-burger { display: block; }
   .s3k-feat-grid { grid-template-columns: 1fr; }
