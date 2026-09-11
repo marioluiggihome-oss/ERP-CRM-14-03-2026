@@ -498,6 +498,10 @@ export default function AIRenderStudio({ state, setState }) {
   const [editInstruction, setEditInstruction] = useState('');
   const [editLines, setEditLines] = useState([]); // multi-línea: instrucciones adicionales
   const [editing, setEditing] = useState(false);
+  // Después del acabado Premium, el usuario elige para cada modificación si
+  // quiere procesarla en modo normal o mantener el motor Premium.
+  const [premiumEditMode, setPremiumEditMode] = useState(true);
+  const premiumChangeActive = premiumFinishActive && premiumEditMode;
   // Cadena de edición sin degradación acumulativa: cada cambio se genera desde
   // la imagen original de la sesión, incorporando las órdenes ya aplicadas en
   // el prompt, en vez de volver a enviar el render regenerado anterior.
@@ -2927,6 +2931,10 @@ export default function AIRenderStudio({ state, setState }) {
   const aplicarPintado = async () => {
     const img = currentImage();
     if (!img || editing || !trazos.length) return;
+    if (premiumChangeActive && !canUsePremiumFinish) {
+      setError('No tienes permiso para aplicar este cambio con acabado PREMIUM. Selecciona cambio normal.');
+      return;
+    }
     const orden = editInstruction.trim();
     setEditing(true); setError(null);
     try {
@@ -2955,7 +2963,7 @@ export default function AIRenderStudio({ state, setState }) {
         body: JSON.stringify({
           description: desc,
           style: params.style,
-          provider: providerOf(),
+          provider: premiumChangeActive ? 'chatgpt' : providerOf(),
           referenceImage: pintada,
           // La referencia es un render NUESTRO —pintado, pero nuestro—, y se
           // dice. Sin esto el servidor se lo pasa al detector de croquis, y
@@ -2970,6 +2978,7 @@ export default function AIRenderStudio({ state, setState }) {
         try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, la original */ }
         const merged = {
           ...data,
+          premiumFinish: premiumFinishActive,
           result: { ...data.result, images: [finalImg] },
           description: `${renderResult?.description || description}\n[Cambios señalados sobre la imagen]`,
         };
@@ -3003,8 +3012,8 @@ export default function AIRenderStudio({ state, setState }) {
       setError('La instrucción no identifica con suficiente precisión qué propiedad y qué zona deben cambiar. No se aplicó ningún cambio para evitar alterar el diseño.');
       return;
     }
-    if (premiumFinishActive && !canUsePremiumFinish) {
-      setError('Este render tiene acabado PREMIUM, pero tu usuario no tiene permiso para continuar editándolo en ese modo.');
+    if (premiumChangeActive && !canUsePremiumFinish) {
+      setError('No tienes permiso para aplicar este cambio con acabado PREMIUM. Selecciona cambio normal.');
       return;
     }
     // SIN VENTANA TAMBIÉN AQUÍ (master, 10/09/2026). Aplicar un cambio estando
@@ -3068,7 +3077,7 @@ export default function AIRenderStudio({ state, setState }) {
           // Después de elevar un render a PREMIUM, «Aplicar cambio» no vuelve
           // al motor con el que se creó: mantiene la cadena de calidad y cobra
           // el coste PREMIUM, avisado antes de entrar aquí.
-          provider: premiumFinishActive ? 'chatgpt' : providerOf(),
+          provider: premiumChangeActive ? 'chatgpt' : providerOf(),
           // El último diseño aprobado debe ser la referencia principal. Antes se
           // enviaba aquí la base original y el diseño actual quedaba como imagen
           // secundaria de acabado; así una nueva orden podía recuperar tiradores,
@@ -6000,12 +6009,24 @@ export default function AIRenderStudio({ state, setState }) {
                     className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
+                  {premiumFinishActive && (
+                    <div className="shrink-0 flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" title="Elige cómo procesar este cambio">
+                      <button type="button" onClick={() => setPremiumEditMode(false)}
+                        className={`px-2.5 py-1.5 rounded-md text-[11px] font-black ${!premiumEditMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
+                        Normal
+                      </button>
+                      <button type="button" onClick={() => setPremiumEditMode(true)} disabled={!canUsePremiumFinish}
+                        className={`px-2.5 py-1.5 rounded-md text-[11px] font-black disabled:opacity-40 ${premiumEditMode ? 'bg-emerald-700 text-white shadow-sm' : 'text-emerald-700'}`}>
+                        Premium
+                      </button>
+                    </div>
+                  )}
                   <button onClick={() => editRender()} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
-                    title={premiumFinishActive ? `Se aplicará con acabado PREMIUM y consumirá ${premiumFinishCost} créditos.` : 'Aplicar el cambio al render actual'}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-white rounded-lg text-xs font-bold disabled:opacity-50 shrink-0 ${premiumFinishActive ? 'bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90' : 'bg-accion-600 hover:bg-accion-700'}`}>
+                    title={premiumChangeActive ? `Se aplicará con acabado PREMIUM y consumirá ${premiumFinishCost} crédito.` : 'Aplicar el cambio en modo normal (1 crédito)'}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-white rounded-lg text-xs font-bold disabled:opacity-50 shrink-0 ${premiumChangeActive ? 'bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90' : 'bg-accion-600 hover:bg-accion-700'}`}>
                     {editing
                       ? <><Loader size={14} className="animate-spin" /> Aplicando…</>
-                      : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}{premiumFinishActive ? ` · PREMIUM · ${premiumFinishCost} créditos` : ''}</>}
+                      : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}{premiumChangeActive ? ` · PREMIUM · ${premiumFinishCost} crédito` : ''}</>}
                   </button>
                 </div>
               )}

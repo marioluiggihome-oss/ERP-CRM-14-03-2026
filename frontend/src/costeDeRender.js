@@ -18,14 +18,14 @@
  * renderizan: el Estudio 3D de producción (`AIRenderStudio.jsx`, congelado) y
  * su clon de pruebas (`Estudio3DLab.jsx`). Con la tabla copiada en cada una,
  * añadir un motor obligaría a acordarse de tocar las dos — y el día que se
- * olvide una, esa pantalla avisará «1 crédito» de un motor que cobra siete.
+ * olvide una, esa pantalla avisará un precio distinto del cobro real.
  *
  * EL AVISO NUNCA DICE QUÉ IA SE USA (CLAUDE.md, regla 15; el master, 25/08:
  * «que no ponga nunca qué IA se usa»). Por eso esto es una tabla de NÚMEROS y
  * las claves son nombres técnicos que no salen a pantalla.
  */
 export const COSTE_CREDITOS = {
-  chatgpt: 7,
+  chatgpt: 1,
   julio11: 1,
   julio11_plus: 1,
   banana_pro: 3.3,

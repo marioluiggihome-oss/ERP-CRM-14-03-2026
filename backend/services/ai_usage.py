@@ -428,13 +428,10 @@ async def añadir_saldo(user_id: str, renders: int) -> int:
 # render». Se redondea HACIA ARRIBA al descontar, que es como se cobra: nadie
 # regala el trozo suelto.
 COSTE_POR_MOTOR = {
-    # IA PREMIUM (ChatGPT). Es el motor más caro de todos y por eso NO cobra 1
-    # como los demás: al proveedor se le pagan ~0,25 € por imagen frente a los
-    # 0,036 € del motor de producción, o sea unas 7 veces. Solo lo usa el
-    # master desde el clon del Estudio 3D (regla 11), así que esto no le toca
-    # el bolsillo a ningún usuario; pero un motor caro cobrando como el barato
-    # es justo lo que hace que nadie relacione la factura con el botón.
-    "chatgpt": 7.0,
+    # IA PREMIUM (ChatGPT). Por decisión comercial del master, cada generación
+    # descuenta un único crédito igual que el resto. Su coste real para la
+    # empresa se sigue mostrando por separado en MASTER → Consumo IA.
+    "chatgpt": 1.0,
     "julio11": 1.0,
     "julio11_plus": 1.0,
     "banana_pro": 3.3,
