@@ -6188,7 +6188,21 @@ export default function Estudio3DLab({ state, setState }) {
                       </button>
                     </div>
                   </div>
-                  <pre className="whitespace-pre-wrap break-words text-slate-500 font-mono text-[10px] leading-snug max-h-40 overflow-y-auto">
+                  {/* ALTO SUFICIENTE PARA VER LA RELACIÓN ENTERA (master, 11/09/2026:
+                      «aquí pone 9 muebles, pero no se ven todos, no hay opción
+                      de bajar hacia abajo y verlos»).
+
+                      Estaba en `max-h-40` —160 px—, que corta a partir del
+                      décimo y deja el resto detrás de un scroll INTERIOR sin
+                      barra visible: en una tablet no hay forma de saber que hay
+                      más, y esta lista es justo la que se revisa antes de pasar
+                      a presupuesto. Una relación que no se puede leer entera no
+                      se puede comprobar.
+
+                      `overscroll-contain` para que arrastrar dentro no mueva el
+                      panel de detrás, que en táctil es lo que hace que parezca
+                      que no se puede bajar. */}
+                  <pre className="whitespace-pre-wrap break-words text-slate-500 font-mono text-[10px] leading-snug max-h-[55vh] overflow-y-auto overscroll-contain">
                     {renderResult.parsed_params.relacionMV}
                   </pre>
                   <div className="mt-1 text-slate-400">

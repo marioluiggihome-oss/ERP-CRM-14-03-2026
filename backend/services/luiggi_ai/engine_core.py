@@ -37,6 +37,38 @@ _URL_RE = re.compile(r'https?://[^\s"\'<>)\]}]+', re.IGNORECASE)
 _IMG_EXT_RE = re.compile(r'\.(png|jpe?g|webp|gif|bmp|tiff?)(\?|#|$)', re.IGNORECASE)
 
 
+def _patron_de_marca(term: str) -> str:
+    """La marca, PERO SOLO COMO PALABRA ENTERA.
+
+    EL FALLO (master, 11/09/2026, viendo la lectura de un fregadero):
+    «esta anotación de dónde sale» — en pantalla ponía
+
+        una anotación LuiggiAIcrita "(FREG)"
+
+    La sustitución era por SUBCADENA e insensible a mayúsculas, así que
+    «manus» —que está en la tabla desde IA 2— se comía el trozo de
+    **manuscrita**, y salía «LuiggiAIcrita». En una tipografía sin gracias la
+    I mayúscula y la l minúscula son idénticas, así que se lee «LuiggiAlcrita»
+    y parece un nombre propio: por eso desconcierta en vez de parecer un error.
+
+    Y no es solo esa palabra: «manuscrito», «manuscritos» y cualquier texto que
+    lleve dentro «gemini», «claude» u «openai» sale reventado. Lo peor es DÓNDE
+    pasa — en la LECTURA DEL PLANO, que es lo que el master revisa antes de
+    presupuestar. Un texto corrompido ahí no da ningún error: se lee, se duda,
+    y se pierde el tiempo buscando de dónde sale.
+
+    Con `\b` a los lados, «manuscrita» se queda como está y «Manus» a secas se
+    sigue sustituyendo. Los bordes solo se ponen donde el término empieza o
+    acaba en carácter de palabra: «googleapis.com» acaba en «m», pero un
+    término que empezara por un símbolo no admitiría `\b` delante y el patrón
+    no casaría nunca.
+    """
+    escapado = re.escape(term)
+    izq = r"\b" if term[:1].isalnum() or term[:1] == "_" else ""
+    der = r"\b" if term[-1:].isalnum() or term[-1:] == "_" else ""
+    return f"{izq}{escapado}{der}"
+
+
 class LuiggiAICore:
     """
     Motor central de LuiggiAI.
@@ -130,7 +162,7 @@ class LuiggiAICore:
         for term, replacement in self._sanitize_pairs:
             if not term:
                 continue
-            pattern = re.compile(re.escape(term), re.IGNORECASE)
+            pattern = re.compile(_patron_de_marca(term), re.IGNORECASE)
             result = pattern.sub(lambda m: self._smart_case(m.group(0), replacement), result)
         return result
 

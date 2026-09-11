@@ -172,6 +172,38 @@ def _puntos(entry, alto, ancho=None):
     return None
 
 
+# ALTURAS POR DEFECTO CUANDO EL TEXTO NO LAS DICE (master, 11/09/2026:
+# «siempre por defecto los muebles que detecte que sean los altos de altura 90,
+# y los bajos de 80» y «las columnas de 220 de alto»). Es la regla 13 de
+# CLAUDE.md, que estaba escrita desde el 25/08 y aquí no se cumplía.
+#
+# EL FALLO ERA SILENCIOSO Y COSTABA DINERO. Solo los BAJOS tenían defecto; en
+# altos y columnas el alto se quedaba en `None`, y `_puntos` trata la falta de
+# altura como «el escalón de abajo»: `ev[1] if (alto and alto > 210) else
+# ev[0]`. O sea que una columna pegada sin «altura N» se tarifaba a 200 —el
+# escalón barato— y salía en pantalla como 200. No daba ningún error: solo un
+# presupuesto 20 cm más bajo de lo que esta fábrica fabrica.
+#
+# Se llega por el PEGADO MASIVO, que es como se traen los muebles leídos del
+# plano: el master, 11/09: «he copiado los muebles detectados y los he pegado
+# en pegado masivo».
+#
+# Los bajos NO se eligen: esta fábrica solo los hace a 80 (CLAUDE.md).
+ALTURA_POR_DEFECTO = {"BAJO": 80, "ALTO": 90, "COLUMNA": 220}
+
+
+def altura_por_defecto(tipo, alto):
+    """El alto que vale, o el de por defecto de su tipo si no viene ninguno.
+
+    Un alto ya escrito manda SIEMPRE: aquí no se corrige lo que alguien haya
+    puesto a propósito, solo se rellena lo que falta. Y si el tipo no es de los
+    tres, se devuelve `None` como antes — inventar una altura para algo que no
+    se sabe qué es sería justo lo que prohíbe la regla 7."""
+    if alto:
+        return alto
+    return ALTURA_POR_DEFECTO.get(str(tipo or "").upper())
+
+
 def parse_relacion_text(text: str, tariff: str = "T1"):
     """Compatibilidad: solo los muebles. Para saber además QUÉ no se ha podido
     leer, usa `parse_relacion` (y no dejes nada por el camino en silencio)."""
@@ -291,9 +323,7 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
                 m_w = re.search(r"(\d{2,3})", cod)
                 width = int(m_w.group(1)) if m_w else 60
                 dims = re.findall(r"x\s*(\d{2,3})", rest)
-                alto = int(dims[-1]) if dims else alt_g
-                if tipo == "BAJO" and not alto:
-                    alto = 80
+                alto = altura_por_defecto(tipo, int(dims[-1]) if dims else alt_g)
                 pts = _puntos(entry, alto)
                 # «B60D/I» ACABA EN «I», Y ESO NO ES MANO IZQUIERDA (master,
                 # 07/09/2026: «ten en cuenta que HAY muchos muebles que
@@ -350,7 +380,10 @@ def parse_relacion(text: str, tariff: str = "T1", contexto: str = ""):
                 continue
             letters, width, tail = mc.group(1), mc.group(2), mc.group(3)
             dims = re.findall(r"x\s*(\d{2,3})", tail)
-            alto = int(dims[-1]) if dims else alt_g
+            # El defecto se aplica también aquí: son DOS caminos que resuelven
+            # la altura y arreglar uno solo deja el otro tarifando barato.
+            alto = altura_por_defecto(_tipo_de(f"{letters}{width}"),
+                                      int(dims[-1]) if dims else alt_g)
             mano = ""
             if re.search(r"d/i", tail) or re.search(r"d/i", rest):
                 mano = ""

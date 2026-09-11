@@ -187,10 +187,10 @@ const PALETA_RAPIDA = [
     { label: 'AR65 Rincón', expr: '1 ar65d (altura 90)', desc: 'Rincón 65' },
   ]},
   { grupo: 'Columnas', items: [
-    { label: 'CD60 Desp.', expr: '1 cd60d (altura 200)', desc: 'Despensero 60' },
-    { label: 'CH60 Horno', expr: '1 ch60 (altura 200)', desc: 'Columna Horno 60' },
-    { label: 'CHM60 H+M', expr: '1 chm60 (altura 200)', desc: 'Horno + Micro 60' },
-    { label: 'CF60 Frigo', expr: '1 cf60 (altura 200)', desc: 'Frigo Integrable 60' },
+    { label: 'CD60 Desp.', expr: '1 cd60d (altura 220)', desc: 'Despensero 60' },
+    { label: 'CH60 Horno', expr: '1 ch60 (altura 220)', desc: 'Columna Horno 60' },
+    { label: 'CHM60 H+M', expr: '1 chm60 (altura 220)', desc: 'Horno + Micro 60' },
+    { label: 'CF60 Frigo', expr: '1 cf60 (altura 220)', desc: 'Frigo Integrable 60' },
   ]},
   { grupo: 'Lineales y Remates', items: [
     { label: 'Costado Bajo', expr: '1 ccb', desc: 'Costado Bajo' },
@@ -271,6 +271,18 @@ const MUESTRARIO_CASCOS = [
   { id: 'esp-blanco-16', nombre: 'Especial Blanco (16mm)', color: '#f2f5f8', grosor: 16 }
 ];
 
+/* EL CASCO DE PARTIDA ES EL BLANCO HIDRÓFUGO (master, 11/09/2026: «el casco
+ * por defecto es blanco hidrófugo 19, en todos los casos, luego se podrá
+ * cambiar en cada presupuesto»). Se busca POR ID, no por posición: con
+ * `MUESTRARIO_CASCOS[0]` bastaba con reordenar el muestrario —o meter un
+ * acabado nuevo el primero— para que todos los presupuestos nuevos empezaran
+ * con otro casco sin que nadie lo hubiera decidido, y eso mueve el coste de
+ * cada mueble. El `||` del final es para que un id mal escrito no deje el
+ * presupuesto sin acabado. */
+const CASCO_POR_DEFECTO = (
+  MUESTRARIO_CASCOS.find(c => c.id === 'blanco-hidro-19') || MUESTRARIO_CASCOS[0]
+).nombre;
+
 export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
@@ -278,7 +290,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
   const [descuento, setDescuento] = useState(0);
   const [ivaRate, setIvaRate] = useState(21);
   const [acabadoPuerta, setAcabadoPuerta] = useState(MUESTRARIO_PUERTAS.T1[0].nombre);
-  const [acabadoCasco, setAcabadoCasco] = useState(MUESTRARIO_CASCOS[0].nombre);
+  const [acabadoCasco, setAcabadoCasco] = useState(CASCO_POR_DEFECTO);
   
   const [muebles, setMuebles] = useState([]);
   const [observacionesGenerales, setObservacionesGenerales] = useState('');
@@ -712,7 +724,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
               let i = 0;
               if (t === 'h7090') i = (m.alto || 90) >= 85 ? 1 : 0;
               else if (t === 'h127147') i = (m.alto || 127) > 137 ? 1 : 0;
-              else if (t === 'h200220') i = (m.alto || 200) > 210 ? 1 : 0;
+              else if (t === 'h200220') i = (m.alto || 220) > 210 ? 1 : 0;
               pvp = Math.round((e[i] || e[0]) * newPv * 100) / 100;
             } else if (typeof e === 'number') {
               pvp = Math.round(e * newPv * 100) / 100;
@@ -836,7 +848,23 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     return hits.slice(0, 40);
   }, [busca, catalogo]);
 
-  const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [200, 220], bajo: [80, 70] };
+  // EL PRIMERO DE CADA LISTA ES EL QUE SE PONE AL AÑADIR (ver `opciones[0]`
+  // más abajo). El master, 11/09/2026: «siempre por defecto los muebles que
+  // detecte que sean los altos de altura 90, y los bajos de 80» y «las
+  // columnas de 220 de alto».
+  //
+  // Altos y bajos ya salían bien; las COLUMNAS salían a 200 porque la lista
+  // iba `[200, 220]`. Eso contradecía la regla 13 de CLAUDE.md desde el
+  // 25/08 —«altos 90, bajos 80, columnas 220»— y no daba ningún error:
+  // simplemente cada columna se presupuestaba 20 cm más baja de lo que se
+  // fabrica, con su precio.
+  //
+  // OJO, SON DOS ÓRDENES DISTINTOS y no hay que tocar el otro: esta lista es
+  // el orden en PANTALLA (primero el de por defecto), mientras que el array de
+  // la TARIFA va de menor a mayor (200, 220). El índice que elige el precio se
+  // calcula aparte, comparando la altura; si se reordenara aquello, cada
+  // columna se tarifaría por la casilla que no es.
+  const OPCIONES_ALTURA = { h7090: [90, 70], h127147: [127, 147], h200220: [220, 200], bajo: [80, 70] };
 
   // Costados, laterales y regletas: sus dos columnas de tarifa son el ANCHO de
   // la pieza, no la altura del mueble que rematan (ver `services/mv_relacion.py`).
@@ -1727,7 +1755,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
     if (!muebles.length) { setAviso('Añade al menos un mueble para lanzar a fabricación.'); return; }
     
     const esInterno = window.confirm(
-      `¿Dónde se fabricará este pedido de ${totalUds} módulos? (Casco: ${acabadoCasco || 'Grafito Antracita (19mm)'})\n\n` +
+      `¿Dónde se fabricará este pedido de ${totalUds} módulos? (Casco: ${acabadoCasco || CASCO_POR_DEFECTO})\n\n` +
       `• Pulsa ACEPTAR para: 🏠 Fabricación Interna (Taller Propio)\n` +
       `• Pulsa CANCELAR para: 🚚 Fabricación Externa (Proveedor / Fuera)`
     );
@@ -1743,7 +1771,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         ref: ref || 'Cocina Montada 3',
         tipo: 'Cocina Montada 3',
         tarifa: `${tarifa} (${acabadoPuerta})`,
-        casco: acabadoCasco || 'Grafito Antracita (19mm)',
+        casco: acabadoCasco || CASCO_POR_DEFECTO,
         origen: origen,
         tagOrigen: tagOrigen,
         modulos: totalUds,
@@ -4144,7 +4172,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       <td className="py-1.5 px-2 font-sans font-bold text-slate-700">{descDe(m)}</td>
                       <td className="py-1.5 px-2 text-center font-black text-slate-800">{q}</td>
                       {m.coste == null ? (
-                        <td colSpan={10} className="py-1.5 px-2 font-sans font-bold text-aviso-800">
+                        <td colSpan={11} className="py-1.5 px-2 font-sans font-bold text-aviso-800">
                           Sin coste — el despiece no conoce «{m.familia || m.tipo || '?'}»
                         </td>
                       ) : (
@@ -4164,6 +4192,25 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                           <td className="py-1.5 px-2 text-right text-slate-600">{c(d.caj)}</td>
                           <td className="py-1.5 px-2 text-right text-slate-600">{c(d.gav)}</td>
                           <td className="py-1.5 px-2 text-right text-slate-600">{c(d.soportes)}</td>
+                          {/* EL HKT FALTABA, Y DESPLAZABA TODA LA FILA (master,
+                              11/09/2026: «pones q el HKT de blum vale 17 euros?
+                              yo creo q son las columnas que no están bien
+                              posicionadas». Tenía razón.) La cabecera y los
+                              totales pintan 14 columnas y la fila pintaba 13:
+                              el navegador no da ningún error, simplemente
+                              corre todo lo que viene detrás una casilla a la
+                              izquierda. Así que la mano de obra (17,00 €) se
+                              leía bajo «HKT Blum», el coste bajo «M. obra» y el
+                              PVP bajo «Coste × uds». La tabla cuadraba consigo
+                              misma y mentía en cada rótulo — justo lo que no
+                              se ve mirando los números, porque los números
+                              estaban bien. */}
+                          <td className="py-1.5 px-2 text-right text-slate-600"
+                            title="Aventos HK top de Blum: solo lo llevan los altos abatibles.">
+                            {d.faltaHkt
+                              ? <span className="text-aviso-600 font-black" title="Este mueble es abatible y lleva HKT, pero no hay precio puesto para el herraje.">?</span>
+                              : c(d.hkt)}
+                          </td>
                           <td className="py-1.5 px-2 text-right text-slate-600"
                             title="Mano de obra por mueble montado: la misma cifra que cobra el montador.">
                             {c(d.mo)}
@@ -4174,7 +4221,23 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                       <td className="py-1.5 px-2 text-right font-black text-dato-900 bg-slate-50/60">
                         {m.coste == null ? nada : eur(m.coste * q)}
                       </td>
-                      <td className="py-1.5 px-2 text-right text-slate-600">{eur(m.pvp)}</td>
+                      {/* EL PVP DE ESTA TABLA ES EL NETO, EL MISMO DEL QUE
+                          SALE EL MARGEN (master, 11/09/2026: «porque arriba a
+                          la izquierda da un margen y abajo a la derecha otro»).
+                          Aquí se imprimía `m.pvp` —el de tarifa, ANTES del
+                          descuento— mientras la columna de al lado restaba
+                          sobre `pvpNeto`. Con descuento 0 los dos números son
+                          el mismo y la tabla parece cuadrar; en cuanto se
+                          teclea un descuento, PVP − Coste deja de dar el
+                          margen de su propia fila y el total de abajo deja de
+                          cuadrar con el de arriba. Ninguna de las dos cifras
+                          era falsa: eran de dos precios distintos sin decirlo. */}
+                      <td className="py-1.5 px-2 text-right text-slate-600"
+                        title={m.dtoAplicado
+                          ? `PVP de tarifa ${eur(m.pvp)} − ${m.dtoAplicado}% de descuento. El margen se calcula sobre este neto.`
+                          : 'PVP de venta. El margen se calcula sobre esta cifra.'}>
+                        {eur(m.pvpNeto)}
+                      </td>
                       <td className={`py-1.5 px-2 text-right font-bold ${
                         m.margenPct == null ? 'text-slate-300'
                         : m.margenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'
@@ -4208,7 +4271,10 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
                   ))}
                   <td className="py-2 px-2"></td>
                   <td className="py-2 px-2 text-right text-dato-950" data-testid="cm3-escandallo-total">{eur(totalCoste)}</td>
-                  <td className="py-2 px-2 text-right text-slate-700">{eur(subtotalBruto)}</td>
+                  <td className="py-2 px-2 text-right text-slate-700"
+                    title="Base imponible: lo que se factura una vez aplicado el descuento. Es la cifra sobre la que se calcula el margen, aquí y en la barra de arriba.">
+                    {eur(baseImponible)}
+                  </td>
                   <td className={`py-2 px-2 text-right ${
                     totalMargenPct == null ? 'text-slate-400'
                     : totalMargenPct >= SEMAFORO_MARGEN.bien ? 'text-ok-600'

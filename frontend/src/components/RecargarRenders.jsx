@@ -125,7 +125,6 @@ export default function RecargarRenders({ abierto, onClose }) {
                 {(cat.packs || []).map(p => (
                   <div key={p.id} className="border border-slate-200 rounded-2xl p-4 flex flex-col">
                     <p className="font-black text-slate-800">{p.renders} renders</p>
-                    <p className="text-[11px] text-slate-400 mb-2">{eur(p.porRender)} por render</p>
                     <p className="text-2xl font-black text-slate-800">{eur(p.precioConIva)}</p>
                     <p className="text-[11px] text-slate-400 mb-3">{eur(p.precioSinIva)} + {cat.iva}% IVA</p>
                     <button

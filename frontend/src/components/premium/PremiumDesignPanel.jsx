@@ -32,7 +32,6 @@ export default function PremiumDesignPanel({
         {tab === 'instalaciones' && <PremiumInstallations rows={brief.installations} onChange={installations => update({ installations })} disabled={disabled} />}
         {tab === 'distribucion' && <>
           <label className="premium-design__field">Punto de partida<select value={brief.scene} disabled={disabled} onChange={e => update({ scene: e.target.value })}><option value="concepto">Idea desde una descripción</option><option value="croquis">Croquis con módulos o medidas</option><option value="obra">Foto de la estancia real</option></select></label>
-          <label className="premium-design__field">Qué representa cada imagen<textarea rows={3} maxLength={1200} value={brief.sourceNotes} disabled={disabled} onChange={e => update({ sourceNotes: e.target.value })} placeholder="Ej.: foto 1, croquis de la pared del fondo; foto 2, esa misma pared en obra; foto 3, muestra de puerta." /></label>
           <div className="premium-design__workflow">
             <p><strong>1. Lee el croquis</strong><span>Detecta paredes, orden, niveles y anchos antes de generar el render.</span></p>
             <button type="button" onClick={onDetectLayout} disabled={disabled || detectingLayout}>{detectingLayout ? 'Leyendo croquis…' : distribution ? 'Volver a leer el croquis' : 'Leer croquis y módulos'}</button>

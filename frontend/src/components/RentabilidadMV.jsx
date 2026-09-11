@@ -187,8 +187,30 @@ export const RULES = {
   ALTILLO_VITRINA: { casco: 'Alto Con Balda', altoSel: true, colg: 1, puertas: 1, vitrina: true },
   COLUMNA_DESPENSERO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2, baldas: 4 },
   COLUMNA_FRIGO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
-  COLUMNA_HORNO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
-  COLUMNA_HORNO_MICRO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2 },
+  /* LAS LETRAS DE LA COLUMNA DE HORNO DICEN LO QUE LLEVA DENTRO (master,
+   * 11/09/2026: «la referencia CHMG no detecta el precio de las gavetas para
+   * el coste de artículos»). Tenía razón: la regla era la misma para las ocho
+   * referencias de la familia, así que un CHMG60D/I —columna de horno y micro
+   * CON GAVETA— salía del escandallo con la casilla de gavetas vacía y 54,37 €
+   * de herraje sin contar. No da ningún error: sale un margen más alto del
+   * real, que es la clase de número que nadie mira dos veces porque gusta.
+   *
+   * Se lee igual que en BAJO_HORNO (BHG → gaveta, BHC/BHZ → cajón): por el
+   * código, no por la familia, porque la familia de la tarifa MV es la misma
+   * para las ocho. `G` es gaveta y `C` es cajón — la misma nomenclatura que
+   * BCG/BGC/BGF en los bajos.
+   *
+   * PENDIENTE DE CONFIRMAR CON EL MASTER, y por eso NO se rellena: cuántos
+   * cajones llevan CHC60 y CHMC60 (la `C` sola). En BCG la `C` sola son TRES
+   * cajones y en BGC es UNO, así que la letra no basta para saberlo y aquí no
+   * se inventa una cifra (regla 7). Mientras tanto cuentan 0, que es lo que
+   * contaban antes: se queda como estaba, no se empeora. */
+  COLUMNA_HORNO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2,
+    gavFn: c => /^CHG/.test(String(c || '').toUpperCase()) ? 1 : 0,
+    cajFn: c => /^CHPC|^CHGC/.test(String(c || '').toUpperCase()) ? 1 : 0 },
+  COLUMNA_HORNO_MICRO: { casco: 'Columna Despensa', altoCol: true, patas: 1, puertas: 2,
+    gavFn: c => /^CHMG|^CHMCG/.test(String(c || '').toUpperCase()) ? 1 : 0,
+    cajFn: c => /^CHMCG/.test(String(c || '').toUpperCase()) ? 1 : 0 },
   MEDIACOLUMNA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 'dio', baldas: 2 },
   MEDIA_PUERTA_GAVETA: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1, gavetas: 1 },
   MEDIACOLUMNA_HORNO: { casco: 'Semicolumna Despensa', alto: 1300, patas: 1, puertas: 1 },
