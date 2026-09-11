@@ -195,3 +195,14 @@ def test_premium_entiende_combi_y_frigo_como_electrodomestico():
     assert "|frigo|combi|nevera|" in clon
     assert "|frigo|combi|nevera|" not in original, (
         "el vocabulario experimental se ha colado en el Estudio 3D congelado")
+
+
+def test_normal_y_premium_no_comparten_sesion_ni_preset():
+    """Cambiar de estudio no puede llevarse el diseño ni el selector del otro."""
+    original, clon = _leer(ORIGINAL), _leer(CLON)
+    assert "state?.estudio3dPreset" in original
+    assert "leerSesion(estadoRef.current, 'estudio3d')" in original
+    assert "guardarSesion(f, 'estudio3d', sesionRef.current)" in original
+    assert "state?.estudio3dPremiumPreset" in clon
+    assert "leerSesion(estadoRef.current, 'estudio3dPremium')" in clon
+    assert "guardarSesion(f, 'estudio3dPremium', sesionRef.current)" in clon

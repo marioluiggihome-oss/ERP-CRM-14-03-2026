@@ -14,11 +14,8 @@ LO QUE ESTE CANDADO PROTEGE, EN ORDEN DE LO QUE CUESTA SI SE ROMPE:
    PREMIUM sobre un render aprobado, con permiso y coste visibles. No abre el
    selector experimental ni permite generar el diseño inicial con ese motor.
 
-2. **QUE EL CROQUIS LLEGUE AL MODELO.** La API de imágenes de OpenAI tiene DOS
-   llamadas y solo UNA acepta imágenes de entrada. Si el croquis se mandara por
-   `images.generate`, se perdería EN SILENCIO: saldría una cocina bonita que no
-   es la del cliente, sin un solo error. Es el fallo de la regla 2 con otro
-   nombre.
+2. **QUE EL CROQUIS LLEGUE A ASTRA.** Premium usa Responses API: Astra recibe
+   el texto y todas las referencias y gobierna la herramienta de imagen.
 
 3. **QUE SE COBRE LO QUE CUESTA.** Un motor sin entrada en `COSTE_POR_MOTOR`
    cobra 1 crédito por omisión, y sin precio en `MODEL_PRICES` cuenta 0,00 € en
@@ -43,7 +40,8 @@ RUTA_IA = os.path.join(RAIZ, "backend", "routes", "ai_engine.py")
 APP = os.path.join(RAIZ, "frontend", "src", "App.js")
 
 MOTOR = "chatgpt"
-MODELO = "gpt-image-1"
+MODELO_DIRECTOR = "gpt-6-astra"
+MODELO = "gpt-image-2.5-sunburst"
 PERMISO = "canUseIAPremium"
 
 
@@ -221,11 +219,11 @@ def test_el_laboratorio_se_abre_por_SU_casilla_y_no_por_la_del_estudio_3d():
         "con solo llegar a esa pestaña")
 
 
-def test_la_casilla_EXISTE_en_el_panel_master_y_dice_lo_que_cuesta():
+def test_la_casilla_EXISTE_y_no_muestra_la_cifra_de_creditos():
     """Un permiso que no se puede marcar no reparte nada (regla 8c), y uno que
     no dice lo que abre se marca sin saberlo (regla 26).
 
-    Aquí encima cuesta DINERO: 7 créditos por render contra 1."""
+    El cobro interno permanece, pero el master pidió retirar su cifra visible."""
     panel = _leer(PANEL)
     assert f"'{PERMISO}'" in panel, (
         f"«{PERMISO}» no está en la lista de capacidades del panel Master: no "
@@ -239,20 +237,8 @@ def test_la_casilla_EXISTE_en_el_panel_master_y_dice_lo_que_cuesta():
     assert "Lab" in rotulo, (
         "el rótulo de la casilla ya no nombra la pantalla que abre: quien "
         "quiera quitarla no sabrá cuál buscar (regla 26)")
-    # EL PRECIO VA EN EL RÓTULO VISIBLE, NO EN EL `title`. La primera versión
-    # aceptaba cualquiera de los dos y por eso una mutación se le escapó: en la
-    # tablet con la que trabaja el master NO HAY HOVER, así que un aviso que
-    # solo vive en el tooltip es un aviso que puede no verse nunca. Y el que
-    # marca esta casilla es justo quien tiene que enterarse de lo que cuesta.
-    assert "crédito" in rotulo, (
-        "el rótulo VISIBLE de la casilla ya no dice lo que cuesta. Abre el "
-        "motor más caro del ERP —7 créditos por render contra 1—, y en una "
-        "tablet no hay hover: si solo lo dice el tooltip, se marca sin saberlo.")
-    assert "7" in rotulo, (
-        "el rótulo ya no dice CUÁNTOS créditos. «Consume créditos» lo pone "
-        "todo; lo que hay que ver aquí es que son siete veces más.")
-    assert "crédito" in ayuda, (
-        "la ayuda de la casilla ya no explica el coste")
+    assert "crédito" not in rotulo.lower()
+    assert "crédito" not in ayuda.lower()
 
 
 def test_LA_CASILLA_ABRE_EL_MOTOR_EN_EL_SERVIDOR_no_solo_el_boton():
@@ -301,36 +287,21 @@ def _cuerpo_del_motor():
     return fuente[i:j]
 
 
-def test_con_croquis_se_usa_la_llamada_QUE_ADMITE_IMAGENES():
-    """`images.generate` NO acepta imágenes de entrada. Mandar el croquis por
-    ahí no da error: devuelve una cocina que no es la del cliente."""
+def test_astra_dirige_el_render_y_recibe_las_imagenes():
     cuerpo = _cuerpo_del_motor()
-    assert "images.edit" in cuerpo, (
-        "el motor premium ya no usa `images.edit`: el croquis del cliente no "
-        "llegaría al modelo y la cocina que salga no será la suya (regla 2)")
-    assert "images.generate" in cuerpo, (
-        "sin `images.generate` no se puede renderizar desde texto solo")
-    # LO QUE SE MIRA ES QUÉ LLAMADA CUELGA DE QUÉ CONDICIÓN, no en qué orden
-    # aparecen los nombres en el fichero. La primera versión comparaba
-    # posiciones y se ponía roja por el COMENTARIO de aquí arriba, que nombra
-    # las dos llamadas para explicarlas: un candado que lee prosa no lee código.
-    assert re.search(r"if refs:\s*\n\s*resp = await client\.images\.edit", cuerpo), (
-        "`images.edit` ya no cuelga de que HAYA referencias: o se llama "
-        "siempre (y falla sin imagen) o nunca — y entonces el croquis del "
-        "cliente se pierde en silencio")
-    assert re.search(r"else:\s*\n\s*resp = await client\.images\.generate", cuerpo), (
-        "`images.generate` ya no es el camino SIN referencias: si se llamara "
-        "habiendo croquis, saldría una cocina que no es la del cliente")
+    assert "client.responses.create" in cuerpo
+    assert "model=_MODELO_OPENAI_DIRECTOR" in cuerpo
+    assert 'reasoning={"effort": _ESFUERZO_OPENAI_DIRECTOR}' in cuerpo
+    assert '"type": "input_image"' in cuerpo
+    assert '"type": "image_generation"' in cuerpo
+    assert '"model": _MODELO_OPENAI_IMAGEN' in cuerpo
 
 
-def test_las_referencias_van_como_FICHERO_y_con_nombre():
-    """La librería deduce el tipo de fichero del `.name`. Sin él, la llamada se
-    cae — y se cae DESPUÉS de que el master haya pagado el crédito."""
+def test_las_referencias_van_como_data_url_multimodal():
     cuerpo = _cuerpo_del_motor()
-    assert "b64decode" in cuerpo, \
-        "las referencias ya no se decodifican: OpenAI no admite base64 en el cuerpo"
-    assert ".name = " in cuerpo, \
-        "el fichero de referencia va sin nombre: la subida fallará"
+    assert "def _a_data_url" in cuerpo
+    assert 'f"data:{mime};base64,{b64}"' in cuerpo
+    assert '"detail": "high"' in cuerpo
 
 
 def test_el_tope_de_siete_imagenes_se_respeta():
@@ -367,6 +338,8 @@ def test_el_modelo_esta_escrito_en_una_CONSTANTE_y_no_dentro_de_la_llamada():
     assert f'"{MODELO}"' not in cuerpo, (
         "el nombre del modelo se ha vuelto a escribir dentro de la llamada: "
         "ahí cambia sin que la constante lo diga")
+    assert f'_MODELO_OPENAI_DIRECTOR = "{MODELO_DIRECTOR}"' in fuente
+    assert '_ESFUERZO_OPENAI_DIRECTOR = "medium"' in fuente
 
 
 # ─── 4. Que sin llave se diga, no se disimule ───────────────────────────────
