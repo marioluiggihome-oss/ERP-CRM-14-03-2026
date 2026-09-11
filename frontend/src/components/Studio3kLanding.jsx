@@ -130,8 +130,8 @@ function Nav({ onEnter }) {
         {/* Logo wordmark */}
         <a href="#top" className="s3k-logo-link">
           <img
-            src={scrolled ? "/studio3k-logo-light.png" : "/studio3k-logo-white.png"}
-            alt="studio3k"
+            src="/studio3k-logo-white.png"
+            alt="STUDIO3K.IO"
             className="s3k-logo-img"
           />
         </a>
@@ -650,17 +650,17 @@ const CSS = `
 
 /* NAV */
 .s3k-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; transition: background .3s, box-shadow .3s; }
-.s3k-nav-solid { background: rgba(255,255,255,.94); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(26,26,46,.08); }
+.s3k-nav-solid { background: rgba(10,10,18,.96); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(255,255,255,.1); }
 .s3k-nav-inner { display: flex; align-items: center; gap: 32px; height: 64px; }
 .s3k-logo-link { display: flex; align-items: center; }
-.s3k-logo-img { height: 26px; width: auto; object-fit: contain; }
+.s3k-logo-img { display: block; height: 34px; width: 148px; object-fit: contain; object-position: left center; }
 .s3k-nav-links { display: flex; align-items: center; gap: 28px; margin-left: auto; }
 .s3k-nav-links a { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); transition: color .2s; }
-.s3k-nav-solid .s3k-nav-links a { color: var(--s3k-ink); }
+.s3k-nav-solid .s3k-nav-links a { color: rgba(255,255,255,.9); }
 .s3k-nav-links a:hover { color: var(--s3k-indigo) !important; }
 .s3k-nav-actions { display: flex; align-items: center; gap: 10px; }
 .s3k-nav-burger { display: none; background: none; border: none; cursor: pointer; padding: 6px; color: #fff; }
-.s3k-nav-solid .s3k-nav-burger { color: var(--s3k-ink); }
+.s3k-nav-solid .s3k-nav-burger { color: #fff; }
 .s3k-nav-mobile { background: var(--s3k-white); border-top: 1px solid var(--s3k-stone-2); padding: 14px 24px; display: flex; flex-direction: column; gap: 6px; }
 .s3k-nav-mobile a { font-size: 15px; font-weight: 600; color: var(--s3k-ink); padding: 8px 0; border-bottom: 1px solid var(--s3k-stone); }
 
@@ -671,8 +671,8 @@ const CSS = `
 .s3k-btn-outline:hover { background: var(--s3k-indigo); color: #fff; }
 .s3k-btn-ghost { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid rgba(255,255,255,.35); color: rgba(255,255,255,.85); font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 10px; transition: .2s; background: transparent; cursor: pointer; }
 .s3k-btn-ghost:hover { border-color: rgba(255,255,255,.7); color: #fff; }
-.s3k-nav-solid .s3k-btn-ghost { border-color: rgba(26,26,46,.25); color: var(--s3k-ink); }
-.s3k-nav-solid .s3k-btn-ghost:hover { border-color: var(--s3k-indigo); color: var(--s3k-indigo); }
+.s3k-nav-solid .s3k-btn-ghost { border-color: rgba(255,255,255,.35); color: rgba(255,255,255,.9); }
+.s3k-nav-solid .s3k-btn-ghost:hover { border-color: var(--s3k-indigo); color: #fff; }
 .s3k-btn-ghost-light { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid rgba(255,255,255,.35); color: rgba(255,255,255,.85); font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 10px; transition: .2s; background: transparent; cursor: pointer; }
 .s3k-btn-ghost-light:hover { border-color: rgba(255,255,255,.7); color: #fff; }
 .s3k-btn-white { display: inline-flex; align-items: center; gap: 8px; background: #fff; color: var(--s3k-indigo); font-weight: 700; font-size: 14px; padding: 11px 22px; border-radius: 10px; transition: .2s; cursor: pointer; }
@@ -815,6 +815,7 @@ const CSS = `
   .s3k-footer-inner { grid-template-columns: 1fr; gap: 40px; }
 }
 @media (max-width: 640px) {
+  .s3k-logo-img { height: 28px; width: 122px; }
   .s3k-nav-links, .s3k-nav-actions { display: none; }
   .s3k-nav-burger { display: block; }
   .s3k-feat-grid { grid-template-columns: 1fr; }
