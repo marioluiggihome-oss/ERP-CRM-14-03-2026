@@ -140,23 +140,15 @@ def test_acabado_premium_usa_el_render_actual_y_no_el_selector_de_motor():
         "pidió quitarla el 10/09")
 
 
-def test_los_cambios_posteriores_CONSERVAN_el_modo_premium():
-    """Un render con acabado PREMIUM se sigue editando en PREMIUM.
-
-    Si al aplicar un cambio se volviera al motor normal, la imagen perdería el
-    acabado por el que se pagó y nadie lo relacionaría con haber pulsado
-    «aplicar cambio».
-
-    YA NO AVISA DEL COSTE (master, 10/09/2026: «cuando aplicas cambios desde
-    premium»). Se le quitó la ventana igual que al botón: en una tablet corta
-    el trabajo en cada vuelta, y aquí es donde más vueltas se dan. El COBRO no
-    cambia — lo hace el servidor (regla 32)."""
+def test_los_cambios_posteriores_dejan_elegir_normal_o_premium():
+    """El acabado se conserva, pero el motor de cada cambio lo elige el usuario."""
     produccion = _leer(PRODUCCION)
     assert "premiumFinish: true" in produccion
     assert "const premiumFinishActive = renderResult?.premiumFinish === true" in produccion
-    assert "provider: premiumFinishActive ? 'chatgpt' : providerOf()" in produccion, (
-        "un cambio sobre un render PREMIUM ya no se aplica con el motor "
-        "premium: perdería el acabado por el que se pagó")
+    assert "premiumEditMode" in produccion
+    assert "provider: premiumChangeActive ? 'chatgpt' : providerOf()" in produccion
+    assert "setPremiumEditMode(false)" in produccion
+    assert "setPremiumEditMode(true)" in produccion
 
 
 def test_editar_en_premium_SIN_PERMISO_se_sigue_cerrando():
@@ -167,7 +159,7 @@ def test_editar_en_premium_SIN_PERMISO_se_sigue_cerrando():
     con acabado PREMIUM no se sigue editando en ese modo. Un aviso se quita
     porque molesta; un permiso no."""
     produccion = _leer(PRODUCCION)
-    assert "premiumFinishActive && !canUsePremiumFinish" in produccion, (
+    assert "premiumChangeActive && !canUsePremiumFinish" in produccion, (
         "ha desaparecido el cierre: cualquiera podría seguir editando en modo "
         "PREMIUM un render que lo tenga, gastando el motor más caro sin la "
         "casilla que lo autoriza")
@@ -313,18 +305,15 @@ def test_el_tope_de_siete_imagenes_se_respeta():
 
 # ─── 3. Que se cobre lo que cuesta ──────────────────────────────────────────
 
-def test_el_motor_premium_tiene_precio_y_coste_en_creditos():
+def test_el_motor_premium_cuesta_un_credito_como_pidio_el_master():
     uso = _leer(USO)
     assert f'"{MODELO}"' in uso, (
         f"«{MODELO}» no está en MODEL_PRICES: el informe de Consumo de IA lo "
         f"contaría a 0,00 € y el motor más caro sería el que menos parece gastar")
     m = re.search(r'"chatgpt":\s*([\d.]+)', uso)
-    assert m, (
-        "el motor premium no está en COSTE_POR_MOTOR: cobraría 1 crédito por "
-        "omisión, como el motor de producción, costando unas 7 veces más")
-    assert float(m.group(1)) > 1.0, (
-        f"el motor premium cobra {m.group(1)} créditos, lo mismo o menos que el "
-        f"de producción, y al proveedor se le paga bastante más por imagen")
+    assert m, "el motor premium no está declarado en COSTE_POR_MOTOR"
+    assert float(m.group(1)) == 1.0, (
+        f"el motor premium cobra {m.group(1)} créditos y debe cobrar exactamente 1")
 
 
 def test_el_modelo_esta_escrito_en_una_CONSTANTE_y_no_dentro_de_la_llamada():
