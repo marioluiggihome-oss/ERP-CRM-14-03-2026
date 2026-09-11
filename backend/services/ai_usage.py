@@ -42,6 +42,7 @@ MODEL_PRICES = {
     # miente. Cuando llegue la primera factura de OpenAI, se cuadra.
     "gpt-6-astra":                   {"in": 5.00, "out": 25.0, "img": 0.0},
     "gpt-image-2.5-sunburst":        {"in": 5.00, "out": 30.0, "img": 0.17},
+    "black-forest-labs/flux-1.1-pro":{"in": 0.00, "out": 0.00, "img": 0.04},
 }
 # Coste estimado por TIPO de llamada cuando no se miden tokens reales.
 DEFAULT_COST_PER = {"render": 0.12, "vision": 0.003, "otro": 0.003}
@@ -136,6 +137,20 @@ async def get_usage_summary():
     # Coste REAL acumulado del mes (medido con los tokens reales de cada llamada).
     real_cost = round(float(cur.get("real_cost", 0) or 0), 4)
     history = await db.ai_usage.find({}, {"_id": 0, "by_user": 0}).sort("month", -1).to_list(6)
+    calls = cur.get("calls", {})
+    tokens_in = cur.get("tokens_in", {})
+    tokens_out = cur.get("tokens_out", {})
+    images = cur.get("images", {})
+    model_keys = set(calls) | set(tokens_in) | set(tokens_out) | set(images)
+    cost_by_model = {
+        model: cost_of(
+            model,
+            tokens_in.get(model, 0),
+            tokens_out.get(model, 0),
+            images.get(model, 0),
+        )
+        for model in model_keys
+    }
     return {
         "current_month": month,
         "total": total,
@@ -149,10 +164,11 @@ async def get_usage_summary():
         "estimated_cost": round(est, 2),
         "real_cost": real_cost,
         "by_model": {
-            "calls": cur.get("calls", {}),
-            "tokens_in": cur.get("tokens_in", {}),
-            "tokens_out": cur.get("tokens_out", {}),
-            "images": cur.get("images", {}),
+            "calls": calls,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "images": images,
+            "cost_eur": cost_by_model,
         },
         "spend_url": cfg.get("spend_url", ""),
         "master_credits": int(cfg.get("master_credits", CUPO_MASTER_POR_DEFECTO) or 0),
