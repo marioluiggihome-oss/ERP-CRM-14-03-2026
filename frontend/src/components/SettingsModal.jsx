@@ -2959,7 +2959,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseIAPremium: e.target.checked})}
                                 className="w-4 h-4 rounded accent-master-600"
                               />
-                              <span title="Abre la pantalla «Estudio 3D — Lab» y dentro de ella el motor IA PREMIUM. OJO: cada render con ese motor cuesta 7 créditos, frente a 1 de los demás." className="text-xs font-bold text-slate-700">Estudio 3D — Lab · IA PREMIUM (7 créditos/render)</span>
+                              <span title="Abre la pantalla «Estudio 3D — Lab» y dentro de ella el motor IA PREMIUM." className="text-xs font-bold text-slate-700">Estudio 3D — Lab · IA PREMIUM</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input

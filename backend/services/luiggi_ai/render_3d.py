@@ -143,14 +143,16 @@ PRO_KITCHEN_DESIGN_PRINCIPLES = (
 # no rompe nada —sigue saliendo una imagen— y solo empeora el resultado, así
 # que si no está en un sitio que alguien mire, cambia solo y nadie se entera.
 #
-# `gpt-image-1` es el único de OpenAI que PINTA y además acepta imágenes de
-# ENTRADA, que aquí no es un extra: sin eso el croquis del cliente no llega al
-# modelo y la cocina que sale no es la suya (regla 2).
+# Astra dirige el trabajo y GPT Image lo pinta. La Responses API mantiene las
+# imágenes de entrada dentro del mismo contexto: el croquis, el render actual y
+# las referencias llegan a Astra antes de que llame a la herramienta de imagen.
 #
 # OJO: OpenAI suele exigir VERIFICAR LA ORGANIZACIÓN para dejar usar este
 # modelo. Sin esa verificación la clave vale para texto y falla para imagen —
 # y el error que devuelve habla de permisos, no de la clave.
-_MODELO_OPENAI_IMAGEN = "gpt-image-1"
+_MODELO_OPENAI_DIRECTOR = "gpt-6-astra"
+_ESFUERZO_OPENAI_DIRECTOR = "medium"
+_MODELO_OPENAI_IMAGEN = "gpt-image-2.5-sunburst"
 
 _PREMIUM_PROMPT_PREFIX = (
     "ULTRA-PREMIUM PHOTOREALISTIC KITCHEN RENDER. "
@@ -1953,32 +1955,21 @@ class Render3DService:
                                   reference_mime: str = "image/png",
                                   reference_images: Optional[List[str]] = None,
                                   openai_key: str = "") -> Dict[str, Any]:
-        """IA PREMIUM — el render con `gpt-image-1` de OpenAI.
+        """IA PREMIUM — Astra dirige y GPT Image ejecuta el render.
 
-        SOLO SE USA DESDE EL CLON del Estudio 3D (`Estudio3DLab.jsx`). El
-        Estudio 3D de producción está congelado desde el 04/09/2026 y este
-        motor no aparece por ninguno de sus caminos.
+        Se usa en el Estudio 3D Premium y en la pasada de acabado Premium que
+        el usuario activa expresamente desde el Estudio 3D normal. El flujo
+        normal conserva sus motores y su coste habitual hasta pulsar ese botón.
 
-        DOS LLAMADAS DISTINTAS, Y NO ES UN DETALLE:
-          · SIN croquis ni referencia → `images.generate` (crear desde cero).
-          · CON croquis o referencia  → `images.edit`, que es la ÚNICA de las
-            dos que acepta imágenes de entrada. Si se mandara todo por
-            `generate`, el croquis del cliente se perdería EN SILENCIO: saldría
-            una cocina bonita que no es la suya, sin un solo error. Es
-            exactamente el fallo que la regla 2 de CLAUDE.md existe para
-            impedir.
-
-        LA REFERENCIA VIAJA COMO FICHERO, NO COMO TEXTO. La API de imágenes de
-        OpenAI no admite base64 en el cuerpo como hace Gemini: quiere el binario
-        subido. Por eso se decodifica a `BytesIO` con un nombre y un tipo — sin
-        el `.name`, la librería no sabe qué está subiendo y la llamada se cae.
+        La llamada usa Responses API con `gpt-6-astra`, razonamiento medio, y
+        la herramienta `gpt-image-2.5-sunburst`. Así Astra ve el texto y las
+        imágenes de entrada, interpreta el cambio y gobierna el render. No hay
+        una ruta alternativa que pueda omitir el croquis en silencio.
 
         Devuelve el MISMO diccionario que los demás motores (`success`,
         `result.images` como data URL), porque quien lo llama no puede tener que
         saber qué motor le tocó.
         """
-        import base64
-        import io as _io
         start = time.time()
         try:
             import openai
@@ -2010,34 +2001,37 @@ class Render3DService:
                 refs.append(b64)
         refs = refs[:7]
 
-        def _a_fichero(b64: str, n: int):
-            limpio = b64.split(",", 1)[1] if b64.startswith("data:") else b64
-            crudo = base64.b64decode(limpio)
-            fich = _io.BytesIO(crudo)
-            # El nombre importa: la librería deduce de él el tipo que sube.
-            fich.name = f"referencia_{n}.png"
-            return fich
+        def _a_data_url(b64: str) -> str:
+            if b64.startswith("data:image/"):
+                return b64
+            mime = reference_mime if str(reference_mime).startswith("image/") else "image/png"
+            return f"data:{mime};base64,{b64}"
 
         try:
-            client = openai.AsyncOpenAI(api_key=openai_key, timeout=180.0)
-            if refs:
-                resp = await client.images.edit(
-                    model=_MODELO_OPENAI_IMAGEN,
-                    image=[_a_fichero(b, i) for i, b in enumerate(refs)],
-                    prompt=task_prompt[:32000],
-                    size="1536x1024",
-                    quality="high",
-                )
-            else:
-                resp = await client.images.generate(
-                    model=_MODELO_OPENAI_IMAGEN,
-                    prompt=task_prompt[:32000],
-                    size="1536x1024",
-                    quality="high",
-                )
+            client = openai.AsyncOpenAI(api_key=openai_key, timeout=240.0)
+            contenido = [{"type": "input_text", "text": task_prompt[:32000]}]
+            contenido.extend({
+                "type": "input_image",
+                "image_url": _a_data_url(b64),
+                "detail": "high",
+            } for b64 in refs)
+            resp = await client.responses.create(
+                model=_MODELO_OPENAI_DIRECTOR,
+                reasoning={"effort": _ESFUERZO_OPENAI_DIRECTOR},
+                input=[{"role": "user", "content": contenido}],
+                tools=[{
+                    "type": "image_generation",
+                    "model": _MODELO_OPENAI_IMAGEN,
+                    "size": "1536x1024",
+                    "quality": "high",
+                }],
+            )
 
-            datos = list(getattr(resp, "data", None) or [])
-            img_b64 = getattr(datos[0], "b64_json", None) if datos else None
+            llamadas_imagen = [
+                item for item in list(getattr(resp, "output", None) or [])
+                if getattr(item, "type", "") == "image_generation_call"
+            ]
+            img_b64 = getattr(llamadas_imagen[0], "result", None) if llamadas_imagen else None
             if not img_b64:
                 raise RuntimeError("el motor premium no devolvió ninguna imagen")
 
@@ -2046,6 +2040,13 @@ class Render3DService:
             # apuntándola no puede tumbar la respuesta.
             try:
                 from services.ai_usage import record_ai_tokens
+                uso = getattr(resp, "usage", None)
+                await record_ai_tokens(
+                    "render", _MODELO_OPENAI_DIRECTOR,
+                    int(getattr(uso, "input_tokens", 0) or 0),
+                    int(getattr(uso, "output_tokens", 0) or 0),
+                    0, count=False,
+                )
                 await record_ai_tokens("render", _MODELO_OPENAI_IMAGEN, 0, 0, 1, count=False)
             except Exception as e:
                 logger.warning(f"No se pudo apuntar el consumo del render premium: {e}")
@@ -2057,7 +2058,7 @@ class Render3DService:
                 "engine": self.config.brand_name,
                 "duration_seconds": round(time.time() - start, 1),
                 "prompt_used": prompt,
-                "motorUsado": _MODELO_OPENAI_IMAGEN,
+                "motorUsado": f"{_MODELO_OPENAI_DIRECTOR}+{_MODELO_OPENAI_IMAGEN}",
             }
             if parsed_params is not None:
                 out["parsed_params"] = parsed_params
