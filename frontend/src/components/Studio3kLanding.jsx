@@ -127,10 +127,17 @@ function Nav({ onEnter }) {
   return (
     <header className={`s3k-nav ${scrolled ? "s3k-nav-solid" : ""}`}>
       <div className="s3k-wrap s3k-nav-inner">
-        {/* Logo wordmark */}
+        {/* EL LOGOTIPO VA EN VECTOR (master, 11/09/2026, pidiendo el logo en
+            alta resolución). El PNG era de 1578x363: en una pantalla Retina el
+            navegador lo estira al doble y el borde de las letras se ve blando,
+            y para imprimir no vale. El SVG no tiene resolución —vale igual
+            para esta cabecera de 34 px que para una lona— y pesa ocho veces
+            menos, que en la pagina publica es lo primero que carga.
+            El PNG se queda en `public/`: lo usa `platformEntry.js` como icono
+            y borrarlo no arregla nada. */}
         <a href="#top" className="s3k-logo-link">
           <img
-            src="/studio3k-logo-white.png"
+            src="/studio3k-logo-white.svg"
             alt="STUDIO3K.IO"
             className="s3k-logo-img"
           />
@@ -547,7 +554,7 @@ function Footer() {
     <footer className="s3k-footer">
       <div className="s3k-wrap s3k-footer-inner">
         <div className="s3k-footer-brand">
-          <img src="/studio3k-logo-white.png" alt="studio3k" className="s3k-footer-logo" />
+          <img src="/studio3k-logo-white.svg" alt="studio3k" className="s3k-footer-logo" />
           <p className="s3k-footer-tagline">Visualización y gestión de propuestas de cocina.<br />Para tiendas que quieren vender mejor.</p>
         </div>
         <div className="s3k-footer-links">
