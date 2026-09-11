@@ -1938,6 +1938,14 @@ class Render3DService:
             }
             if parsed_params is not None:
                 out["parsed_params"] = parsed_params
+            try:
+                from services.ai_usage import record_ai_tokens
+                await record_ai_tokens(
+                    "render", "black-forest-labs/flux-1.1-pro",
+                    0, 0, 1, count=False,
+                )
+            except Exception as e:
+                logger.warning(f"No se pudo apuntar el consumo de Flux Pro: {e}")
             return out
 
         except Exception as e:

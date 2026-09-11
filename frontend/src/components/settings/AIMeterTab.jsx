@@ -11,14 +11,42 @@
  * cliente que agota su cupo. Solo Admin/Master.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Zap, RefreshCw, Plus, AlertTriangle, TrendingUp, X } from 'lucide-react';
+import { Zap, RefreshCw, Plus, AlertTriangle, TrendingUp, X, ExternalLink, Cpu } from 'lucide-react';
 import { authHeaders } from '../../services/api';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+const entero = (n) => (Number(n) || 0).toLocaleString('es-ES');
+
+const AI_PROVIDERS = {
+  openai: {
+    name: 'OpenAI',
+    usage: 'https://platform.openai.com/usage',
+    billing: 'https://platform.openai.com/settings/organization/billing/overview',
+  },
+  google: {
+    name: 'Google Gemini',
+    usage: 'https://aistudio.google.com/usage',
+    billing: 'https://console.cloud.google.com/billing',
+  },
+  replicate: {
+    name: 'Replicate',
+    usage: 'https://replicate.com/account',
+    billing: 'https://replicate.com/account/billing',
+  },
+};
+
+const providerOf = (model = '') => {
+  const value = model.toLowerCase();
+  if (value.startsWith('gpt-') || value.startsWith('o1') || value.startsWith('o3') || value.startsWith('o4')) return 'openai';
+  if (value.includes('gemini')) return 'google';
+  if (value.includes('flux') || value.includes('black-forest')) return 'replicate';
+  return 'other';
+};
 
 export default function AIMeterTab() {
   const [data, setData] = useState({ clients: [], cost_render: 0.12, month: '' });
+  const [aiSummary, setAiSummary] = useState({ by_model: { calls: {}, tokens_in: {}, tokens_out: {}, images: {}, cost_eur: {} } });
   const [packs, setPacks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [granting, setGranting] = useState(null); // user row para el popover
@@ -27,13 +55,15 @@ export default function AIMeterTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [r1, r2] = await Promise.all([
+      const [r1, r2, r3] = await Promise.all([
         fetch(`${BASE}/api/admin/ai-usage/clients`, { headers: authHeaders() }),
         fetch(`${BASE}/api/admin/render-packs`, { headers: authHeaders() }),
+        fetch(`${BASE}/api/admin/ai-usage`, { headers: authHeaders() }),
       ]);
-      const d1 = await r1.json(); const d2 = await r2.json();
+      const d1 = await r1.json(); const d2 = await r2.json(); const d3 = await r3.json();
       setData(d1.success ? d1 : { clients: [], cost_render: 0.12, month: '' });
       setPacks(d2.success ? d2.packs : []);
+      if (d3.success) setAiSummary(d3);
     } catch { /* noop */ }
     finally { setLoading(false); }
   }, []);
@@ -57,9 +87,82 @@ export default function AIMeterTab() {
   const totalCoste = clients.reduce((s, c) => s + (c.coste_estimado || 0), 0);
   const agotados = clients.filter(c => c.agotado).length;
   const barColor = (c) => c.agotado ? 'bg-red-500' : c.pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+  const byModel = aiSummary.by_model || {};
+  const modelNames = Array.from(new Set([
+    ...Object.keys(byModel.calls || {}),
+    ...Object.keys(byModel.tokens_in || {}),
+    ...Object.keys(byModel.tokens_out || {}),
+    ...Object.keys(byModel.images || {}),
+  ])).sort((a, b) => (byModel.calls?.[b] || 0) - (byModel.calls?.[a] || 0));
+  const providersUsed = modelNames.reduce((acc, model) => {
+    const provider = providerOf(model);
+    if (!acc[provider]) acc[provider] = { calls: 0, cost: 0 };
+    acc[provider].calls += Number(byModel.calls?.[model] || 0);
+    acc[provider].cost += Number(byModel.cost_eur?.[model] || 0);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-4">
+      <section className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+        <div className="p-3 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-black text-slate-800 flex items-center gap-2"><Cpu size={16} className="text-indigo-600" /> IA utilizadas este mes</h3>
+            <p className="text-xs text-slate-500">Consumo técnico por modelo y accesos directos a uso y facturación.</p>
+          </div>
+          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">Coste técnico aprox.: {eur(aiSummary.real_cost)}</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-slate-50/60">
+          {Object.entries(AI_PROVIDERS).map(([id, provider]) => {
+            const used = providersUsed[id] || { calls: 0, cost: 0 };
+            return (
+              <div key={id} className="bg-white border border-slate-200 rounded-xl p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-black text-slate-800">{provider.name}</span>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${used.calls ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                    {used.calls ? `${entero(used.calls)} llamadas` : 'Sin uso registrado'}
+                  </span>
+                </div>
+                {used.cost > 0 && <div className="text-xs font-bold text-slate-600 mb-2">Coste registrado: {eur(used.cost)}</div>}
+                <div className="flex gap-2">
+                  <a href={provider.usage} target="_blank" rel="noopener noreferrer" className="flex-1 px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 inline-flex items-center justify-center gap-1">Uso <ExternalLink size={11} /></a>
+                  <a href={provider.billing} target="_blank" rel="noopener noreferrer" className="flex-1 px-2 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-[11px] font-bold text-white inline-flex items-center justify-center gap-1">Facturación <ExternalLink size={11} /></a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="overflow-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100 text-slate-500">
+              <tr>
+                <th className="text-left p-2 font-black uppercase">Proveedor / modelo</th>
+                <th className="text-right p-2 font-black uppercase">Llamadas</th>
+                <th className="text-right p-2 font-black uppercase">Entrada</th>
+                <th className="text-right p-2 font-black uppercase">Salida</th>
+                <th className="text-right p-2 font-black uppercase">Imágenes</th>
+                <th className="text-right p-2 font-black uppercase">Coste</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelNames.map(model => (
+                <tr key={model} className="border-t border-slate-100">
+                  <td className="p-2"><span className="font-bold text-slate-700">{AI_PROVIDERS[providerOf(model)]?.name || 'Otra IA'}</span><div className="text-[10px] text-slate-400 font-mono">{model}</div></td>
+                  <td className="p-2 text-right font-bold tabular-nums">{entero(byModel.calls?.[model])}</td>
+                  <td className="p-2 text-right tabular-nums text-slate-500">{entero(byModel.tokens_in?.[model])}</td>
+                  <td className="p-2 text-right tabular-nums text-slate-500">{entero(byModel.tokens_out?.[model])}</td>
+                  <td className="p-2 text-right tabular-nums text-slate-500">{entero(byModel.images?.[model])}</td>
+                  <td className="p-2 text-right font-bold tabular-nums text-emerald-700">{eur(byModel.cost_eur?.[model])}</td>
+                </tr>
+              ))}
+              {modelNames.length === 0 && <tr><td colSpan={6} className="p-5 text-center text-slate-400">Todavía no hay consumo técnico registrado este mes.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Zap size={18} className="text-amber-500" /> Consumo de IA por cliente</h3>
