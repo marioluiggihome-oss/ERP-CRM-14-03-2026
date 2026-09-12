@@ -2480,9 +2480,27 @@ logger.info(f"🔐 Global auth enforcement (ENFORCE_GLOBAL_AUTH): {'ON' if ENFOR
 # aunque CORS_ORIGINS este fijado en produccion.
 _cors_env = os.environ.get('CORS_ORIGINS', 'https://erp.luiggihome.es,https://erp-crm-14-03-2026-production.up.railway.app,http://localhost:3000')
 _cors_origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
-for _extra in ['https://carpinter.io', 'https://www.carpinter.io']:
-    if _extra not in _cors_origins:
-        _cors_origins.append(_extra)
+# LOS DOMINIOS DE MARCA SALEN DE `platformEntry.js`, NO DE UNA LISTA A MANO.
+#
+# El master, 12/09/2026: «necesito una web conectada a studio3k.io... una URL
+# que nada tenga que ver con el dominio luiggihome».
+#
+# Aquí estaban SOLO los de carpinter.io. La pantalla, en cambio, lleva desde el
+# principio reconociendo también `studio3k.io` y `estudio3k.io` como puerta de
+# entrada: o sea que el día que se apunte el DNS de studio3k.io a la
+# aplicación, la web cargaría, se vería con su marca... y TODAS las llamadas a
+# la API las cortaría el navegador por CORS. Y eso no da un error que se pueda
+# leer: da un login que no hace nada, con el fallo escondido en la consola.
+# Es el fallo de siempre en este repo —un arreglo puesto en una marca y no en
+# la otra—, y la forma de que no vuelva es no escribir la lista dos veces.
+_DOMINIOS_DE_MARCA = (
+    'carpinter.io', 'carpenter.io',      # CARPINTER.IO
+    'studio3k.io', 'estudio3k.io',       # STUDIO3K.IO
+)
+for _dominio in _DOMINIOS_DE_MARCA:
+    for _extra in ('https://%s' % _dominio, 'https://www.%s' % _dominio):
+        if _extra not in _cors_origins:
+            _cors_origins.append(_extra)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

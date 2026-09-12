@@ -63,10 +63,19 @@ const isCarpDirect = () => detectPlatformEntry()?.key === 'carpinter';
 // erp.luiggihome.es/?brand=studio3k conservan la identidad de la marca.
 const isStudio3kDirect = () => detectPlatformEntry()?.key === 'studio3k';
 
+/* EL LOGOTIPO DE VERDAD, NO UNA IMITACIÓN EN TEXTO (master, 12/09/2026:
+   «para poder entrar con ese logotipo de STUDIO3K»).
+   Aquí había dos <span> escribiendo «studio» + «3k» con la fuente del ERP: se
+   parecía, pero no era la marca —otra tipografía y otro azul (#5f78ca contra
+   el #4A6AFD del logotipo), uno al lado del otro—. Y una marca dibujada a mano
+   se separa del logotipo de verdad en cuanto uno de los dos cambia, sin que
+   nadie se entere. Ahora es el SVG, el mismo fichero que usa la landing. */
 const Studio3kBrand = ({ big = false }) => (
-  <div className={`inline-flex items-baseline font-bold tracking-tight ${big ? 'text-5xl' : 'text-2xl'}`}>
-    <span className="text-white">studio</span><span className="text-[#5f78ca]">3k</span>
-  </div>
+  <img
+    src="/studio3k-logo-white.svg"
+    alt="studio3k"
+    className={big ? 'h-12 w-auto' : 'h-6 w-auto'}
+  />
 );
 
 const Login = ({ onLogin, customLogo }) => {
@@ -347,7 +356,7 @@ const Login = ({ onLogin, customLogo }) => {
                 <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
                   TU COCINA<br />
                   TU PROYECTO<br />
-                  <span style={{ color: '#5f78ca' }}>EN 3D</span>
+                  <span style={{ color: '#4A6AFD' }}>EN 3D</span>
                 </h1>
                 <p className="text-white/70 text-lg">
                   Tu entorno profesional para diseñar, presentar y vender cocinas.

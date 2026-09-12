@@ -26,10 +26,16 @@ export const PLATFORM_ENTRIES = {
     brand: 'studio3k',
     name: 'STUDIO3K.IO',
     title: 'STUDIO3K.IO · Acceso profesional',
-    color: '#5f78ca',
+    // El azul del LOGOTIPO (#4A6AFD), no uno parecido: este color pinta el
+    // spinner de carga y la barra del navegador justo al lado de la marca.
+    color: '#4A6AFD',
     background: '#0b0b14',
-    icon: '/studio3k-logo.png',
-    favicon: '/studio3k-logo.png',
+    // El icono era `studio3k-logo.png`: 1920x1920 y 1,8 MB para un favicon de
+    // 16 px, con un logotipo ANTIGUO (mayúsculas espaciadas) que no es el de
+    // la marca, y que a ese tamaño no se lee. Ahora es un cuadrado recortado
+    // del propio logotipo: el «3k» sobre el fondo oscuro.
+    icon: '/studio3k-icon.svg',
+    favicon: '/studio3k-icon.svg',
   },
 };
 
