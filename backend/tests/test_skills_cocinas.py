@@ -1,6 +1,11 @@
 # © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
 # Software propietario y confidencial. Ver LICENSE.
 from copy import deepcopy
+import os
+import sys
+
+os.environ.setdefault('JWT_SECRET', 'solo-pruebas-skills-cocinas-32-caracteres')
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from services.skills_cocinas import ejecutar
 
 

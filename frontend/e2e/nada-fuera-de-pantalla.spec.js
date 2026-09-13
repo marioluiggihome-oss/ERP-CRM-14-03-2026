@@ -32,7 +32,7 @@
  * bloquea y `overflow-x-auto` + `shrink-0` en la tira.
  */
 const { test, expect } = require('@playwright/test');
-const { entrar } = require('./arnes');
+const { entrar, abrirPresupuestador } = require('./arnes');
 
 const VISTAS = [
   ['móvil', { width: 390, height: 844 }],
@@ -74,9 +74,13 @@ for (const modulo of MODULOS) {
     await entrar(page, baseURL);
     // Se pulsa el botón DEL MENÚ, no la tarjeta de inicio: varios módulos
     // tienen las dos cosas con el mismo rótulo y el clic salía ambiguo.
-    await page.locator('aside').first()
-      .getByRole('button', { name: new RegExp(`^${modulo.replace(/\./g, '\\.')}$`, 'i') })
-      .first().click();
+    if (modulo === 'Cocina Montada 3') {
+      await abrirPresupuestador(page, 'montada');
+    } else {
+      await page.locator('aside').first()
+        .getByRole('button', { name: new RegExp(`^${modulo.replace(/\./g, '\\.')}$`, 'i') })
+        .first().click();
+    }
     await page.waitForTimeout(2500);
 
     for (const [etiqueta, vista] of VISTAS) {

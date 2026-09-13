@@ -22,7 +22,7 @@
  * que ahí sí cabe y deja comparar en vertical.
  */
 const { test, expect } = require('@playwright/test');
-const { entrar } = require('./arnes');
+const { entrar, abrirPresupuestador } = require('./arnes');
 
 const MUEBLES = [
   { qty: 1, cod: 'B60D/I', familia: 'BAJO', tipo: 'BAJO', ancho: 60, alto: 80, fondo: 58, mano: 'D', pts: 49, pvp: 163.17, raw: '1 b60d', encontrado: true },
@@ -41,9 +41,7 @@ async function abrirConMuebles(page, baseURL, vista) {
     status: 200, contentType: 'application/json',
     body: JSON.stringify({ success: true, muebles: MUEBLES, count: MUEBLES.length, total: 649 }),
   }));
-  await page.locator('aside').first()
-    .getByRole('button', { name: /Cocina Montada 3/i }).first().click();
-  await page.waitForTimeout(2000);
+  await abrirPresupuestador(page, 'montada');
   await page.locator('input[placeholder*="código o descripción"]').first().fill('1 b60d');
   await page.getByRole('button', { name: /Añadir Mueble/i }).first().click();
   await page.waitForTimeout(1500);

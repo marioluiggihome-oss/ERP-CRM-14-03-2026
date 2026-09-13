@@ -163,7 +163,7 @@ def test_sin_la_casilla_no_se_llega_al_motor_premium():
     for usuario in (COMERCIAL, GERENTE):
         assert motor_permitido(usuario, "chatgpt") == MOTOR_DE_PRODUCCION, (
             f"«{usuario['username']}» ha llegado al motor premium sin tener la "
-            f"casilla: es el más caro del ERP, 7 créditos por render.")
+            f"casilla que lo autoriza.")
 
 
 def test_una_casilla_TORCIDA_no_abre_el_motor_caro():
@@ -181,15 +181,16 @@ def test_el_master_sigue_llegando_al_premium_sin_casilla():
             "al master se le ha cerrado su propio motor premium")
 
 
-def test_el_premium_se_COBRA_mas_caro_a_quien_lo_tiene_por_casilla():
-    """El cobro va por el motor que se usa DE VERDAD (regla 32). Si se cobrara
-    por el pedido, o si el premium cobrara 1, repartir la casilla saldría gratis
-    en el contador y caro en la factura."""
+def test_el_premium_respeta_el_precio_unico_de_un_credito():
+    """Normal y Premium consumen un crédito por render/cambio.
+
+    El permiso decide qué motor puede usar la persona; no cambia el precio que
+    se muestra ni el que se descuenta del contador.
+    """
     usado = motor_permitido(CON_PREMIUM, "chatgpt")
     rebajado = motor_permitido(COMERCIAL, "chatgpt")
-    assert coste_de_motor("render", 1, usado) > coste_de_motor("render", 1, rebajado), (
-        "renderizar con el motor premium cuesta lo mismo que con el de "
-        "producción, y al proveedor se le paga bastante más por imagen")
+    assert coste_de_motor("render", 1, usado) == 1
+    assert coste_de_motor("render", 1, rebajado) == 1
 
 
 def test_permiso_acabado_normal_abre_solo_motor_premium():

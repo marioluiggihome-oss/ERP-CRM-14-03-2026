@@ -71,6 +71,7 @@ def ia(monkeypatch):
 
     jwt = types.ModuleType("services.jwt_service")
     jwt.require_auth = lambda: None
+    jwt.require_module_access = lambda _flag: jwt.require_auth
     monkeypatch.setitem(sys.modules, "services.jwt_service", jwt)
 
     spec = importlib.util.spec_from_file_location("routes.ia_lab", RUTA)

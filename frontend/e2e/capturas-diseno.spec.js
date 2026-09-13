@@ -15,16 +15,9 @@
  * compararlas antes y después a mano. Es una herramienta, no una prueba.
  */
 const { test } = require('@playwright/test');
-const { entrar } = require('./arnes');
+const { entrar, abrirPresupuestador } = require('./arnes');
 
 const DEST = process.env.CAPTURAS || 'capturas';
-
-/** Pulsa una entrada del menú lateral por su rótulo. */
-const menu = (rotulo) => async (page) => {
-  await page.getByText(new RegExp(`^${rotulo}$`, 'i')).first()
-    .click({ force: true });
-  await page.waitForTimeout(1200);
-};
 
 const PANTALLAS = [
   { nombre: 'inicio', abrir: async () => {} },
@@ -35,8 +28,8 @@ const PANTALLAS = [
       await page.waitForTimeout(900);
     },
   },
-  { nombre: 'cocina-montada-3', abrir: menu('Cocina Montada 3') },
-  { nombre: 'cocina-desmontada', abrir: menu('Cocina Desmontada') },
+  { nombre: 'cocina-montada-3', abrir: (page) => abrirPresupuestador(page, 'montada') },
+  { nombre: 'cocina-desmontada', abrir: (page) => abrirPresupuestador(page, 'desmontada') },
   {
     nombre: 'estudio-3d',
     abrir: async (page) => {

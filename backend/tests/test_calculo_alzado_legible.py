@@ -166,7 +166,7 @@ def test_la_cota_marcada_es_la_que_se_dibuja_de_verdad():
         "ha vuelto la cota cruda, sin marcar, en la fila de suelo"
     assert 'cotas_altos.append((x, x + w, f"{w}"))' not in src, \
         "ha vuelto la cota cruda, sin marcar, en la fila colgada"
-    assert '{cota_w}×{ALTOS_Y1 - ALTOS_Y0}' in src, \
+    assert '{cota_w}×{altura_alto:g}' in src, \
         "el rotulo dentro del alto sigue enseñando la cota sin marcar"
 
 

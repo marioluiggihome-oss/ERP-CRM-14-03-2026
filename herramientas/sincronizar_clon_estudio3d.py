@@ -80,8 +80,8 @@ CAMBIOS = [
         "    if (motor === 'ia7') return 'julio11_plus';\n"
         "    // IA PREMIUM — SOLO EXISTE EN ESTE CLON. El Estudio 3D de producción no\n"
         "    // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta a\n"
-        "    // quien tenga la casilla `canUseIAPremium` (regla 33). Es el motor más\n"
-        "    // caro: 7 créditos por render contra 1.\n"
+        "    // quien tenga la casilla `canUseIAPremium` (regla 33). El permiso cambia\n"
+        "    // el motor disponible; Premium y normal consumen un único crédito.\n"
         "    if (motor === 'premium') return 'chatgpt';\n",
     ),
 ]

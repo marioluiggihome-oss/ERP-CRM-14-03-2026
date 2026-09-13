@@ -2959,7 +2959,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 El master, 09/09: «la IA premium métela en permisos de
                                 usuario para poderla activar a ciertos usuarios».
                                 Se nombra lo que abre (regla 26: el permiso se llama
-                                como la sección) Y lo que cuesta: 7 créditos por render
+                                como la sección). Consume 1 crédito por render o cambio
                                 contra 1. Sin decirlo aquí, se marca sin saberlo. */}
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input

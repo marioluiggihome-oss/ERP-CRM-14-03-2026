@@ -649,8 +649,8 @@ export default function Estudio3DLab({ state, setState }) {
     if (motor === 'ia7') return 'julio11_plus';
     // IA PREMIUM — SOLO EXISTE EN ESTE CLON. El Estudio 3D de producción no
     // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta a
-    // quien tenga la casilla `canUseIAPremium` (regla 33). Es el motor más
-    // caro: 7 créditos por render contra 1.
+    // quien tenga la casilla `canUseIAPremium` (regla 33). El permiso cambia
+    // el motor disponible; Premium y normal consumen un único crédito.
     if (motor === 'premium') return 'chatgpt';
     return 'gemini';
   };
@@ -1845,18 +1845,9 @@ export default function Estudio3DLab({ state, setState }) {
     // detectado, se dibuja ESO: es lo que ha visto y ha dado por bueno. Y de
     // paso se ahorra una llamada a la IA por cada vía.
     if (distAceptada.current) return distAceptada.current;
-    // En el Estudio 3D normal se prioriza el render visible, que es el flujo
-    // rápido y estable utilizado anteriormente. El plano original queda como
-    // respaldo cuando todavía no existe un render. Premium mantiene su propio
-    // flujo de lectura y no entra por esta ruta.
-    const img = currentImage();
-    if (img) {
-      try {
-        const dataUrl = await imageToDataUrl(img);
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
-      } catch (e) { anota('del render', e); }
-    }
+    // El croquis/plano original contiene las cotas escritas y por eso manda.
+    // El render es una interpretación visual y solo sirve de respaldo cuando
+    // no se ha adjuntado un original legible.
     const croquis = originalRef || refImage;
     if (croquis) {
       try {
@@ -1864,6 +1855,14 @@ export default function Estudio3DLab({ state, setState }) {
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
       } catch (e) { anota('del croquis', e); }
+    }
+    const img = currentImage();
+    if (img) {
+      try {
+        const dataUrl = await imageToDataUrl(img);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
+      } catch (e) { anota('del render', e); }
     }
     if ((description || '').trim()) {
       try {
