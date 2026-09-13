@@ -1612,16 +1612,15 @@ async def generar_alzado(payload: ProyectoBase):
         # Antes estas constantes no cuadraban con sus propios rótulos (la línea a 86
         # se rotulaba "90" y una cota de 76 cm decía "80"). Ahora todo se DERIVA:
         from services.kitchen_geometry import (
-            CASCO_BAJO_ALTO, ALTOS_ALTURAS, COLUMNA_ALTURAS,
+            CASCO_BAJO_ALTO, CASCO_ALTO_PREDETERMINADO, COLUMNA_ALTURAS,
             ZOCALO_ALTO_MIN, ENCIMERA_GRUESO_MAX, SEPARACION_ENCIMERA_ALTOS_MIN,
             cota_de_ancho,
         )
         ZOC_Y = ZOCALO_ALTO_MIN                      # 10  · cara superior del zócalo
         ENC_Y = ZOC_Y + CASCO_BAJO_ALTO              # 90  · cara superior del casco bajo
         ENC_TOP = ENC_Y + ENCIMERA_GRUESO_MAX        # 94  · cara superior de la encimera
-        ALTOS_Y1 = COLUMNA_ALTURAS[1]                # 220 · los altos rasan con la columna
-        ALTOS_Y0 = ALTOS_Y1 - ALTOS_ALTURAS[0]       # 150 · alto de 70 cm
-        COL_Y = COLUMNA_ALTURAS[1]                   # 220
+        ALTOS_Y0 = ENC_TOP + SEPARACION_ENCIMERA_ALTOS_MIN
+        ALTOS_Y1 = ALTOS_Y0 + CASCO_ALTO_PREDETERMINADO
         _SEP_ALTOS = ALTOS_Y0 - ENC_TOP              # separación encimera→altos (56 cm)
         # Autocomprobación: si alguien cambia una constante y la geometría deja de ser
         # fabricable, se ve aquí en vez de salir un plano incoherente.
@@ -1691,6 +1690,21 @@ async def generar_alzado(payload: ProyectoBase):
         paredes = _val["paredes"]
         elementos = _val["elementos"]
         _avisos_geom = _val.get("avisos") or []
+
+        # No escribir cotas a partir de una altura provisional. La relación MV
+        # permite revisar esos módulos, pero el alzado acotado no es fabricable.
+        if any(e.get("alto_desconocido") for e in elementos):
+            raise HTTPException(status_code=422, detail="Confirma las alturas pendientes antes de generar el alzado acotado.")
+        from services.kitchen_geometry import COLUMNAS_IDS, es_a_medida
+        COLS = COLUMNAS_IDS
+        alturas_bajos = {e["alto"] for e in elementos if e.get("fila") != "alto"
+                         and e.get("id") not in COLUMNAS_IDS and not es_a_medida(e.get("id"))}
+        if len(alturas_bajos) > 1:
+            raise HTTPException(status_code=422, detail="Hay bajos de distintas alturas: define los niveles de apoyo y encimera antes de acotar.")
+        ENC_Y = ZOC_Y + next(iter(alturas_bajos), CASCO_BAJO_ALTO)
+        ENC_TOP = ENC_Y + ENCIMERA_GRUESO_MAX
+        ALTOS_Y0 = ENC_TOP + SEPARACION_ENCIMERA_ALTOS_MIN
+        ALTOS_Y1 = ALTOS_Y0 + max((e["alto"] for e in elementos if e.get("fila") == "alto"), default=CASCO_ALTO_PREDETERMINADO)
 
         n = len(paredes)
         fig, axes = plt.subplots(n, 1, figsize=(14, 4.6 * n))
@@ -1888,11 +1902,12 @@ async def generar_alzado(payload: ProyectoBase):
                 _es_fila_alta = (fila == "alto" or tipo in ALTOS)
                 x = int(e.get("posicion_cm") or (pos_alto if _es_fila_alta else pos))
                 if tipo in COLS:
-                    wire(ax, x, ZOC_Y, w, COL_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, COL_Y - ZOC_Y)
-                    _texto_vertical(ax, x + w / 2, (ZOC_Y + COL_Y) / 2, label, COL_Y - ZOC_Y)
+                    altura_columna = e.get("alto", COLUMNA_ALTURAS[1])
+                    wire(ax, x, ZOC_Y, w, altura_columna); puerta_x(ax, x, ZOC_Y, w, altura_columna)
+                    _texto_vertical(ax, x + w / 2, ZOC_Y + altura_columna / 2, label, altura_columna)
                     # Tiradores verticales de la columna (puerta superior e inferior).
-                    tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.30, length=18)
-                    tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.72, length=18)
+                    tirador_v(ax, x + w - 5, ZOC_Y + altura_columna * 0.30, length=18)
+                    tirador_v(ax, x + w - 5, ZOC_Y + altura_columna * 0.72, length=18)
                     herr["puertas"] += 2
                 elif (fila == "alto" or tipo in ALTOS) and any(
                         min(cx + cw, x + w) - max(cx, x) > w * 0.5
@@ -1905,9 +1920,10 @@ async def generar_alzado(payload: ProyectoBase):
                     # Fila COLGADA. Antes un "Mueble alto" caía en el `else` y se
                     # dibujaba a ras de suelo, rotulado "30×80": un alto no mide
                     # 80 de alto (son 70 o 90) ni se apoya en el zócalo.
-                    wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
-                    _ta = f"{label}\n{cota_w}×{ALTOS_Y1 - ALTOS_Y0}" if _con_cotas else label
-                    _texto_modulo(ax, x, w, (ALTOS_Y0 + ALTOS_Y1) / 2, _ta)
+                    altura_alto = e.get("alto", CASCO_ALTO_PREDETERMINADO)
+                    wire(ax, x, ALTOS_Y0, w, altura_alto)
+                    _ta = f"{label}\n{cota_w}×{altura_alto:g}" if _con_cotas else label
+                    _texto_modulo(ax, x, w, ALTOS_Y0 + altura_alto / 2, _ta)
                     # Un alto ancho lleva DOS hojas: dos tiradores, al centro,
                     # y dos puertas en el herraje.
                     _hojas = hojas_de(w)
@@ -2457,6 +2473,12 @@ async def detect_distribucion(payload: dict):
             "(anchos de fabricación: 15,20,30,40,45,50,60,70,80,90,100,120). Electrodomésticos visibles "
             "cuentan como módulos (frigorífico, columna horno/microondas, lavavajillas, fregadero, "
             "placa/cocina, campana...).\n"
+            "MODELAJE MV: bajos de 80 cm y altos de 90 cm por defecto. Devuelve `alto` solo si está indicado expresamente; "
+            "70 cm en bajos requiere indicación. No confundas casco con zócalo o encimera. "
+            "Un sobremódulo es otro mueble por encima de los altos, id `sobremodulo`; su altura y fondo son independientes. "
+            "Si se conoce el reparto exacto usa `bajo_2_gavetas_1_cajon`, `bajo_3_cajones_1_gaveta` o `bajo_5_cajones`. "
+            "Si no se distingue, usa `cajonera` y deja la familia pendiente. "
+            "Una columna recta tiene un único ancho: si las cotas de sus frentes se contradicen, devuelve ancho null y explica el conflicto en label. "
             "\nREGLA MÁS IMPORTANTE — LAS MEDIDAS ESCRITAS MANDAN:\n"
             "Si en la imagen hay NÚMEROS ESCRITOS (un croquis acotado a mano, cotas sobre un render), esos "
             "números son la VERDAD. Cópialos literalmente y marca `\"medida_escrita\": true` en ese módulo. "
@@ -2551,6 +2573,10 @@ async def detect_distribucion(payload: dict):
             # no ha medido nadie.
             if anc is not None:
                 elem["ancho"] = max(10, anc)
+            # No perder las dimensiones ni el nivel de los módulos en el puente.
+            for campo in ("alto", "fondo", "fila"):
+                if e.get(campo) is not None:
+                    elem[campo] = e[campo]
             elementos.append(elem)
         if not paredes:
             raise HTTPException(status_code=422, detail="No se pudo deducir la distribución del render.")
@@ -2672,6 +2698,102 @@ async def _puede_volcar_mv(user) -> bool:
         return False
 
 
+async def _acceso_skills_premium(user):
+    from routes.cascos import _es_master
+    from services.jwt_service import _users_collection
+    if not user or not user.get('id'):
+        raise HTTPException(status_code=401, detail='Inicia sesión para revisar el proyecto.')
+    if _es_master(user):
+        return
+    actual = await _users_collection().find_one({'id': user['id']}, {'canUseIAPremium': 1})
+    if not actual or not actual.get('canUseIAPremium'):
+        raise HTTPException(status_code=403, detail='No tienes acceso a la revisión Premium.')
+
+
+async def _fichas_tecnicas_mv():
+    docs = await _get_estudio_db()['mv_fichas_tecnicas'].find({'verificada': True}, {'_id': 0}).to_list(length=2000)
+    return {d['referencia'].upper(): d for d in docs if d.get('referencia')}
+
+
+def _skills_visibles(informe, user):
+    from copy import deepcopy
+    from routes.cascos import _ve_precios_mv
+    visible = deepcopy(informe)
+    if not _ve_precios_mv(user):
+        visible['skills'][7]['resultado'] = {'tarifa': informe['tarifa'],
+                                            'version': informe['tarifa_version'], 'precios_ocultos': True}
+    return visible
+
+
+@router.post('/skills-tecnicas')
+async def evaluar_skills_tecnicas(payload: dict, current_user: dict = Depends(get_current_user)):
+    await _acceso_skills_premium(current_user)
+    if payload.get('premium_activado') is not True:
+        raise HTTPException(status_code=409, detail='Activa Subir a acabado Premium antes de la revisión avanzada.')
+    from services.skills_cocinas import ejecutar
+    entrada = {'distribucion': payload.get('distribucion') or {},
+               'tarifa': payload.get('tarifa') or 'T1', 'render_id': payload.get('render_id')}
+    try:
+        informe = ejecutar(**entrada, fichas=await _fichas_tecnicas_mv())
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    clave = {'_id': f"{current_user['id']}:{informe['revision']}"}
+    await _get_estudio_db()['estudio3d_revisiones_tecnicas'].update_one(clave, {'$setOnInsert': {
+        'userId': current_user['id'], 'entrada': entrada, 'informe': informe,
+        'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }}, upsert=True)
+    return _skills_visibles(informe, current_user)
+
+
+@router.post('/skills-tecnicas/{revision}/aprobar')
+async def aprobar_skills_tecnicas(revision: str, current_user: dict = Depends(get_current_user)):
+    await _acceso_skills_premium(current_user)
+    from services.skills_cocinas import ejecutar
+    col = _get_estudio_db()['estudio3d_revisiones_tecnicas']
+    clave = {'_id': f"{current_user['id']}:{revision}", 'userId': current_user['id']}
+    doc = await col.find_one(clave)
+    if not doc:
+        raise HTTPException(status_code=404, detail='No existe esta revisión para tu usuario.')
+    actual = ejecutar(**doc['entrada'], fichas=await _fichas_tecnicas_mv())
+    if actual['revision'] != revision:
+        raise HTTPException(status_code=409, detail='Han cambiado las fichas o la tarifa. Ejecuta de nuevo la revisión.')
+    if not actual['puede_aprobar']:
+        raise HTTPException(status_code=409, detail={'mensaje': 'No se puede aprobar un diseño incompleto.',
+                                                   'pendientes': actual['datos_pendientes']})
+    aprobacion = {'userId': current_user['id'], 'revision': revision,
+                  'fecha': datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    await col.update_one(clave, {'$set': {'aprobacion': aprobacion}})
+    return {'aprobado': True, 'aprobacion': aprobacion}
+
+
+@router.post('/skills-tecnicas/{revision}/volcar')
+async def volcar_skills_tecnicas(revision: str, current_user: dict = Depends(get_current_user)):
+    await _acceso_skills_premium(current_user)
+    if not await _puede_volcar_mv(current_user):
+        raise HTTPException(status_code=403, detail='No tienes permiso para volcar muebles MV.')
+    from services.skills_cocinas import ejecutar
+    from services.mv_relacion import parse_relacion_text
+    from routes.cascos import _ve_precios_mv, sin_precios
+    doc = await _get_estudio_db()['estudio3d_revisiones_tecnicas'].find_one(
+        {'_id': f"{current_user['id']}:{revision}", 'userId': current_user['id']})
+    if not doc or not doc.get('aprobacion'):
+        raise HTTPException(status_code=409, detail='Aprueba primero esta revisión técnica.')
+    informe = ejecutar(**doc['entrada'], fichas=await _fichas_tecnicas_mv())
+    if informe['revision'] != revision or not informe['puede_aprobar']:
+        raise HTTPException(status_code=409, detail='La revisión ya no es válida; vuelve a comprobar el diseño.')
+    muebles = []
+    for m in informe['relacion']:
+        if m['modo_suministro'] == 'hueco':
+            continue
+        lineas = parse_relacion_text(f"{int(m['cantidad'])} {m['codigo']} (altura {m['alto']})", informe['tarifa'])
+        if len(lineas) != 1:
+            raise HTTPException(status_code=422, detail='No se pudo volcar exactamente la relación aprobada.')
+        lineas[0]['technicalUid'] = m['uid']
+        muebles.extend(lineas)
+    return {'revision': revision, 'render_id': informe['render_id'], 'tarifa_version': informe['tarifa_version'],
+            'muebles': muebles if _ve_precios_mv(current_user) else sin_precios(muebles)}
+
+
 @router.post("/relacion-mv")
 async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """La distribución del Estudio 3D, traducida a MUEBLES MV con su precio.
@@ -2764,6 +2886,7 @@ async def relacion_mv(payload: dict, current_user: Optional[dict] = Depends(get_
             t["cod"] = t["cod"][:-3] + linea["mano"]
             t["mano"] = linea["mano"]
         t["manoPropuesta"] = bool(linea.get("mano_propuesta"))
+        t["confirmarFamilia"] = bool(linea.get("confirmar_familia"))
         linea["codigo_mv"] = t.get("cod")
         linea["familia_mv"] = t.get("familia")
         linea["puntos"] = t.get("pts")

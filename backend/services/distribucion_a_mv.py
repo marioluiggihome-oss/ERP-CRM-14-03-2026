@@ -39,6 +39,11 @@ _MV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 #
 # (prefijo, familia legible, seguro)
 MAPA = {
+    "sobremodulo":     ("L", "Sobremódulo", True),
+    "sobremódulo":     ("L", "Sobremódulo", True),
+    "bajo_2_gavetas_1_cajon": ("BGC", "Bajo 2 gavetas y 1 cajón", True),
+    "bajo_3_cajones_1_gaveta": ("BCG", "Bajo 3 cajones y 1 gaveta", True),
+    "bajo_5_cajones": ("BC", "Bajo 5 cajones", True),
     "bajo":            ("B",   "Bajo", True),
     "bajo_fregadero":  ("BF",  "Bajo fregadero", True),
     "fregadero":       ("BF",  "Bajo fregadero", True),
@@ -56,7 +61,9 @@ MAPA = {
     "altillo":         ("L",   "Altillo", True),
     "sobreencimera":   ("S",   "Sobreencimera", True),
     "mediacolumna":    ("M",   "Mediacolumna", True),
-    "frigorifico":     ("CF",  "Columna frigorífico", True),
+    "frigorifico":     ("CF",  "Columna frigorífico: confirmar que es integrado", False),
+    "columna_frigo":   ("CF",  "Columna frigorífico integrado", True),
+    "columna_horno":   ("CH",  "Columna horno", True),
     "columna_hornos":  ("CH",  "Columna horno", True),
     "despensa":        ("CD",  "Columna despensero", True),
     "vinoteca":        ("CD",  "Columna despensero", False),
@@ -158,7 +165,11 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
     for e in elementos:
         eid = str(e.get("id") or "").lower().strip()
         etiqueta = e.get("label") or eid or "Módulo"
-        ancho = int(e.get("ancho") or 0)
+        try:
+            ancho_real = float(str(e.get("ancho") or 0).replace(",", "."))
+            ancho = int(ancho_real)
+        except (ValueError, TypeError, OverflowError):
+            ancho_real, ancho = 0, 0
         pared = int(e.get("pared_idx") or 0)
         # LA FILA DE UN RINCÓN LA DICE SU TIPO. Sin esto, un elemento que
         # llegue sin `fila` —que la pone `validar_distribucion`, y no todo
@@ -173,6 +184,12 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
         if motivo_fuera:
             sin_codigo.append({"label": etiqueta, "id": eid, "ancho": ancho,
                                "pared_idx": pared, "motivo": motivo_fuera})
+            continue
+
+        if e.get("ancho_desconocido") or e.get("alto_desconocido") or ancho != ancho_real:
+            sin_codigo.append({"label": etiqueta, "id": eid, "ancho": ancho_real,
+                               "pared_idx": pared,
+                               "motivo": "Medida pendiente o especial: confirmar dimensiones reales antes de asignar referencia MV."})
             continue
 
         # ── LOS RINCONES VAN POR SU PROPIA TABLA ─────────────────────────
@@ -202,6 +219,13 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
             continue
 
         prefijo, familia, seguro = entrada
+        # L/LV tienen una tarifa importada cuyo selector necesita contrastarse
+        # con la ficha: no confundir su escalón de precio con la altura física.
+        if prefijo in ("L", "LV"):
+            sin_codigo.append({"label": etiqueta, "id": eid, "ancho": ancho,
+                               "pared_idx": pared,
+                               "motivo": "Sobremódulo: revisar altura, fondo y referencia en la ficha MV antes de tarifar."})
+            continue
         if not ancho:
             sin_codigo.append({"label": etiqueta, "id": eid, "ancho": 0,
                                "pared_idx": pared,
@@ -236,7 +260,8 @@ def distribucion_a_relacion(distribucion: dict, tarifa: str = "T1",
             "familia": familia, "codigo": codigo, "ancho": ancho,
             "mano": mano, "mano_propuesta": bool(mano),
             "puede_dos_puertas": sin_mano and con_mano,
-            "alto": _altura_de(fila, prefijo, alto_altos, alto_columnas),
+            "alto": e.get("alto") if e.get("altura_explicita") else _altura_de(fila, prefijo, alto_altos, alto_columnas),
+            "altura_explicita": bool(e.get("altura_explicita")),
             "confirmar_familia": not seguro,
         })
 
@@ -270,7 +295,7 @@ def reaplica_alturas(lineas, alto_altos: int = ALTO_ALTOS,
             if c.isdigit():
                 break
             prefijo += c
-        if prefijo:
+        if prefijo and not copia.get("altura_explicita"):
             fila = "alto" if prefijo.startswith("A") else "bajo"
             copia["alto"] = _altura_de(fila, prefijo, alto_altos, alto_columnas)
         salida.append(copia)
