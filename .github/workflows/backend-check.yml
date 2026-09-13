@@ -44,10 +44,13 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
-      - name: Configurar Node 18 para los contratos de Tailwind
+      - name: Configurar Node 24 para los contratos de frontend
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          # Las pruebas de dictado importan modulos ES con deteccion de sintaxis,
+          # igual que el entorno actual del proyecto. Node 18 los clasificaba
+          # como CommonJS y hacia fallar 14 pruebas antes de ejecutarlas.
+          node-version: "24"
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
 
