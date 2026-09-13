@@ -2705,8 +2705,8 @@ async def _acceso_skills_premium(user):
         raise HTTPException(status_code=401, detail='Inicia sesión para revisar el proyecto.')
     if _es_master(user):
         return
-    actual = await _users_collection().find_one({'id': user['id']}, {'canUseIAPremium': 1})
-    if not actual or not actual.get('canUseIAPremium'):
+    actual = await _users_collection().find_one({'id': user['id']}, {'canUseIAPremium': 1, 'canUsePremiumFinish': 1})
+    if not actual or not (actual.get('canUseIAPremium') is True or actual.get('canUsePremiumFinish') is True):
         raise HTTPException(status_code=403, detail='No tienes acceso a la revisión Premium.')
 
 

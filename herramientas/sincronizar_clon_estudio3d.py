@@ -64,6 +64,11 @@ CABECERA = '''
 # vez, la regeneración se para: mejor sin clon que con un clon que miente.
 CAMBIOS = [
     (
+        "permiso Premium independiente del estudio normal",
+        "  const canUsePremiumFinish = isMaster || state?.currentUser?.canUsePremiumFinish === true;",
+        "  const canUsePremiumFinish = isMaster || state?.currentUser?.canUseIAPremium === true;",
+    ),
+    (
         "el botón IA PREMIUM en la botonera",
         "                        ['ia7', 'IA7', 'Configuración mejorada de prueba'],\n",
         "                        ['ia7', 'IA7', 'Configuración mejorada de prueba'],\n"

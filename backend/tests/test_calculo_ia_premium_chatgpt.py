@@ -95,10 +95,10 @@ def test_produccion_ofrece_el_acabado_premium_SOLO_CON_PERMISO():
     enseñe: de él depende que el botón se deshabilite sin saldo."""
     produccion = _leer(PRODUCCION)
     assert "canUsePremiumFinish" in produccion
-    assert "currentUser?.canUseIAPremium === true" in produccion
-    assert ">Acabado PREMIUM<" in produccion, (
+    assert "currentUser?.canUsePremiumFinish === true" in produccion
+    assert ">Activar Premium · mejorar acabado<" in produccion, (
         "ha desaparecido el botón de acabado PREMIUM del Estudio 3D")
-    assert "créditos</span>" not in produccion.split(">Acabado PREMIUM<")[0][-200:], (
+    assert "créditos</span>" not in produccion.split(">Activar Premium · mejorar acabado<")[0][-200:], (
         "ha vuelto la cifra de créditos al rótulo del botón (master, 10/09)")
     assert "creditosDeUnRender('chatgpt')" in produccion, (
         "ya no se calcula lo que cuesta: sin ese número el botón no puede "

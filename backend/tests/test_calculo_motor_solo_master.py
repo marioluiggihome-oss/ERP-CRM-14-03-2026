@@ -190,3 +190,15 @@ def test_el_premium_se_COBRA_mas_caro_a_quien_lo_tiene_por_casilla():
     assert coste_de_motor("render", 1, usado) > coste_de_motor("render", 1, rebajado), (
         "renderizar con el motor premium cuesta lo mismo que con el de "
         "producción, y al proveedor se le paga bastante más por imagen")
+
+
+def test_permiso_acabado_normal_abre_solo_motor_premium():
+    user = {"id": "acabado", "canUsePremiumFinish": True}
+    assert motor_permitido(user, "chatgpt") == "chatgpt"
+    for motor in MOTORES_DE_PRUEBAS:
+        assert motor_permitido(user, motor) == MOTOR_DE_PRODUCCION
+
+
+def test_permiso_acabado_requiere_booleano_y_respeta_revocacion():
+    for valor in (False, None, "true", "false", 1):
+        assert motor_permitido({"canUsePremiumFinish": valor}, "chatgpt") == MOTOR_DE_PRODUCCION

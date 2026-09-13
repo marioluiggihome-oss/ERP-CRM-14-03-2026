@@ -5613,7 +5613,7 @@ export default function Estudio3DLab({ state, setState }) {
                   <span>Activar Premium · mejorar acabado</span>
                 </button>
                 )}
-                {premiumFinishActive && (
+                {premiumFinishActive && canUsePremiumFinish && (
                   <button type="button" role="switch" aria-checked={premiumChangeActive}
                     aria-label="Modo Premium" disabled={editing || downloading || (!premiumChangeActive && !canUsePremiumFinish)}
                     onClick={() => { setPremiumEditMode(!premiumChangeActive); setRevisionTecnica(null); }}
@@ -6176,7 +6176,7 @@ export default function Estudio3DLab({ state, setState }) {
                     className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
-                  {premiumFinishActive && (
+                  {premiumFinishActive && canUsePremiumFinish && (
                     <div className="shrink-0 flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" title="Elige cómo procesar este cambio">
                       <button type="button" onClick={() => { setPremiumEditMode(false); setRevisionTecnica(null); }} disabled={editing || downloading}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-black ${!premiumEditMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>

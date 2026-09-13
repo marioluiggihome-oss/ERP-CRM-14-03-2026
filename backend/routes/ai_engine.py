@@ -766,6 +766,8 @@ def motor_permitido(user, pedido):
     # cualquier cosa dentro, y sobre un permiso que gasta dinero no se acepta
     # un "algo que parece verdadero".
     clave = MOTORES_POR_PERMISO.get(str(pedido).strip().lower())
+    if str(pedido).strip().lower() == 'chatgpt' and (user or {}).get('canUsePremiumFinish') is True:
+        return 'chatgpt'
     if clave and (user or {}).get(clave) is True:
         return str(pedido).strip().lower()
 

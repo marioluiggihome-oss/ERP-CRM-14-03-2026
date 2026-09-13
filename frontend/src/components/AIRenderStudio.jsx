@@ -369,7 +369,7 @@ export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true || state?.currentUser?.isPrimaryAdmin === true || state?.currentUser?.isMaster === true;
   // Puente autorizado el 10/09/2026: un diseño ya aprobado puede recibir una
   // pasada final PREMIUM sin abrir aquí el banco de pruebas ni sus motores.
-  const canUsePremiumFinish = isMaster || state?.currentUser?.canUseIAPremium === true;
+  const canUsePremiumFinish = isMaster || state?.currentUser?.canUsePremiumFinish === true;
   const premiumFinishCost = creditosDeUnRender('chatgpt');
   // Permiso específico para el giro 360º (o rol master). Si no lo tiene, ni se muestra el botón.
   const canUseRender360 = true; // Visor 360° interactivo siempre disponible
@@ -5550,7 +5550,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <span>Activar Premium · mejorar acabado</span>
                 </button>
                 )}
-                {premiumFinishActive && (
+                {premiumFinishActive && canUsePremiumFinish && (
                   <button type="button" role="switch" aria-checked={premiumChangeActive}
                     aria-label="Modo Premium" disabled={editing || downloading || (!premiumChangeActive && !canUsePremiumFinish)}
                     onClick={() => { setPremiumEditMode(!premiumChangeActive); setRevisionTecnica(null); }}
@@ -6113,7 +6113,7 @@ export default function AIRenderStudio({ state, setState }) {
                     className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
-                  {premiumFinishActive && (
+                  {premiumFinishActive && canUsePremiumFinish && (
                     <div className="shrink-0 flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" title="Elige cómo procesar este cambio">
                       <button type="button" onClick={() => { setPremiumEditMode(false); setRevisionTecnica(null); }} disabled={editing || downloading}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-black ${!premiumEditMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
