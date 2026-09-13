@@ -503,7 +503,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Después del acabado Premium, el usuario elige para cada modificación si
   // quiere procesarla en modo normal o mantener el motor Premium.
   const [premiumEditMode, setPremiumEditMode] = useState(true);
-  const premiumChangeActive = premiumFinishActive && premiumEditMode;
+  const premiumChangeActive = premiumFinishActive && premiumEditMode && canUsePremiumFinish;
   // Cadena de edición sin degradación acumulativa: cada cambio se genera desde
   // la imagen original de la sesión, incorporando las órdenes ya aplicadas en
   // el prompt, en vez de volver a enviar el render regenerado anterior.
@@ -2110,7 +2110,7 @@ export default function AIRenderStudio({ state, setState }) {
   // Cocina Desmontada NO revisa: empareja lo que le llega con el catálogo y lo
   // precia. Así que ahí la revisión tiene que pasar ANTES, aquí.
   const volcarRelacionMV = (destino) => {
-    if (premiumFinishActive) { revisarTecnicaPremium(); return; }
+    if (premiumChangeActive) { revisarTecnicaPremium(); return; }
     const muebles = relacionMV?.muebles;
     if (!muebles?.length) { setError('No hay muebles que volcar.'); return; }
     if (destino === 'montada3') {
@@ -2529,6 +2529,7 @@ export default function AIRenderStudio({ state, setState }) {
   const visitaDecorador = async () => {
     const img = currentImage();
     if (!img || editing) return;
+    const decoradorPremiumActivo = premiumChangeActive || providerOf() === 'chatgpt';
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -2543,13 +2544,28 @@ export default function AIRenderStudio({ state, setState }) {
         + 'y equilibrada, y complementos decorativos SUELTOS que no forman parte del mueble (plantas, un cuadro en '
         + 'la pared, textiles, fruteros, algún objeto sobre la encimera). Estos complementos no deben tapar ni '
         + 'alterar los muebles. Misma cámara, misma perspectiva, fotorrealista y de alta calidad.'
-        + memoriaDeCambios()
+        + (decoradorPremiumActivo
+          ? '\nDECORACIÓN PREMIUM EXPRESAMENTE SOLICITADA: el cambio debe ser visible, no te limites a retocar la luz. '
+            + 'Crea varios grupos decorativos coordinados, adaptados al espacio libre: plantas naturales, jarrones, '
+            + 'frutero, una bandeja con cerámica o tazas, tablas de cocina y textiles discretos. Añade un cuadro '
+            + 'solo si existe una pared libre adecuada. Distribuye los acentos con equilibrio y variedad de alturas, '
+            + 'sin saturar ni amontonar objetos. Conserva los objetos existentes y completa la escena donde haya sitio. '
+            + 'Deja despejados placa, fregadero, ventilaciones, zonas de preparación y recorrido de puertas y cajones. '
+            + 'No añadas estanterías, baldas, nichos, muebles ni ventanas. No cambies colores ni materiales del mobiliario. '
+            + 'La imagen actual manda: los complementos nuevos sí están autorizados, la carpintería no se modifica.'
+          : memoriaDeCambios())
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
           description: desc, style: params.style,
-          provider: providerOf(), referenceImage: dataUrl,
+          provider: decoradorPremiumActivo ? 'chatgpt' : providerOf(), referenceImage: dataUrl,
+          ...(decoradorPremiumActivo ? { editContract: {
+            objetivo: 'añadir decoración suelta visible y coordinada, con luz ambiental equilibrada',
+            zona: 'superficies libres y paredes libres existentes, sin bloquear zonas de trabajo ni aperturas',
+            conservar: ['distribución, medidas y número de muebles', 'puertas, cajones, tiradores y electrodomésticos',
+              'materiales y colores de muebles, encimera, paredes y suelo', 'cámara, perspectiva y huecos existentes'],
+          } } : {}),
           // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
           // servidor se lo pasa al detector de croquis, y una cocina clara
           // —paredes, muebles y encimera claros— tiene poco color y mucho
@@ -2583,12 +2599,12 @@ export default function AIRenderStudio({ state, setState }) {
         // de píxeles de mentira. Para tener MÁS resolución de verdad está el
         // botón de HD/4K, que la genera en vez de estirarla.
         try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, se usa la original */ }
-        const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
+        const merged = { ...data, premiumFinish: premiumFinishActive, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
-      } else setError(data.error || 'No se pudo aplicar la visita de decorador/a.');
+      } else setError(data.detail || data.error || 'No se pudo aplicar la visita de decorador/a.');
     } catch { setError('Error de conexión en la visita de decorador/a.'); }
-    finally { setEditing(false); }
+    finally { setEditing(false); fetchCredits(); }
   };
 
   // ─── HD: pasada de restauración/super-resolución. Recupera nitidez tras muchas
@@ -2700,6 +2716,7 @@ export default function AIRenderStudio({ state, setState }) {
         result: { ...data.result, images: [finalImg] },
         description: `${renderResult?.description || description}\n[Acabado PREMIUM final]`,
       };
+      setPremiumEditMode(true);
       setRenderResult(merged);
       setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
     } catch (e) {
@@ -3895,7 +3912,7 @@ export default function AIRenderStudio({ state, setState }) {
   // ya relleno. Un paso menos y, sobre todo, SIN una segunda adivinanza: son
   // los muebles que se leyeron del dibujo, no lo que parezca el render.
   const volcarRelacionA = (destino) => {
-    if (premiumFinishActive) { revisarTecnicaPremium(); return; }
+    if (premiumChangeActive) { revisarTecnicaPremium(); return; }
     const texto = renderResult?.parsed_params?.relacionMV;
     if (!texto || !setState) return;
     if (destino === 'cocinaMontada3') abrirPresupuestoJuntoDiseno({ relacionMVPendiente: texto });
@@ -3924,7 +3941,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   const [showDualModal, setShowDualModal] = useState(null); // null | 'choosing'
   const revisarTecnicaPremium = async () => {
-    if (!premiumFinishActive) return;
+    if (!premiumChangeActive) return;
     setDownloading(true); setError(null);
     try {
       const imagenOrigen = currentImage();
@@ -3944,7 +3961,7 @@ export default function AIRenderStudio({ state, setState }) {
   const attachToBudget = async () => {
     const img = currentImage();
     if (!img) return;
-    if (premiumFinishActive && tipo3d === 'cocina') { await revisarTecnicaPremium(); return; }
+    if (premiumChangeActive && tipo3d === 'cocina') { await revisarTecnicaPremium(); return; }
     // Reutilizar los muebles ya identificados evita otra interpretación del render.
     if (tipo3d === 'cocina' && puedeAbrirMontada3) {
       if (relacionMV?.puedeVolcar && relacionMV?.muebles?.length) { volcarRelacionMV('montada3'); return; }
@@ -4562,7 +4579,7 @@ export default function AIRenderStudio({ state, setState }) {
             </button>
             {revisionTecnica && <React.Suspense fallback={<p>Cargando revisión técnica…</p>}>
         <RevisionTecnicaCocina key={revisionTecnica.informe.revision} informe={revisionTecnica.informe}
-          vigente={premiumFinishActive && revisionTecnica.imagenOrigen === currentImage() && revisionTecnica.distribucion === JSON.stringify(distAceptada.current)}
+          vigente={premiumChangeActive && revisionTecnica.imagenOrigen === currentImage() && revisionTecnica.distribucion === JSON.stringify(distAceptada.current)}
           onClose={() => setRevisionTecnica(null)}
           onApprove={() => postJson(`/api/estudio-cocinas/skills-tecnicas/${revisionTecnica.informe.revision}/aprobar`, {})}
           onTransfer={async () => {
@@ -5530,8 +5547,17 @@ export default function AIRenderStudio({ state, setState }) {
                   title="Mejora el render aprobado sin cambiar su diseño."
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90 shadow-md disabled:opacity-50">
                   {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                  <span>Acabado PREMIUM</span>
+                  <span>Activar Premium · mejorar acabado</span>
                 </button>
+                )}
+                {premiumFinishActive && (
+                  <button type="button" role="switch" aria-checked={premiumChangeActive}
+                    aria-label="Modo Premium" disabled={editing || downloading || (!premiumChangeActive && !canUsePremiumFinish)}
+                    onClick={() => { setPremiumEditMode(!premiumChangeActive); setRevisionTecnica(null); }}
+                    title="Cambiar de modo conserva el diseño y no consume créditos."
+                    className={`px-3 py-2 rounded-lg text-xs font-bold border disabled:opacity-40 ${premiumChangeActive ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-700 border-slate-300'}`}>
+                    {premiumChangeActive ? 'Premium activado · Desactivar' : 'Premium desactivado · Activar'}
+                  </button>
                 )}
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
@@ -5572,7 +5598,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <Share2 size={12} />
                   <span className="hidden sm:inline truncate">WhatsApp</span>
                 </button>
-                {premiumFinishActive && tipo3d === 'cocina' && <button onClick={revisarTecnicaPremium} disabled={downloading}
+                {premiumChangeActive && tipo3d === 'cocina' && <button onClick={revisarTecnicaPremium} disabled={downloading}
                   className="px-3 py-2 rounded bg-indigo-700 text-white text-sm">Revisar muebles y despiece</button>}
                 <button onClick={attachToBudget} disabled={downloading || !currentImage()}
                   className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-accion-600 text-white' : 'bg-accion-500 text-white hover:bg-accion-600'}`}
@@ -6089,11 +6115,11 @@ export default function AIRenderStudio({ state, setState }) {
                   </button>
                   {premiumFinishActive && (
                     <div className="shrink-0 flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" title="Elige cómo procesar este cambio">
-                      <button type="button" onClick={() => setPremiumEditMode(false)}
+                      <button type="button" onClick={() => { setPremiumEditMode(false); setRevisionTecnica(null); }} disabled={editing || downloading}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-black ${!premiumEditMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
                         Normal
                       </button>
-                      <button type="button" onClick={() => setPremiumEditMode(true)} disabled={!canUsePremiumFinish}
+                      <button type="button" onClick={() => setPremiumEditMode(true)} disabled={editing || downloading || !canUsePremiumFinish}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-black disabled:opacity-40 ${premiumEditMode ? 'bg-emerald-700 text-white shadow-sm' : 'text-emerald-700'}`}>
                         Premium
                       </button>
