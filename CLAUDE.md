@@ -41,16 +41,16 @@ Muebles (catálogo MV / cascos ACB de este proyecto):
 
 | Elemento | Medida real |
 |---|---|
-| Casco BAJO (alto) | **800** — en esta fábrica los bajos se fabrican SOLO a 80 cm |
+| Casco BAJO (alto) | **800 por defecto**; 700 cuando se indique expresamente (Mario, septiembre 2026) |
 | Zócalo | 100–150 |
 | Encimera (grosor) | 20–40 |
 | Altura de trabajo (cara superior encimera) | ~900–940 |
-| Casco ALTO (alto) | **700 o 900** (MV: alturas 70/90) |
+| Casco ALTO (alto) | **900 por defecto**; 700 cuando se indique expresamente (MV: alturas 70/90) |
 | Distancia encimera → bajo del alto | 550–600 |
 | Columna (alto) | **2000 o 2200** (MV: 200/220) |
 | Mediacolumna | 1300 |
 | Sobreencimera | 1270 o 1470 |
-| Altillo (alto del casco) | **350** — la fila corta que va SOBRE los altos, hasta el techo |
+| Altillo / sobremódulo | Fila por encima de los altos. **Confirmar altura y fondo**; 350 es solo referencia de dibujo, no medida de pedido. Contrastar ficha MV antes de tarifar. |
 | Fondo altos | ~330 |
 | Fondo bajos | ~580 |
 | Anchos estándar (cm) | 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120 |
