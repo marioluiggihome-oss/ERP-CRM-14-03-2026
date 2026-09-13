@@ -106,6 +106,9 @@ def rent(monkeypatch):
     async def _auth():
         return {"id": "u1", "isAdmin": True}
     jwt.require_auth = _auth
+    async def _acceso(_user):
+        return True
+    jwt.tiene_acceso_rentabilidad = _acceso
     monkeypatch.setitem(sys.modules, "services.jwt_service", jwt)
     dbc = types.ModuleType("services.db_client")
     dbc.get_db = lambda: bd

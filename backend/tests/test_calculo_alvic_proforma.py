@@ -46,6 +46,7 @@ def cascos(monkeypatch):
     jwt.get_current_user = _req
     jwt.verify_access_token = lambda *a, **k: {"sub": "u1"}
     jwt.ADMIN_ROLE_FLAGS = ["isAdmin"]
+    jwt.require_module_access = lambda _flag: _req
     monkeypatch.setitem(sys.modules, "services.jwt_service", jwt)
 
     # PyMuPDF y la vision no se tocan en estas pruebas.

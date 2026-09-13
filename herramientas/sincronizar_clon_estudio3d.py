@@ -64,6 +64,11 @@ CABECERA = '''
 # vez, la regeneración se para: mejor sin clon que con un clon que miente.
 CAMBIOS = [
     (
+        "permiso Premium independiente del estudio normal",
+        "  const canUsePremiumFinish = isMaster || state?.currentUser?.canUsePremiumFinish === true;",
+        "  const canUsePremiumFinish = isMaster || state?.currentUser?.canUseIAPremium === true;",
+    ),
+    (
         "el botón IA PREMIUM en la botonera",
         "                        ['ia7', 'IA7', 'Configuración mejorada de prueba'],\n",
         "                        ['ia7', 'IA7', 'Configuración mejorada de prueba'],\n"
@@ -75,8 +80,8 @@ CAMBIOS = [
         "    if (motor === 'ia7') return 'julio11_plus';\n"
         "    // IA PREMIUM — SOLO EXISTE EN ESTE CLON. El Estudio 3D de producción no\n"
         "    // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta a\n"
-        "    // quien tenga la casilla `canUseIAPremium` (regla 33). Es el motor más\n"
-        "    // caro: 7 créditos por render contra 1.\n"
+        "    // quien tenga la casilla `canUseIAPremium` (regla 33). El permiso cambia\n"
+        "    // el motor disponible; Premium y normal consumen un único crédito.\n"
         "    if (motor === 'premium') return 'chatgpt';\n",
     ),
 ]

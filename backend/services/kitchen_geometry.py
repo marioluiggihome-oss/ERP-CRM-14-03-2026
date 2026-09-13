@@ -18,10 +18,11 @@ from typing import Optional
 # ── Estándares de fabricación (cm) ───────────────────────────────────────────
 ANCHOS_STD = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120]
 
-CASCO_BAJO_ALTO = 80          # en esta fábrica los bajos SOLO se fabrican a 80
+CASCO_BAJO_ALTO = 80          # predeterminado; 70 cuando se indica expresamente
 ZOCALO_ALTO_MIN, ZOCALO_ALTO_MAX = 10, 15
 ENCIMERA_GRUESO_MIN, ENCIMERA_GRUESO_MAX = 2, 4
 ALTOS_ALTURAS = [70, 90]
+CASCO_ALTO_PREDETERMINADO = 90
 COLUMNA_ALTURAS = [200, 220]
 MEDIACOLUMNA_ALTO = 130
 SOBREENCIMERA_ALTURAS = [127, 147]
@@ -41,7 +42,7 @@ LIMITES = {
     "fondo":          (20, 70),
 }
 
-COLUMNAS_IDS = {"frigorifico", "frigorifico_frances", "congelador", "columna_hornos", "columna_escobero", "despensa", "vinoteca"}
+COLUMNAS_IDS = {"frigorifico", "frigorifico_frances", "congelador", "columna_hornos", "columna_horno", "columna_frigo", "columna_escobero", "despensa", "vinoteca"}
 
 # PIEZAS A MEDIDA: su ancho es el que sea, y NO se ajusta a un estándar de
 # catálogo. No son muebles: son tableros.
@@ -193,7 +194,7 @@ def altura_modulo(elem_id: str) -> int:
     if t in COLUMNAS_IDS:
         return COLUMNA_ALTURAS[1]
     if t in ALTOS_IDS:
-        return ALTOS_ALTURAS[0]
+        return CASCO_ALTO_PREDETERMINADO
     return CASCO_BAJO_ALTO
 
 
@@ -267,7 +268,7 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         # «no es fabricable». Un módulo del que NADIE sabe el ancho se dibuja
         # —un alzado con un hueco tampoco sirve— pero su cota se rotula «?»,
         # nunca un número (CLAUDE.md, regla 7).
-        sin_ancho = e.get("ancho") in (None, "")
+        sin_ancho = e.get("ancho") in (None, "") or (bool(e.get("ancho_desconocido")) and not e.get("corregida"))
         try:
             anc = float(e.get("ancho") or 0)
             pos = float(e.get("posicion_cm") or 0)
@@ -361,6 +362,29 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
         if fondo_explicito is not None and not en_rango(fondo_explicito, "fondo"):
             avisos.append(f"Módulo «{etiqueta}»: fondo {fondo_explicito:g} cm fuera de rango; se conserva solo si se corrige.")
             fondo_explicito = None
+        # Conservar la altura indicada: cambiarla aquí separaría alzado y pedido.
+        # Una altura incoherente queda pendiente, nunca se convierte en estándar
+        # sin aviso. Los sobremódulos no heredan la altura de los altos.
+        sobremodulo = eid in {"altillo", "sobremodulo", "sobremódulo"}
+        alto_base = (35 if sobremodulo else
+                     CASCO_ALTO_PREDETERMINADO if fila == "alto" else altura_modulo(eid))
+        alto_indicado = e.get("alto")
+        try:
+            alto_indicado = float(str(alto_indicado).replace(",", ".")) if alto_indicado not in (None, "") else None
+        except (ValueError, TypeError):
+            alto_indicado = None
+        altura_pendiente = bool(e.get("alto_desconocido")) or (sobremodulo and alto_indicado is None)
+        if alto_indicado is not None:
+            permitidas = ALTOS_ALTURAS if fila == "alto" else [70, 80]
+            especial = sobremodulo or eid in COLUMNAS_IDS or es_a_medida(eid)
+            valida = 0 < alto_indicado <= 300 and (especial or alto_indicado in permitidas)
+            if valida:
+                alto_base = alto_indicado
+                if e.get("altura_corregida"):
+                    altura_pendiente = False
+            else:
+                altura_pendiente = True
+                avisos.append(f"Módulo «{etiqueta}»: altura {alto_indicado:g} cm pendiente de confirmar; no se puede presupuestar automáticamente.")
         elementos.append({
             "id": eid,
             "label": etiqueta,
@@ -373,7 +397,9 @@ def validar_distribucion(dist: dict, ancho_real: Optional[int] = None,
             "pared_idx": max(0, min(pidx, len(paredes) - 1)),
             "posicion_cm": max(0, int(round(pos))),
             "ancho": anc_snap,
-            "alto": ALTOS_ALTURAS[0] if fila == "alto" else altura_modulo(eid),
+            "alto": alto_base,
+            "alto_desconocido": altura_pendiente,
+            "altura_explicita": bool(e.get("altura_explicita", alto_indicado is not None)),
             "fondo": (fondo_explicito if fondo_explicito is not None else (FONDO_ALTOS if fila == "alto" else fondo_modulo(eid))),
         })
 

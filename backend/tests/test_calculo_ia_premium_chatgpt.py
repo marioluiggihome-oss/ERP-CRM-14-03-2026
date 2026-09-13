@@ -17,10 +17,9 @@ LO QUE ESTE CANDADO PROTEGE, EN ORDEN DE LO QUE CUESTA SI SE ROMPE:
 2. **QUE EL CROQUIS LLEGUE A ASTRA.** Premium usa Responses API: Astra recibe
    el texto y todas las referencias y gobierna la herramienta de imagen.
 
-3. **QUE SE COBRE LO QUE CUESTA.** Un motor sin entrada en `COSTE_POR_MOTOR`
-   cobra 1 crédito por omisión, y sin precio en `MODEL_PRICES` cuenta 0,00 € en
-   el informe de Consumo: el motor más caro sería el que menos parece gastar
-   (reglas 15 y 32).
+3. **QUE SE COBRE UN CRÉDITO.** `COSTE_POR_MOTOR` conserva la decisión del
+   master para el saldo del usuario, mientras `MODEL_PRICES` registra por
+   separado el coste real del proveedor (reglas 15 y 32).
 
 4. **QUE SIN LLAVE SE DIGA, NO SE DISIMULE.** Sin `OPENAI_API_KEY` este motor
    NO puede caer al de siempre: eso devolvería una imagen de otro motor con la
@@ -71,7 +70,7 @@ def test_el_boton_premium_NO_esta_en_el_estudio_3d_de_produccion():
         assert marca not in botonera, (
             f"el botón premium ha aparecido en el Estudio 3D de PRODUCCIÓN. "
             f"Ese está congelado desde el 04/09 y es el único que ve un usuario "
-            f"que no sea master: cada render pasaría a costar unas 7 veces más.")
+            f"que no sea master: abriría un motor no autorizado.")
 
 
 def test_produccion_no_sabe_ni_traducir_el_motor_premium():
@@ -90,15 +89,15 @@ def test_produccion_ofrece_el_acabado_premium_SOLO_CON_PERMISO():
 
     LO QUE NO SE PUEDE PERDER es el COBRO, que es otra cosa: sigue viviendo en
     `cobrar_render` en el servidor (regla 32). Quitar un aviso es cosmético;
-    quitar el cobro sería renderizar gratis con el motor más caro del ERP. Por
+    quitar el cobro sería renderizar gratis con un motor de pago. Por
     eso aquí abajo se sigue exigiendo que el coste se CALCULE, aunque no se
     enseñe: de él depende que el botón se deshabilite sin saldo."""
     produccion = _leer(PRODUCCION)
     assert "canUsePremiumFinish" in produccion
-    assert "currentUser?.canUseIAPremium === true" in produccion
-    assert ">Acabado PREMIUM<" in produccion, (
+    assert "currentUser?.canUsePremiumFinish === true" in produccion
+    assert ">Activar Premium · mejorar acabado<" in produccion, (
         "ha desaparecido el botón de acabado PREMIUM del Estudio 3D")
-    assert "créditos</span>" not in produccion.split(">Acabado PREMIUM<")[0][-200:], (
+    assert "créditos</span>" not in produccion.split(">Activar Premium · mejorar acabado<")[0][-200:], (
         "ha vuelto la cifra de créditos al rótulo del botón (master, 10/09)")
     assert "creditosDeUnRender('chatgpt')" in produccion, (
         "ya no se calcula lo que cuesta: sin ese número el botón no puede "
@@ -110,8 +109,8 @@ def test_el_boton_premium_SE_DESHABILITA_SIN_SALDO():
     """CANDADO NUEVO, y hace falta justo desde hoy.
 
     Al quitar la ventana de confirmación se quedó sin la pregunta que frenaba
-    una pulsación sin querer. Lo único que impide gastar 7 créditos de un toque
-    es que el botón esté apagado cuando no llegan."""
+    una pulsación sin querer. El botón debe apagarse cuando no queda el crédito
+    necesario."""
     produccion = _leer(PRODUCCION)
     m = re.search(r"disabled=\{editing[^}]*premiumFinishCost > \(aiCredits\.restantes",
                   produccion)
@@ -161,7 +160,7 @@ def test_editar_en_premium_SIN_PERMISO_se_sigue_cerrando():
     produccion = _leer(PRODUCCION)
     assert "premiumChangeActive && !canUsePremiumFinish" in produccion, (
         "ha desaparecido el cierre: cualquiera podría seguir editando en modo "
-        "PREMIUM un render que lo tenga, gastando el motor más caro sin la "
+        "PREMIUM un render que lo tenga, usando un motor no autorizado sin la "
         "casilla que lo autoriza")
 
 
@@ -267,7 +266,7 @@ def test_un_permiso_TORCIDO_no_abre_el_motor_caro():
     bloque = ruta[i:i + 400]
     assert "is True" in bloque, (
         "el permiso de IA PREMIUM se comprueba por lo que «parece verdadero». "
-        "Un 'false' de texto en la ficha abriría el motor de 7 créditos.")
+        "Un 'false' de texto en la ficha abriría el motor Premium.")
 
 
 # ─── 2. Que el croquis llegue al modelo ─────────────────────────────────────

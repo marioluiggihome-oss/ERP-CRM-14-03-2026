@@ -81,6 +81,8 @@ import useSpeechRecognition from '../hooks/useSpeechRecognition';
 // coste, la tarifa). Dos volcados distintos acabarían separándose con el tiempo,
 // y uno de los dos se quedaría sin el aviso que evita un frente mal taladrado.
 const RelacionReview = React.lazy(() => import('./RelacionReview'));
+const RevisionTecnicaCocina = React.lazy(() => import('./RevisionTecnicaCocina'));
+const PresupuestoJuntoDiseno = React.lazy(() => import('./PresupuestoJuntoDiseno'));
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { creditosDeUnRender } from '../costeDeRender';
 import { avgEurPerMl } from '../utils/pricing';
@@ -526,7 +528,7 @@ export default function Estudio3DLab({ state, setState }) {
   // Después del acabado Premium, el usuario elige para cada modificación si
   // quiere procesarla en modo normal o mantener el motor Premium.
   const [premiumEditMode, setPremiumEditMode] = useState(true);
-  const premiumChangeActive = premiumFinishActive && premiumEditMode;
+  const premiumChangeActive = premiumFinishActive && premiumEditMode && canUsePremiumFinish;
   // Cadena de edición sin degradación acumulativa: cada cambio se genera desde
   // la imagen original de la sesión, incorporando las órdenes ya aplicadas en
   // el prompt, en vez de volver a enviar el render regenerado anterior.
@@ -647,8 +649,8 @@ export default function Estudio3DLab({ state, setState }) {
     if (motor === 'ia7') return 'julio11_plus';
     // IA PREMIUM — SOLO EXISTE EN ESTE CLON. El Estudio 3D de producción no
     // ofrece este botón ni sabe traducirlo, y el servidor solo se lo acepta a
-    // quien tenga la casilla `canUseIAPremium` (regla 33). Es el motor más
-    // caro: 7 créditos por render contra 1.
+    // quien tenga la casilla `canUseIAPremium` (regla 33). El permiso cambia
+    // el motor disponible; Premium y normal consumen un único crédito.
     if (motor === 'premium') return 'chatgpt';
     return 'gemini';
   };
@@ -1843,18 +1845,9 @@ export default function Estudio3DLab({ state, setState }) {
     // detectado, se dibuja ESO: es lo que ha visto y ha dado por bueno. Y de
     // paso se ahorra una llamada a la IA por cada vía.
     if (distAceptada.current) return distAceptada.current;
-    // En el Estudio 3D normal se prioriza el render visible, que es el flujo
-    // rápido y estable utilizado anteriormente. El plano original queda como
-    // respaldo cuando todavía no existe un render. Premium mantiene su propio
-    // flujo de lectura y no entra por esta ruta.
-    const img = currentImage();
-    if (img) {
-      try {
-        const dataUrl = await imageToDataUrl(img);
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
-        if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
-      } catch (e) { anota('del render', e); }
-    }
+    // El croquis/plano original contiene las cotas escritas y por eso manda.
+    // El render es una interpretación visual y solo sirve de respaldo cuando
+    // no se ha adjuntado un original legible.
     const croquis = originalRef || refImage;
     if (croquis) {
       try {
@@ -1862,6 +1855,14 @@ export default function Estudio3DLab({ state, setState }) {
         const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success) { viaDistribucion.current = 'del croquis'; return dj.distribucion; }
       } catch (e) { anota('del croquis', e); }
+    }
+    const img = currentImage();
+    if (img) {
+      try {
+        const dataUrl = await imageToDataUrl(img);
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
+        if (dj?.success) { viaDistribucion.current = 'del render'; return dj.distribucion; }
+      } catch (e) { anota('del render', e); }
     }
     if ((description || '').trim()) {
       try {
@@ -1984,7 +1985,17 @@ export default function Estudio3DLab({ state, setState }) {
   //
   // Aquí no se calcula ni un precio: el backend traduce y tarifa contra el
   // catálogo oficial. La pantalla enseña y deja revisar.
+  const [revisionTecnica, setRevisionTecnica] = useState(null);
   const [relacionMV, setRelacionMV] = useState(null);
+  const [presupuestoEntrada, setPresupuestoEntrada] = useState(null);
+  const [presupuestoAbierto, setPresupuestoAbierto] = useState(false);
+  const [presupuestoImagen, setPresupuestoImagen] = useState(null);
+  const abrirPresupuestoJuntoDiseno = (entrada) => {
+    if (!puedeAbrirMontada3) { setError('No tienes acceso al presupuestador.'); return; }
+    setPresupuestoImagen(currentImage());
+    setPresupuestoEntrada(prev => JSON.stringify(prev) === JSON.stringify(entrada) ? prev : entrada);
+    setPresupuestoAbierto(true);
+  };
   const [cargandoMV, setCargandoMV] = useState(false);
 
   const pedirMueblesMV = async () => {
@@ -2051,6 +2062,7 @@ export default function Estudio3DLab({ state, setState }) {
       lineas: relacionMV.lineas.map(l => ({
         id: l.id, label: l.label, familia: l.familia, codigo: l.codigo,
         ancho: l.ancho, alto: l.alto, pared_idx: l.pared_idx,
+        altura_explicita: !!l.altura_explicita,
         posicion_cm: l.posicion_cm, mano: l.mano ?? null,
         mano_propuesta: !!l.mano_propuesta,
         puede_dos_puertas: !!l.puede_dos_puertas,
@@ -2134,11 +2146,13 @@ export default function Estudio3DLab({ state, setState }) {
   // Cocina Desmontada NO revisa: empareja lo que le llega con el catálogo y lo
   // precia. Así que ahí la revisión tiene que pasar ANTES, aquí.
   const volcarRelacionMV = (destino) => {
+    if (premiumChangeActive) { revisarTecnicaPremium(); return; }
     const muebles = relacionMV?.muebles;
     if (!muebles?.length) { setError('No hay muebles que volcar.'); return; }
     if (destino === 'montada3') {
-      setState && setState(p => ({ ...p, cocinaMontadaPendingMuebles: muebles }));
-      irA('cocinaMontada3');
+      abrirPresupuestoJuntoDiseno({ cocinaMontadaPendingMuebles: muebles,
+        avisosMV: (relacionMV.sin_codigo || []).map(m => `${m.label}: ${m.motivo}`),
+        familiasPorRevisar: (relacionMV.lineas || []).filter(m => m.confirmar_familia).map(m => m.label) });
       return;
     }
     setRevisarRelacion(muebles);
@@ -2551,6 +2565,7 @@ export default function Estudio3DLab({ state, setState }) {
   const visitaDecorador = async () => {
     const img = currentImage();
     if (!img || editing) return;
+    const decoradorPremiumActivo = premiumChangeActive || providerOf() === 'chatgpt';
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -2565,13 +2580,28 @@ export default function Estudio3DLab({ state, setState }) {
         + 'y equilibrada, y complementos decorativos SUELTOS que no forman parte del mueble (plantas, un cuadro en '
         + 'la pared, textiles, fruteros, algún objeto sobre la encimera). Estos complementos no deben tapar ni '
         + 'alterar los muebles. Misma cámara, misma perspectiva, fotorrealista y de alta calidad.'
-        + memoriaDeCambios()
+        + (decoradorPremiumActivo
+          ? '\nDECORACIÓN PREMIUM EXPRESAMENTE SOLICITADA: el cambio debe ser visible, no te limites a retocar la luz. '
+            + 'Crea varios grupos decorativos coordinados, adaptados al espacio libre: plantas naturales, jarrones, '
+            + 'frutero, una bandeja con cerámica o tazas, tablas de cocina y textiles discretos. Añade un cuadro '
+            + 'solo si existe una pared libre adecuada. Distribuye los acentos con equilibrio y variedad de alturas, '
+            + 'sin saturar ni amontonar objetos. Conserva los objetos existentes y completa la escena donde haya sitio. '
+            + 'Deja despejados placa, fregadero, ventilaciones, zonas de preparación y recorrido de puertas y cajones. '
+            + 'No añadas estanterías, baldas, nichos, muebles ni ventanas. No cambies colores ni materiales del mobiliario. '
+            + 'La imagen actual manda: los complementos nuevos sí están autorizados, la carpintería no se modifica.'
+          : memoriaDeCambios())
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
           description: desc, style: params.style,
-          provider: providerOf(), referenceImage: dataUrl,
+          provider: decoradorPremiumActivo ? 'chatgpt' : providerOf(), referenceImage: dataUrl,
+          ...(decoradorPremiumActivo ? { editContract: {
+            objetivo: 'añadir decoración suelta visible y coordinada, con luz ambiental equilibrada',
+            zona: 'superficies libres y paredes libres existentes, sin bloquear zonas de trabajo ni aperturas',
+            conservar: ['distribución, medidas y número de muebles', 'puertas, cajones, tiradores y electrodomésticos',
+              'materiales y colores de muebles, encimera, paredes y suelo', 'cámara, perspectiva y huecos existentes'],
+          } } : {}),
           // LA REFERENCIA ES UN RENDER NUESTRO, Y SE DICE. Sin esto el
           // servidor se lo pasa al detector de croquis, y una cocina clara
           // —paredes, muebles y encimera claros— tiene poco color y mucho
@@ -2605,12 +2635,12 @@ export default function Estudio3DLab({ state, setState }) {
         // de píxeles de mentira. Para tener MÁS resolución de verdad está el
         // botón de HD/4K, que la genera en vez de estirarla.
         try { finalImg = await imageToDataUrl(finalImg); } catch { /* si falla, se usa la original */ }
-        const merged = { ...data, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
+        const merged = { ...data, premiumFinish: premiumFinishActive, result: { ...data.result, images: [finalImg] }, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
-      } else setError(data.error || 'No se pudo aplicar la visita de decorador/a.');
+      } else setError(data.detail || data.error || 'No se pudo aplicar la visita de decorador/a.');
     } catch { setError('Error de conexión en la visita de decorador/a.'); }
-    finally { setEditing(false); }
+    finally { setEditing(false); fetchCredits(); }
   };
 
   // ─── HD: pasada de restauración/super-resolución. Recupera nitidez tras muchas
@@ -2722,6 +2752,7 @@ export default function Estudio3DLab({ state, setState }) {
         result: { ...data.result, images: [finalImg] },
         description: `${renderResult?.description || description}\n[Acabado PREMIUM final]`,
       };
+      setPremiumEditMode(true);
       setRenderResult(merged);
       setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
     } catch (e) {
@@ -3921,9 +3952,11 @@ export default function Estudio3DLab({ state, setState }) {
   // ya relleno. Un paso menos y, sobre todo, SIN una segunda adivinanza: son
   // los muebles que se leyeron del dibujo, no lo que parezca el render.
   const volcarRelacionA = (destino) => {
+    if (premiumChangeActive) { revisarTecnicaPremium(); return; }
     const texto = renderResult?.parsed_params?.relacionMV;
     if (!texto || !setState) return;
-    irA(setState, destino, { relacionMVPendiente: texto });
+    if (destino === 'cocinaMontada3') abrirPresupuestoJuntoDiseno({ relacionMVPendiente: texto });
+    else irA(setState, destino, { relacionMVPendiente: texto });
   };
   const [relacionCopiada, setRelacionCopiada] = useState(false);
   const copiarRelacionMV = async (texto) => {
@@ -3947,9 +3980,53 @@ export default function Estudio3DLab({ state, setState }) {
   };
 
   const [showDualModal, setShowDualModal] = useState(null); // null | 'choosing'
+  const revisarTecnicaPremium = async () => {
+    if (!premiumChangeActive) return;
+    setDownloading(true); setError(null);
+    try {
+      const imagenOrigen = currentImage();
+      const dist = await deducirDistribucion([], []);
+      if (!dist) throw new Error('Detecta y revisa primero la distribución de muebles.');
+      distAceptada.current = dist;
+      const bytes = new TextEncoder().encode(imagenOrigen || '');
+      const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+      const renderId = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+      const informe = await postJson('/api/estudio-cocinas/skills-tecnicas', {
+        premium_activado: true, distribucion: dist, render_id: renderId,
+      });
+      setRevisionTecnica({ informe, imagenOrigen, distribucion: JSON.stringify(dist) });
+    } catch (e) { setError(e.message || 'No se pudo completar la revisión técnica.'); }
+    finally { setDownloading(false); }
+  };
   const attachToBudget = async () => {
     const img = currentImage();
     if (!img) return;
+    if (premiumChangeActive && tipo3d === 'cocina') { await revisarTecnicaPremium(); return; }
+    // Reutilizar los muebles ya identificados evita otra interpretación del render.
+    if (tipo3d === 'cocina' && puedeAbrirMontada3) {
+      if (relacionMV?.puedeVolcar && relacionMV?.muebles?.length) { volcarRelacionMV('montada3'); return; }
+      if (renderResult?.parsed_params?.relacionMV) { volcarRelacionA('cocinaMontada3'); return; }
+      setDownloading(true);
+      try {
+        const motivos = [], fallos = [];
+        const dist = await deducirDistribucion(motivos, fallos);
+        if (!dist) { setError('No se han identificado los muebles. Revisa la distribución antes de presupuestar.'); return; }
+        distAceptada.current = dist;
+        setDistDetectada({ distribucion: dist, via: viaDistribucion.current || 'deducida', avisos: dist.avisos || [] });
+        const r = await postJson('/api/estudio-cocinas/relacion-mv',
+          { distribucion: dist, alto_altos: altoAltos, alto_columnas: altoColumnas });
+        if (!r?.success) throw new Error('No se pudo obtener la relación MV.');
+        setRelacionMV(r);
+        if (!r.puedeVolcar || !r.muebles?.length) {
+          setError('Revisa la relación MV: faltan referencias o medidas confirmadas, o permiso de volcado.'); return;
+        }
+        abrirPresupuestoJuntoDiseno({ cocinaMontadaPendingMuebles: r.muebles,
+          avisosMV: (r.sin_codigo || []).map(m => `${m.label}: ${m.motivo}`),
+          familiasPorRevisar: (r.lineas || []).filter(m => m.confirmar_familia).map(m => m.label) });
+      } catch (e) { setError(e?.message || 'No se pudo preparar el presupuesto.'); }
+      finally { setDownloading(false); }
+      return;
+    }
     // Armario → Presupuestador de Armarios (adjunta el render).
     if (tipo3d === 'armario') { await doAttach('armarios'); return; }
     // Cocina → Analizador de Planos: detecta los muebles del render y los vuelca
@@ -4560,6 +4637,21 @@ export default function Estudio3DLab({ state, setState }) {
               className="flex items-center gap-1 px-2 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50">
               <FolderOpen size={13} /> <span className="hidden sm:inline">Proyectos</span>
             </button>
+            {revisionTecnica && <React.Suspense fallback={<p>Cargando revisión técnica…</p>}>
+        <RevisionTecnicaCocina key={revisionTecnica.informe.revision} informe={revisionTecnica.informe}
+          vigente={premiumChangeActive && revisionTecnica.imagenOrigen === currentImage() && revisionTecnica.distribucion === JSON.stringify(distAceptada.current)}
+          onClose={() => setRevisionTecnica(null)}
+          onApprove={() => postJson(`/api/estudio-cocinas/skills-tecnicas/${revisionTecnica.informe.revision}/aprobar`, {})}
+          onTransfer={async () => {
+            if (revisionTecnica.imagenOrigen !== currentImage() || revisionTecnica.distribucion !== JSON.stringify(distAceptada.current)) throw new Error('Vuelve a revisar el diseño actualizado.');
+            const r = await postJson(`/api/estudio-cocinas/skills-tecnicas/${revisionTecnica.informe.revision}/volcar`, {});
+            abrirPresupuestoJuntoDiseno({ cocinaMontadaPendingMuebles: r.muebles,
+              revisionTecnicaOrigen: { revision: r.revision, render_id: r.render_id, tarifa_version: r.tarifa_version } });
+            setRevisionTecnica(null);
+          }} />
+      </React.Suspense>}
+      {presupuestoEntrada && puedeAbrirMontada3 && <button onClick={() => setPresupuestoAbierto(true)}
+              className="px-3 py-1.5 bg-white border rounded-lg text-xs font-bold">Ver presupuesto</button>}
                 <button onClick={() => setPaletteOpen(o => !o)}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition-all ${paletteOpen ? 'bg-accion-500 text-slate-950 shadow-md' : 'bg-gradient-to-r from-accion-500 to-accion-600 text-white hover:opacity-90'}`}
                   title="Abrir catálogo lateral de acabados ALVIC Luxe / Zenit, ACB y PORTASUR">
@@ -5517,8 +5609,17 @@ export default function Estudio3DLab({ state, setState }) {
                   title="Mejora el render aprobado sin cambiar su diseño."
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-emerald-700 via-teal-600 to-amber-600 hover:opacity-90 shadow-md disabled:opacity-50">
                   {editing ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                  <span>Acabado PREMIUM</span>
+                  <span>Activar Premium · mejorar acabado</span>
                 </button>
+                )}
+                {premiumFinishActive && canUsePremiumFinish && (
+                  <button type="button" role="switch" aria-checked={premiumChangeActive}
+                    aria-label="Modo Premium" disabled={editing || downloading || (!premiumChangeActive && !canUsePremiumFinish)}
+                    onClick={() => { setPremiumEditMode(!premiumChangeActive); setRevisionTecnica(null); }}
+                    title="Cambiar de modo conserva el diseño y no consume créditos."
+                    className={`px-3 py-2 rounded-lg text-xs font-bold border disabled:opacity-40 ${premiumChangeActive ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-700 border-slate-300'}`}>
+                    {premiumChangeActive ? 'Premium activado · Desactivar' : 'Premium desactivado · Activar'}
+                  </button>
                 )}
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
@@ -5559,6 +5660,8 @@ export default function Estudio3DLab({ state, setState }) {
                   <Share2 size={12} />
                   <span className="hidden sm:inline truncate">WhatsApp</span>
                 </button>
+                {premiumChangeActive && tipo3d === 'cocina' && <button onClick={revisarTecnicaPremium} disabled={downloading}
+                  className="px-3 py-2 rounded bg-indigo-700 text-white text-sm">Revisar muebles y despiece</button>}
                 <button onClick={attachToBudget} disabled={downloading || !currentImage()}
                   className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-accion-600 text-white' : 'bg-accion-500 text-white hover:bg-accion-600'}`}
                   title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
@@ -6072,13 +6175,13 @@ export default function Estudio3DLab({ state, setState }) {
                     className="shrink-0 p-2 rounded-lg border bg-white text-accion-600 border-accion-200 hover:bg-accion-50">
                     <Plus size={16} />
                   </button>
-                  {premiumFinishActive && (
+                  {premiumFinishActive && canUsePremiumFinish && (
                     <div className="shrink-0 flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" title="Elige cómo procesar este cambio">
-                      <button type="button" onClick={() => setPremiumEditMode(false)}
+                      <button type="button" onClick={() => { setPremiumEditMode(false); setRevisionTecnica(null); }} disabled={editing || downloading}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-black ${!premiumEditMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
                         Normal
                       </button>
-                      <button type="button" onClick={() => setPremiumEditMode(true)} disabled={!canUsePremiumFinish}
+                      <button type="button" onClick={() => setPremiumEditMode(true)} disabled={editing || downloading || !canUsePremiumFinish}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-black disabled:opacity-40 ${premiumEditMode ? 'bg-emerald-700 text-white shadow-sm' : 'text-emerald-700'}`}>
                         Premium
                       </button>
@@ -6460,6 +6563,10 @@ export default function Estudio3DLab({ state, setState }) {
           Flotando ahi pisaba la barra de escribir el cambio —el master, en una
           tablet de 8,6" en vertical: «mis render lo pisa con lo de aplicar
           cambios»—, que es justo el sitio por donde se trabaja. */}
+      {presupuestoEntrada && puedeAbrirMontada3 && <React.Suspense fallback={<p>Cargando presupuesto…</p>}>
+        <PresupuestoJuntoDiseno abierto={presupuestoAbierto} onClose={() => setPresupuestoAbierto(false)}
+          imagen={presupuestoImagen} state={state} entrada={presupuestoEntrada} cliente={cliente} referencia={ref} />
+      </React.Suspense>}
       <RecargarRenders abierto={verRecarga} onClose={() => setVerRecarga(false)} />
     </div>
   );

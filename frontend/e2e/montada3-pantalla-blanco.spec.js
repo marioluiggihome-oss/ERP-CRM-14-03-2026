@@ -16,7 +16,7 @@
  * recoge todo lo que diga la consola. Si algo revienta, aquí sale.
  */
 const { test, expect } = require('@playwright/test');
-const { entrar } = require('./arnes');
+const { entrar, abrirPresupuestador } = require('./arnes');
 
 test('cazar el blanco al añadir un mueble', async ({ page, baseURL }) => {
   test.setTimeout(180000);
@@ -29,8 +29,7 @@ test('cazar el blanco al añadir un mueble', async ({ page, baseURL }) => {
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await entrar(page, baseURL);
-  await page.getByText(/^Cocina Montada 3$/i).first().click({ force: true });
-  await page.waitForTimeout(1500);
+  await abrirPresupuestador(page, 'montada');
 
   const buscador = page.getByPlaceholder(/Escribe un c[oó]digo o descripci/i);
   await buscador.waitFor({ timeout: 20000 });

@@ -46,7 +46,7 @@ const CAPABILITY_KEYS = [
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessElectros', 'canAccessExpediente',
   'canAccessAlmacen', 'canAccessBackup', 'canViewAllDocuments', 'canAccessRentabilidad', 'canAccessMando', 'isController',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
-  'canUseRender360', 'canUse4K', 'canUseAmueblado', 'canVolcarMV', 'canUseIAPremium',
+  'canUseRender360', 'canUse4K', 'canUseAmueblado', 'canVolcarMV', 'canUseIAPremium', 'canUsePremiumFinish',
   'canVerPreciosProveedor',
 ];
 
@@ -241,6 +241,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canUseCascos: false,
     canUseRender360: false,
     canUseIAPremium: false,
+    canUsePremiumFinish: false,
     canUse4K: false,
     canUseAmueblado: false,
     canVolcarMV: false,
@@ -931,6 +932,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canUseCascos: false,
       canUseRender360: false,
       canUseIAPremium: false,
+      canUsePremiumFinish: false,
       canUse4K: false,
       canUseAmueblado: false,
     canVolcarMV: false,
@@ -2946,11 +2948,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               />
                               <span title="Presupuestador de cascos (Cocina Desmontada)." className="text-xs font-bold text-slate-700">Cocina Desmontada (Cascos)</span>
                             </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canUsePremiumFinish === true}
+                                onChange={e => setUserForm({...userForm, canUsePremiumFinish: e.target.checked})}
+                                className="w-4 h-4 rounded accent-emerald-600" />
+                              <span title="Permite activar el acabado Premium y aplicar cambios Premium dentro de Estudio 3D. El acceso al Lab se autoriza por separado."
+                                className="text-xs font-bold text-slate-700">Estudio 3D · botón Premium</span>
+                            </label>
                             {/* IA PREMIUM — la casilla que ABRE UN MOTOR, no un adorno.
                                 El master, 09/09: «la IA premium métela en permisos de
                                 usuario para poderla activar a ciertos usuarios».
                                 Se nombra lo que abre (regla 26: el permiso se llama
-                                como la sección) Y lo que cuesta: 7 créditos por render
+                                como la sección). Consume 1 crédito por render o cambio
                                 contra 1. Sin decirlo aquí, se marca sin saberlo. */}
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
