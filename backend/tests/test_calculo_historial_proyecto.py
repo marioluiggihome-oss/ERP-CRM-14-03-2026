@@ -108,7 +108,7 @@ class _BaseDatos:
 
 DUENO = {"id": "u42", "clientName": "Mario"}
 OTRO = {"id": "u99", "clientName": "Ajeno"}
-ADMIN = {"id": "adm", "isAdmin": True}
+MASTER = {"id": "master", "isPrimaryAdmin": True}
 
 
 @pytest.fixture()
@@ -243,8 +243,8 @@ def test_otro_usuario_no_ve_ni_escribe_el_historial_ajeno(motor):
         with pytest.raises(motor.HTTPException) as e2:
             await motor.add_design_images(pid, {"imagenes": [_foto(5)]}, OTRO)
         assert e2.value.status_code == 403
-        # El admin si entra.
-        assert (await motor.list_design_images(pid, 0, 12, ADMIN))["total"] == 1
+        # Solo el dueño o el master; un administrador normal no hereda acceso.
+        assert (await motor.list_design_images(pid, 0, 12, MASTER))["total"] == 1
     asyncio.run(esc())
 
 

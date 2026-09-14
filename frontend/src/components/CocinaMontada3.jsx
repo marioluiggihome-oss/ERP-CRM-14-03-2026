@@ -283,9 +283,9 @@ const CASCO_POR_DEFECTO = (
   MUESTRARIO_CASCOS.find(c => c.id === 'blanco-hidro-19') || MUESTRARIO_CASCOS[0]
 ).nombre;
 
-export default function CocinaMontada3({ currentUser, state, setState, logo }) {
-  const [cliente, setCliente] = useState('');
-  const [ref, setRef] = useState('');
+export default function CocinaMontada3({ currentUser, state, setState, logo, clienteInicial = '', referenciaInicial = '' }) {
+  const [cliente, setCliente] = useState(clienteInicial);
+  const [ref, setRef] = useState(referenciaInicial);
   const [telefono, setTelefono] = useState('');
   const [descuento, setDescuento] = useState(0);
   const [ivaRate, setIvaRate] = useState(21);
@@ -2002,6 +2002,7 @@ export default function CocinaMontada3({ currentUser, state, setState, logo }) {
         // habría que reconstruir a ojo — y a ojo se pierden las manos D/I, los
         // acabados y la tarifa con la que se valoró.
         cm3: { muebles, telefono, tarifa, acabadoPuerta, acabadoCasco,
+               revisionTecnicaOrigen: state?.revisionTecnicaOrigen || null,
                observaciones: observacionesGenerales },
       };
       const r = await fetch(`${API_URL}/api/cascos/orders`, {

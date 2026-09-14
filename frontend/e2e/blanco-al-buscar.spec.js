@@ -16,7 +16,7 @@
  * nunca se ve en una prueba normal.
  */
 const { test } = require('@playwright/test');
-const { entrar } = require('./arnes');
+const { entrar, abrirPresupuestador } = require('./arnes');
 
 test('foto de la espera al añadir un mueble', async ({ page, baseURL }) => {
   test.setTimeout(120000);
@@ -35,8 +35,7 @@ test('foto de la espera al añadir un mueble', async ({ page, baseURL }) => {
     });
   });
 
-  await page.getByText(/^Cocina Montada 3$/i).first().click({ force: true });
-  await page.waitForTimeout(1500);
+  await abrirPresupuestador(page, 'montada');
 
   const buscador = page.getByPlaceholder(/Escribe un c[oó]digo o descripci/i);
   await buscador.click();

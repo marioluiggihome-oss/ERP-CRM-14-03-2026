@@ -2,7 +2,7 @@ name: Backend Check
 
 # Comprobación mínima del backend en cada PR y push: compila todos los .py
 # (detecta errores de sintaxis/indentación que romperían el arranque en
-# Railway). No instala dependencias: es rápida y sin falsas alarmas.
+# Railway), ejecuta los cálculos y valida los contratos de pantalla.
 
 on:
   pull_request:
@@ -43,6 +43,19 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: backend/requirements.txt
+
+      - name: Configurar Node 24 para los contratos de frontend
+        uses: actions/setup-node@v4
+        with:
+          # Las pruebas de dictado importan modulos ES con deteccion de sintaxis,
+          # igual que el entorno actual del proyecto. Node 18 los clasificaba
+          # como CommonJS y hacia fallar 14 pruebas antes de ejecutarlas.
+          node-version: "24"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Instalar dependencias del frontend usadas por los contratos
+        run: yarn install --frozen-lockfile --cwd frontend
 
       - name: Compilar todos los .py del backend
         run: python -m compileall -q backend
@@ -115,6 +128,7 @@ jobs:
           python -m pytest \
             backend/tests/test_calculo_*.py \
             backend/tests/test_pantalla_*.py \
+            backend/tests/test_skills_*.py \
             -q 2>&1 | tee /tmp/pt.log
 
       # Ninguna prueba puede quedarse fuera por falta de librerias: si alguna se

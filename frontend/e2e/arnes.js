@@ -80,6 +80,15 @@ async function entrar(page, base) {
   await page.getByText(/elige un m[oó]dulo/i).waitFor({ timeout: 20000 });
 }
 
+/** Abre una de las dos vistas del Presupuestador unificado. */
+async function abrirPresupuestador(page, pestana = 'montada') {
+  await page.getByTestId('presupuestador-nav-btn').click({ force: true });
+  const tab = page.getByTestId(`presupuestador-tab-${pestana}`);
+  await tab.waitFor({ timeout: 20000 });
+  await tab.click({ force: true });
+  await page.waitForTimeout(1200);
+}
+
 /**
  * El contenedor que de verdad se desliza para un elemento dado.
  *
@@ -157,5 +166,5 @@ async function entrarEnEstudio3D(page, baseURL) {
 
 module.exports = {
   USUARIO_MASTER, PNG_FALSO, simularBackend, entrar, entrarEnEstudio3D,
-  contenedorQueSeDesliza, deslizarHastaElFinal,
+  abrirPresupuestador, contenedorQueSeDesliza, deslizarHastaElFinal,
 };

@@ -41,16 +41,16 @@ Muebles (catálogo MV / cascos ACB de este proyecto):
 
 | Elemento | Medida real |
 |---|---|
-| Casco BAJO (alto) | **800** — en esta fábrica los bajos se fabrican SOLO a 80 cm |
+| Casco BAJO (alto) | **800 por defecto**; 700 cuando se indique expresamente (Mario, septiembre 2026) |
 | Zócalo | 100–150 |
 | Encimera (grosor) | 20–40 |
 | Altura de trabajo (cara superior encimera) | ~900–940 |
-| Casco ALTO (alto) | **700 o 900** (MV: alturas 70/90) |
+| Casco ALTO (alto) | **900 por defecto**; 700 cuando se indique expresamente (MV: alturas 70/90) |
 | Distancia encimera → bajo del alto | 550–600 |
 | Columna (alto) | **2000 o 2200** (MV: 200/220) |
 | Mediacolumna | 1300 |
 | Sobreencimera | 1270 o 1470 |
-| Altillo (alto del casco) | **350** — la fila corta que va SOBRE los altos, hasta el techo |
+| Altillo / sobremódulo | Fila por encima de los altos. **Confirmar altura y fondo**; 350 es solo referencia de dibujo, no medida de pedido. Contrastar ficha MV antes de tarifar. |
 | Fondo altos | ~330 |
 | Fondo bajos | ~580 |
 | Anchos estándar (cm) | 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120 |
@@ -1133,7 +1133,7 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
    - **LA TABLA DE CRÉDITOS SALIÓ DE LA PANTALLA** a
      `frontend/src/costeDeRender.js`. Con dos pantallas que renderizan, una
      tabla copiada en cada una se separa el día que se añada un motor, y la
-     que se olvide avisará «1 crédito» de uno que cobra siete.
+     que se olvide puede mostrar y descontar un precio distinto del real.
    - **SE REPARTE POR CASILLA: `canUseIAPremium`** (09/09, el mismo día: «la IA
      premium métela en permisos de usuario para poderla activar a ciertos
      usuarios»). Nació solo del master y lo abrió a continuación.
@@ -1153,15 +1153,16 @@ Nadie lo tocó a propósito: se rompió como efecto colateral de otra mejora.
      - **El rótulo dice lo que abre Y lo que cuesta**, en el texto VISIBLE y no
        solo en el `title`: en la tablet del master no hay hover, así que un
        aviso que solo vive en el tooltip puede no verse nunca — y quien marca
-       la casilla es justo quien tiene que enterarse de los 7 créditos. Una
+       la casilla es justo quien tiene que saber qué función está habilitando. Una
        mutación se escapó por aceptar el tooltip; el candado está apretado.
      - No cuelga de `canUseAIAnalysis`: compartirlo haría que quitar uno
        quitara el otro (regla 26).
-   - **IA PREMIUM cobra 7 créditos**, no 1. Al proveedor se le paga ~0,25 €/
-     imagen contra los 0,036 € del motor de producción. El precio de
+   - **IA PREMIUM cobra 1 crédito**, igual que el modo normal, por decisión del
+     master (12/09/2026). El coste real del proveedor se sigue registrando por
+     separado y no cambia el saldo visible del usuario. El precio de
      `MODEL_PRICES` está **pendiente de cuadrar con la primera factura de
      OpenAI**: va escrito porque un motor sin precio cuenta 0,00 € en Consumo
-     de IA y el más caro sería el que menos parece gastar.
+     de IA y ocultaría el gasto real en el informe.
    - **DOS LLAMADAS DISTINTAS Y SOLO UNA ADMITE EL CROQUIS.** Con referencias
      va por `images.edit`; sin ellas, por `images.generate`. Mandar el croquis
      por `generate` NO da error: devuelve una cocina bonita que no es la del

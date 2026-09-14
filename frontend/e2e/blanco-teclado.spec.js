@@ -20,14 +20,13 @@
  * navegador de la tablet, y se mira si la página desaparece.
  */
 const { test, expect } = require('@playwright/test');
-const { entrar } = require('./arnes');
+const { entrar, abrirPresupuestador } = require('./arnes');
 
 test('el teclado de la tablet deja la pantalla en blanco', async ({ page, baseURL }) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width: 800, height: 1340 });   // tablet 8,6"
   await entrar(page, baseURL);
-  await page.getByText(/^Cocina Montada 3$/i).first().click({ force: true });
-  await page.waitForTimeout(1500);
+  await abrirPresupuestador(page, 'montada');
 
   const vivo = () => page.evaluate(() =>
     !/ACCESO RESTRINGIDO/i.test(document.body.innerText || ''));

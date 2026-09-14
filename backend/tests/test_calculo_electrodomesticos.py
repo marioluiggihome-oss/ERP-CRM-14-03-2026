@@ -39,6 +39,7 @@ def ia_lab(monkeypatch):
     async def _req():
         return {"id": "u1", "isAdmin": True}
     jwt.require_auth = _req
+    jwt.require_module_access = lambda _flag: _req
     monkeypatch.setitem(sys.modules, "services.jwt_service", jwt)
     rutas = types.ModuleType("routes")
     rutas.__path__ = [os.path.join(BACKEND, "routes")]

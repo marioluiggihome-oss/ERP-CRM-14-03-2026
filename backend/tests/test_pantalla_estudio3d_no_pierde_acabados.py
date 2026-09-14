@@ -348,3 +348,23 @@ def test_COMPARAR_USA_SIEMPRE_EL_DIBUJO_INICIAL():
 def test_EL_GUARDADO_PERSISTE_LA_PRIMERA_REFERENCIA():
     cuerpo = sin_comentarios(_lee())
     assert "referenceImage: originalRef ? await shrinkForSave(originalRef) : refSave" in cuerpo
+
+
+def test_LAS_EXPORTACIONES_USAN_LA_IMAGEN_BN_VISIBLE():
+    """Cuando B/N está activo, PNG, PDF, dossier y compartir deben usar la
+    lámina visible, no la imagen de color que queda como base del proyecto."""
+    cuerpo = sin_comentarios(_lee())
+    assert "const currentVisibleImage = () => (schematic && bnImage ? bnImage : currentImage());" in cuerpo
+    for funcion in ("downloadRender", "exportPDF", "exportDossierPDF", "shareWhatsApp"):
+        inicio = cuerpo.index(f"const {funcion} = async")
+        siguientes = [cuerpo.find("\n  const ", inicio + 1), cuerpo.find("\n  // ", inicio + 1)]
+        fin = min(x for x in siguientes if x >= 0)
+        assert "currentVisibleImage()" in cuerpo[inicio:fin], f"{funcion} no respeta la imagen visible"
+    assert "push(currentVisibleImage(), schematic ? 'vista-lineal-bn'" in cuerpo
+
+
+def test_LA_DESCARGA_CON_MARCAS_TAMBIEN_PRIORIZA_BN():
+    cuerpo = sin_comentarios(_lee())
+    inicio = cuerpo.index("const renderMarcadoDataUrl")
+    fin = cuerpo.find("\n  // ", inicio + 1)
+    assert "schematic && bnImage ? bnImage : currentImage()" in cuerpo[inicio:fin]
