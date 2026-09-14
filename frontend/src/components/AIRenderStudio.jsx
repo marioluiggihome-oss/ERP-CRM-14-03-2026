@@ -1430,6 +1430,9 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   const currentImage = () => renderResult?.result?.images?.[0] || null;
+  // Fuente única para exportaciones: con B/N activo debe salir exactamente la
+  // lámina visible, no el render de color que permanece como base del proyecto.
+  const currentVisibleImage = () => (schematic && bnImage ? bnImage : currentImage());
   useEffect(() => {
     setSchematic(false);
     setBnImage(null);
@@ -3230,7 +3233,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Descargar el render (PNG) ──────────────────────────────────────────────
   const downloadRender = async () => {
-    const img = currentImage();
+    const img = currentVisibleImage();
     if (!img) return;
     if (marks.length > 0) {
       await descargarConMarcas();
@@ -3252,7 +3255,7 @@ export default function AIRenderStudio({ state, setState }) {
     // Reúne imágenes sin duplicar, empezando por el render actual.
     const items = [];
     const push = (src, etiqueta) => { if (src && !items.some(x => x.src === src)) items.push({ src, etiqueta }); };
-    push(currentImage(), renderResult?.description || 'render');
+    push(currentVisibleImage(), schematic ? 'vista-lineal-bn' : (renderResult?.description || 'render'));
     (renderHistory || []).forEach((h, i) => push(h?.result?.images?.[0], h?.description || `historial-${i + 1}`));
     if (!items.length) return;
     setDownloading(true);
@@ -3274,7 +3277,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Exportar PDF de presentación (con logo) ────────────────────────────────
   const exportPDF = async () => {
-    const img = currentImage();
+    const img = currentVisibleImage();
     if (!img) return;
     setDownloading(true);
     try {
@@ -3310,7 +3313,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Compartir por WhatsApp ────────────────────────────────────────────────
   const shareWhatsApp = async () => {
-    const img = currentImage();
+    const img = currentVisibleImage();
     if (!img) return;
     try {
       const dataUrl = await imageToDataUrl(img);
@@ -3334,7 +3337,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   // ─── Dossier PDF multi-página (portada + render + especificaciones) ─────────
   const exportDossierPDF = async () => {
-    const img = currentImage();
+    const img = currentVisibleImage();
     if (!img) return;
     setDownloading(true);
     try {
