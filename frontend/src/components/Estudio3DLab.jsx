@@ -889,6 +889,20 @@ export default function Estudio3DLab({ state, setState }) {
   const [orbitOn, setOrbitOn] = useState(false);
   // Visor interactivo: zoom + pan
   const [interactiveMode, setInteractiveMode] = useState(false);
+  /* EL VISOR INTERACTIVO NO FUNCIONABA CON LOS DEDOS (master, 14/09/2026:
+     «este botón no funciona bien», señalando el visor interactivo).
+
+     Y no funcionaba por lo más simple: en TODO el fichero no había un solo
+     manejador táctil. El zoom iba por `onWheel` y el arrastre por
+     `onMouseDown`, así que en una tablet —que es donde trabaja el master— se
+     pulsaba el botón, se ponía azul… y no pasaba nada. Sin error, sin aviso:
+     un botón encendido que no hace nada.
+
+     Aquí se guarda el gesto en curso: con UN dedo se arrastra, con DOS se hace
+     pinza. Va en un `ref` y no en el estado porque cambia en cada
+     `touchmove` —decenas de veces por segundo— y repintar la pantalla en cada
+     uno deja el gesto a trompicones. */
+  const gesto = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
@@ -5748,13 +5762,22 @@ export default function Estudio3DLab({ state, setState }) {
                 {/* Separador visual */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 {/* Grupo visor */}
-                {referenciaInicial && (
-                  <button onClick={() => setCompareOn(v => !v)}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                    title="Comparar la imagen original subida con el render">
-                    <Image size={12} /> <span className="hidden sm:inline truncate">Comparar</span>
-                  </button>
-                )}
+                {/* COMPARAR NO SE ESCONDE (master, 14/09/2026: «¿dónde está el
+                    botón de comparar?»). Estaba dentro de un `if` y
+                    DESAPARECÍA cuando el proyecto no tenía referencia guardada
+                    —los generados solo desde la descripción, y los antiguos que
+                    no la persistían—. Un botón que se va de la barra no parece
+                    apagado: parece que alguien lo ha quitado, y se busca en
+                    todos los menús. Ahora sigue ahí, apagado, y el motivo se
+                    lee en el propio botón. */}
+                <button onClick={() => setCompareOn(v => !v)}
+                  disabled={!referenciaInicial}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  title={referenciaInicial
+                    ? 'Comparar el render con las imágenes del encargo'
+                    : 'Este proyecto no tiene imagen de referencia: se generó solo desde la descripción, o se guardó antes de que la referencia se conservara. Sube un croquis o una foto y podrás comparar.'}>
+                  <Image size={12} /> <span className="hidden sm:inline truncate">Comparar</span>
+                </button>
                 {canUseRender360 && (orbitFrames.length >= 2 ? (
                   <button onClick={() => setOrbitOn(v => !v)}
                     className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors ${orbitOn ? 'bg-accion-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -5775,6 +5798,26 @@ export default function Estudio3DLab({ state, setState }) {
                   title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}>
                   <Layers size={14} className={interactiveMode ? 'text-white' : 'text-slate-600'} />
                 </button>
+                {/* EL ZOOM TIENE QUE VERSE. Iba SOLO por rueda del ratón, que
+                    en una tablet no existe y en un portátil no lo adivina
+                    nadie: el botón se encendía y parecía roto. Con los botones
+                    delante, el visor se usa igual con dedos que con ratón. */}
+                {interactiveMode && (
+                  <>
+                    <button onClick={() => setZoom(z => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
+                      className="px-2 py-1 rounded-lg text-[11px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      title="Alejar">−</button>
+                    <span className="px-1 text-[10px] font-black text-slate-500 tabular-nums">
+                      {Math.round(zoom * 100)}%
+                    </span>
+                    <button onClick={() => setZoom(z => Math.min(5, Math.round((z + 0.25) * 100) / 100))}
+                      className="px-2 py-1 rounded-lg text-[11px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      title="Acercar">+</button>
+                    <button onClick={() => { setZoom(1); setPanX(0); setPanY(0); }}
+                      className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      title="Volver al tamaño original y centrar">Ajustar</button>
+                  </>
+                )}
                 {/* Separador + nuevo render */}
                 <span className="w-px h-5 bg-slate-200 mx-0.5" />
                 <button onClick={() => { resetEditChain(); setRenderResult(null); setDescription(''); }}
@@ -5968,6 +6011,35 @@ export default function Estudio3DLab({ state, setState }) {
               <div className="flex-1 min-w-0 min-h-[42vh] bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
+                /* CON LOS DEDOS: uno arrastra, dos hacen pinza. */
+                onTouchStart={e => {
+                  if (!interactiveMode) return;
+                  const t = e.touches;
+                  if (t.length === 1) {
+                    gesto.current = { tipo: 'mover', x: t[0].clientX - panX, y: t[0].clientY - panY };
+                  } else if (t.length === 2) {
+                    const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+                    gesto.current = { tipo: 'pinza', dist: Math.hypot(dx, dy) || 1, zoom };
+                  }
+                }}
+                onTouchMove={e => {
+                  if (!interactiveMode || !gesto.current) return;
+                  const t = e.touches;
+                  // Sin esto el navegador se queda el gesto para desplazar la
+                  // página y el render no se mueve (ver `touchAction` abajo).
+                  if (e.cancelable) e.preventDefault();
+                  if (gesto.current.tipo === 'mover' && t.length === 1) {
+                    setPanX(t[0].clientX - gesto.current.x);
+                    setPanY(t[0].clientY - gesto.current.y);
+                  } else if (gesto.current.tipo === 'pinza' && t.length === 2) {
+                    const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+                    const d = Math.hypot(dx, dy) || 1;
+                    setZoom(Math.max(0.5, Math.min(5, gesto.current.zoom * (d / gesto.current.dist))));
+                  }
+                }}
+                onTouchEnd={() => { gesto.current = null; }}
+                onTouchCancel={() => { gesto.current = null; }}
+                style={interactiveMode ? { touchAction: 'none' } : undefined}
               >
                 {orbitOn && orbitFrames.length >= 2 ? (
                   <div
