@@ -447,8 +447,9 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
           {selectedImages.length === 0 ? (
             <label className="flex-1 min-h-0 border-4 border-dashed border-indigo-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all group">
               <Layers size={48} className="text-indigo-300 group-hover:text-purple-600 transition-colors mb-4" />
-              <p className="text-sm font-black text-indigo-900 uppercase">Subir planos (1 o más paredes)</p>
-              <p className="text-xs text-indigo-400 mt-2">JPG, PNG - Selecciona varias imágenes a la vez</p>
+              <p className="text-sm font-black text-indigo-900 uppercase">Alzados anotados para presupuesto</p>
+              <p className="text-xs text-indigo-500 mt-2 text-center px-3">Sube una o varias fotos de los alzados con los muebles y referencias escritos.</p>
+              <p className="text-[11px] text-indigo-400 mt-1 text-center px-3">Se revisan las referencias antes de añadirlas; lo ilegible queda pendiente y no se presupuesta automáticamente.</p>
               <input 
                 ref={fileInputRef}
                 type="file" 
@@ -499,7 +500,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 {/* Add more images */}
                 <label className="mt-2 border-2 border-dashed border-indigo-200 rounded-xl p-3 flex items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all">
                   <Plus size={16} className="text-indigo-400 mr-2" />
-                  <span className="text-xs font-bold text-indigo-600 uppercase">Añadir más paredes</span>
+                  <span className="text-xs font-bold text-indigo-600 uppercase">Añadir otro alzado o pared</span>
                   <input 
                     type="file" 
                     accept="image/*"
@@ -515,8 +516,8 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               {analyzing && (
                 <div className="absolute inset-0 bg-indigo-950/80 flex flex-col items-center justify-center rounded-xl z-10">
                   <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
-                  <p className="text-white font-black uppercase text-sm">Analizando {selectedImages.length} {selectedImages.length === 1 ? 'plano' : 'planos'}...</p>
-                  <p className="text-purple-300 text-xs mt-2">Detectando muebles con IA</p>
+                  <p className="text-white font-black uppercase text-sm">Leyendo {selectedImages.length} {selectedImages.length === 1 ? 'alzado' : 'alzados'} anotado{selectedImages.length === 1 ? '' : 's'}...</p>
+                  <p className="text-purple-300 text-xs mt-2">Separando muebles, referencias y datos pendientes</p>
                 </div>
               )}
               
@@ -528,7 +529,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   data-testid="analyze-plan-btn"
                 >
                   <Wand2 size={20} />
-                  Analizar {selectedImages.length} {selectedImages.length === 1 ? 'Plano' : 'Planos'} con IA
+                  Revisar {selectedImages.length} {selectedImages.length === 1 ? 'alzado' : 'alzados'} y preparar relación
                 </button>
               )}
             </div>
