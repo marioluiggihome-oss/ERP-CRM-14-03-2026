@@ -266,11 +266,32 @@ def test_LA_ORDEN_NUEVA_NO_REEJECUTA_EL_HISTORIAL():
 
 
 def test_LA_EDICION_AMBIGUA_SE_BLOQUEA_ANTES_DE_ENVIAR():
-    """Una línea sin propiedad concreta no debe consumir un render ni rediseñar."""
+    """Una línea sin propiedad concreta no debe consumir un render ni rediseñar.
+
+    Esta prueba exigía el TEXTO EXACTO del aviso («No se aplicó ningún cambio
+    para evitar alterar el diseño»). El 14/09/2026 ese aviso se reescribió a
+    propósito: culpaba al que escribía —«no identifica con suficiente
+    precisión»— sin decir qué faltaba, y el master se topó con él intentando
+    cambiar un grifo. Un candado clavado a una frase se pone rojo cuando se
+    mejora la frase y, peor, presiona para dejar el texto malo.
+
+    Lo que hay que proteger es el COMPORTAMIENTO: que la orden ambigua se corte
+    ANTES de gastar un render, y que el aviso diga qué hacer.
+    """
     cuerpo = sin_comentarios(_lee())
     assert "alcance: 'bloqueado'" in cuerpo
-    assert "No se aplicó ningún cambio para evitar alterar el diseño" in cuerpo
     assert "const contratoActual = contratoEdicion(allLines)" in cuerpo
+    # Se corta ANTES de llamar al render: el `return` va dentro del `if`.
+    i = cuerpo.index("if (contratoActual.alcance === 'bloqueado')")
+    bloque = cuerpo[i:i + 500]
+    assert "setError(" in bloque and "return;" in bloque, (
+        "la orden ambigua ya no se corta antes de enviar: gastaría un render "
+        "y dejaría al modelo rediseñar la cocina")
+    assert bloque.index("return;") < bloque.index("}", bloque.index("return;")) + 1
+    # Y el aviso dice qué falta, con ejemplos, en vez de culpar al que escribe.
+    j = cuerpo.index("setError(", i)
+    aviso = cuerpo[j:j + 400]
+    assert "«" in aviso, "el aviso de orden ambigua ya no da ejemplos"
 
 
 def test_QUITAR_MEDIDAS_ES_UN_CAMBIO_VALIDO_Y_NO_UNA_ORDEN_AMBIGUA():

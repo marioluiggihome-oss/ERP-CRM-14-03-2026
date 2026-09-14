@@ -14,7 +14,7 @@ CAMBIOS_PREMIUM = [
 ('open project reset', '  const loadDesign = async (dsg) => {', "  const loadDesign = async (dsg) => {\n    setPremiumBrief(null); setPremiumLayoutConfirmation('');"),
 ('save briefing', '          relacionMV: relacionParaGuardar(),', "          relacionMV: relacionParaGuardar(),\n          ...(motor === 'premium' ? { premiumBrief: normalizeBrief(premiumBrief) } : {}),"),
 ('restore saved briefing', '        const full = d.design || {};', '        const full = d.design || {};\n        setPremiumBrief(full.premiumBrief ? normalizeBrief(full.premiumBrief) : null);'),
-('premium appliance vocabulary', '|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|', '|lavavajillas|lavadora|frigorífico|frigorifico|frigo|combi|nevera|horno|microondas|campana|'),
+('premium appliance vocabulary', '|lavavajillas|lavadora|secadora|frigorífico|frigorifico|nevera|congelador|', '|lavavajillas|lavadora|secadora|frigorífico|frigorifico|frigo|combi|nevera|congelador|'),
 # Premium must not share the production module's transient preset or session key.
 ('premium preset isolation', "    const preset = state?.estudio3dPreset;", "    const preset = state?.estudio3dPremiumPreset;"),
 ('premium preset cleanup isolation', "    if (setState) setState(p => { const { estudio3dPreset, ...rest } = p; return rest; });", "    if (setState) setState(p => { const { estudio3dPremiumPreset, ...rest } = p; return rest; });"),

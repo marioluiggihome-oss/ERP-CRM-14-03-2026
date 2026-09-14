@@ -1615,11 +1615,27 @@ export default function AIRenderStudio({ state, setState }) {
     const esTirador = /(tirador|tiradores|gola|manilla|asa)\b/.test(texto);
     const esBajo = /(\bbajo\b|\bbajos\b|abajo|parte baja|de abajo|módulo bajo|módulos bajos|inferior|inferiores)/.test(texto);
     const esAnotacionTecnica = /(medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
-    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|frigorífico|nevera|horno|microondas|campana|mueble|muebles|iluminación|iluminacion|luz|luces|suelo|pared|ventana|ventanas|decoración|decoracion|color|acabado|material|repisas|baldas|medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
-    if (!texto && editRefImage) {
+    /* EL VOCABULARIO SE QUEDABA CORTO Y BLOQUEABA COCINAS ENTERAS (master,
+       14/09/2026: «sale este mensaje cuando quiero sustituir el grifo»).
+       Faltaban el GRIFO, el fregadero, la placa, el zócalo, el copete, la
+       isla, el salpicadero… o sea, media cocina. Y el mensaje no dice «no
+       conozco esa palabra»: dice que la instrucción no es lo bastante precisa,
+       así que uno la reescribe tres veces y sigue sin funcionar. */
+    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|secadora|frigorífico|frigorifico|nevera|congelador|horno|microondas|campana|extractor|placa|vitrocerámica|vitroceramica|inducción|induccion|fregadero|seno|grifo|grifería|griferia|mueble|muebles|columna|columnas|altillo|altillos|zócalo|zocalo|copete|isla|península|peninsula|barra|taburete|taburetes|estantería|estanteria|estante|estantes|iluminación|iluminacion|luz|luces|lámpara|lampara|enchufe|enchufes|suelo|pared|paredes|techo|ventana|ventanas|salpicadero|aplacado|alicatado|revestimiento|decoración|decoracion|color|acabado|material|repisas|baldas|medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
+    /* UNA IMAGEN ADJUNTA YA DICE QUÉ SE CAMBIA, Y ESO MANDA SOBRE EL TEXTO.
+       Aquí estaba la parte grave de lo del grifo: esta rama solo entraba con
+       el texto VACÍO (`!texto`). O sea que adjuntar la foto del grifo y
+       ESCRIBIR «pon este grifo» funcionaba PEOR que adjuntarla y no escribir
+       nada — el texto caía al `tienePropiedad` de abajo y bloqueaba el cambio.
+       Justo al revés de como se usa: la imagen es lo que se pide y las
+       palabras solo afinan dónde va. El texto se conserva como objetivo, para
+       no perder la precisión que el usuario sí ha dado. */
+    if (editRefImage) {
       return {
         alcance: 'referencia_adicional',
-        objetivo: 'elemento de la imagen adicional',
+        objetivo: texto
+          ? `elemento de la imagen adicional, según la orden: ${(lineas || []).join(' ').trim()}`
+          : 'elemento de la imagen adicional',
         zona: 'zona coherente con el diseño existente',
         conservar: ['todo el diseño existente salvo el elemento de referencia solicitado'],
         contexto_aprobado: '',
@@ -3075,7 +3091,12 @@ export default function AIRenderStudio({ state, setState }) {
     if (!img || (!allLines.length && !editRefImage)) return;
     const contratoActual = contratoEdicion(allLines);
     if (contratoActual.alcance === 'bloqueado') {
-      setError('La instrucción no identifica con suficiente precisión qué propiedad y qué zona deben cambiar. No se aplicó ningún cambio para evitar alterar el diseño.');
+      /* EL AVISO TIENE QUE DECIR QUÉ FALTA. «No identifica con suficiente
+         precisión» no se puede arreglar: se reescribe la frase tres veces y
+         sigue sin funcionar, porque lo que fallaba no era la precisión sino
+         que la palabra no estaba en la lista. Ahora se dice qué hace falta y
+         se dan ejemplos, incluida la salida fácil: adjuntar la foto. */
+      setError('Di QUÉ hay que cambiar para no tocar el resto del diseño: «cambia los tiradores de los bajos», «pon el grifo negro», «quita el zócalo». También vale adjuntar una foto de lo que quieres poner.');
       return;
     }
     if (premiumChangeActive && !canUsePremiumFinish) {
