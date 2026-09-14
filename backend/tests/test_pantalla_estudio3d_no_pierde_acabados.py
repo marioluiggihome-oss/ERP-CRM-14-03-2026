@@ -313,11 +313,36 @@ def test_AL_ABRIR_SOLO_SE_USA_EL_HISTORIAL_PERSISTENTE_VIGENTE():
 
 
 def test_COMPARAR_USA_SIEMPRE_EL_DIBUJO_INICIAL():
+    """El lado «Referencia» es el ENCARGO, nunca la última imagen subida.
+
+    Esta prueba exigía la línea `const referenciaInicial = originalRef ||
+    refImage;` tal cual escrita. El 14/09/2026 esa línea se quitó porque ERA EL
+    FALLO: el master, «que al comparar salgan las imágenes primitivas del
+    proyecto, no las fotos posteriores que adjunto de acabados, encimeras o
+    cambios». Con un proyecto sin la primera referencia guardada —los antiguos
+    no la tienen—, ese `|| refImage` ponía en el lado «Referencia» la foto del
+    acabado recién subida, y comparar un render con la imagen que acaba de
+    cambiarlo no compara nada.
+
+    Se reescribe para vigilar LO QUE TIENE QUE PASAR y no cómo está escrito: un
+    candado clavado a un literal se pone rojo con un cambio honrado y, peor,
+    obliga a conservar la línea mala para tenerlo en verde.
+    """
     cuerpo = sin_comentarios(_lee())
-    assert "const referenciaInicial = originalRef || refImage;" in cuerpo
+    assert "const referenciaInicial = originalRef || refImage;" not in cuerpo, (
+        "Comparar vuelve a caer en la ÚLTIMA imagen subida cuando el proyecto "
+        "no trae la primera guardada")
+    assert "const referenciasIniciales" in cuerpo, (
+        "ya no existe la lista de referencias del principio de la que sale "
+        "Comparar")
     assert "compareOn && referenciaInicial && renderResult?.result?.images?.[0]" in cuerpo
     assert "pdfComparePreview || referenciaInicial" in cuerpo
     assert 'alt="Dibujo inicial"' in cuerpo
+    # Y lo que se sube DESPUÉS del primer render no puede entrar: eso son los
+    # cambios, no el encargo.
+    i = cuerpo.index("const addReference")
+    assert "renderHistory.length === 0" in cuerpo[i:i + 900], (
+        "cualquier imagen subida vuelve a colarse en Comparar")
 
 
 def test_EL_GUARDADO_PERSISTE_LA_PRIMERA_REFERENCIA():

@@ -475,6 +475,20 @@ export default function Estudio3DLab({ state, setState }) {
   const [refImages, setRefImages] = useState([]); // Referencias subidas para el proyecto actual.
   const [sameProjectRefs, setSameProjectRefs] = useState(false); // Varias vistas de una misma cocina → un único render.
   const [originalRef, setOriginalRef] = useState(null); // PRIMERA referencia: se conserva para Comparar
+  /* TODAS las referencias del principio, no solo la primera (master,
+     14/09/2026: «siempre que le dé al botón comparar que salgan las imágenes
+     primitivas del proyecto, para comparar con lo que envié al inicio del
+     todo, no las fotos posteriores que adjunto de acabados, encimeras o
+     cambios»).
+     Comparar usaba `originalRef || refImage`, y ese `|| refImage` es el fallo:
+     en cuanto el proyecto no tenía guardada la primera —los antiguos no la
+     tienen— el lado «Referencia» enseñaba la ÚLTIMA imagen subida, que es
+     justo la foto del acabado o de la encimera. Comparar el render con la
+     imagen que lo acaba de cambiar no compara nada.
+     Se congelan en el primer render: lo de antes es el encargo, lo de después
+     son cambios sobre él. */
+  const [refsIniciales, setRefsIniciales] = useState([]);
+  const [idxComparar, setIdxComparar] = useState(0);
   const [pdfComparePreview, setPdfComparePreview] = useState(null);
   const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
   const [floorPlan, setFloorPlan] = useState(null);    // plano en planta (dataURL)
@@ -1275,7 +1289,11 @@ export default function Estudio3DLab({ state, setState }) {
   // La comparación siempre parte de la primera referencia del proyecto.
   // `refImage` puede cambiar al subir una vista adicional; no puede sustituir
   // al dibujo inicial que debe permanecer en el lado «Referencia».
-  const referenciaInicial = originalRef || refImage;
+  const referenciasIniciales = refsIniciales.length
+    ? refsIniciales
+    : (originalRef ? [originalRef] : (refImage ? [refImage] : []));
+  const referenciaInicial = referenciasIniciales[
+    Math.min(idxComparar, referenciasIniciales.length - 1)] || null;
   // El PDF inicial se conserva para generar. Comparar utiliza únicamente una
   // copia PNG de su primera página, preparada por el backend.
   useEffect(() => {
@@ -1574,7 +1592,7 @@ export default function Estudio3DLab({ state, setState }) {
     setCamera(p.camera);
     setElectros(p.electros || []);
     setTipo3d('cocina');
-    setRefImage(null); setRefImages([]); setSameProjectRefs(false); setEditRefImage(null); setOriginalRef(null);
+    setRefImage(null); setRefImages([]); setSameProjectRefs(false); setEditRefImage(null); setOriginalRef(null); setRefsIniciales([]); setIdxComparar(0);
   };
   // Añade una frase rápida al final de la descripción.
   const addPhrase = (t) => setDescription(prev => {
@@ -3770,6 +3788,13 @@ export default function Estudio3DLab({ state, setState }) {
           // La referencia persistida para Comparar es siempre la primera subida,
           // no la última vista adicional usada para generar.
           referenceImage: originalRef ? await shrinkForSave(originalRef) : refSave,
+          // Y TODAS las del principio, para que Comparar siga enseñándolas al
+          // reabrir: sin esto, un proyecto guardado vuelve con una sola y las
+          // demás se pierden. `referenceImage` se mantiene por los proyectos
+          // que ya estaban guardados con una sola.
+          referenceImages: await Promise.all(
+            (refsIniciales.length ? refsIniciales : (originalRef ? [originalRef] : []))
+              .map(im => shrinkForSave(im).catch(() => im))),
           medidas, tipo3d,
           distribucion: distAceptada.current || null,
           relacionMV: relacionParaGuardar(),
@@ -3815,16 +3840,23 @@ export default function Estudio3DLab({ state, setState }) {
     setRenderResult(null);
     // La lista ya no trae el referenceImage (payload); se carga el detalle completo
     // para poder Comparar con el plano/referencia original guardado.
-    setRefImage(null); setOriginalRef(null);
+    setRefImage(null); setOriginalRef(null); setRefsIniciales([]); setIdxComparar(0);
+    let docGuardado = null;
     try {
       const r = await fetch(`${API_URL}/api/ai-engine/designs/${dsg.id}`, { headers: getAuthHeaders() });
       if (r.ok) {
         const d = await r.json();
         const full = d.design || {};
         setPremiumBrief(full.premiumBrief ? normalizeBrief(full.premiumBrief) : null);
+        docGuardado = full;
         // No rehidratamos `full.images`: puede contener una copia antigua de
         // fotos que ya se borraron del historial persistente.
         if (full.referenceImage) { setRefImage(full.referenceImage); setOriginalRef(full.referenceImage); }
+        const inis = (full.referenceImages || []).filter(
+          im => typeof im === 'string' && im.startsWith('data:'));
+        setRefsIniciales(inis.length ? inis
+          : (full.referenceImage ? [full.referenceImage] : []));
+        setIdxComparar(0);
         // Y LAS MEDIDAS DE VUELTA. Es la otra mitad del arreglo del 25/08:
         // guardarlas no sirve de nada si al abrir el proyecto no se recuperan.
         // Con el ancho real puesto, la pared vuelve a estar anclada y las cotas
@@ -3862,9 +3894,40 @@ export default function Estudio3DLab({ state, setState }) {
     if (fotosValidas.length) {
       setRenderResult(fotosValidas[0]);
     } else {
-      // Proyecto sin fotos vigentes: no dejar una imagen huérfana activa.
-      setRenderResult(null);
-      setEditBaseImage(null);
+      /* LOS PROYECTOS ANTIGUOS GUARDAN LA FOTO DENTRO DEL DOCUMENTO
+         (master, 14/09/2026: «hay proyectos antiguos que no los puedo abrir»).
+
+         Hasta que el historial se separó a `render3d_images`, cada proyecto
+         llevaba su render dentro, en `images`. Al abrir solo se lee la
+         colección nueva, así que TODO proyecto anterior a ese cambio se abría
+         en blanco: se veía el nombre, el cliente y las medidas, y ni una foto.
+         No daba ningún error —por eso no había nada que buscar—, simplemente
+         parecía que el proyecto se había perdido.
+
+         Se usa SOLO cuando el historial nuevo viene vacío, y eso es la mitad
+         importante: la copia de `images` puede ser vieja, y si se rehidratara
+         siempre, una foto borrada a propósito reaparecería al reabrir. Con el
+         historial vacío no hay nada que contradecir. El otro caso posible
+         —alguien borró TODAS las fotos del proyecto— lo cierra el servidor,
+         que al borrar la última vacía también esta copia heredada. */
+      const heredadas = (docGuardado?.images || []).filter(
+        im => typeof im === 'string' && im.startsWith('data:'));
+      if (heredadas.length) {
+        const items = heredadas.map((src, i) => ({
+          success: true, tipo: 'render', heredada: true,
+          description: docGuardado?.description || '',
+          timestamp: docGuardado?.updatedAt ? new Date(docGuardado.updatedAt) : new Date(),
+          result: { images: [src] },
+          key: `heredada-${i}`,
+        }));
+        setRenderHistory(items);
+        setRenderResult(items[0]);
+        setHistInfo({ total: items.length, hayMas: false, cargadas: items.length, enDrive: false });
+      } else {
+        // Proyecto sin fotos vigentes: no dejar una imagen huérfana activa.
+        setRenderResult(null);
+        setEditBaseImage(null);
+      }
     }
   };
   const deleteDesign = async (id) => {
@@ -3985,7 +4048,7 @@ export default function Estudio3DLab({ state, setState }) {
   const nuevoProyecto = () => {
     setPremiumBrief(null); setPremiumLayoutConfirmation('');
     setCliente(''); setRef(''); setSavedId(null); setRenderResult(null); setRenderHistory([]);
-    setDescription(''); setRefImage(null); setRefImages([]); setSameProjectRefs(false); setOriginalRef(null); setFloorPlan(null); setWallSketches([]);
+    setDescription(''); setRefImage(null); setRefImages([]); setSameProjectRefs(false); setOriginalRef(null); setRefsIniciales([]); setIdxComparar(0); setFloorPlan(null); setWallSketches([]);
     setEditInstruction(''); setEditLines([]); setEditRefImage(null);
     setMarks([]); setMarkTool(null); setSchematic(false);
     setOrbitFrames([]); setOrbitOn(false); setOrbitIndex(0);
@@ -4001,6 +4064,11 @@ export default function Estudio3DLab({ state, setState }) {
     setRefImages(prev => [...prev, b64]);
     setRefImage(b64);                       // principal = última añadida (compat con render single/comparar)
     setOriginalRef(prev => prev || b64);    // conserva la PRIMERA subida para Comparar
+    // Mientras no haya render, lo que se sube ES el encargo. Después son
+    // cambios sobre un render que ya existe, y no pueden entrar en Comparar.
+    if (!renderResult && renderHistory.length === 0) {
+      setRefsIniciales(prev => (prev.includes(b64) ? prev : [...prev, b64]));
+    }
     try {
       const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
         method: 'POST', headers: getAuthHeaders(),
@@ -5647,7 +5715,26 @@ export default function Estudio3DLab({ state, setState }) {
                         </p>
                       </div>
                     )}
-                    <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">Referencia</span>
+                    <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">
+                      Referencia{referenciasIniciales.length > 1
+                        ? ` ${Math.min(idxComparar, referenciasIniciales.length - 1) + 1}/${referenciasIniciales.length}`
+                        : ''}
+                    </span>
+                    {/* SI EL ENCARGO TRAÍA VARIAS IMÁGENES, SE PUEDEN VER TODAS.
+                        Enseñar solo la primera y llamarla «la referencia» deja
+                        fuera el resto del encargo sin decirlo. */}
+                    {referenciasIniciales.length > 1 && (
+                      <>
+                        <button type="button"
+                          onClick={() => setIdxComparar(i => (i - 1 + referenciasIniciales.length) % referenciasIniciales.length)}
+                          className="absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center"
+                          title="Imagen anterior del encargo">‹</button>
+                        <button type="button"
+                          onClick={() => setIdxComparar(i => (i + 1) % referenciasIniciales.length)}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center"
+                          title="Siguiente imagen del encargo">›</button>
+                      </>
+                    )}
                   </div>
                   <div className="bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative min-h-0">
                     <img src={assetSrc(renderResult.result.images[0])} alt="Render" className="max-w-full max-h-full object-contain" />

@@ -464,7 +464,18 @@ async def delete_design_image(design_id: str, imagen_id: str,
         await asyncio.to_thread(drive_fotos.a_papelera, img["driveId"])
     res = await _db.render3d_images.delete_one({"designId": design_id, "id": imagen_id})
     total = await _db.render3d_images.count_documents({"designId": design_id})
-    await _db.render3d_designs.update_one({"id": design_id}, {"$set": {"numImagenes": total}})
+    # AL BORRAR LA ÚLTIMA, SE VACÍA TAMBIÉN LA COPIA HEREDADA DEL DOCUMENTO.
+    #
+    # Los proyectos anteriores a esta colección llevan su render dentro, en
+    # `images`, y la pantalla lo usa para poder abrirlos (master, 14/09/2026:
+    # «hay proyectos antiguos que no los puedo abrir»). Esa copia solo se mira
+    # cuando el historial está vacío — así que si alguien borra la última foto
+    # a propósito y la copia siguiera ahí, la foto REAPARECERÍA al reabrir el
+    # proyecto, que es justo lo que el borrado promete que no pasa.
+    cambios = {"numImagenes": total}
+    if total == 0:
+        cambios["images"] = []
+    await _db.render3d_designs.update_one({"id": design_id}, {"$set": cambios})
     return {"success": True, "borradas": getattr(res, "deleted_count", 0), "total": total}
 
 
