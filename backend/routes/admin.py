@@ -311,7 +311,7 @@ async def get_activity_by_type(days: int = 30, user=Depends(require_admin)):
 
 
 # ─── Consumo de IA (contador + umbral + coste estimado), solo master ─────────
-from services.ai_usage import get_usage_summary, set_config
+from services.ai_usage import get_usage_summary, get_usage_por_dia, set_config
 from services.db_client import get_db as _get_db
 
 
@@ -319,6 +319,26 @@ from services.db_client import get_db as _get_db
 async def ai_usage(user=Depends(require_admin)):
     """Resumen del consumo de IA del mes en curso, histórico, coste estimado y alerta."""
     return {"success": True, **(await get_usage_summary())}
+
+
+@router.get("/ai-usage/por-dia")
+async def ai_usage_por_dia(dias: int = 30, user=Depends(require_admin)):
+    """Gasto de IA día a día, y quién lo gastó cada día.
+
+    Los ids de usuario se traducen a nombres AQUÍ y no en la pantalla: un
+    informe de «quién gasta» lleno de identificadores no lo lee nadie. Si un id
+    ya no existe, sale el id tal cual — no se inventa un nombre.
+    """
+    nombres = {}
+    try:
+        _db = _get_db()
+        async for u in _db.users.find({}, {"_id": 0, "id": 1, "username": 1, "name": 1}):
+            uid = u.get("id")
+            if uid:
+                nombres[uid] = u.get("name") or u.get("username") or uid
+    except Exception:
+        pass  # sin nombres se ven los ids; el informe sale igual
+    return {"success": True, **(await get_usage_por_dia(dias, nombres))}
 
 
 @router.post("/ai-usage/threshold")

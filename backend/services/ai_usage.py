@@ -22,6 +22,54 @@ def _month() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
+def _day() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+# ─── EL DÍA SE GUARDA APARTE, Y ESO ES TODO EL INVENTO ───────────────────────
+#
+# El master, 14/09/2026: «¿podemos saber los tokens o usos de IA gastados al
+# día?, y también por usuario y día».
+#
+# No se podía: el contador llevaba UN documento por MES (`{"month": "2026-09"}`)
+# y cada llamada le sumaba encima. O sea que el mes se veía entero y el día no
+# existía — y no es que estuviera escondido: no se guardaba, así que los días
+# pasados no se pueden recuperar de ninguna manera.
+#
+# POR QUÉ UN DOCUMENTO NUEVO Y NO CAMBIAR LA CLAVE DEL MES: cambiarla a
+# `%Y-%m-%d` habría partido el histórico en dos —seis meses de datos que dejan
+# de sumar— y habría roto la pantalla del medidor, el umbral y la bolsa de
+# créditos, que leen el mes. El mes se queda EXACTAMENTE como estaba; el día va
+# al lado.
+#
+# LOS DOS CONTADORES TIENEN QUE ESCRIBIRLO. Hay dos funciones que cuentan
+# (`record_ai_usage` y `record_ai_tokens`), y poner el día solo en una es el
+# fallo de siempre en este repo: la mitad de las llamadas no saldrían en el
+# informe y el total del día sería MENOR que el real, sin dar ningún error.
+# Por eso existe `_suma_al_dia`, que se llama desde las dos.
+async def _suma_al_dia(inc: dict, user_id: str = None):
+    """Suma lo mismo que al mes, pero en el documento del día. Best-effort.
+
+    NUNCA puede romper la llamada de IA: si el contador falla, el render tiene
+    que salir igual. Es la misma regla que el resto de este módulo.
+    """
+    if db is None or not inc:
+        return
+    try:
+        # POR USUARIO Y DÍA, que es lo que contesta «quién está gastando»: el
+        # `inc` que llega ya trae su `by_user.<id>`, el mismo que va al mes. Se
+        # copia tal cual a propósito (ver abajo).
+        propio = dict(inc)
+        dia = _day()
+        await db.ai_usage_diario.update_one(
+            {"day": dia},
+            {"$inc": propio, "$setOnInsert": {"day": dia, "month": _month()}},
+            upsert=True,
+        )
+    except Exception:
+        pass
+
+
 # ─── Tarifas de referencia (EUR) para el cálculo de coste ────────────────────
 # €/1M tokens de entrada y salida, y €/imagen para los modelos de imagen.
 # Precios de lista (Nivel de pago) aproximados; ajustables por el master.
@@ -48,9 +96,39 @@ MODEL_PRICES = {
 DEFAULT_COST_PER = {"render": 0.12, "vision": 0.003, "otro": 0.003}
 
 
+def modelo_de_clave(clave: str) -> str:
+    """Devuelve el nombre REAL del modelo a partir de como se guarda en Mongo.
+
+    OJO, QUE ESTO ERA UN FALLO DE VERDAD y llevaba tiempo puesto. Mongo no
+    admite puntos en el nombre de un campo, así que al contar se guarda
+    `gemini-2_5-flash-image`. Pero el precio está en `MODEL_PRICES` bajo
+    `gemini-2.5-flash-image`, y la tarifa se buscaba con la clave ESCAPADA: no
+    casaba nunca, caía en el modelo por defecto y su `img` es 0,00 €.
+
+    Resultado: el «coste por modelo» del medidor ha estado enseñando **0 € de
+    imágenes** para todos los modelos —que es justo donde está el dinero del
+    Estudio 3D—. No daba ningún error, y el total del mes (`real_cost`) sí es
+    correcto porque se calcula al escribir, con el nombre bien: o sea que las
+    dos cifras no cuadraban entre sí y no había forma de saber cuál mentía.
+
+    Se destapó al escribir el informe por día, comparando el coste del día con
+    la tarifa a mano.
+
+    No se adivina nada: se escapan las claves de `MODEL_PRICES` igual que al
+    guardar y se busca la que coincide. Un modelo que no esté en la tabla sale
+    tal cual.
+    """
+    if clave in MODEL_PRICES:
+        return clave
+    for modelo in MODEL_PRICES:
+        if modelo.replace(".", "_") == clave:
+            return modelo
+    return clave
+
+
 def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0) -> float:
     """Coste (EUR) exacto de una llamada a partir de tokens reales y/o nº de imágenes."""
-    p = MODEL_PRICES.get(model or "", MODEL_PRICES["gemini-2.5-flash"])
+    p = MODEL_PRICES.get(modelo_de_clave(model or ""), MODEL_PRICES["gemini-2.5-flash"])
     return round(
         (int(in_tokens or 0) / 1_000_000) * p["in"]
         + (int(out_tokens or 0) / 1_000_000) * p["out"]
@@ -89,6 +167,10 @@ async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens
             {"$inc": inc, "$setOnInsert": {"month": _month()}},
             upsert=True,
         )
+        # Y lo mismo en el día. Se pasa el MISMO `inc` a propósito: si el día
+        # sumara cosas distintas del mes, los dos informes dirían cifras que no
+        # cuadran entre sí y no habría forma de saber cuál miente.
+        await _suma_al_dia(inc, user_id if count else None)
     except Exception:
         pass
 
@@ -114,6 +196,7 @@ async def record_ai_usage(kind: str, user_id: str = None):
             {"$inc": inc, "$setOnInsert": {"month": _month()}},
             upsert=True,
         )
+        await _suma_al_dia(inc, user_id)
     except Exception:
         pass  # el contador nunca bloquea una llamada de IA
 
@@ -174,6 +257,65 @@ async def get_usage_summary():
         "master_credits": int(cfg.get("master_credits", CUPO_MASTER_POR_DEFECTO) or 0),
         "default_credits": int(cfg.get("default_credits", 0) or 0),
         "credits_per": cfg.get("credits_per", {"render": 1, "vision": 0}) or {"render": 1, "vision": 0},
+    }
+
+
+async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None):
+    """El gasto de cada uno de los últimos días, y quién lo gastó.
+
+    Master, 14/09/2026: «¿podemos saber los tokens o usos de IA gastados al
+    día?, y también por usuario y día».
+
+    EL COSTE SE VUELVE A CALCULAR AQUÍ, desde los tokens y las imágenes
+    guardados, con la misma `cost_of` que usa el mes. No se lee el `real_cost`
+    acumulado y ya está: si un día se corrigiera una tarifa de `MODEL_PRICES`,
+    un importe guardado se quedaría con la tarifa vieja y el informe del día no
+    cuadraría con el del mes — dos cifras del mismo dinero, que es lo que este
+    repo lleva evitando desde el principio.
+
+    `nombres_de_usuario` es un diccionario {id: nombre} opcional: el documento
+    guarda ids, y un informe de «quién gasta» lleno de identificadores no lo
+    lee nadie. Si no se puede resolver un id, sale el id — nunca se inventa un
+    nombre.
+    """
+    if db is None:
+        return {"dias": [], "por_usuario": []}
+    n = max(1, min(int(dias or 30), 180))
+    filas = await db.ai_usage_diario.find({}, {"_id": 0}).sort("day", -1).to_list(n)
+    nombres = nombres_de_usuario or {}
+
+    def _coste(doc):
+        ti, to = doc.get("tokens_in", {}), doc.get("tokens_out", {})
+        im = doc.get("images", {})
+        return round(sum(cost_of(m, ti.get(m, 0), to.get(m, 0), im.get(m, 0))
+                         for m in set(ti) | set(to) | set(im)), 4)
+
+    dias_out, acumulado = [], {}
+    for doc in filas:
+        por_usuario = {}
+        for uid, veces in (doc.get("by_user") or {}).items():
+            por_usuario[nombres.get(uid, uid)] = int(veces or 0)
+            acumulado[uid] = acumulado.get(uid, 0) + int(veces or 0)
+        dias_out.append({
+            "day": doc.get("day"),
+            "total": int(doc.get("total", 0) or 0),
+            "by_kind": doc.get("by_kind", {}),
+            "cost_eur": _coste(doc),
+            "tokens_in": sum(int(v or 0) for v in (doc.get("tokens_in") or {}).values()),
+            "tokens_out": sum(int(v or 0) for v in (doc.get("tokens_out") or {}).values()),
+            "images": sum(int(v or 0) for v in (doc.get("images") or {}).values()),
+            "by_user": por_usuario,
+        })
+    return {
+        "dias": dias_out,
+        "por_usuario": sorted(
+            ({"id": uid, "nombre": nombres.get(uid, uid), "llamadas": v}
+             for uid, v in acumulado.items()),
+            key=lambda x: -x["llamadas"]),
+        # Se dice DESDE CUÁNDO hay datos. El contador diario empezó el
+        # 14/09/2026: antes de esa fecha no hay nada, y un informe que enseña
+        # cero sin decir por qué se lee como «ese día no se gastó».
+        "desde": filas[-1].get("day") if filas else None,
     }
 
 

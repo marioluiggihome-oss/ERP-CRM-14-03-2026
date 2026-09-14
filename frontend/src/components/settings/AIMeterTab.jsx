@@ -51,19 +51,25 @@ export default function AIMeterTab() {
   const [loading, setLoading] = useState(false);
   const [granting, setGranting] = useState(null); // user row para el popover
   const [soloCarpinteros, setSoloCarpinteros] = useState(false);
+  const [porDia, setPorDia] = useState({ dias: [], por_usuario: [], desde: null });
+  const [diaAbierto, setDiaAbierto] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [r1, r2, r3] = await Promise.all([
+      const [r1, r2, r3, r4] = await Promise.all([
         fetch(`${BASE}/api/admin/ai-usage/clients`, { headers: authHeaders() }),
         fetch(`${BASE}/api/admin/render-packs`, { headers: authHeaders() }),
         fetch(`${BASE}/api/admin/ai-usage`, { headers: authHeaders() }),
+        fetch(`${BASE}/api/admin/ai-usage/por-dia?dias=30`, { headers: authHeaders() }),
       ]);
       const d1 = await r1.json(); const d2 = await r2.json(); const d3 = await r3.json();
+      const d4 = await r4.json().catch(() => ({}));
       setData(d1.success ? d1 : { clients: [], cost_render: 0.12, month: '' });
       setPacks(d2.success ? d2.packs : []);
       if (d3.success) setAiSummary(d3);
+      // El día a día no puede tumbar la pestaña: si falla, se ve el resto.
+      setPorDia(d4 && d4.success ? d4 : { dias: [], por_usuario: [], desde: null });
     } catch { /* noop */ }
     finally { setLoading(false); }
   }, []);
@@ -111,6 +117,85 @@ export default function AIMeterTab() {
             <p className="text-xs text-slate-500">Consumo técnico por modelo y accesos directos a uso y facturación.</p>
           </div>
           <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">Coste técnico aprox.: {eur(aiSummary.real_cost)}</span>
+        </div>
+
+        {/* ─── GASTO DÍA A DÍA (master, 14/09/2026: «¿podemos saber los
+            tokens o usos de IA gastados al día?, y también por usuario y
+            día»). Hasta hoy el contador era MENSUAL: se veía el mes entero y
+            el día no existía. El día se empezó a guardar el 14/09/2026, así
+            que antes de esa fecha no hay nada — y se DICE, porque un informe
+            que enseña cero sin explicarlo se lee como «ese día no se gastó». */}
+        <div className="p-3 border-b border-slate-100">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+            <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+              <Cpu size={16} className="text-indigo-600" /> Gasto día a día
+            </h3>
+            {porDia.desde && (
+              <span className="text-[10px] text-slate-400 font-bold">
+                Hay registro desde el {porDia.desde}
+              </span>
+            )}
+          </div>
+          {porDia.dias.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Todavía no hay días registrados. El contador diario empieza con la
+              primera llamada a la IA a partir de este despliegue; el consumo
+              anterior solo está disponible por meses.
+            </p>
+          ) : (
+            <div className="overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100 text-slate-500">
+                  <tr>
+                    <th className="text-left px-2 py-1.5 font-black uppercase">Día</th>
+                    <th className="text-right px-2 py-1.5 font-black uppercase">Llamadas</th>
+                    <th className="text-right px-2 py-1.5 font-black uppercase">Imágenes</th>
+                    <th className="text-right px-2 py-1.5 font-black uppercase">Tokens</th>
+                    <th className="text-right px-2 py-1.5 font-black uppercase">Coste</th>
+                    <th className="text-left px-2 py-1.5 font-black uppercase">Quién</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porDia.dias.map(d => {
+                    const abierto = diaAbierto === d.day;
+                    const gente = Object.entries(d.by_user || {}).sort((a, b) => b[1] - a[1]);
+                    return (
+                      <tr key={d.day} className="border-b border-slate-100 align-top">
+                        <td className="px-2 py-1.5 font-mono font-bold text-slate-700">{d.day}</td>
+                        <td className="px-2 py-1.5 text-right font-black text-slate-800">{entero(d.total)}</td>
+                        <td className="px-2 py-1.5 text-right text-slate-600">{entero(d.images)}</td>
+                        <td className="px-2 py-1.5 text-right text-slate-600"
+                          title={`${entero(d.tokens_in)} de entrada · ${entero(d.tokens_out)} de salida`}>
+                          {entero((d.tokens_in || 0) + (d.tokens_out || 0))}
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-black text-slate-800">{eur(d.cost_eur)}</td>
+                        <td className="px-2 py-1.5 text-slate-600">
+                          {gente.length === 0 ? (
+                            <span className="text-slate-300">·</span>
+                          ) : (
+                            <>
+                              {(abierto ? gente : gente.slice(0, 2)).map(([quien, veces]) => (
+                                <span key={quien} className="inline-block mr-2 whitespace-nowrap">
+                                  {quien} <b className="font-mono">{entero(veces)}</b>
+                                </span>
+                              ))}
+                              {gente.length > 2 && (
+                                <button type="button"
+                                  onClick={() => setDiaAbierto(abierto ? null : d.day)}
+                                  className="text-indigo-600 font-bold underline">
+                                  {abierto ? 'ver menos' : `+${gente.length - 2} más`}
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-slate-50/60">
