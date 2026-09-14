@@ -51,6 +51,7 @@ import { getToken } from '../services/api';
 import { guardarSesion, leerSesion, irA } from '../services/navegacion';
 import { diagnosticarRed, esFalloDeRed } from '../services/diagnostico';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
+import ConsumoIADelDia from './ConsumoIADelDia';
 // La revisión de la relación NO se reescribe aquí: es la misma pantalla que usan
 // Cascos y Cocina Montada 3, con sus avisos (la mano sin decidir, el candado del
 // coste, la tarifa). Dos volcados distintos acabarían separándose con el tiempo,
@@ -857,6 +858,24 @@ export default function AIRenderStudio({ state, setState }) {
   const [orbitOn, setOrbitOn] = useState(false);
   // Visor interactivo: zoom + pan
   const [interactiveMode, setInteractiveMode] = useState(false);
+  /* VER EL DIBUJO A TOPE DE TAMAÑO (master, 14/09/2026: «podemos poner un
+     botón de ver a tope de tamaño el dibujo renderizado, ocupando toda la
+     pantalla»).
+     OJO, QUE ESTO YA EXISTIÓ Y SE QUITÓ A PROPÓSITO el 25/08: entonces se
+     llamaba «Pantalla completa» y había DOS botones con ese nombre en la misma
+     pantalla haciendo cosas distintas —uno expandía el navegador y este abría
+     una capa con la foto—, y encima cerrar la capa te sacaba de la pantalla
+     completa del navegador aunque hubieras entrado con el otro. Vuelve porque
+     el master lo pide, pero con OTRO NOMBRE («Ampliar») y sin tocar la
+     pantalla completa del navegador: son dos cosas distintas y ahora se
+     llaman distinto. */
+  const [dibujoAmpliado, setDibujoAmpliado] = useState(false);
+  useEffect(() => {
+    if (!dibujoAmpliado) return undefined;
+    const alPulsar = (e) => { if (e.key === 'Escape') setDibujoAmpliado(false); };
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, [dibujoAmpliado]);
   /* EL VISOR INTERACTIVO NO FUNCIONABA CON LOS DEDOS (master, 14/09/2026:
      «este botón no funciona bien», señalando el visor interactivo).
 
@@ -4674,6 +4693,16 @@ export default function AIRenderStudio({ state, setState }) {
                 </span>
               )
             )}
+            {/* EL GASTO DE IA, AL LADO DE LOS CRÉDITOS (master, 14/09/2026:
+                «pon un botón solo para máster para ver estos gastos con un
+                candado y pulsando shift»). Aquí es donde se mira lo que queda,
+                así que es donde se busca lo que se ha ido. Va detrás del
+                candado de siempre —Shift+clic o mantener pulsado— porque por
+                ahí salen los euros de la casa y quién los gasta, y esta
+                pantalla se enseña con clientes delante (regla 9). El botón NO
+                existe para quien no es master, y el cierre de verdad está en
+                el servidor (`require_master`). */}
+            <ConsumoIADelDia esMaster={isMaster} apiUrl={API_URL} cabeceras={getAuthHeaders} />
           </div>
 
           {/* «MIS RENDERS», ARRIBA Y A LA DERECHA. El master, en una tablet de
@@ -5789,6 +5818,13 @@ export default function AIRenderStudio({ state, setState }) {
                     en una tablet no existe y en un portátil no lo adivina
                     nadie: el botón se encendía y parecía roto. Con los botones
                     delante, el visor se usa igual con dedos que con ratón. */}
+                <button onClick={() => setDibujoAmpliado(true)}
+                  disabled={!currentImage()}
+                  data-testid="btn-ampliar-dibujo"
+                  title="Ver el dibujo a tope de tamaño, ocupando toda la pantalla. No es la pantalla completa del navegador: solo agranda la imagen."
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">
+                  <Maximize2 size={12} /> <span className="hidden sm:inline truncate">Ampliar</span>
+                </button>
                 {interactiveMode && (
                   <>
                     <button onClick={() => setZoom(z => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
@@ -6717,6 +6753,31 @@ export default function AIRenderStudio({ state, setState }) {
           imagen={presupuestoImagen} state={state} entrada={presupuestoEntrada} cliente={cliente} referencia={ref} />
       </React.Suspense>}
       <RecargarRenders abierto={verRecarga} onClose={() => setVerRecarga(false)} />
+
+      {/* EL DIBUJO A TOPE DE TAMAÑO. Fondo negro y la imagen en `contain`: se
+          ve entera y lo más grande que cabe, sin recortarla ni deformarla —que
+          en una cocina es el ancho de un mueble, no un detalle estético.
+          Se cierra tocando el fondo, con la X o con Escape: en una tablet no
+          hay Escape, y una capa a pantalla completa sin forma clara de salir
+          da sensación de que el ERP se ha colgado.
+          Y NO toca la pantalla completa del navegador: ese es el otro botón.
+          Mezclarlos fue el fallo del 25/08. */}
+      {dibujoAmpliado && currentImage() && (
+        <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+          data-testid="dibujo-ampliado"
+          onClick={() => setDibujoAmpliado(false)}>
+          <img src={assetSrc(currentImage())} alt="Render a tamaño completo"
+            className="max-w-full max-h-full object-contain" />
+          <button onClick={(e) => { e.stopPropagation(); setDibujoAmpliado(false); }}
+            title="Cerrar (o toca el fondo)"
+            className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur">
+            <X size={20} />
+          </button>
+          <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white/10 text-white/70 text-[11px] font-bold backdrop-blur pointer-events-none">
+            Toca para cerrar
+          </span>
+        </div>
+      )}
     </div>
   );
 }

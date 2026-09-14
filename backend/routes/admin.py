@@ -322,8 +322,25 @@ async def ai_usage(user=Depends(require_admin)):
 
 
 @router.get("/ai-usage/por-dia")
-async def ai_usage_por_dia(dias: int = 30, user=Depends(require_admin)):
-    """Gasto de IA día a día, y quién lo gastó cada día.
+async def ai_usage_por_dia(dias: int = 30, user=Depends(require_master)):
+    """Gasto de IA día a día, y quién lo gastó cada día. SOLO MASTER.
+
+    El master, 14/09/2026: «pon un botón solo para máster para ver estos gastos
+    con un candado». Aquí se cierra de verdad, no solo el botón: si únicamente
+    se escondiera en pantalla, la URL seguiría contestando a cualquiera con
+    sesión — es el fallo del motor de render (regla 11) y el del
+    Presupuestador, calcados.
+
+    `require_admin` NO vale para esto: por ahí pasan gerente y director
+    comercial (regla 8), y aquí se ve lo que la casa se gasta en IA y QUIÉN lo
+    gasta. Se usa `require_master`, que YA es esa puerta (`services.master`):
+    escribir la comprobación otra vez aquí sería tener dos sitios donde
+    apretarla y olvidarse de uno.
+
+    Los endpoints de `/ai-usage` que ya existían se quedan como estaban: este
+    es nuevo y no lo usa nadie todavía, así que apretarlo no deja fuera a nadie
+    que hoy entre. Estrechar los viejos «ya que estamos» es justo lo que este
+    repo no hace sin preguntar (regla 8b).
 
     Los ids de usuario se traducen a nombres AQUÍ y no en la pantalla: un
     informe de «quién gasta» lleno de identificadores no lo lee nadie. Si un id

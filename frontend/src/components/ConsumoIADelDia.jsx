@@ -1,0 +1,195 @@
+/*
+ * © 2024-2026 ALEMAR FUTURE 07 SLU. Todos los derechos reservados. [ALEMAR-COPYRIGHT]
+ * Software propietario y confidencial. Ver LICENSE.
+ * Prohibida su copia, distribución, modificación o uso sin autorización
+ * escrita del titular.
+ */
+/**
+ * EL GASTO DE IA, DETRÁS DE UN CANDADO Y SOLO PARA EL MASTER.
+ *
+ * El master, 14/09/2026: «pon un botón solo para máster para ver estos gastos
+ * con un candado y pulsando shift».
+ *
+ * POR QUÉ UN CANDADO Y NO UN BOTÓN NORMAL: por aquí se ve lo que la casa se
+ * gasta en IA y QUIÉN lo gasta. Es la misma clase de dato que el coste y el
+ * margen de Rentabilidad, y se protege igual (regla 9): no se bloquea la
+ * pantalla, se OCULTAN los importes hasta que alguien hace un gesto
+ * deliberado. Así el Estudio 3D se puede enseñar con un cliente delante sin
+ * que aparezcan los euros de la casa.
+ *
+ * EL GESTO ES EL MISMO DEL RESTO DEL ERP —Shift+clic, o mantener pulsado un
+ * segundo— y eso no es un detalle: UNA TABLET NO TIENE TECLA SHIFT. Con solo
+ * Shift, en la tablet del master el candado no se abriría nunca y el botón
+ * parecería roto. Por eso se usa `usePulsacionLarga`, que ya resuelve las dos
+ * formas en un solo sitio.
+ *
+ * Y EL CIERRE DE VERDAD ESTÁ EN EL SERVIDOR: `/api/admin/ai-usage/por-dia` va
+ * con `require_master`. Si solo se escondiera el botón, la URL seguiría
+ * contestando a cualquiera con sesión — el fallo del motor de render (regla
+ * 11), calcado.
+ */
+import React, { useState, useCallback } from 'react';
+import { Lock, Unlock, X, Loader } from 'lucide-react';
+import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
+
+const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', {
+  minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+const entero = (n) => (Number(n) || 0).toLocaleString('es-ES');
+
+export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
+  const [abierto, setAbierto] = useState(false);
+  const [datos, setDatos] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+  const [diaAbierto, setDiaAbierto] = useState(null);
+
+  const abrir = useCallback(async () => {
+    setAbierto(true);
+    if (datos || cargando) return;
+    setCargando(true); setError(null);
+    try {
+      const r = await fetch(`${apiUrl}/api/admin/ai-usage/por-dia?dias=30`,
+        { headers: cabeceras() });
+      if (r.status === 403) { setError('Este consumo es solo del master.'); return; }
+      if (!r.ok) { setError(`No se pudo leer el consumo (HTTP ${r.status}).`); return; }
+      const d = await r.json();
+      setDatos(d && d.success ? d : { dias: [], por_usuario: [], desde: null });
+    } catch {
+      setError('Error de conexión al leer el consumo.');
+    } finally { setCargando(false); }
+  }, [apiUrl, cabeceras, datos, cargando]);
+
+  const largo = usePulsacionLarga(abrir);
+
+  // El botón no existe para quien no es master: enseñarlo apagado sería
+  // contarle que hay un sitio con los euros de la casa.
+  if (!esMaster) return null;
+
+  const dias = (datos && datos.dias) || [];
+  const hoy = dias[0];
+
+  return (
+    <>
+      <button
+        type="button"
+        {...largo.props}
+        onClick={(e) => {
+          if (largo.consumir()) return;   // ya lo ha abierto la pulsación larga
+          if (e.shiftKey) { abrir(); return; }
+          // Un clic suelto NO abre: es un candado, no un botón.
+          setError(null);
+          setAbierto(false);
+          window.alert(`Consumo de IA — ${AYUDA_CANDADO}.`);
+        }}
+        data-testid="candado-consumo-ia"
+        title={`Gasto de IA día a día (solo master). ${AYUDA_CANDADO}`}
+        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black bg-slate-100 text-slate-500 hover:bg-slate-200">
+        {abierto ? <Unlock size={12} /> : <Lock size={12} />}
+        <span className="hidden sm:inline">Gasto IA</span>
+      </button>
+
+      {abierto && (
+        <div className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-3"
+          onClick={() => setAbierto(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="p-3 border-b border-slate-200 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-800">Gasto de IA, día a día</h3>
+                <p className="text-[11px] text-slate-500">
+                  Interno · no sale en nada que vea un cliente
+                  {datos && datos.desde ? ` · hay registro desde el ${datos.desde}` : ''}
+                </p>
+              </div>
+              <button onClick={() => setAbierto(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100" title="Cerrar">
+                <X size={16} className="text-slate-500" />
+              </button>
+            </div>
+
+            {cargando ? (
+              <div className="p-8 text-center text-slate-500">
+                <Loader size={22} className="animate-spin mx-auto mb-2" /> Leyendo el consumo…
+              </div>
+            ) : error ? (
+              <div className="p-6 text-center text-sm font-bold text-error-600">{error}</div>
+            ) : dias.length === 0 ? (
+              <div className="p-6 text-sm text-slate-500">
+                Todavía no hay días registrados. El contador diario empieza con la
+                primera llamada a la IA desde el 14/09/2026; lo anterior solo está
+                por meses, en el panel Master.
+              </div>
+            ) : (
+              <div className="overflow-auto">
+                {hoy && (
+                  <div className="p-3 bg-slate-50 border-b border-slate-200 flex gap-4 flex-wrap">
+                    <div>
+                      <div className="text-[10px] font-black uppercase text-slate-400">Hoy ({hoy.day})</div>
+                      <div className="text-lg font-black text-dato-900">{eur(hoy.cost_eur)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase text-slate-400">Llamadas</div>
+                      <div className="text-lg font-black text-slate-700">{entero(hoy.total)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase text-slate-400">Imágenes</div>
+                      <div className="text-lg font-black text-slate-700">{entero(hoy.images)}</div>
+                    </div>
+                  </div>
+                )}
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-100 text-slate-500 sticky top-0">
+                    <tr>
+                      <th className="text-left px-2 py-1.5 font-black uppercase">Día</th>
+                      <th className="text-right px-2 py-1.5 font-black uppercase">Llam.</th>
+                      <th className="text-right px-2 py-1.5 font-black uppercase">Imág.</th>
+                      <th className="text-right px-2 py-1.5 font-black uppercase">Tokens</th>
+                      <th className="text-right px-2 py-1.5 font-black uppercase">Coste</th>
+                      <th className="text-left px-2 py-1.5 font-black uppercase">Quién</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {dias.map(d => {
+                      const gente = Object.entries(d.by_user || {}).sort((a, b) => b[1] - a[1]);
+                      const todo = diaAbierto === d.day;
+                      return (
+                        <tr key={d.day} className="border-b border-slate-100">
+                          <td className="px-2 py-1.5 font-bold text-slate-700">{d.day}</td>
+                          <td className="px-2 py-1.5 text-right font-black text-slate-800">{entero(d.total)}</td>
+                          <td className="px-2 py-1.5 text-right text-slate-600">{entero(d.images)}</td>
+                          <td className="px-2 py-1.5 text-right text-slate-600"
+                            title={`${entero(d.tokens_in)} entrada · ${entero(d.tokens_out)} salida`}>
+                            {entero((d.tokens_in || 0) + (d.tokens_out || 0))}
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-black text-dato-900">{eur(d.cost_eur)}</td>
+                          <td className="px-2 py-1.5 font-sans text-slate-600">
+                            {gente.length === 0 ? <span className="text-slate-300">·</span> : (
+                              <>
+                                {(todo ? gente : gente.slice(0, 2)).map(([q, v]) => (
+                                  <span key={q} className="inline-block mr-2 whitespace-nowrap">
+                                    {q} <b className="font-mono">{entero(v)}</b>
+                                  </span>
+                                ))}
+                                {gente.length > 2 && (
+                                  <button type="button"
+                                    onClick={() => setDiaAbierto(todo ? null : d.day)}
+                                    className="text-accion-600 font-bold underline">
+                                    {todo ? 'ver menos' : `+${gente.length - 2}`}
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

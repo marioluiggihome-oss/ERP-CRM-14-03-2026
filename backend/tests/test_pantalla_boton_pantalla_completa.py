@@ -53,15 +53,50 @@ def test_el_estudio_usa_el_boton_compartido_de_pantalla_completa():
 
 
 def test_no_vuelve_la_capa_negra_que_expandia_el_render():
-    """Nada de `showFullscreen` ni de una capa a pantalla completa con la foto."""
+    """LO QUE SE PROHIBIÓ EL 25/08 NO ERA LA CAPA: ERA LA CONFUSIÓN.
+
+    Esta prueba prohibía CUALQUIER capa a pantalla completa en el Estudio 3D.
+    El 14/09/2026 el master pidió lo contrario: «podemos poner un botón de ver
+    a tope de tamaño el dibujo renderizado, ocupando toda la pantalla». No es
+    que se arrepintiera de lo del 25/08 — lo que molestaba entonces era otra
+    cosa, y está escrito en la petición original: «lo quiero para que expanda
+    la pantalla completa, NO para expandir el render; el render ya tiene su
+    propio botón». Había DOS botones llamados «Pantalla completa» haciendo
+    cosas distintas, y cerrar la capa te sacaba del modo pantalla completa del
+    navegador aunque hubieras entrado con el otro.
+
+    O sea que el daño real eran esas dos cosas, no la capa. Se vigilan ellas:
+    el botón viejo no vuelve, y el nuevo ni se llama igual ni toca el modo
+    pantalla completa del navegador. Lo demás está en
+    `test_pantalla_candado_gasto_ia_y_ampliar.py`.
+
+    Prohibir la capa a secas habría obligado a borrar esta prueba para darle al
+    master lo que pide — y borrar un candado para ponerlo verde es exactamente
+    lo que este repo no hace.
+    """
     cuerpo = _lee(ESTUDIO)
     for rastro in ("showFullscreen", "entrarEnPantallaCompleta", "salirDePantallaCompleta"):
         assert rastro not in cuerpo, (
-            f"ha vuelto `{rastro}`: eso es la capa negra que expandía el RENDER. "
-            "El master pidió que ese botón expanda la PANTALLA; para el render "
-            "está el visor interactivo (zoom + pan), que ya existe.")
-    assert "z-[9999]" not in cuerpo, (
-        "hay una capa a pantalla completa nueva en el Estudio 3D")
+            f"ha vuelto `{rastro}`: ese era el botón que se llamaba «Pantalla "
+            "completa» y expandía el RENDER, al lado del que expande la "
+            "pantalla. Para ampliar el dibujo está «Ampliar».")
+    # La capa nueva SÍ puede existir, pero no puede llamarse como la otra ni
+    # tocar el modo pantalla completa del navegador: mezclarlos fue el fallo.
+    if 'data-testid="dibujo-ampliado"' in cuerpo:
+        i = cuerpo.index('data-testid="btn-ampliar-dibujo"')
+        boton = cuerpo[i - 500:i + 600]
+        assert "Pantalla completa" not in boton, (
+            "vuelve a haber dos botones «Pantalla completa» haciendo cosas "
+            "distintas en la misma barra")
+        j = cuerpo.index("setDibujoAmpliado(true)")
+        assert "requestFullscreen" not in cuerpo[j - 300:j + 300], (
+            "ampliar el dibujo vuelve a tocar la pantalla completa del "
+            "navegador: cerrar la capa sacaría del modo pantalla completa a "
+            "quien hubiera entrado con el otro botón")
+    else:
+        assert "z-[9999]" not in cuerpo, (
+            "hay una capa a pantalla completa nueva en el Estudio 3D que no es "
+            "la de «Ampliar»: si es a propósito, hay que decir aquí qué es")
 
 
 def test_el_render_conserva_su_propio_boton_de_ampliar():
