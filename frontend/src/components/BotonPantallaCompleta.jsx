@@ -105,8 +105,18 @@ export default function BotonPantallaCompleta({
       type="button"
       onClick={alternar}
       className={className || 'flex flex-col items-center gap-1 p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 transition-colors duration-200'}
-      aria-label={activa ? 'Salir de pantalla completa' : 'Pantalla completa'}
-      title={activa ? 'Salir de pantalla completa' : 'Pantalla completa (oculta las barras del navegador)'}
+      /* EL NOMBRE QUE SE ANUNCIA SALE DEL QUE SE VE.
+         Estaba escrito a mano —«Pantalla completa»— mientras el rótulo visible
+         se pasa por `textos`, así que al renombrar el botón a «Pantalla full»
+         (master, 14/09/2026) el lector de pantalla habría seguido diciendo
+         «Pantalla completa»: quien no ve el botón oiría un nombre que no está
+         escrito en ninguna parte, y quien lo ve no encontraría por voz el que
+         lee. Dos rótulos para un botón acaban separándose siempre; aquí se
+         separaban ya. */
+      aria-label={activa ? textos.dentro : textos.fuera}
+      title={activa
+        ? textos.dentro
+        : `${textos.fuera} (oculta las barras del navegador)`}
       data-testid="toggle-pantalla-completa"
     >
       {activa ? <Minimize2 size={18} /> : <Maximize2 size={18} />}

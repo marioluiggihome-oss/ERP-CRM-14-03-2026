@@ -30,6 +30,7 @@ manera de montar React aquí, pero un borrado accidental o un «lo dejo otra vez
 como estaba» se cazan igual, y en un segundo.
 """
 import os
+import re
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ESTUDIO = os.path.join(RAIZ, "frontend", "src", "components", "AIRenderStudio.jsx")
@@ -121,12 +122,31 @@ def test_el_boton_compartido_deja_poner_el_rotulo_de_cada_sitio():
         "`BotonPantallaCompleta` ha vuelto a llevar el rótulo escrito a fuego. "
         "En el carril va a 7 px en mayúsculas y en la barra del render a 11 px: "
         "con uno solo, en el Estudio 3D salía «Pantalla» en microscópico.")
-    # Y el del Estudio 3D tiene que pedir el rótulo largo, que es el que se lee.
+    # Y el del Estudio 3D tiene que pedir SU rótulo, que es el largo.
+    #
+    # Antes esto exigía la palabra «Pantalla completa» LITERAL. El 14/09/2026 el
+    # master lo renombró a «Pantalla full», así que el candado se puso rojo por
+    # un cambio pedido — y un candado clavado a un rótulo presiona para no poder
+    # cambiar nunca el rótulo. Lo que hay que proteger es que el Estudio 3D pida
+    # el suyo y no se quede con el del carril: allí va a 7 px en mayúsculas y
+    # aquí a 11 px, y con uno solo en el Estudio 3D salía «Pantalla» en
+    # microscópico.
     estudio = _lee(ESTUDIO)
     trozo = estudio[estudio.index("<BotonPantallaCompleta"):]
     trozo = trozo[:trozo.index("/>") + 2]
-    assert "Pantalla completa" in trozo, (
-        "el botón del Estudio 3D ya no dice «Pantalla completa»")
+    assert "textos={{" in trozo, (
+        "el botón del Estudio 3D ya no pide su propio rótulo: se queda con el "
+        "corto del carril")
+    m = re.search(r"fuera:\s*'([^']+)'", trozo)
+    assert m, "no se puede leer el rótulo que pide el Estudio 3D: %s" % trozo
+    assert len(m.group(1)) > len("Pantalla"), (
+        "el Estudio 3D pide un rótulo tan corto como el del carril («%s»): ahí "
+        "se lee en microscópico" % m.group(1))
+    # Y el nombre que se ANUNCIA no puede volver a escribirse a mano: si se
+    # separa del visible, el lector de pantalla dice uno y la pantalla otro.
+    assert "aria-label={activa ? textos.dentro : textos.fuera}" in cuerpo, (
+        "el `aria-label` ha vuelto a estar escrito a fuego: al renombrar el "
+        "botón, quien no lo ve oiría un nombre que ya no existe")
 
 
 # La palabra «Créditos» en el móvil la vigila
