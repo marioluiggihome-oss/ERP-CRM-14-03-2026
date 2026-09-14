@@ -11,7 +11,7 @@ import json
 import uuid
 import base64
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 
 try:
@@ -280,36 +280,45 @@ def _es_del_mueble_detectado(producto: dict, width: int, tipo: str) -> bool:
 
 
 async def search_product_in_catalog(code: str, width: int = None, height: int = None,
-                                     library: str = None, tipo: str = None) -> dict:
-    """
-    Busca un producto en el catálogo.
-    Orden: código exacto -> referencia -> variantes de código -> TIPO+ANCHO -> dimensiones.
-    Filtra por biblioteca si se especifica.
+                                     library: str = None, tipo: str = None
+                                     ) -> Tuple[Optional[dict], Optional[str]]:
+    """Busca en catálogo y devuelve (producto, modo_de_coincidencia).
 
-    OJO CON EL ORDEN: los pasos 1 y 2 son IDENTIDAD (el código existe tal cual).
-    Del 3 en adelante son HEURÍSTICA sobre un código que la IA ha DEDUCIDO, y
-    todo lo que salga de ahí se comprueba contra el ancho y la familia del
-    módulo detectado (ver `_es_del_mueble_detectado`). Sin esa comprobación, un
-    código inventado emparejaba con un producto real y le ponía su precio.
+    Solo codigo_exacto, referencia_exacta y variante_codigo pueden confirmar
+    automáticamente una referencia que el modelo haya leído como ESCRITA.
+    tipo_ancho y dimensiones son propuestas para revisión: encontrar algo
+    parecido no demuestra que sea el mueble anotado.
     """
-    code = (code or '').upper().strip()
+    raw_code = str(code or '').upper().strip()
+    # Los croquis reales traen «A-60 I», «ACP.90» o «B.60 I». Primero se
+    # conserva el literal para la búsqueda exacta y después se compacta para
+    # comparar la variante manuscrita con el código de catálogo.
+    compact_code = re.sub(r'[\s._-]+', '', raw_code)
 
     base_filter = {}
     if library:
-        base_filter["library"] = library.upper()
+        base_filter["library"] = str(library).upper()
 
+    if raw_code:
+        product = await db.products.find_one({**base_filter, "code": raw_code}, {"_id": 0})
+        if product:
+            return product, "codigo_exacto"
+
+        product = await db.products.find_one({**base_filter, "reference": raw_code}, {"_id": 0})
+        if product:
+            return product, "referencia_exacta"
+
+        if compact_code != raw_code:
+            product = await db.products.find_one({**base_filter, "code": compact_code}, {"_id": 0})
+            if product:
+                return product, "variante_codigo"
+            product = await db.products.find_one({**base_filter, "reference": compact_code}, {"_id": 0})
+            if product:
+                return product, "variante_codigo"
+
+    code = compact_code
     if code:
-        # 1. Búsqueda exacta
-        product = await db.products.find_one({**base_filter, "code": code}, {"_id": 0})
-        if product:
-            return product
-
-        # 2. Buscar con referencia
-        product = await db.products.find_one({**base_filter, "reference": code}, {"_id": 0})
-        if product:
-            return product
-
-        # 3. Buscar variantes del código (formato ZC: 9A1P600, etc.)
+        # Variantes ZC.
         match = re.match(r'^(\d+)([A-Z]+)(\d*)([A-Z]*)(\d+)$', code)
         if match:
             tipo_code = match.group(2)
@@ -318,59 +327,53 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
             ancho = match.group(5)
 
             pattern = f".*{tipo_code}.*{num_puertas}.*{tipo_puerta}.*{ancho}$"
-            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern, "$options": "i"}}, {"_id": 0})
+            product = await db.products.find_one(
+                {**base_filter, "code": {"$regex": pattern, "$options": "i"}}, {"_id": 0})
             if _es_del_mueble_detectado(product, width, tipo):
-                return product
+                return product, "variante_codigo"
 
             pattern_simple = f".*{tipo_code}.*{ancho}$"
-            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_simple, "$options": "i"}}, {"_id": 0})
+            product = await db.products.find_one(
+                {**base_filter, "code": {"$regex": pattern_simple, "$options": "i"}}, {"_id": 0})
             if _es_del_mueble_detectado(product, width, tipo):
-                return product
+                return product, "variante_codigo"
 
-        # 3b. Variantes de código MV: LETRAS iniciales + ANCHO en cm, con o sin
-        #     sufijo D/I (el usuario escribe "A60I", "A-60 I", "B60D"; el catálogo
-        #     guarda "A60D/I"). Normalizamos y buscamos por prefijo letras+ancho para
-        #     que el código escrito a mano en el croquis case con el producto real.
+        # Variantes MV con o sin mano y altura.
         mv = re.match(r'^([A-Z]+?)(\d{2,3})', code)
         if mv:
             letras, ancho_mv = mv.group(1), mv.group(2)
-            # Prefijo exacto de familia + ancho; el resto (D/I, sufijos) es libre.
-            # Puede haber VARIAS alturas del mismo mueble (A60D/I-70 y
-            # A60D/I-90): se traen todas y manda la altura pedida.
             pattern_mv = f"^{letras}{ancho_mv}(D/I|D|I)?([-_]\\d{{2,3}})?$"
             productos = await db.products.find(
-                {**base_filter, "code": {"$regex": pattern_mv, "$options": "i"}}, {"_id": 0}
+                {**base_filter, "code": {"$regex": pattern_mv, "$options": "i"}},
+                {"_id": 0},
             ).to_list(20)
             elegido = _elige_por_altura(productos, height)
             if _es_del_mueble_detectado(elegido, width, tipo):
-                return elegido
-            # Fallback: mismas letras iniciales + mismo ancho, sufijo cualquiera.
-            pattern_mv2 = f"^{letras}{ancho_mv}"
-            productos = await db.products.find(
-                {**base_filter, "code": {"$regex": pattern_mv2, "$options": "i"}}, {"_id": 0}
-            ).to_list(20)
-            elegido = _elige_por_altura(productos, height)
-            if _es_del_mueble_detectado(elegido, width, tipo):
-                return elegido
+                return elegido, "variante_codigo"
 
-    # 4. Emparejamiento por TIPO + ANCHO (clave para que funcione en MV y ZC
-    #    aunque el código sugerido por la IA no exista en esa biblioteca).
+            productos = await db.products.find(
+                {**base_filter, "code": {"$regex": f"^{letras}{ancho_mv}", "$options": "i"}},
+                {"_id": 0},
+            ).to_list(20)
+            elegido = _elige_por_altura(productos, height)
+            if _es_del_mueble_detectado(elegido, width, tipo):
+                return elegido, "variante_codigo"
+
     product = await _match_by_type_and_width(tipo, width, height, base_filter)
     if product:
-        return product
+        return product, "tipo_ancho"
 
-    # 5. Último recurso: por dimensiones (ancho + alto aproximados).
     if width and height:
         products = await db.products.find({
             **base_filter,
             "width": {"$gte": width - 50, "$lte": width + 50},
-            "height": {"$gte": height - 100, "$lte": height + 100}
+            "height": {"$gte": height - 100, "$lte": height + 100},
         }, {"_id": 0}).limit(5).to_list(5)
         elegido = _elige_por_altura(products, height)
         if _es_del_mueble_detectado(elegido, width, tipo):
-            return elegido
+            return elegido, "dimensiones"
 
-    return None
+    return None, None
 
 
 def _dim_mm(valor, respaldo=None, minimo=0, maximo=0):
@@ -493,14 +496,27 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
         height = alto_cm * 10  # cm → mm para búsqueda en catálogo
         fondo_cm = int(raw_fondo / 10) if raw_fondo and raw_fondo > 200 else int(raw_fondo)
 
-        catalog_product = await search_product_in_catalog(
+        catalog_product, match_mode = await search_product_in_catalog(
             code, width, height, library, tipo=item.get('tipo')
         )
-        
+
         enriched_item = {**item}
-        
+        codigo_fuente = str(item.get('codigo_fuente') or '').strip().lower()
+        confianza = str(item.get('confianza') or '').strip().upper()
+        match_de_identidad = match_mode in {
+            'codigo_exacto', 'referencia_exacta', 'variante_codigo'
+        }
+        confirmado = (
+            bool(catalog_product)
+            and codigo_fuente == 'escrito'
+            and match_de_identidad
+            and confianza != 'BAJA'
+        )
+
         if catalog_product:
             enriched_item['producto_encontrado'] = True
+            enriched_item['coincidencia_catalogo'] = match_mode
+            enriched_item['confirmado_presupuesto'] = confirmado
             enriched_item['codigo_catalogo'] = catalog_product.get('code', code)
             enriched_item['nombre_catalogo'] = catalog_product.get('name', '')
             # `puntos` = puntos del catálogo; `precio_pvp` = EUR (puntos × valor punto).
@@ -526,16 +542,20 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             # "no encontrado" ni "encontrado"; se marca aparte para la sección propia.
             enriched_item['producto_encontrado'] = False
             enriched_item['es_electrodomestico'] = True
+            enriched_item['coincidencia_catalogo'] = None
+            enriched_item['confirmado_presupuesto'] = False
             enriched_item['codigo_catalogo'] = code
-            enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {item.get('subtipo', '').replace('_', ' ')}".strip()
+            enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {str(item.get('subtipo') or '').replace('_', ' ')}".strip()
             enriched_item['puntos'] = 0
             enriched_item['precio_pvp'] = 0
             enriched_item['mensaje'] = "Electrodoméstico / accesorio (no es mueble del catálogo)"
         else:
             enriched_item['producto_encontrado'] = False
             enriched_item['es_electrodomestico'] = False
+            enriched_item['coincidencia_catalogo'] = None
+            enriched_item['confirmado_presupuesto'] = False
             enriched_item['codigo_catalogo'] = code
-            enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {item.get('subtipo', '').replace('_', ' ')}"
+            enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {str(item.get('subtipo') or '').replace('_', ' ')}"
             enriched_item['puntos'] = 0
             enriched_item['precio_pvp'] = 0
             enriched_item['mensaje'] = f"Producto no encontrado en catálogo {library or 'ZC'} - revisar manualmente"
@@ -578,6 +598,8 @@ def group_identical_furniture(enriched_list: list) -> list:
             ancho,
             altura,
             item.get('precio_pvp', 0),
+            item.get('confirmado_presupuesto') is True,
+            item.get('pared'),
         )
 
         if key in index_by_key:
@@ -622,7 +644,11 @@ Para cada mueble detectado proporciona:
 - alto_estimado: altura en cm
 - fondo_estimado: fondo en cm (33 para altos estándar, 58 para bajos)
 - posicion: ubicación en el plano
-- codigo_sugerido: USAR EL SISTEMA DE CÓDIGOS DESCRITO ARRIBA
+- codigo_sugerido: código leído; si no existe escrito, la mejor propuesta o null
+- codigo_fuente: "escrito" si lo has transcrito del plano, "inferido" si lo has
+  deducido visualmente, o "ausente" si no hay código. NUNCA marques "escrito"
+  para un código que has construido tú.
+- ancho_fuente: "escrito", "codigo", "estimado" o "ausente"
 - confianza: ALTA/MEDIA/BAJA
 
 RAZONA DE FORMA METÓDICA ANTES DE RESPONDER (piensa paso a paso):
@@ -693,6 +719,8 @@ Responde SOLO con JSON válido:
       "fondo_estimado": 33,
       "posicion": "sobre fregadero",
       "codigo_sugerido": "9A1P600",
+      "codigo_fuente": "inferido",
+      "ancho_fuente": "estimado",
       "confianza": "ALTA"
     }
   ],
@@ -712,6 +740,35 @@ Responde SOLO con JSON válido:
 # Límite máximo: 10MB
 MAX_KITCHEN_IMAGE = 10 * 1024 * 1024
 MAX_KITCHEN_BASE64 = MAX_KITCHEN_IMAGE * 4 // 3
+MAX_KITCHEN_FILES = 12
+ALLOWED_KITCHEN_IMAGE_TYPES = {
+    'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+}
+
+
+def _normalizar_biblioteca(value: Optional[str]) -> str:
+    library = str(value or 'ZC').strip().upper()
+    if library not in {'ZC', 'MV'}:
+        raise HTTPException(status_code=422, detail='Biblioteca no válida. Usa ZC o MV.')
+    return library
+
+
+async def _leer_imagen_plano(file: UploadFile) -> bytes:
+    mime = str(file.content_type or '').split(';', 1)[0].strip().lower()
+    if mime not in ALLOWED_KITCHEN_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f'Formato no admitido en {file.filename or "la imagen"}. Usa JPG, PNG, WEBP o HEIC.',
+        )
+    content = await file.read(MAX_KITCHEN_IMAGE + 1)
+    if not content:
+        raise HTTPException(status_code=400, detail=f'{file.filename or "La imagen"} está vacía.')
+    if len(content) > MAX_KITCHEN_IMAGE:
+        raise HTTPException(
+            status_code=413,
+            detail=f'{file.filename or "La imagen"} supera el máximo de 10 MB.',
+        )
+    return content
 
 
 # Croquis de taller: una foto de un cuaderno con una tabla escrita a mano, en
@@ -803,6 +860,9 @@ por proporción, usando anchos estándar (300/400/450/500/600/700/800/900/1000/1
 
 - El sistema emparejará "codigo_sugerido" contra el catálogo MV; por eso transcribir
   bien el código escrito es lo más importante para acertar el mueble y su precio.
+- Para cada módulo con referencia visible devuelve "codigo_fuente": "escrito".
+  Si no se lee con seguridad, devuelve null y "codigo_fuente": "ausente"; nunca
+  conviertas una forma dudosa en una referencia presupuestable.
 """
     return ANALYSIS_PROMPT_SINGLE + CROQUIS_A_MANO + CRITERIOS_ANALISIS
 
@@ -852,10 +912,10 @@ async def analyze_kitchen_plan(
             raise HTTPException(status_code=503, detail="Vision IA no configurada. Falta la clave del motor de IA (contacta con el administrador)")
         
         # Normalizar biblioteca
-        active_library = (library or "ZC").upper()
+        active_library = _normalizar_biblioteca(library)
         logger.info(f"Analyzing kitchen plan for library: {active_library}")
-        
-        file_content = await file.read()
+
+        file_content = await _leer_imagen_plano(file)
         base64_image = base64.b64encode(file_content).decode('utf-8')
         
         response_text = await analyze_image_with_gemini(
@@ -889,8 +949,19 @@ async def analyze_kitchen_plan(
             data['muebles_detectados'] = group_identical_furniture(enriched)
 
             # Los contadores/totales cuentan por CANTIDAD (no por filas).
-            total_pvp = sum(m.get('precio_pvp', 0) * m.get('cantidad', 1) for m in data['muebles_detectados'])
-            productos_encontrados = sum(m.get('cantidad', 1) for m in data['muebles_detectados'] if m.get('producto_encontrado'))
+            total_pvp = sum(
+                m.get('precio_pvp', 0) * m.get('cantidad', 1)
+                for m in data['muebles_detectados']
+                if m.get('confirmado_presupuesto') is True
+            )
+            productos_encontrados = sum(
+                m.get('cantidad', 1) for m in data['muebles_detectados']
+                if m.get('confirmado_presupuesto') is True
+            )
+            productos_pendientes = sum(
+                m.get('cantidad', 1) for m in data['muebles_detectados']
+                if m.get('producto_encontrado') and m.get('confirmado_presupuesto') is not True
+            )
             electrodomesticos = sum(m.get('cantidad', 1) for m in data['muebles_detectados'] if m.get('es_electrodomestico'))
             # "No encontrados" reales = ni encontrados ni electrodomésticos
             productos_no_encontrados = sum(m.get('cantidad', 1) for m in data['muebles_detectados']
@@ -900,13 +971,20 @@ async def analyze_kitchen_plan(
 
             data['resumen_precios'] = {
                 'total_pvp': total_pvp,
-                'total_puntos': sum(m.get('puntos', 0) * m.get('cantidad', 1) for m in data['muebles_detectados']),
+                'total_puntos': sum(
+                    m.get('puntos', 0) * m.get('cantidad', 1)
+                    for m in data['muebles_detectados']
+                    if m.get('confirmado_presupuesto') is True
+                ),
                 'productos_encontrados': productos_encontrados,
+                'productos_confirmados': productos_encontrados,
+                'productos_pendientes': productos_pendientes,
                 'productos_no_encontrados': productos_no_encontrados,
                 'electrodomesticos': electrodomesticos,
-                'mensaje': f"{productos_encontrados} productos cotizados de {muebles_cotizables} muebles detectados",
+                'mensaje': f"{productos_encontrados} confirmados y {productos_pendientes} pendientes de {muebles_cotizables} muebles detectados",
                 'biblioteca': active_library
             }
+            data['library'] = active_library
             # Repaso con criterio de oficio: alturas imposibles, anchos fuera de
             # estandar y lo que un profesional echaria en falta (el bajo del
             # fregadero, la campana, los remates de los extremos). Avisa, NO
@@ -963,65 +1041,29 @@ async def analyze_kitchen_plan_multi(
             raise HTTPException(status_code=503, detail="Vision IA no configurada. Falta la clave del motor de IA (contacta con el administrador)")
         
         # Normalizar biblioteca
-        active_library = (library or "ZC").upper()
+        active_library = _normalizar_biblioteca(library)
+        if not files:
+            raise HTTPException(status_code=400, detail='Sube al menos una imagen.')
+        if len(files) > MAX_KITCHEN_FILES:
+            raise HTTPException(status_code=413, detail=f'Puedes subir como máximo {MAX_KITCHEN_FILES} imágenes.')
         logger.info(f"Analyzing multiple kitchen plans for library: {active_library}")
-        
+
         all_furniture = []
         all_summaries = []
         
         for idx, file in enumerate(files):
-            file_content = await file.read()
+            file_content = await _leer_imagen_plano(file)
             base64_image = base64.b64encode(file_content).decode('utf-8')
             
-            analysis_prompt = f"""Analiza este plano/diseño de cocina (PARED {idx + 1} de {len(files)}) y detecta TODOS los muebles.
+            # Una pared y varias usan EXACTAMENTE las mismas reglas: referencias
+            # manuscritas, procedencia del código y criterios MV. Antes la ruta
+            # múltiple conservaba un prompt antiguo de ZC y perdía precisamente
+            # las anotaciones para las que se creó este flujo.
+            analysis_prompt = build_analysis_prompt(active_library) + f"""
 
-IDENTIFICA CON CUIDADO:
-1. Muebles ALTOS (armarios de pared superiores)
-2. Muebles BAJOS (armarios de base con encimera)
-3. COLUMNAS (muebles de altura completa)
-4. SEMICOLUMNAS (muebles de media altura)
-5. COSTADOS (paneles laterales decorativos)
-6. Electrodomésticos integrados
-
-SISTEMA DE CÓDIGOS:
-- ALTOS: {{altura}}A{{nPuertas}}P{{anchoMM}} → Ej: 60A1P600, 9A2P800
-- BAJOS: {{altura/10}}B{{nPuertas}}P{{anchoMM}} → Ej: 7B1P600, 7B2P800
-- COLUMNAS: {{altura/10}}CD{{nPuertas}}P{{anchoMM}} → Ej: 22CD1P600
-- SEMICOLUMNAS: {{altura/10}}SM{{nPuertas}}P{{anchoMM}}
-- VITRINAS: usar V en lugar de P → Ej: 9A1V600
-
-ANCHOS ESTÁNDAR: 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200mm
-
-Responde SOLO con JSON:
-{{
-  "pared": {idx + 1},
-  "muebles_detectados": [
-    {{
-      "tipo": "ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO/ELECTRODOMESTICO",
-      "subtipo": "1_PUERTA/2_PUERTAS/CAJON/VITRINA/HORNO/FREGADERO",
-      "ancho_estimado": 600,
-      "alto_estimado": 90,
-      "fondo_estimado": 33,
-      "posicion": "descripción",
-      "codigo_sugerido": "9A1P600",
-      "confianza": "ALTA/MEDIA/BAJA"
-    }}
-  ],
-  "resumen": {{
-    "total_altos": 0,
-    "total_bajos": 0,
-    "total_columnas": 0
-  }}
-}}"""
-
-            # Para MV la nomenclatura de códigos es distinta: no forzar el formato
-            # ZC; el backend empareja por TIPO + ANCHO contra el catálogo MV.
-            if active_library == 'MV':
-                analysis_prompt += """
-
-IMPORTANTE — BIBLIOTECA MV (MUEBLES VALENCIA): el sistema de códigos de arriba es
-de otra biblioteca. NO fuerces ese formato. Prioriza detectar bien el TIPO y el
-ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente.
+ESTA IMAGEN ES LA PARED {idx + 1} DE {len(files)}.
+Analiza únicamente los módulos visibles en esta vista. No dupliques muebles de
+otras paredes y conserva el orden de izquierda a derecha.
 """
 
             response_text = await analyze_image_with_gemini(
@@ -1067,8 +1109,19 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
         enriched_furniture = group_identical_furniture(enriched_furniture)
 
         # Los contadores/totales cuentan por CANTIDAD (no por filas).
-        total_pvp = sum(m.get('precio_pvp', 0) * m.get('cantidad', 1) for m in enriched_furniture)
-        productos_encontrados = sum(m.get('cantidad', 1) for m in enriched_furniture if m.get('producto_encontrado'))
+        total_pvp = sum(
+            m.get('precio_pvp', 0) * m.get('cantidad', 1)
+            for m in enriched_furniture
+            if m.get('confirmado_presupuesto') is True
+        )
+        productos_encontrados = sum(
+            m.get('cantidad', 1) for m in enriched_furniture
+            if m.get('confirmado_presupuesto') is True
+        )
+        productos_pendientes = sum(
+            m.get('cantidad', 1) for m in enriched_furniture
+            if m.get('producto_encontrado') and m.get('confirmado_presupuesto') is not True
+        )
         electrodomesticos = sum(m.get('cantidad', 1) for m in enriched_furniture if m.get('es_electrodomestico'))
         productos_no_encontrados = sum(m.get('cantidad', 1) for m in enriched_furniture
                                        if not m.get('producto_encontrado') and not m.get('es_electrodomestico'))
@@ -1076,11 +1129,17 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
 
         total_summary['resumen_precios'] = {
             'total_pvp': total_pvp,
-            'total_puntos': sum(m.get('puntos', 0) * m.get('cantidad', 1) for m in enriched_furniture),
+            'total_puntos': sum(
+                m.get('puntos', 0) * m.get('cantidad', 1)
+                for m in enriched_furniture
+                if m.get('confirmado_presupuesto') is True
+            ),
             'productos_encontrados': productos_encontrados,
+            'productos_confirmados': productos_encontrados,
+            'productos_pendientes': productos_pendientes,
             'productos_no_encontrados': productos_no_encontrados,
             'electrodomesticos': electrodomesticos,
-            'mensaje': f"{productos_encontrados} productos cotizados de {muebles_cotizables} muebles detectados"
+            'mensaje': f"{productos_encontrados} confirmados y {productos_pendientes} pendientes de {muebles_cotizables} muebles detectados"
         }
         # Mismo repaso profesional que en el analisis de una sola pared.
         try:
@@ -1097,12 +1156,15 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
             "library": active_library,
             "analysis": {
                 "muebles_detectados": enriched_furniture,
+                "library": active_library,
                 "avisos_profesionales": avisos_prof,
                 "resumen": total_summary,
                 "paredes": all_summaries
             }
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Multi-wall kitchen plan analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
