@@ -1652,6 +1652,14 @@ export default function Estudio3DLab({ state, setState }) {
     const esTirador = /(tirador|tiradores|gola|manilla|asa)\b/.test(texto);
     const esBajo = /(\bbajo\b|\bbajos\b|abajo|parte baja|de abajo|módulo bajo|módulos bajos|inferior|inferiores)/.test(texto);
     const esAnotacionTecnica = /(medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
+    /* MOVER UN MÓDULO ES CAMBIAR LA DISTRIBUCIÓN, Y HAY QUE DECIRLO (master,
+       14/09/2026: «necesito cambiar la posición de la columna
+       horno/micro/vinoteca y ponerla más a la izquierda, pero no lo hace»).
+       El contrato genérico manda al motor «Debe conservarse: distribución,
+       módulos», y el motor obedece: la orden pedía mover y el contrato
+       prohibía mover. No fallaba nada — el render volvía igual, que es lo que
+       más desconcierta. */
+    const esMover = /(mover|mueve|muével|muevel|desplaz|reubic|recolo|intercambi|permut|invierte|invertir|cambia(r)?\s+(de\s+)?(sitio|lado|posición|posicion)|de\s+sitio|de\s+lado|al\s+otro\s+lado|más\s+a\s+la\s+(izquierda|derecha)|mas\s+a\s+la\s+(izquierda|derecha)|hacia\s+la\s+(izquierda|derecha)|a\s+la\s+(izquierda|derecha)\s+del|pégal|pegal|junto\s+a|al\s+lado\s+de)/.test(texto);
     /* EL VOCABULARIO SE QUEDABA CORTO Y BLOQUEABA COCINAS ENTERAS (master,
        14/09/2026: «sale este mensaje cuando quiero sustituir el grifo»).
        Faltaban el GRIFO, el fregadero, la placa, el zócalo, el copete, la
@@ -1713,6 +1721,27 @@ export default function Estudio3DLab({ state, setState }) {
           'no añadir repisas, nichos, baldas decorativas ni elementos de madera no solicitados',
         ],
         contexto_aprobado: '',
+      };
+    }
+    if (esMover) {
+      /* AQUÍ LA DISTRIBUCIÓN SÍ SE TOCA — es lo único que se toca. Todo lo
+         demás sigue clavado: el módulo se lleva consigo su ancho, su alto, sus
+         frentes y sus electrodomésticos, y los vecinos se corren para dejarle
+         sitio sin cambiar de tipo ni de medida. Un cambio de sitio no es una
+         cocina nueva. */
+      return {
+        alcance: 'mover_modulo',
+        objetivo: 'la POSICIÓN del módulo indicado en la orden: hay que moverlo de sitio de verdad',
+        zona: 'la pared o el frente donde está ese módulo, y los módulos vecinos que se corren para dejarle sitio',
+        conservar: [
+          'el módulo movido tal cual: mismo ancho, mismo alto, mismos frentes, mismos huecos y los mismos electrodomésticos dentro',
+          'los módulos vecinos: se recolocan para dejarle sitio, pero no cambian de tipo, de medida ni de acabado',
+          'el número total de muebles: mover no es añadir ni quitar',
+          'materiales, colores, tiradores, encimera, aplacado, suelo, paredes y ventanas',
+          'cámara, perspectiva, encuadre e iluminación',
+          'tipo de instalación de los electrodomésticos, incluida la integración del lavavajillas',
+        ],
+        contexto_aprobado: [description, ...editAppliedChanges].filter(Boolean).join('\n'),
       };
     }
     return {

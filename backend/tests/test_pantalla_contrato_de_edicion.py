@@ -141,6 +141,92 @@ def test_EL_TEXTO_NO_SE_TIRA_CUANDO_HAY_IMAGEN():
             % pantalla)
 
 
+# ── Mover un módulo ES cambiar la distribución ───────────────────────────────
+
+ORDENES_DE_MOVER = [
+    "cambiar la posición de la columna horno micro vinoteca y ponerla más a la izquierda",
+    "mueve la columna a la izquierda",
+    "desplaza el frigorífico al otro lado",
+    "intercambia el horno y la vinoteca",
+    "cambia de sitio la campana",
+    "pon la columna junto a la ventana",
+]
+ORDENES_QUE_NO_MUEVEN = [
+    "cambia el color de los frentes", "pon este grifo", "quita el zócalo",
+    "cambia los tiradores de los bajos",
+]
+
+
+def _regex_de_mover(nombre):
+    cuerpo = _limpio(nombre)
+    m = re.search(r"const esMover = (/\(.+?\)/)\.test\(texto\)", cuerpo)
+    assert m, "%s ya no reconoce las órdenes de mover" % nombre
+    return m.group(1)
+
+
+def _corre_mover(nombre, frases):
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no hay node en esta máquina")
+    guion = ("const re = %s;\nconst out = {};\n"
+             "for (const f of %s) out[f] = re.test(f.toLowerCase());\n"
+             "console.log(JSON.stringify(out));\n"
+             % (_regex_de_mover(nombre), json.dumps(frases)))
+    r = subprocess.run([node, "-e", guion], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+def test_MOVER_UN_MODULO_SE_RECONOCE_COMO_TAL():
+    """Master, 14/09: «necesito cambiar la posición de la columna
+    horno/micro/vinoteca y ponerla más a la izquierda, pero no lo hace»."""
+    for pantalla in PANTALLAS:
+        res = _corre_mover(pantalla, ORDENES_DE_MOVER)
+        sin_detectar = [f for f, ok in res.items() if not ok]
+        assert not sin_detectar, (
+            "%s no reconoce estas órdenes como un cambio de posición: %s"
+            % (pantalla, sin_detectar))
+
+
+def test_UN_CAMBIO_DE_COLOR_NO_SE_TOMA_POR_UNA_MUDANZA():
+    """Al revés también cuenta: si cualquier orden pasara por «mover», el
+    contrato dejaría de proteger la distribución en todas."""
+    for pantalla in PANTALLAS:
+        res = _corre_mover(pantalla, ORDENES_QUE_NO_MUEVEN)
+        coladas = [f for f, ok in res.items() if ok]
+        assert not coladas, (
+            "%s toma por mudanza órdenes que no lo son: %s" % (pantalla, coladas))
+
+
+def test_EL_CONTRATO_DE_MOVER_NO_PROHIBE_MOVER():
+    """ESTE es el fallo. El contrato genérico manda al motor «Debe
+    conservarse: distribución, módulos», y el motor obedece: la orden pedía
+    mover y el contrato lo prohibía. No fallaba nada — el render volvía igual,
+    que es lo que más desconcierta, y cada reintento gasta un crédito."""
+    for pantalla in PANTALLAS:
+        cuerpo = _limpio(pantalla)
+        i = cuerpo.index("alcance: 'mover_modulo'")
+        contrato = cuerpo[i:cuerpo.index("contexto_aprobado", i)]
+        assert "distribución, módulos" not in contrato, (
+            "%s vuelve a exigir conservar la distribución en una orden que "
+            "pide justo cambiarla: el motor no moverá nada" % pantalla)
+        # Y lo que SÍ tiene que quedarse clavado.
+        for debe in ("mismo ancho", "no cambian de tipo", "cámara"):
+            assert debe in contrato, (
+                "%s ya no protege «%s» al mover: una mudanza acabaría siendo "
+                "una cocina nueva" % (pantalla, debe))
+
+
+def test_MOVER_SE_DECIDE_ANTES_QUE_EL_CONTRATO_GENERICO():
+    """Si el genérico ganara, seguiría mandando «conservar distribución»."""
+    for pantalla in PANTALLAS:
+        cuerpo = _limpio(pantalla)
+        i = cuerpo.index("const contratoEdicion")
+        bloque = cuerpo[i:i + 6000]
+        assert bloque.index("if (esMover) {") < bloque.index("alcance: 'solo_lo_solicitado'"), (
+            "%s evalúa el contrato genérico antes que el de mover" % pantalla)
+
+
 def test_EL_AVISO_DICE_QUE_HACE_FALTA_Y_NO_SOLO_QUE_NO_VALE():
     """«No identifica con suficiente precisión» no se puede arreglar: no dice
     qué falta."""
