@@ -118,7 +118,10 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const APP_VERSION = 'v4.2-crm-paginacion-presup2';
+/* EL SELLO DE LA COMPILACIÓN, para poder mirar la esquina y saber si el
+ * aparato tiene la versión de hoy. Lo pone `craco.config.js` al compilar. El
+ * respaldo es para el servidor de desarrollo, donde no hace falta. */
+const APP_BUILD = process.env.REACT_APP_BUILD || 'dev';
 
 const App = () => {
   const [isManufacturingView, setIsManufacturingView] = useState(false);
@@ -2018,10 +2021,10 @@ const App = () => {
                <ShieldCheck size={14} className="text-slate-900" />
                <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">
                  {(state.currentUser?.isStudio3k || state.currentUser?.linkedStudio3kAdminId || state.currentUser?.canManageStudio3kUsers)
-                   ? 'STUDIO3K.IO v4.1'
+                   ? 'STUDIO3K.IO'
                    : (state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers)
-                     ? 'CARPINTER.IO v4.1'
-                     : 'ERP v4.1'}
+                     ? 'CARPINTER.IO'
+                     : 'ERP'} {APP_BUILD}
                </span>
             </div>
           </main>

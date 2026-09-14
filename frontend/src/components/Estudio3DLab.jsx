@@ -5926,11 +5926,11 @@ export default function Estudio3DLab({ state, setState }) {
                       <>
                         <button type="button"
                           onClick={() => setIdxComparar(i => (i - 1 + referenciasIniciales.length) % referenciasIniciales.length)}
-                          className="absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center"
+                          className="absolute left-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center text-lg"
                           title="Imagen anterior del encargo">‹</button>
                         <button type="button"
                           onClick={() => setIdxComparar(i => (i + 1) % referenciasIniciales.length)}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center text-lg"
                           title="Siguiente imagen del encargo">›</button>
                       </>
                     )}
