@@ -5670,7 +5670,7 @@ export default function AIRenderStudio({ state, setState }) {
                 <BotonPantallaCompleta
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900"
                   claseTexto="truncate"
-                  textos={{ dentro: 'Salir de pantalla full', fuera: 'Pantalla full' }} />
+                  textos={{ dentro: 'Reducir', fuera: 'Pantalla full' }} />
                 <span className={barraLateral ? 'h-px w-full bg-slate-200 my-1' : 'w-px h-4 bg-slate-200 mx-0.5'} />
                 {/* Grupo IA: acciones que generan nueva imagen */}
                 <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
