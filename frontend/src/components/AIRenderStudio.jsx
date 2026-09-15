@@ -1647,8 +1647,23 @@ export default function AIRenderStudio({ state, setState }) {
        Faltaban el GRIFO, el fregadero, la placa, el zócalo, el copete, la
        isla, el salpicadero… o sea, media cocina. Y el mensaje no dice «no
        conozco esa palabra»: dice que la instrucción no es lo bastante precisa,
-       así que uno la reescribe tres veces y sigue sin funcionar. */
-    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|secadora|frigorífico|frigorifico|nevera|congelador|horno|microondas|campana|extractor|placa|vitrocerámica|vitroceramica|inducción|induccion|fregadero|seno|grifo|grifería|griferia|mueble|muebles|columna|columnas|altillo|altillos|zócalo|zocalo|copete|isla|península|peninsula|barra|taburete|taburetes|estantería|estanteria|estante|estantes|iluminación|iluminacion|luz|luces|lámpara|lampara|enchufe|enchufes|suelo|pared|paredes|techo|ventana|ventanas|salpicadero|aplacado|alicatado|revestimiento|decoración|decoracion|color|acabado|material|repisas|baldas|medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos)/.test(texto);
+       así que uno la reescribe tres veces y sigue sin funcionar.
+
+       Y SEGUÍA SIENDO UNA LISTA DE COCINA EN UNA PANTALLA QUE DISEÑA CUATRO
+       COSAS (master, 15/09/2026, con un armario en pantalla: «DENTRO DEL
+       ARMARIO PON SÓLO ROPA PARA MUJER, CAMBIALA — no la aplica»).
+       `ESTUDIO_3D_TIPOS` dice desde el primer día que aquí se diseñan COCINA,
+       ARMARIO/VESTIDOR, BAÑO y otro mueble a medida; este filtro solo hablaba
+       cocina. «Armario» no estaba y «ropa» tampoco, así que la orden NI SALÍA
+       DEL NAVEGADOR: no es que el motor la ignorara, es que nunca le llegó, y
+       lo único que se veía era el render sin cambiar.
+
+       Y EL ATREZO CUENTA. Lo que se ve dentro de un armario —ropa, perchas,
+       cajas, toallas— o alrededor de una cocina —planta, alfombra, cuadro— es
+       lo que el cliente mira en el render, y pedir que cambie es una orden
+       LOCALIZADA, no un rediseño. Sin estas palabras, el caso del master
+       seguiría bloqueado aunque «armario» sí estuviera. */
+    const tienePropiedad = /(tirador|tiradores|gola|manilla|asa|encimera|frente|frentes|puerta|puertas|cajón|cajones|gaveta|gavetas|lavavajillas|lavadora|secadora|frigorífico|frigorifico|nevera|congelador|horno|microondas|campana|extractor|placa|vitrocerámica|vitroceramica|inducción|induccion|fregadero|seno|grifo|grifería|griferia|mueble|muebles|columna|columnas|altillo|altillos|zócalo|zocalo|copete|isla|península|peninsula|barra|taburete|taburetes|estantería|estanteria|estante|estantes|iluminación|iluminacion|luz|luces|lámpara|lampara|enchufe|enchufes|suelo|pared|paredes|techo|ventana|ventanas|salpicadero|aplacado|alicatado|revestimiento|decoración|decoracion|color|acabado|material|repisas|baldas|medida|medidas|cota|cotas|acotación|acotacion|número|numeros|números|texto|textos|rótulo|rotulo|rótulos|rotulos|armario|armarios|vestidor|vestidores|ropero|closet|clóset|zapatero|perchero|percha|perchas|colgador|pantalonero|corbatero|cajonera|cajoneras|maletero|módulo|modulo|módulos|modulos|lavabo|lavabos|inodoro|váter|vater|ducha|bañera|banera|bidé|bide|mampara|toallero|espejo|espejos|sanitario|sanitarios|aseo|ropa|prenda|prendas|camisa|camisas|camiseta|camisetas|vestido|vestidos|chaqueta|chaquetas|abrigo|abrigos|pantalón|pantalon|pantalones|jersey|jerséis|jerseis|zapato|zapatos|bolso|bolsos|cinturón|cinturon|toalla|toallas|sábana|sabana|sábanas|sabanas|almohada|almohadas|cesta|cestas|caja|cajas|maleta|maletas|cojín|cojin|cojines|manta|mantas|alfombra|alfombras|cortina|cortinas|planta|plantas|maceta|macetas|cuadro|cuadros|jarrón|jarron|jarrones|libro|libros|butaca|butacas|silla|sillas|mesa|mesas|cama|camas)/.test(texto);
     /* UNA IMAGEN ADJUNTA YA DICE QUÉ SE CAMBIA, Y ESO MANDA SOBRE EL TEXTO.
        Aquí estaba la parte grave de lo del grifo: esta rama solo entraba con
        el texto VACÍO (`!texto`). O sea que adjuntar la foto del grifo y

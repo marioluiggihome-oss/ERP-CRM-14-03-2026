@@ -64,12 +64,64 @@ ORDENES_REALES = [
 # modelo rediseñaría la cocina entera.
 ORDENES_VAGAS = ["hazlo bonito", "mejóralo", "más profesional", "cámbialo"]
 
+# ── Y LA PANTALLA NO SOLO DISEÑA COCINAS ────────────────────────────────────
+#
+# El master, 15/09/2026, con un armario en pantalla:
+#
+#     DENTRO DEL ARMARIO PON SÓLO ROPA PARA MUJER, CAMBIALA
+#     «OJO LE PIDO ESTA INSTRUCCIÓN Y NO LA APLICA»
+#
+# `ESTUDIO_3D_TIPOS` dice desde el primer día que aquí se diseñan COCINA,
+# ARMARIO/VESTIDOR, BAÑO y otro mueble a medida. `tienePropiedad` solo hablaba
+# COCINA: ni «armario» ni «ropa» estaban en la lista, así que la orden ni salía
+# del navegador — no es que el motor la ignorara, es que nunca le llegó.
+#
+# LO QUE MÁS DESPISTA es que no parece un bloqueo: el render se queda como
+# estaba, igual que cuando el motor obedece un contrato que prohíbe lo que le
+# pides (el caso de mover un módulo). Dos causas distintas, la misma pantalla.
+ORDENES_DE_ARMARIO = [
+    # La del master, literal.
+    "dentro del armario pon sólo ropa para mujer, cambiala",
+    "cambia la ropa del armario", "pon perchas de madera",
+    "quita el zapatero", "pon una cajonera abajo",
+    "cambia las baldas del vestidor", "pon cajas en el altillo",
+    "más barras de colgar", "pon bolsos en la balda de arriba",
+]
+ORDENES_DE_BANO = [
+    "cambia el lavabo", "pon una mampara de cristal", "quita el bidé",
+    "cambia el espejo por uno redondo", "pon toallas en el toallero",
+    "cambia el plato de ducha",
+]
+# EL ATREZO TAMBIÉN SE PIDE, y es una orden LOCALIZADA: cambiar la planta no es
+# rediseñar la cocina. Sin estas palabras, el caso del master seguiría
+# bloqueado aunque «armario» sí estuviera — su orden habla de ROPA.
+ORDENES_DE_ATREZO = [
+    "quita la planta", "cambia la alfombra", "pon un cuadro en la pared",
+    "quita los cojines", "cambia las cortinas", "pon un jarrón en la repisa",
+]
+
 
 def _limpio(nombre):
     with open(os.path.join(COMPONENTES, nombre), "r", encoding="utf-8") as f:
         cuerpo = sin_comentarios(f.read())
     assert "const contratoEdicion" in cuerpo, nombre
     return cuerpo
+
+
+def _bloque_del_contrato(cuerpo):
+    """El cuerpo de `contratoEdicion`, medido por la función siguiente."""
+    i = cuerpo.index("const contratoEdicion")
+    j = cuerpo.index("const colorVariant", i)
+    bloque = cuerpo[i:j]
+    assert "return {" in bloque, "el recorte se ha comido el cuerpo del contrato"
+    return bloque
+
+
+def _lista_de_tipos(cuerpo):
+    """Solo `ESTUDIO_3D_TIPOS`, no las otras listas con `id` del fichero."""
+    i = cuerpo.index("const ESTUDIO_3D_TIPOS = [")
+    j = cuerpo.index("];", i)
+    return cuerpo[i:j]
 
 
 def _regex_de_propiedad(nombre):
@@ -102,6 +154,125 @@ def test_EL_GRIFO_Y_MEDIA_COCINA_MAS_DEJAN_DE_ESTAR_PROHIBIDOS():
             % (pantalla, bloqueadas))
 
 
+def test_UN_ARMARIO_NO_ES_UNA_COCINA_Y_TAMBIEN_SE_EDITA():
+    """La frase del master, literal, la primera de la lista."""
+    for pantalla in PANTALLAS:
+        res = _corre_en_node(pantalla, ORDENES_DE_ARMARIO)
+        bloqueadas = [f for f, ok in res.items() if not ok]
+        assert not bloqueadas, (
+            "%s bloquea órdenes corrientes de armario o vestidor: %s"
+            % (pantalla, bloqueadas))
+
+
+# CADA PALABRA TIENE QUE VALER POR SÍ SOLA.
+#
+# Las listas de frases de arriba NO probaban eso, y las mutaciones lo
+# destaparon: quitar «armario» del filtro las dejaba a TODAS en verde, porque
+# cada frase traía además «ropa», «percha» o «balda», que siguen en la lista. Y
+# quitar «ropa» tampoco fallaba, por lo mismo al revés. O sea que se podía
+# borrar justo la palabra del caso del master y el candado no se enteraba.
+#
+# Estas sondas llevan UNA sola palabra del vocabulario cada una. Si se cae
+# cualquiera, se ve qué falta y no «alguna de estas nueve frases».
+SONDAS = [
+    # armario / vestidor
+    "armario", "vestidor", "ropero", "zapatero", "perchero", "percha",
+    "colgador", "pantalonero", "cajonera", "maletero",
+    # baño
+    "lavabo", "inodoro", "ducha", "bañera", "bidé", "mampara", "toallero",
+    "espejo",
+    # atrezo
+    "ropa", "prenda", "camisa", "vestido", "chaqueta", "zapatos", "bolso",
+    "toalla", "almohada", "cesta", "caja", "maleta", "cojín", "manta",
+    "alfombra", "cortina", "planta", "maceta", "cuadro", "jarrón", "libro",
+    "butaca", "silla", "mesa", "cama",
+]
+
+
+def test_CADA_PALABRA_NUEVA_VALE_POR_SI_SOLA():
+    """Una sonda por palabra: «cambia el <palabra>» y nada más.
+
+    `cambia` no está en el vocabulario —vive en el filtro de mover, que es
+    otro—, así que lo único que puede hacer pasar cada sonda es su palabra.
+    """
+    frases = ["cambia el %s" % w for w in SONDAS]
+    for pantalla in PANTALLAS:
+        res = _corre_en_node(pantalla, frases)
+        faltan = sorted(f.replace("cambia el ", "") for f, ok in res.items() if not ok)
+        assert not faltan, (
+            "%s no reconoce estas palabras, y cada una es una orden que el "
+            "usuario escribe y que se quedaría bloqueada sin decir por qué: %s"
+            % (pantalla, faltan))
+
+
+def test_LA_FRASE_DEL_MASTER_NO_DEPENDE_DE_UNA_SOLA_PALABRA():
+    """«Armario» y «ropa» tienen que valer las DOS, por separado.
+
+    Su orden trae las dos, así que basta una para que pase — y por eso el
+    candado no notaba que faltara la otra. Se comprueban sueltas.
+    """
+    for pantalla in PANTALLAS:
+        res = _corre_en_node(pantalla, ["cambia el armario", "cambia la ropa"])
+        faltan = [f for f, ok in res.items() if not ok]
+        assert not faltan, (
+            "%s se apoya en una sola de las dos palabras del caso del master: %s"
+            % (pantalla, faltan))
+
+
+def test_UN_BANO_TAMPOCO_ES_UNA_COCINA():
+    """`ESTUDIO_3D_TIPOS` lleva el baño desde el principio; el filtro no."""
+    for pantalla in PANTALLAS:
+        res = _corre_en_node(pantalla, ORDENES_DE_BANO)
+        bloqueadas = [f for f, ok in res.items() if not ok]
+        assert not bloqueadas, (
+            "%s bloquea órdenes corrientes de baño: %s" % (pantalla, bloqueadas))
+
+
+def test_EL_ATREZO_SE_PUEDE_CAMBIAR_SIN_REDISENARLO_TODO():
+    """Lo que se ve dentro y alrededor es lo que mira el cliente."""
+    for pantalla in PANTALLAS:
+        res = _corre_en_node(pantalla, ORDENES_DE_ATREZO)
+        bloqueadas = [f for f, ok in res.items() if not ok]
+        assert not bloqueadas, (
+            "%s bloquea cambiar el atrezo del render: %s" % (pantalla, bloqueadas))
+
+
+def test_EL_FILTRO_CONOCE_LOS_CUATRO_TIPOS_QUE_LA_PANTALLA_DISEÑA():
+    """El candado que impide que esto vuelva a pasar con el tipo siguiente.
+
+    No comprueba palabras sueltas: le pide a la lista de tipos del propio
+    fichero (`ESTUDIO_3D_TIPOS`) cuáles son, y exige que el filtro reconozca
+    una orden de cada uno. Si mañana se añade un quinto tipo y nadie toca el
+    vocabulario, esto se pone rojo ANTES de que el master se encuentre otra
+    pantalla que se queda quieta sin decir por qué.
+    """
+    ejemplo = {
+        "cocina": "cambia la encimera",
+        "armario": "cambia la ropa del armario",
+        "bano": "cambia el lavabo",
+        "otro": "cambia las baldas de la estantería",
+    }
+    for pantalla in PANTALLAS:
+        cuerpo = _limpio(pantalla)
+        # SOLO LA LISTA DE TIPOS. Buscar `{ id: '...' }` en el fichero entero
+        # recogía los estilos, las cámaras, los electrodomésticos y los
+        # colores —cincuenta «tipos» que no lo son—, y el candado fallaba por
+        # el motivo equivocado.
+        tipos = re.findall(r"\{ id: '([a-z]+)',", _lista_de_tipos(cuerpo))
+        assert "armario" in tipos and "bano" in tipos, (
+            "%s ya no declara los tipos como se esperaba: %s" % (pantalla, tipos))
+        faltan = [t for t in tipos if t not in ejemplo]
+        assert not faltan, (
+            "%s diseña tipos nuevos (%s) y este candado no sabe qué orden "
+            "probarles: añade un ejemplo antes de darlos por buenos"
+            % (pantalla, faltan))
+        res = _corre_en_node(pantalla, [ejemplo[t] for t in tipos])
+        mudos = [f for f, ok in res.items() if not ok]
+        assert not mudos, (
+            "%s declara diseñar %s pero el filtro de edición no entiende: %s"
+            % (pantalla, tipos, mudos))
+
+
 def test_UNA_ORDEN_VAGA_SIGUE_SIN_PASAR():
     """El filtro no se abre del todo: sin decir QUÉ se cambia, el modelo
     rediseña la cocina y se lleva por delante lo ya aprobado."""
@@ -120,8 +291,12 @@ def test_UNA_IMAGEN_ADJUNTA_NUNCA_SE_BLOQUEA_POR_EL_TEXTO():
         assert "if (!texto && editRefImage) {" not in cuerpo, (
             "%s vuelve a exigir que el texto esté vacío para aceptar la imagen "
             "adjunta: escribir lo que se quiere hace que se bloquee" % pantalla)
-        i = cuerpo.index("const contratoEdicion")
-        bloque = cuerpo[i:i + 3000]
+        # LA VENTANA SE MIDE POR LA FUNCIÓN, NO POR UN NÚMERO. Antes eran
+        # 3.000 caracteres a bulto, y al ampliar el vocabulario a armarios y
+        # baños el filtro creció y `if (!tienePropiedad)` se salió de la
+        # ventana: el candado reventó por un cambio HONRADO, que es la forma
+        # más rápida de que alguien lo borre para seguir trabajando.
+        bloque = _bloque_del_contrato(cuerpo)
         pos_img = bloque.index("if (editRefImage) {")
         pos_bloqueo = bloque.index("if (!tienePropiedad) {")
         assert pos_img < pos_bloqueo, (
