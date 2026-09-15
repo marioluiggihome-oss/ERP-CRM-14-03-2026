@@ -4941,16 +4941,30 @@ export default function Estudio3DLab({ state, setState }) {
                     {/* Subir Croquis o Foto */}
                     <label className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-full transition-all ${analyzingRef ? 'bg-purple-200 text-purple-600' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}>
                       <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
-                      <span>{analyzingRef ? 'Leyendo…' : 'Subir croquis/foto'}</span>
+                      <span>{analyzingRef ? 'Leyendo…' : 'Subir croquis, foto o plano (PDF)'}</span>
                       <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
                     </label>
 
-                    {/* Escaneo LiDAR / Vídeo de Obra */}
-                    <label className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-full transition-all bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100`}>
-                      <Box size={14} />
-                      <span>📱 Escaneo LiDAR / Vídeo</span>
-                      <input type="file" accept="video/*,.usdz,.ply,.e57" className="hidden" onChange={handleReferenceUpload} />
-                    </label>
+                    {/* AQUÍ HUBO UN BOTÓN DE «ESCANEO LiDAR / VÍDEO» Y NO HACÍA
+                        NADA (master, 15/09/2026: «¿para qué servía este
+                        botón?»). Aceptaba `video/*,.usdz,.ply,.e57` y se los
+                        daba a `handleReferenceUpload`, que es el MISMO
+                        manejador de las fotos. No hay nada en el servidor que
+                        lea vídeo ni nubes de puntos: no existe.
+
+                        Y FALLABA DE LA PEOR MANERA POSIBLE. `downscaleImage`
+                        intenta decodificar el fichero como imagen y, cuando no
+                        puede, hace `img.onerror = () => resolve(original)`: NO
+                        da error, devuelve el fichero tal cual. O sea que un
+                        vídeo entraba en la lista como «foto de referencia»,
+                        ocupaba uno de los 7 huecos del tope y DESPLAZABA a un
+                        croquis que sí habría servido — con el render saliendo
+                        peor sin que nadie supiera por qué.
+
+                        No se sustituye por nada: lo que de verdad sirve —el
+                        plano acotado que sacan AR Plan 3D, CubiCasa o Polycam—
+                        es un PDF o una imagen, y entra por el botón de al
+                        lado, que ya los acepta. Por eso ahora lo dice. */}
                   </div>
                 </div>
                 {analyzingRef && (
