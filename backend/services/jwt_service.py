@@ -322,6 +322,24 @@ async def require_auth(
             raise HTTPException(status_code=403, detail="Sesión no válida para este acceso")
         if not suscripcion_permitida(user):
             raise HTTPException(status_code=403, detail="Suscripción no activa")
+    # QUIÉN ESTÁ GASTANDO LA IA SE APUNTA AQUÍ, que es el único sitio donde se
+    # sabe (master, 15/09/2026: «que ponga los usuarios que la han utilizado»).
+    #
+    # El contador de consumo vive abajo del todo, en `llm_vision`, y allí no
+    # llega el usuario: le llegan un prompt y una imagen. De las doce llamadas
+    # que registran consumo, NI UNA pasaba el usuario, así que el reparto por
+    # persona —el del día y el del mes— estaba vacío desde el primer día, sin
+    # dar ningún error: se veía un cero y parecía que nadie había gastado.
+    #
+    # Se pone en una variable de CONTEXTO y no en una global: cada petición
+    # corre en su propia tarea de asyncio con su propio contexto, así que dos
+    # a la vez no se pisan el usuario. Con una global, el gasto de uno acabaría
+    # apuntado al bolsillo de otro.
+    try:
+        from services.ai_usage import fijar_usuario_en_curso
+        fijar_usuario_en_curso(user.get("id"))
+    except Exception:
+        pass   # apuntar quién gasta nunca puede tumbar una sesión
     return user
 
 

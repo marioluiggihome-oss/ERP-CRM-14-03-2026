@@ -10,12 +10,54 @@ Mongo. El master puede consultarlo y fijar un umbral de alerta por exceso de uso
 
 Diseño defensivo: si algo falla al contar, NUNCA debe romper la llamada de IA.
 """
+import contextvars
 from datetime import datetime, timezone
 
 try:
     from config import db  # instancia global de la base de datos
 except Exception:  # pragma: no cover
     db = None
+
+
+# ─── QUIÉN ESTÁ GASTANDO ─────────────────────────────────────────────────────
+#
+# El master, 15/09/2026, viendo la columna «QUIÉN» con un punto: «que ponga los
+# usuarios que la han utilizado».
+#
+# Y no salía nadie porque NUNCA se guardó: de las doce llamadas que registran
+# consumo de IA, NI UNA pasaba el usuario. Solo lo hacía la de diagnóstico del
+# panel de admin. O sea que el reparto por usuario —el del día y también el del
+# MES, que lleva ahí desde el principio— ha estado siempre vacío, sin dar
+# ningún error: se veía un cero y parecía que nadie había gastado.
+#
+# POR QUÉ UNA VARIABLE DE CONTEXTO Y NO AÑADIR UN PARÁMETRO: quien registra es
+# `llm_vision`, una pieza de abajo del todo que NO sabe quién ha entrado —le
+# llega un prompt y una imagen—. Pasarle el usuario obligaría a cambiar la
+# firma de toda la cadena y a acordarse en los doce sitios; el día que se
+# olvide uno, ese consumo se cuenta sin dueño y nadie lo nota. Con una variable
+# de contexto se pone en UN sitio (al comprobar la sesión) y se lee en UNO.
+#
+# `contextvars` es lo correcto aquí y no una variable global: cada petición
+# corre en su propia tarea de asyncio con su propio contexto, así que dos
+# peticiones a la vez NO se pisan el usuario. Una global sí lo haría, y el
+# consumo acabaría apuntado al bolsillo de otro.
+_usuario_en_curso: contextvars.ContextVar = contextvars.ContextVar(
+    "usuario_en_curso", default=None)
+
+
+def fijar_usuario_en_curso(user_id):
+    """Lo llama la comprobación de sesión, que es donde se sabe quién entra."""
+    try:
+        _usuario_en_curso.set(str(user_id) if user_id else None)
+    except Exception:
+        pass   # el contador nunca puede tumbar una petición
+
+
+def usuario_en_curso():
+    try:
+        return _usuario_en_curso.get()
+    except Exception:
+        return None
 
 
 def _month() -> str:
@@ -144,7 +186,12 @@ async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens
 
     count=True suma también 1 al total y a by_kind (llamada nueva). Usar count=False
     cuando la llamada YA se contó con record_ai_usage() y solo queremos añadir el
-    coste/tokens (evita el doble conteo)."""
+    coste/tokens (evita el doble conteo).
+
+    Si no se dice el usuario, se coge el de la sesión en curso: quien registra
+    es una pieza de abajo del todo que no sabe quién ha entrado (ver
+    `usuario_en_curso`)."""
+    user_id = user_id or usuario_en_curso()
     if db is None:
         return
     try:
@@ -184,7 +231,10 @@ def usage_from_response(resp):
 
 
 async def record_ai_usage(kind: str, user_id: str = None):
-    """Suma 1 al contador del mes en curso (total y por tipo). Best-effort."""
+    """Suma 1 al contador del mes en curso (total y por tipo). Best-effort.
+
+    Si no se dice el usuario, se coge el de la sesión en curso."""
+    user_id = user_id or usuario_en_curso()
     if db is None:
         return
     try:

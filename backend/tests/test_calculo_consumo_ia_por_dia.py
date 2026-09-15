@@ -458,3 +458,96 @@ def test_EL_RANGO_SE_FILTRA_EN_LA_BASE_DE_DATOS():
     _corre(mod.get_usage_por_dia(desde="2026-06-01", hasta="2026-06-30"))
     assert vistos["filtro"].get("day") == {"$gte": "2026-06-01", "$lte": "2026-06-30"}, (
         "el rango no llega a la consulta: se filtra en memoria")
+
+
+# ── Quién ha gastado ─────────────────────────────────────────────────────────
+#
+# El master, 15/09/2026, viendo la columna «QUIÉN» con un punto: «que ponga los
+# usuarios que la han utilizado».
+#
+# Y no salía nadie porque NUNCA se guardó: de las doce llamadas que registran
+# consumo de IA, NI UNA pasaba el usuario (solo la de diagnóstico del panel de
+# admin). El reparto por persona —el del día y también el del MES, que lleva
+# ahí desde el principio— ha estado siempre vacío, sin dar ningún error: se
+# veía un cero y parecía que nadie había gastado.
+
+
+def test_EL_CONSUMO_SE_APUNTA_AL_USUARIO_DE_LA_SESION_SIN_QUE_SE_LO_PASEN():
+    """ESTE es el arreglo: quien registra es una pieza de abajo del todo que no
+    sabe quién ha entrado, así que lo coge del contexto."""
+    # CADA CONTADOR POR SEPARADO. Probándolos juntos, el primero escribe
+    # `by_user` y TAPA que el segundo haya dejado de hacerlo: es el fallo de
+    # «arreglado en un sitio y no en el otro», y aquí significaría que la mitad
+    # del gasto sale sin dueño.
+    for quien, llamar in (
+        ("record_ai_usage", lambda m: m.record_ai_usage("render")),
+        ("record_ai_tokens", lambda m: m.record_ai_tokens(
+            "render", "gemini-2.5-flash-image", images=1, count=True)),
+    ):
+        mod = _mod()
+        mod.fijar_usuario_en_curso("u-mario")
+        try:
+            _corre(llamar(mod))                        # SIN pasar usuario
+            dia = list(mod.db.ai_usage_diario.docs.values())[0]
+            mes = list(mod.db.ai_usage.docs.values())[0]
+            assert dia.get("by_user", {}).get("u-mario", 0) >= 1, (
+                "%s no apunta a nadie: la columna «Quién» sale vacía" % quien)
+            assert mes.get("by_user", {}).get("u-mario", 0) >= 1, (
+                "%s no guarda quién gastó en el contador del MES" % quien)
+        finally:
+            mod.fijar_usuario_en_curso(None)
+
+
+def test_LO_QUE_SE_PASA_A_MANO_MANDA_SOBRE_EL_DE_LA_SESION():
+    """El de diagnóstico del panel de admin pasa el usuario expresamente; no
+    puede quedar tapado por el de la sesión."""
+    mod = _mod()
+    mod.fijar_usuario_en_curso("u-sesion")
+    try:
+        _corre(mod.record_ai_usage("probe", user_id="u-explicito"))
+        dia = list(mod.db.ai_usage_diario.docs.values())[0]
+        assert "u-explicito" in dia["by_user"]
+        assert "u-sesion" not in dia["by_user"]
+    finally:
+        mod.fijar_usuario_en_curso(None)
+
+
+def test_SIN_SESION_SE_CUENTA_IGUAL_PERO_SIN_DUENO():
+    """Un proceso de fondo o una tarea programada no tienen usuario. El gasto
+    NO se puede perder por eso: se cuenta sin dueño, que es distinto de no
+    contarlo."""
+    mod = _mod()
+    mod.fijar_usuario_en_curso(None)
+    _corre(mod.record_ai_usage("render"))
+    dia = list(mod.db.ai_usage_diario.docs.values())[0]
+    assert dia["total"] == 1
+    assert not dia.get("by_user"), (
+        "sin sesión se está inventando un dueño: %s" % dia.get("by_user"))
+
+
+def test_EL_USUARIO_LO_FIJA_LA_COMPROBACION_DE_SESION():
+    """Un sitio para ponerlo y uno para leerlo. Si se pusiera en cada ruta,
+    bastaría olvidarse en una para que ese consumo saliera sin dueño."""
+    ruta = os.path.join(RAIZ, "services", "jwt_service.py")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("async def require_auth")
+    bloque = cuerpo[i:cuerpo.index("async def require_master", i)]
+    # LA LLAMADA, no el nombre: buscar «fijar_usuario_en_curso» a secas lo
+    # encontraba en la línea del `import` que está justo encima, así que
+    # vaciar la llamada pasaba en verde. La trampa de siempre (reglas 24, 34).
+    assert "fijar_usuario_en_curso(user.get(\"id\"))" in bloque, (
+        "`require_auth` ya no apunta quién entra: el consumo de IA volvería a "
+        "guardarse sin dueño y la columna «Quién» saldría vacía")
+    assert "except Exception" in bloque, (
+        "apuntar quién gasta puede tumbar una sesión")
+
+
+def test_NO_SE_USA_UNA_GLOBAL_QUE_MEZCLE_PETICIONES():
+    """Con una global, dos peticiones a la vez se pisan el usuario y el gasto
+    de uno acaba en el bolsillo de otro."""
+    ruta = os.path.join(RAIZ, "services", "ai_usage.py")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    assert "contextvars.ContextVar" in cuerpo, (
+        "el usuario en curso ha dejado de ir en una variable de contexto")
