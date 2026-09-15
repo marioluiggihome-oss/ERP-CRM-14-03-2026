@@ -468,12 +468,17 @@ SUBSCRIPTION_PLANS = {
 
 # ─── Packs de renders (créditos IA extra) ────────────────────────────────────
 # Créditos que se suman al cupo mensual del cliente cuando agota el de su plan.
-# Coste real por render ~0,12 €, así que el margen del pack es muy alto.
-RENDER_PACKS = {
-    "pack20":  {"id": "pack20",  "name": "Pack 20 renders",  "renders": 20,  "price": 15,  "color": "#C4622D"},
-    "pack50":  {"id": "pack50",  "name": "Pack 50 renders",  "renders": 50,  "price": 35,  "color": "#0891b2"},
-    "pack100": {"id": "pack100", "name": "Pack 100 renders", "renders": 100, "price": 60,  "color": "#059669"},
-}
+#
+# ESTA LISTA ESTABA COPIADA Y SE HABÍA SEPARADO. Vivía aquí con sus propias
+# cifras, otra vez en `services/stripe_pagos.py` —que es la que COBRA— y una
+# tercera en `CarpinterosLanding.jsx`, la que lee el cliente. Ninguna de las
+# tres decía lo mismo, y eso no daba ningún error: simplemente se anunciaba un
+# precio y se cobraba otro. Ahora se le pregunta a quien cobra.
+#
+# El coste real de un render es 0,0384 € con el motor de producción (IA 1), no
+# los 0,12 € que ponía aquí — esos son los del motor de pruebas del master, que
+# el servidor no deja usar a un suscriptor (regla 11).
+from services.stripe_pagos import RENDER_PACKS, pack_por_id  # noqa: E402
 
 
 @router.get("/render-packs")
@@ -495,7 +500,9 @@ async def grant_render_pack(payload: dict, user=Depends(require_master)):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     pack_id = (payload or {}).get("pack_id")
     if pack_id:
-        pack = RENDER_PACKS.get(pack_id)
+        # `pack_por_id` resuelve tambien los retirados: el master puede estar
+        # reponiendo a mano una compra antigua, y ahi manda lo que se vendio.
+        pack = pack_por_id(pack_id)
         if not pack:
             raise HTTPException(status_code=400, detail=f"Pack '{pack_id}' no existe")
         renders = int(pack["renders"]); price = pack["price"]; name = pack["name"]

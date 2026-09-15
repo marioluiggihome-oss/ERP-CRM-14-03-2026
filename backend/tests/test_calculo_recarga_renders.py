@@ -211,22 +211,41 @@ def _correr(coro):
     return asyncio.run(coro)
 
 
+def _pack_a_la_venta():
+    """Un pack DEL CATÁLOGO VIVO, con lo que debería cobrarse en céntimos.
+
+    Antes estaba escrito «pack50» a mano, con sus 4235 céntimos al lado. El
+    15/09/2026 se cuadraron los packs con los precios de la web y `pack50` pasó
+    a RETIRADO —se sigue abonando, pero ya no se vende—, así que estas pruebas
+    reventaron por un cambio HONRADO. Un candado anclado en cómo se escribía un
+    id no protege el invariante que dice proteger: lo que aquí se vigila es que
+    EL PRECIO LO PONGA EL SERVIDOR, no cuánto vale un pack concreto.
+    """
+    from services import stripe_pagos as SP
+    pack = sorted(SP.RENDER_PACKS.values(), key=lambda p: p["renders"])[0]
+    return pack["id"], int(round(SP.precio_con_iva(pack) * 100))
+
+
 async def _saldo():
     return (await AU.get_user_credits(USER))["saldo"]
 
 
 def test_el_precio_lo_pone_el_servidor_no_el_navegador():
+    pack_id, esperado = _pack_a_la_venta()
+
     async def esc():
-        await R.comprar(ReqPlano(), {"packId": "pack50", "price": 1, "renders": 9999}, USER)
+        await R.comprar(ReqPlano(), {"packId": pack_id, "price": 1, "renders": 9999}, USER)
         importe = _Sess.ultimo["line_items"][0]["price_data"]["unit_amount"]
-        assert importe == 4235, "se ha usado un precio enviado por el cliente"
+        assert importe == esperado, "se ha usado un precio enviado por el cliente"
     _correr(esc())
 
 
 def test_no_se_abona_nada_al_abrir_la_pasarela():
+    pack_id, _ = _pack_a_la_venta()
+
     async def esc():
         antes = await _saldo()
-        await R.comprar(ReqPlano(), {"packId": "pack50"}, USER)
+        await R.comprar(ReqPlano(), {"packId": pack_id}, USER)
         assert await _saldo() == antes, "abonar antes de pagar permite renders gratis"
     _correr(esc())
 
@@ -273,7 +292,10 @@ def test_los_renders_salen_del_catalogo_no_de_los_metadatos():
     async def esc():
         await R.webhook(Req(evento(session_id="cs_meta"), FIRMA_BUENA))
         compras = (await R.mis_compras(USER))["compras"]
-        assert all(c["renders"] in (20, 50, 100) for c in compras), "se ha colado el 999"
+        from services import stripe_pagos as _SP
+        validos = {int(p["renders"]) for p in
+                   list(_SP.RENDER_PACKS.values()) + list(_SP.PACKS_RETIRADOS.values())}
+        assert all(c["renders"] in validos for c in compras), "se ha colado el 999"
     _correr(esc())
 
 
@@ -285,7 +307,7 @@ def test_sin_claves_queda_inerte_pero_no_rompe():
             assert cat["pagoTarjeta"] is False
             assert len(cat["packs"]) == 3, "el catalogo debe verse aunque no se pueda cobrar"
             with pytest.raises(R.HTTPException) as e:
-                await R.comprar(ReqPlano(), {"packId": "pack50"}, USER)
+                await R.comprar(ReqPlano(), {"packId": _pack_a_la_venta()[0]}, USER)
             assert e.value.status_code == 503
         finally:
             os.environ["STRIPE_SECRET_KEY"] = "sk_test_x"

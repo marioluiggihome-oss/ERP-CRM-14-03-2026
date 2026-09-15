@@ -22,13 +22,49 @@ import os
 
 logger = logging.getLogger(__name__)
 
-# Catalogo de packs. Es la unica fuente de precios: el cliente manda el id y el
+# Catalogo de packs. Es la UNICA fuente de precios: el cliente manda el id y el
 # servidor pone el importe. Los renders comprados no caducan (ai_usage.py).
+#
+# CUADRADO CON LO QUE DICE LA WEB (master, 15/09/2026: «cuadra los packs de la
+# web con los del ERP», y eligiendo que mande la web). Habia TRES listas y no
+# coincidian: esta, la del panel del master (`routes/admin.py`) y la publicada
+# en `CarpinterosLanding.jsx`. El cliente leia «100 renders, 99 €» y Stripe le
+# cobraba 60 €; en el escalon pequeno leia 10 y recibia 20. Siempre a favor del
+# cliente y nunca a favor de la casa, sin dar ningun error.
+#
+# Y LOS IDS DECIAN LA CANTIDAD VIEJA. `pack20` pasando a valer 10 renders es
+# una trampa para el siguiente que lo lea, asi que los ids nuevos dicen la
+# verdad.
 RENDER_PACKS = {
-    "pack20":  {"id": "pack20",  "name": "Pack 20 renders",  "renders": 20,  "price": 15, "color": "#C4622D"},
-    "pack50":  {"id": "pack50",  "name": "Pack 50 renders",  "renders": 50,  "price": 35, "color": "#0891b2"},
-    "pack100": {"id": "pack100", "name": "Pack 100 renders", "renders": 100, "price": 60, "color": "#059669"},
+    "pack10":  {"id": "pack10",  "name": "Pack 10 renders",  "renders": 10,  "price": 15, "color": "#C4622D"},
+    "pack30":  {"id": "pack30",  "name": "Pack 30 renders",  "renders": 30,  "price": 39, "color": "#0891b2"},
+    "pack100": {"id": "pack100", "name": "Pack 100 renders", "renders": 100, "price": 99, "color": "#059669"},
 }
+
+# PACKS RETIRADOS: NO SE VENDEN, PERO SE SIGUEN RESOLVIENDO.
+#
+# Un cliente que pago `pack20` cinco minutos antes de este despliegue recibe el
+# webhook DESPUES. Si el id ya no existiera, `RENDER_PACKS.get("pack20")` daria
+# None, `renders` saldria 0 y el cliente habria PAGADO SIN RECIBIR NADA — sin
+# error, sin aviso y sin que nadie lo relacione con este cambio. Aqui se les
+# abona lo que SE LES VENDIO, no lo que cuesta hoy.
+#
+# `pack100` no hace falta ponerlo: el id y el numero de renders no cambian, y
+# el precio solo se usa al ABRIR la sesion de pago, nunca al abonarla.
+PACKS_RETIRADOS = {
+    "pack20": {"id": "pack20", "name": "Pack 20 renders", "renders": 20, "price": 15, "color": "#C4622D"},
+    "pack50": {"id": "pack50", "name": "Pack 50 renders", "renders": 50, "price": 35, "color": "#0891b2"},
+}
+
+
+def pack_por_id(pack_id: str) -> dict:
+    """El pack con ese id, mirando tambien los retirados. {} si no existe.
+
+    Se usa para ABONAR (webhook, concesion del master). Para VENDER se usa
+    `RENDER_PACKS` a secas: un pack retirado no vuelve al escaparate.
+    """
+    clave = (pack_id or "").strip()
+    return RENDER_PACKS.get(clave) or PACKS_RETIRADOS.get(clave) or {}
 
 MONEDA = "eur"
 IVA_PCT = 21  # Los precios del catalogo son SIN IVA, igual que los planes.
@@ -131,7 +167,9 @@ def datos_de_pago(evento: dict) -> dict:
     if sesion.get("payment_status") != "paid":
         return {}
     meta = sesion.get("metadata") or {}
-    pack = RENDER_PACKS.get(meta.get("pack_id") or "")
+    # `pack_por_id` y no `RENDER_PACKS`: un pago en vuelo con un id retirado
+    # tiene que abonar lo que se vendio (ver PACKS_RETIRADOS).
+    pack = pack_por_id(meta.get("pack_id") or "")
     # Los renders se toman del catalogo del servidor, no de los metadatos, por
     # si alguien manipulara la sesion.
     renders = int(pack["renders"]) if pack else 0
