@@ -80,8 +80,23 @@ class _Coleccion:
                 d = d.setdefault(t, {})
             d[trozos[-1]] = d.get(trozos[-1], 0) + valor
 
-    def find(self, *a, **k):
+    def find(self, filtro=None, *a, **k):
+        """APLICA el filtro de rango, como lo haría Mongo.
+
+        Antes lo ignoraba, y eso hacía que la prueba del rango de fechas
+        pasara en verde SIN que el rango se ejerciera: el doble devolvía todos
+        los días y el recorte de más arriba lo tapaba. Un doble más corto que
+        la pieza real no prueba lo que dice probar (regla 35).
+        """
         docs = list(self.docs.values())
+        rango = (filtro or {}).get("day")
+        if isinstance(rango, dict):
+            if "$gte" in rango:
+                docs = [d for d in docs if str(d.get("day", "")) >= rango["$gte"]]
+            if "$lte" in rango:
+                docs = [d for d in docs if str(d.get("day", "")) <= rango["$lte"]]
+        elif rango is not None:
+            docs = [d for d in docs if d.get("day") == rango]
 
         class _Cursor:
             def sort(self, campo, orden=1):
@@ -305,3 +320,141 @@ def test_EL_CONTADOR_DIARIO_SE_TRAGA_SUS_PROPIOS_ERRORES():
     # Y sin base de datos tampoco.
     mod.db = None
     _corre(mod._suma_al_dia({"total": 1}, "u10"))
+
+
+# ── Rango de fechas y desglose por tipo de IA ────────────────────────────────
+#
+# El master, 15/09/2026: «el gasto de IA, que lo pueda calcular por fechas,
+# ahora sólo muestra el del día actual» y «q diga el gasto por tipos de IAS».
+#
+# Antes solo se podían pedir «los últimos N días» contando desde hoy, que no
+# sirve para cerrar un mes ni para comparar dos semanas. Y el total que salía
+# arriba era el del ÚLTIMO DÍA: al elegir un rango, la cifra grande habría
+# seguido contestando a otra pregunta.
+
+
+def _siembra(mod, dias_y_modelos):
+    """Mete días a mano en el doble, saltándose el reloj.
+
+    Hace falta porque el contador siempre escribe HOY: sin esto no se puede
+    probar un rango de verdad, y un candado que solo mira un día no comprueba
+    nada de lo que se pide aquí.
+    """
+    for dia, modelo, imagenes, tipo in dias_y_modelos:
+        clave = modelo.replace(".", "_")
+        mod.db.ai_usage_diario.docs[(("day", dia),)] = {
+            "day": dia, "month": dia[:7], "total": 1,
+            "by_kind": {tipo: 1}, "by_user": {"u1": 1},
+            "calls": {clave: 1}, "images": {clave: imagenes},
+            "tokens_in": {clave: 100}, "tokens_out": {clave: 50},
+        }
+
+
+def _mod():
+    m = importlib.import_module("services.ai_usage")
+    importlib.reload(m)
+    m.db = _Db()
+    return m
+
+
+def test_SE_PUEDE_PEDIR_UN_RANGO_DE_FECHAS():
+    mod = _mod()
+    _siembra(mod, [
+        ("2026-09-10", "gemini-2.5-flash-image", 1, "render"),
+        ("2026-09-12", "gemini-2.5-flash-image", 1, "render"),
+        ("2026-09-15", "gemini-2.5-flash-image", 1, "render"),
+    ])
+    r = _corre(mod.get_usage_por_dia(desde="2026-09-11", hasta="2026-09-13"))
+    assert [d["day"] for d in r["dias"]] == ["2026-09-12"], (
+        "el rango no recorta: salen días de fuera (%s)" % [d["day"] for d in r["dias"]])
+
+
+def test_EL_RANGO_MANDA_SOBRE_LOS_ULTIMOS_N_DIAS():
+    """Si `dias` siguiera mandando, pedir un mes entero devolvería 30 días
+    contados desde hoy y el informe diría otra cosa de la que se pide."""
+    mod = _mod()
+    _siembra(mod, [("2026-01-%02d" % d, "gemini-2.5-flash-image", 1, "render")
+                   for d in range(1, 29)])
+    r = _corre(mod.get_usage_por_dia(dias=3, desde="2026-01-01", hasta="2026-01-28"))
+    assert len(r["dias"]) == 28, (
+        "el rango se ha quedado recortado por `dias`: %d" % len(r["dias"]))
+
+
+def test_SIN_RANGO_SE_SIGUEN_DANDO_LOS_ULTIMOS_DIAS():
+    """Quitar el filtro tiene que volver al comportamiento de siempre."""
+    mod = _mod()
+    _siembra(mod, [("2026-02-%02d" % d, "gemini-2.5-flash-image", 1, "render")
+                   for d in range(1, 11)])
+    r = _corre(mod.get_usage_por_dia(dias=4))
+    assert len(r["dias"]) == 4
+
+
+def test_EL_TOTAL_ES_DEL_RANGO_ENTERO_Y_NO_DEL_ULTIMO_DIA():
+    """ESTE es el fallo que señaló el master: «ahora sólo muestra el del día
+    actual»."""
+    mod = _mod()
+    _siembra(mod, [
+        ("2026-03-01", "gemini-2.5-flash-image", 10, "render"),
+        ("2026-03-02", "gemini-2.5-flash-image", 10, "render"),
+    ])
+    r = _corre(mod.get_usage_por_dia(desde="2026-03-01", hasta="2026-03-02"))
+    # 20 imágenes x 0,036 EUR, más los tokens de los dos días.
+    assert r["total"]["imagenes"] == 20, (
+        "el total no suma el rango: %s" % r["total"])
+    assert r["total"]["cost_eur"] > 0.7, r["total"]
+    assert r["total"]["dias"] == 2
+    # Y las llamadas SE SUMAN. Sin esto, cambiar el `+=` por un `=` dejaba el
+    # total con el del último día y la prueba pasaba igual: es justo el fallo
+    # que el master señaló («sólo muestra el del día actual»).
+    assert r["total"]["llamadas"] == 2, (
+        "el total de llamadas no acumula el rango: %s" % r["total"])
+
+
+def test_EL_GASTO_SE_DESGLOSA_POR_MOTOR_Y_POR_TIPO_DE_TRABAJO():
+    """«Q diga el gasto por tipos de IAS». Son dos cortes distintos: QUÉ se le
+    pidió a la IA y CON QUÉ se pintó, que es de donde sale el euro."""
+    mod = _mod()
+    _siembra(mod, [
+        ("2026-04-01", "gemini-2.5-flash-image", 10, "render"),
+        ("2026-04-02", "gemini-3-pro-image-preview", 10, "render"),
+        ("2026-04-03", "gemini-2.5-flash", 0, "vision"),
+    ])
+    r = _corre(mod.get_usage_por_dia(desde="2026-04-01", hasta="2026-04-03"))
+    modelos = {m["modelo"]: m for m in r["por_modelo"]}
+    assert "gemini-2.5-flash-image" in modelos, (
+        "el desglose por motor enseña la clave escapada de Mongo: %s" % list(modelos))
+    assert modelos["gemini-2.5-flash-image"]["cost_eur"] == pytest.approx(0.36, abs=1e-3)
+    assert modelos["gemini-3-pro-image-preview"]["cost_eur"] == pytest.approx(1.2, abs=1e-2)
+    # Y ordenado por lo que más cuesta, que es lo que se mira primero.
+    assert r["por_modelo"][0]["modelo"] == "gemini-3-pro-image-preview"
+    assert r["por_tipo"] == {"render": 2, "vision": 1}
+
+
+def test_UN_MOTOR_SIN_TARIFA_SE_MARCA_EN_VEZ_DE_DAR_UN_EURO_QUE_PARECE_FIRME():
+    """Regla 7: un dato que no se sabe no se rellena con algo plausible. Aquí
+    el coste cae en la tarifa por defecto, así que se DICE."""
+    mod = _mod()
+    _siembra(mod, [("2026-05-01", "modelo-que-nadie-ha-tarifado", 5, "render")])
+    r = _corre(mod.get_usage_por_dia(desde="2026-05-01", hasta="2026-05-01"))
+    assert r["por_modelo"][0]["tarifa_conocida"] is False
+    # Y uno que sí está, marcado como conocido.
+    mod2 = _mod()
+    _siembra(mod2, [("2026-05-01", "gemini-2.5-flash-image", 5, "render")])
+    r2 = _corre(mod2.get_usage_por_dia(desde="2026-05-01", hasta="2026-05-01"))
+    assert r2["por_modelo"][0]["tarifa_conocida"] is True
+
+
+def test_EL_RANGO_SE_FILTRA_EN_LA_BASE_DE_DATOS():
+    """Traerse 180 días para tirar 170 va bien con pocos datos y deja de ir
+    bien justo cuando hay historial, que es cuando hace falta."""
+    mod = _mod()
+    vistos = {}
+    original = mod.db.ai_usage_diario.find
+
+    def _espia(filtro=None, *a, **k):
+        vistos["filtro"] = filtro
+        return original(filtro, *a, **k)
+    mod.db.ai_usage_diario.find = _espia
+    _corre(mod.get_usage_por_dia(desde="2026-06-01", hasta="2026-06-30"))
+    assert vistos["filtro"].get("day") == {"$gte": "2026-06-01", "$lte": "2026-06-30"}, (
+        "el rango no llega a la consulta: se filtra en memoria")

@@ -42,24 +42,48 @@ export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [diaAbierto, setDiaAbierto] = useState(null);
+  /* EL RANGO DE FECHAS (master, 15/09/2026: «que lo pueda calcular por
+     fechas»). Antes solo se podían pedir «los últimos N días» contando desde
+     hoy, que no sirve ni para cerrar un mes ni para comparar dos semanas.
+     Empieza vacío = últimos 30 días, que es lo que se mira el 90 % de las
+     veces; en cuanto se toca una fecha, manda el rango. */
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
 
-  const abrir = useCallback(async () => {
-    setAbierto(true);
-    if (datos || cargando) return;
+  const consultar = useCallback(async (d, h) => {
     setCargando(true); setError(null);
     try {
-      const r = await fetch(`${apiUrl}/api/admin/ai-usage/por-dia?dias=30`,
+      const q = (d || h)
+        ? `desde=${encodeURIComponent(d || '')}&hasta=${encodeURIComponent(h || '')}`
+        : 'dias=30';
+      const r = await fetch(`${apiUrl}/api/admin/ai-usage/por-dia?${q}`,
         { headers: cabeceras() });
       if (r.status === 403) { setError('Este consumo es solo del master.'); return; }
       if (!r.ok) { setError(`No se pudo leer el consumo (HTTP ${r.status}).`); return; }
-      const d = await r.json();
-      setDatos(d && d.success ? d : { dias: [], por_usuario: [], desde: null });
+      const j = await r.json();
+      setDatos(j && j.success ? j : { dias: [], por_usuario: [], por_modelo: [], por_tipo: {}, total: {} });
     } catch {
       setError('Error de conexión al leer el consumo.');
     } finally { setCargando(false); }
-  }, [apiUrl, cabeceras, datos, cargando]);
+  }, [apiUrl, cabeceras]);
+
+  const abrir = useCallback(() => {
+    setAbierto(true);
+    if (!datos && !cargando) consultar(desde, hasta);
+  }, [datos, cargando, consultar, desde, hasta]);
 
   const largo = usePulsacionLarga(abrir);
+
+  // Atajos: lo que de verdad se pide es «este mes» o «los últimos 7 días».
+  // Tecleando dos fechas a mano en una tablet eso cuesta ocho toques.
+  const rangoRapido = (dias) => {
+    const f = new Date();
+    const fin = f.toISOString().slice(0, 10);
+    const ini = dias === 'mes'
+      ? `${fin.slice(0, 7)}-01`
+      : new Date(f.getTime() - (dias - 1) * 86400000).toISOString().slice(0, 10);
+    setDesde(ini); setHasta(fin); consultar(ini, fin);
+  };
 
   // El botón no existe para quien no es master: enseñarlo apagado sería
   // contarle que hay un sitio con los euros de la casa.
@@ -67,6 +91,12 @@ export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
 
   const dias = (datos && datos.dias) || [];
   const hoy = dias[0];
+  const porModelo = (datos && datos.por_modelo) || [];
+  const porTipo = (datos && datos.por_tipo) || {};
+  const total = (datos && datos.total) || {};
+  // Los nombres de los tipos, para no enseñar `otro` a pelo.
+  const TIPOS = { render: 'Renders', vision: 'Leer planos y fotos',
+                  text: 'Texto', search: 'Búsqueda', otro: 'Otros' };
 
   return (
     <>
@@ -107,6 +137,37 @@ export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
               </button>
             </div>
 
+            {/* RANGO DE FECHAS. Los atajos primero, que es lo que se usa. */}
+            <div className="p-2 border-b border-slate-200 flex items-center gap-1.5 flex-wrap bg-slate-50">
+              {[['Hoy', 1], ['7 días', 7], ['30 días', 30], ['Este mes', 'mes']].map(([rot, n]) => (
+                <button key={rot} type="button" onClick={() => rangoRapido(n)}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-200 hover:bg-slate-100 text-slate-700">
+                  {rot}
+                </button>
+              ))}
+              <span className="w-px h-4 bg-slate-200 mx-1" />
+              <input type="date" value={desde} max={hasta || undefined}
+                onChange={(e) => setDesde(e.target.value)}
+                data-testid="gasto-ia-desde"
+                className="px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-mono" />
+              <span className="text-[11px] text-slate-400">a</span>
+              <input type="date" value={hasta} min={desde || undefined}
+                onChange={(e) => setHasta(e.target.value)}
+                data-testid="gasto-ia-hasta"
+                className="px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-mono" />
+              <button type="button" onClick={() => consultar(desde, hasta)}
+                className="px-2 py-1 rounded-lg text-[11px] font-black bg-accion-600 text-white hover:bg-accion-700">
+                Ver
+              </button>
+              {(desde || hasta) && (
+                <button type="button"
+                  onClick={() => { setDesde(''); setHasta(''); consultar('', ''); }}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-100">
+                  Quitar filtro
+                </button>
+              )}
+            </div>
+
             {cargando ? (
               <div className="p-8 text-center text-slate-500">
                 <Loader size={22} className="animate-spin mx-auto mb-2" /> Leyendo el consumo…
@@ -121,20 +182,98 @@ export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
               </div>
             ) : (
               <div className="overflow-auto">
-                {hoy && (
-                  <div className="p-3 bg-slate-50 border-b border-slate-200 flex gap-4 flex-wrap">
-                    <div>
+                {/* EL TOTAL ES DEL RANGO ELEGIDO, no del último día: si
+                    pones «este mes» y arriba siguiera el número de hoy, la
+                    cifra grande de la pantalla contestaría a otra pregunta. */}
+                <div className="p-3 bg-slate-50 border-b border-slate-200 flex gap-4 flex-wrap">
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-slate-400">
+                      {desde || hasta
+                        ? `Del ${desde || '…'} al ${hasta || '…'}`
+                        : `Últimos ${total.dias || 0} día(s) con gasto`}
+                    </div>
+                    <div className="text-lg font-black text-dato-900" data-testid="gasto-ia-total">
+                      {eur(total.cost_eur)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-slate-400">Llamadas</div>
+                    <div className="text-lg font-black text-slate-700">{entero(total.llamadas)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-slate-400">Imágenes</div>
+                    <div className="text-lg font-black text-slate-700">{entero(total.imagenes)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-slate-400">Tokens</div>
+                    <div className="text-lg font-black text-slate-700">
+                      {entero((total.tokens_in || 0) + (total.tokens_out || 0))}
+                    </div>
+                  </div>
+                  {hoy && !desde && !hasta && (
+                    <div className="ml-auto text-right">
                       <div className="text-[10px] font-black uppercase text-slate-400">Hoy ({hoy.day})</div>
                       <div className="text-lg font-black text-dato-900">{eur(hoy.cost_eur)}</div>
                     </div>
-                    <div>
-                      <div className="text-[10px] font-black uppercase text-slate-400">Llamadas</div>
-                      <div className="text-lg font-black text-slate-700">{entero(hoy.total)}</div>
+                  )}
+                </div>
+
+                {/* ─── POR TIPO DE IA (master, 15/09: «q diga el gasto por
+                    tipos de IAS»). Dos cortes, porque contestan cosas
+                    distintas: QUÉ se le ha pedido a la IA (renders, leer
+                    planos…) y CON QUÉ se ha pintado, que es de donde sale el
+                    euro. */}
+                {porModelo.length > 0 && (
+                  <div className="p-3 border-b border-slate-200">
+                    <div className="text-[10px] font-black uppercase text-slate-400 mb-1">
+                      Por tipo de trabajo
                     </div>
-                    <div>
-                      <div className="text-[10px] font-black uppercase text-slate-400">Imágenes</div>
-                      <div className="text-lg font-black text-slate-700">{entero(hoy.images)}</div>
+                    <div className="flex gap-2 flex-wrap mb-3">
+                      {Object.entries(porTipo).sort((a, b) => b[1] - a[1]).map(([k, v]) => (
+                        <span key={k} className="px-2 py-1 rounded-lg bg-slate-100 text-[11px] font-bold text-slate-700">
+                          {TIPOS[k] || k} <b className="font-mono">{entero(v)}</b>
+                        </span>
+                      ))}
                     </div>
+                    <div className="text-[10px] font-black uppercase text-slate-400 mb-1">
+                      Por motor · de aquí sale el coste
+                    </div>
+                    <table className="w-full text-xs" data-testid="gasto-ia-por-modelo">
+                      <thead className="bg-slate-100 text-slate-500">
+                        <tr>
+                          <th className="text-left px-2 py-1 font-black uppercase">Motor</th>
+                          <th className="text-right px-2 py-1 font-black uppercase">Llam.</th>
+                          <th className="text-right px-2 py-1 font-black uppercase">Imág.</th>
+                          <th className="text-right px-2 py-1 font-black uppercase">Tokens</th>
+                          <th className="text-right px-2 py-1 font-black uppercase">Coste</th>
+                        </tr>
+                      </thead>
+                      <tbody className="font-mono">
+                        {porModelo.map(m => (
+                          <tr key={m.modelo} className="border-b border-slate-100">
+                            <td className="px-2 py-1 font-sans font-bold text-slate-700">
+                              {m.modelo}
+                              {!m.tarifa_conocida && (
+                                <span className="ml-1 text-[9px] font-black text-aviso-600"
+                                  title="Este motor no está en la tabla de tarifas: el coste va con el precio por defecto y NO es fiable.">
+                                  tarifa sin confirmar
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-2 py-1 text-right text-slate-600">{entero(m.llamadas)}</td>
+                            <td className="px-2 py-1 text-right text-slate-600">{entero(m.imagenes)}</td>
+                            <td className="px-2 py-1 text-right text-slate-600">
+                              {entero((m.tokens_in || 0) + (m.tokens_out || 0))}
+                            </td>
+                            <td className="px-2 py-1 text-right font-black text-dato-900">{eur(m.cost_eur)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      Lo que se guarda es el MOTOR, no el botón: IA 0 e IA 7 piden el
+                      mismo, así que no se puede repartir por botón sin inventárselo.
+                    </p>
                   </div>
                 )}
                 <table className="w-full text-xs">

@@ -260,7 +260,8 @@ async def get_usage_summary():
     }
 
 
-async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None):
+async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None,
+                            desde: str = None, hasta: str = None):
     """El gasto de cada uno de los últimos días, y quién lo gastó.
 
     Master, 14/09/2026: «¿podemos saber los tokens o usos de IA gastados al
@@ -279,9 +280,26 @@ async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None):
     nombre.
     """
     if db is None:
-        return {"dias": [], "por_usuario": []}
-    n = max(1, min(int(dias or 30), 180))
-    filas = await db.ai_usage_diario.find({}, {"_id": 0}).sort("day", -1).to_list(n)
+        return {"dias": [], "por_usuario": [], "por_modelo": [], "por_tipo": {},
+                "total": {}, "desde": None, "hasta": None}
+    # RANGO DE FECHAS (master, 15/09/2026: «el gasto de IA, que lo pueda
+    # calcular por fechas»). Sin rango solo se podía mirar «los últimos N días»
+    # contando desde hoy, que no sirve para cerrar un mes ni para comparar dos
+    # semanas. Las fechas se filtran en la BASE DE DATOS y no aquí: traerse
+    # 180 días para tirar 170 va bien con pocos datos y deja de ir bien
+    # justo cuando hay historial, que es cuando empieza a hacer falta.
+    filtro = {}
+    if desde or hasta:
+        rango = {}
+        if desde:
+            rango["$gte"] = str(desde)[:10]
+        if hasta:
+            rango["$lte"] = str(hasta)[:10]
+        filtro["day"] = rango
+        n = 400            # un rango explícito manda sobre el «últimos N»
+    else:
+        n = max(1, min(int(dias or 30), 180))
+    filas = await db.ai_usage_diario.find(filtro, {"_id": 0}).sort("day", -1).to_list(n)
     nombres = nombres_de_usuario or {}
 
     def _coste(doc):
@@ -306,7 +324,54 @@ async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None):
             "images": sum(int(v or 0) for v in (doc.get("images") or {}).values()),
             "by_user": por_usuario,
         })
+    # ─── EL DESGLOSE POR TIPO DE IA (master, 15/09/2026: «y q diga el gasto
+    # por tipos de IAS»). Se suma TODO EL RANGO, no solo el último día.
+    #
+    # OJO CON LO QUE NO SE PUEDE HACER, y conviene decirlo en vez de fingirlo:
+    # lo que se guarda es el MODELO, no el botón. Y varios botones comparten
+    # modelo —IA 0 e IA 7 piden los dos el mismo—, así que de aquí NO se puede
+    # sacar «cuánto se ha ido en IA 0» sin inventárselo. Para eso habría que
+    # empezar a guardar también el motor; los días ya pasados no lo tendrían.
+    por_modelo, por_tipo = {}, {}
+    tot_llamadas = tot_imagenes = tot_in = tot_out = 0
+    tot_coste = 0.0
+    for doc in filas:
+        for k, v in (doc.get("by_kind") or {}).items():
+            por_tipo[k] = por_tipo.get(k, 0) + int(v or 0)
+        ti, to = doc.get("tokens_in", {}), doc.get("tokens_out", {})
+        im, ca = doc.get("images", {}), doc.get("calls", {})
+        for clave in set(ti) | set(to) | set(im) | set(ca):
+            m = por_modelo.setdefault(clave, {"llamadas": 0, "imagenes": 0,
+                                              "tokens_in": 0, "tokens_out": 0})
+            m["llamadas"] += int(ca.get(clave, 0) or 0)
+            m["imagenes"] += int(im.get(clave, 0) or 0)
+            m["tokens_in"] += int(ti.get(clave, 0) or 0)
+            m["tokens_out"] += int(to.get(clave, 0) or 0)
+        tot_llamadas += int(doc.get("total", 0) or 0)
+    lista_modelos = []
+    for clave, m in por_modelo.items():
+        coste = cost_of(clave, m["tokens_in"], m["tokens_out"], m["imagenes"])
+        tot_coste += coste
+        tot_imagenes += m["imagenes"]; tot_in += m["tokens_in"]; tot_out += m["tokens_out"]
+        lista_modelos.append({
+            "modelo": modelo_de_clave(clave), **m,
+            "cost_eur": round(coste, 4),
+            # Un modelo que no está en la tabla de precios cuenta con la tarifa
+            # por defecto: se DICE, en vez de dar un euro que parece firme.
+            "tarifa_conocida": modelo_de_clave(clave) in MODEL_PRICES,
+        })
+    lista_modelos.sort(key=lambda x: -x["cost_eur"])
+
     return {
+        "por_modelo": lista_modelos,
+        "por_tipo": por_tipo,
+        "total": {
+            "llamadas": tot_llamadas, "imagenes": tot_imagenes,
+            "tokens_in": tot_in, "tokens_out": tot_out,
+            "cost_eur": round(tot_coste, 4),
+            "dias": len(filas),
+        },
+        "hasta": filas[0].get("day") if filas else None,
         "dias": dias_out,
         "por_usuario": sorted(
             ({"id": uid, "nombre": nombres.get(uid, uid), "llamadas": v}

@@ -322,7 +322,8 @@ async def ai_usage(user=Depends(require_admin)):
 
 
 @router.get("/ai-usage/por-dia")
-async def ai_usage_por_dia(dias: int = 30, user=Depends(require_master)):
+async def ai_usage_por_dia(dias: int = 30, desde: str = None, hasta: str = None,
+                           user=Depends(require_master)):
     """Gasto de IA día a día, y quién lo gastó cada día. SOLO MASTER.
 
     El master, 14/09/2026: «pon un botón solo para máster para ver estos gastos
@@ -355,7 +356,7 @@ async def ai_usage_por_dia(dias: int = 30, user=Depends(require_master)):
                 nombres[uid] = u.get("name") or u.get("username") or uid
     except Exception:
         pass  # sin nombres se ven los ids; el informe sale igual
-    return {"success": True, **(await get_usage_por_dia(dias, nombres))}
+    return {"success": True, **(await get_usage_por_dia(dias, nombres, desde, hasta))}
 
 
 @router.post("/ai-usage/threshold")
