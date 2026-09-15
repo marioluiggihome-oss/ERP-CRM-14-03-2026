@@ -985,15 +985,40 @@ async def transcribe_audio(
         audio_file = io.BytesIO(audio_data)
         audio_file.name = file.filename or "audio.webm"
 
+        # `verbose_json` en vez del JSON normal PARA PODER TARIFARLO (master,
+        # 15/09/2026: «cuenta el whisper también»). Whisper se factura por
+        # MINUTO de audio, y la respuesta corriente solo trae el texto: sin la
+        # duración no hay forma honrada de poner el euro. `verbose_json` añade
+        # `duration` —los segundos que OpenAI ha facturado de verdad— y sigue
+        # trayendo `text`, así que el dictado no cambia para quien lo usa.
+        #
+        # LO QUE NO SE HACE: deducir la duración del TAMAÑO del fichero. Un
+        # webm de 300 KB pueden ser diez segundos o dos minutos según cómo
+        # comprima el móvil; eso sería inventarse una cifra (regla 7).
         transcript = await client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
             language="es",
+            response_format="verbose_json",
         )
+
+        texto = getattr(transcript, "text", "") or ""
+
+        # EL CONTADOR ES BEST-EFFORT, como el del render: el audio ya está
+        # transcrito y ya se ha pagado, así que un fallo apuntándolo no puede
+        # dejar al usuario sin su dictado.
+        try:
+            from services.ai_usage import record_ai_tokens
+            await record_ai_tokens(
+                "voz", "whisper-1", 0, 0, 0,
+                segundos=float(getattr(transcript, "duration", 0) or 0),
+            )
+        except Exception as e:
+            logger.warning(f"No se pudo apuntar el consumo de la transcripción: {e}")
 
         return {
             "success": True,
-            "text": transcript.text,
+            "text": texto,
             "engine": config.brand_name,
             "method": "server_transcription",
         }

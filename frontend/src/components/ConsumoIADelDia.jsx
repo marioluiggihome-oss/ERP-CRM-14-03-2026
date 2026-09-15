@@ -35,6 +35,14 @@ import { usePulsacionLarga, AYUDA_CANDADO } from '../utils/pulsacionLarga';
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', {
   minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const entero = (n) => (Number(n) || 0).toLocaleString('es-ES');
+// El audio se factura por MINUTO, así que se enseña en minutos. Un motor que no
+// es de voz no trae segundos: ahí va una raya y no un «0 min», que parecería que
+// se ha dictado algo y ha salido gratis.
+const minutos = (s) => {
+  const seg = Number(s) || 0;
+  if (!seg) return '—';
+  return `${(seg / 60).toLocaleString('es-ES', { maximumFractionDigits: 1 })} min`;
+};
 
 export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
   const [abierto, setAbierto] = useState(false);
@@ -244,6 +252,7 @@ export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
                           <th className="text-left px-2 py-1 font-black uppercase">Motor</th>
                           <th className="text-right px-2 py-1 font-black uppercase">Llam.</th>
                           <th className="text-right px-2 py-1 font-black uppercase">Imág.</th>
+                          <th className="text-right px-2 py-1 font-black uppercase">Audio</th>
                           <th className="text-right px-2 py-1 font-black uppercase">Tokens</th>
                           <th className="text-right px-2 py-1 font-black uppercase">Coste</th>
                         </tr>
@@ -262,6 +271,10 @@ export default function ConsumoIADelDia({ esMaster, apiUrl, cabeceras }) {
                             </td>
                             <td className="px-2 py-1 text-right text-slate-600">{entero(m.llamadas)}</td>
                             <td className="px-2 py-1 text-right text-slate-600">{entero(m.imagenes)}</td>
+                            {/* El dictado del servidor se factura por MINUTO, no por
+                                tokens: sin esta columna Whisper saldría con todo a cero
+                                y un coste que no se podría explicar con nada de la fila. */}
+                            <td className="px-2 py-1 text-right text-slate-600">{minutos(m.segundos)}</td>
                             <td className="px-2 py-1 text-right text-slate-600">
                               {entero((m.tokens_in || 0) + (m.tokens_out || 0))}
                             </td>

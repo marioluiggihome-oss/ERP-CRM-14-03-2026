@@ -140,6 +140,13 @@ MODEL_PRICES = {
     # volumen, pero el euro sale de los tokens, que es como se factura.
     "gpt-image-2.5-sunburst":        {"in": 5.00, "out": 30.0, "img": 0.0},
     "black-forest-labs/flux-1.1-pro":{"in": 0.00, "out": 0.00, "img": 0.04},
+    # WHISPER SE TARIFA POR MINUTO DE AUDIO, no por tokens ni por imágenes
+    # (master, 15/09/2026: «cuenta el whisper también»). Es la única dimensión
+    # que esta tabla no tenía, y por eso el dictado del servidor no se apuntaba
+    # en ningún sitio: no había dónde ponerlo. `min` son €/minuto; los demás
+    # modelos no la traen y `cost_of` la pide con `.get`, así que añadirla aquí
+    # no toca el precio de ninguno.
+    "whisper-1":                     {"in": 0.00, "out": 0.00, "img": 0.0, "min": 0.0055},
 }
 # Coste estimado por TIPO de llamada cuando no se miden tokens reales.
 DEFAULT_COST_PER = {"render": 0.12, "vision": 0.003, "otro": 0.003}
@@ -175,8 +182,9 @@ def modelo_de_clave(clave: str) -> str:
     return clave
 
 
-def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0) -> float:
-    """Coste (EUR) de una llamada a partir de tokens reales y/o nº de imágenes.
+def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0,
+            segundos: float = 0) -> float:
+    """Coste (EUR) de una llamada a partir de tokens, imágenes y/o segundos de audio.
 
     UNA IMAGEN NO SE COBRA DOS VECES (master, 15/09/2026: «mira la otra IA,
     tiene que cuadrar», con el consumo de Google y el de OpenAI delante).
@@ -196,6 +204,19 @@ def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0
     OJO CON EL ORDEN: esto solo aplica si el modelo tiene precio por imagen. Un
     modelo de texto que por lo que sea devuelva `images=1` sigue cobrando sus
     tokens, que es lo correcto.
+
+    EL AUDIO SE PAGA POR MINUTO Y SE SUMA APARTE (master, 15/09/2026: «cuenta
+    el whisper también»). Whisper no da tokens ni imágenes: da minutos, y esa
+    dimensión no existía en esta función — por eso el dictado del servidor no
+    se apuntaba en ningún sitio, ni siquiera como llamada. Se SUMA, no
+    sustituye a nada: un modelo que un día cobrara tokens Y audio pagaría los
+    dos, que es lo que haría el proveedor.
+
+    Y LOS SEGUNDOS SALEN DEL PROVEEDOR, NUNCA DEL TAMAÑO DEL FICHERO. Un webm
+    de 300 KB pueden ser diez segundos o dos minutos según cómo comprima el
+    móvil: deducir la duración del peso sería inventarse una cifra (regla 7).
+    Si la respuesta no trae la duración, `segundos` llega a 0 y la llamada se
+    cuenta con coste 0 — se ve el VOLUMEN aunque no se pueda poner el euro.
     """
     p = MODEL_PRICES.get(modelo_de_clave(model or ""), MODEL_PRICES["gemini-2.5-flash"])
     n_img = int(images or 0)
@@ -204,11 +225,13 @@ def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0
         coste += n_img * p["img"]          # la imagen YA son los tokens de salida
     else:
         coste += (int(out_tokens or 0) / 1_000_000) * p["out"]
+    coste += (float(segundos or 0) / 60.0) * p.get("min", 0.0)
     return round(coste, 6)
 
 
 async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens: int = 0,
-                           images: int = 0, user_id: str = None, count: bool = True):
+                           images: int = 0, user_id: str = None, count: bool = True,
+                           segundos: float = 0):
     """Registra el consumo REAL de una llamada: tokens por modelo y coste exacto
     acumulado del mes. Best-effort (nunca rompe la llamada de IA).
 
@@ -223,7 +246,7 @@ async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens
     if db is None:
         return
     try:
-        eur = cost_of(model, in_tokens, out_tokens, images)
+        eur = cost_of(model, in_tokens, out_tokens, images, segundos)
         mdl = (model or "otro").replace(".", "_")
         inc = {
             f"tokens_in.{mdl}": int(in_tokens or 0),
@@ -232,6 +255,12 @@ async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens
             f"calls.{mdl}": 1,
             "real_cost": eur,
         }
+        # Los SEGUNDOS de audio solo se apuntan si los hay. Si se metieran
+        # siempre, todos los modelos de texto y de imagen estrenarían un
+        # `seconds.<modelo>` a cero y el informe se llenaría de una columna
+        # vacía que no significa nada.
+        if segundos:
+            inc[f"seconds.{mdl}"] = float(segundos)
         if count:
             inc["total"] = 1
             inc[f"by_kind.{kind or 'otro'}"] = 1
@@ -302,13 +331,15 @@ async def get_usage_summary():
     tokens_in = cur.get("tokens_in", {})
     tokens_out = cur.get("tokens_out", {})
     images = cur.get("images", {})
-    model_keys = set(calls) | set(tokens_in) | set(tokens_out) | set(images)
+    seconds = cur.get("seconds", {})
+    model_keys = set(calls) | set(tokens_in) | set(tokens_out) | set(images) | set(seconds)
     cost_by_model = {
         model: cost_of(
             model,
             tokens_in.get(model, 0),
             tokens_out.get(model, 0),
             images.get(model, 0),
+            seconds.get(model, 0),
         )
         for model in model_keys
     }
@@ -329,6 +360,7 @@ async def get_usage_summary():
             "tokens_in": tokens_in,
             "tokens_out": tokens_out,
             "images": images,
+            "seconds": seconds,
             "cost_eur": cost_by_model,
         },
         "spend_url": cfg.get("spend_url", ""),
@@ -382,9 +414,9 @@ async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None,
 
     def _coste(doc):
         ti, to = doc.get("tokens_in", {}), doc.get("tokens_out", {})
-        im = doc.get("images", {})
-        return round(sum(cost_of(m, ti.get(m, 0), to.get(m, 0), im.get(m, 0))
-                         for m in set(ti) | set(to) | set(im)), 4)
+        im, se = doc.get("images", {}), doc.get("seconds", {})
+        return round(sum(cost_of(m, ti.get(m, 0), to.get(m, 0), im.get(m, 0), se.get(m, 0))
+                         for m in set(ti) | set(to) | set(im) | set(se)), 4)
 
     dias_out, acumulado = [], {}
     for doc in filas:
@@ -418,17 +450,20 @@ async def get_usage_por_dia(dias: int = 30, nombres_de_usuario=None,
             por_tipo[k] = por_tipo.get(k, 0) + int(v or 0)
         ti, to = doc.get("tokens_in", {}), doc.get("tokens_out", {})
         im, ca = doc.get("images", {}), doc.get("calls", {})
-        for clave in set(ti) | set(to) | set(im) | set(ca):
+        se = doc.get("seconds", {})
+        for clave in set(ti) | set(to) | set(im) | set(ca) | set(se):
             m = por_modelo.setdefault(clave, {"llamadas": 0, "imagenes": 0,
-                                              "tokens_in": 0, "tokens_out": 0})
+                                              "tokens_in": 0, "tokens_out": 0,
+                                              "segundos": 0.0})
             m["llamadas"] += int(ca.get(clave, 0) or 0)
             m["imagenes"] += int(im.get(clave, 0) or 0)
             m["tokens_in"] += int(ti.get(clave, 0) or 0)
             m["tokens_out"] += int(to.get(clave, 0) or 0)
+            m["segundos"] += float(se.get(clave, 0) or 0)
         tot_llamadas += int(doc.get("total", 0) or 0)
     lista_modelos = []
     for clave, m in por_modelo.items():
-        coste = cost_of(clave, m["tokens_in"], m["tokens_out"], m["imagenes"])
+        coste = cost_of(clave, m["tokens_in"], m["tokens_out"], m["imagenes"], m["segundos"])
         tot_coste += coste
         tot_imagenes += m["imagenes"]; tot_in += m["tokens_in"]; tot_out += m["tokens_out"]
         lista_modelos.append({

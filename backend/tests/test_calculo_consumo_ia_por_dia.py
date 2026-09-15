@@ -667,3 +667,131 @@ def test_VARIAS_IMAGENES_DEL_MISMO_DIA_SE_COBRAN_TODAS(au):
     assert fila["imagenes"] == 10
     # 1.000.000 de entrada a 2,00 € + 10 imágenes a 0,12 €.
     assert fila["cost_eur"] == round(2.00 + 1.20, 4)
+
+
+# ── Whisper: el dictado del servidor se factura por MINUTO ───────────────────
+#
+# El master, 15/09/2026: «cuenta el whisper también».
+#
+# El dictado del servidor —el que usa el ERP cuando el navegador no sabe
+# transcribir— NO SE APUNTABA EN NINGÚN SITIO. Ni el euro, ni la llamada. En el
+# informe de Consumo de IA no existía: cero peticiones, cero coste, como si esa
+# funcion no llamara a nadie.
+#
+# Y NO SE APUNTABA PORQUE NO HABÍA DÓNDE. Whisper no da tokens ni imágenes: da
+# MINUTOS de audio, y esta tabla solo tenía las otras dos dimensiones. Añadir un
+# `whisper-1` con precio por token habría sido peor que no contarlo: un coste
+# calculado con la unidad que no es da un número plausible y nunca un error.
+#
+# LO QUE NO SE PUEDE HACER, y por eso hay prueba: deducir la duración del TAMAÑO
+# del fichero. Un webm de 300 KB pueden ser diez segundos o dos minutos según
+# cómo comprima el móvil. Los segundos salen de `duration`, que es lo que OpenAI
+# dice haber facturado, y si no vienen la llamada se cuenta con coste 0 — se ve
+# el VOLUMEN aunque no se pueda poner el euro (regla 7).
+
+
+def test_EL_AUDIO_SE_COBRA_POR_MINUTO(au):
+    """Un minuto clavado vale la tarifa entera; medio, la mitad."""
+    assert au.cost_of("whisper-1", 0, 0, 0, 60) == round(0.0055, 6)
+    assert au.cost_of("whisper-1", 0, 0, 0, 30) == round(0.00275, 6)
+
+
+def test_UNA_TRANSCRIPCION_SE_APUNTA_EN_EL_DIA_CON_SUS_SEGUNDOS(au):
+    """La cadena entera: apuntar como lo hace la ruta, y pedir el informe."""
+    _corre(au.record_ai_tokens("voz", "whisper-1", 0, 0, 0, segundos=90))
+    inf = _corre(au.get_usage_por_dia(7))
+    fila = [m for m in inf["por_modelo"] if m["modelo"] == "whisper-1"][0]
+    assert fila["segundos"] == 90
+    assert fila["llamadas"] == 1
+    assert fila["cost_eur"] == round(1.5 * 0.0055, 4)
+    # Y se ve como tipo de trabajo propio: el dictado no es un render.
+    assert inf["por_tipo"].get("voz") == 1
+
+
+def test_SIN_DURACION_SE_CUENTA_LA_LLAMADA_PERO_NO_SE_INVENTA_EL_EURO(au):
+    """Si la respuesta no trae `duration`, el volumen se ve y el euro no se
+    rellena con un número plausible (regla 7)."""
+    _corre(au.record_ai_tokens("voz", "whisper-1", 0, 0, 0, segundos=0))
+    inf = _corre(au.get_usage_por_dia(7))
+    fila = [m for m in inf["por_modelo"] if m["modelo"] == "whisper-1"][0]
+    assert fila["llamadas"] == 1, "la transcripción tiene que verse aunque no se pueda tarifar"
+    assert fila["cost_eur"] == 0.0
+    assert fila["tarifa_conocida"] is True
+
+
+def test_LOS_SEGUNDOS_NO_TOCAN_EL_PRECIO_DE_NINGUN_OTRO_MOTOR(au):
+    """`min` es una clave que solo trae Whisper. Se pide con `.get`, así que
+    los demás no cambian de precio por existir ella."""
+    assert au.cost_of("gemini-2.5-flash-image", 0, 0, 1) == round(0.036, 6)
+    assert au.cost_of("gemini-2.5-pro", 1_000_000, 0, 0) == round(1.15, 6)
+    assert au.cost_of("whisper-1", 0, 0, 0, 60) == round(0.0055, 6)
+
+
+def test_EL_AUDIO_SUMA_AL_RESTO_Y_NO_LO_SUSTITUYE(au):
+    """Un modelo que cobre tokens Y audio paga los dos, que es lo que hace el
+    proveedor.
+
+    Esta prueba hace falta porque la de arriba NO lo ejercía: Whisper tiene sus
+    dos precios de token a cero, así que sumar y sustituir dan el mismo número.
+    La mutación «si hay segundos, el audio sustituye a todo lo demás» pasaba en
+    verde con las seis pruebas anteriores. Un candado que no distingue las dos
+    cosas no está probando ninguna.
+    """
+    # Un modelo de texto al que le lleguen segundos por error NO puede perder
+    # el coste de sus tokens: esa es la mitad barata de la mutación.
+    assert au.cost_of("gemini-2.5-pro", 1_000_000, 0, 0, 60) == round(1.15, 6)
+    # Y con las dos dimensiones de verdad, se pagan las dos. Se le pone precio
+    # por minuto a un modelo que también cobra tokens: hoy no existe ninguno
+    # así, y justamente por eso es donde el fallo entraría sin que nadie mire.
+    au.MODEL_PRICES["modelo-de-prueba"] = {"in": 1.00, "out": 0.0, "img": 0.0, "min": 0.10}
+    assert au.cost_of("modelo-de-prueba", 1_000_000, 0, 0, 60) == round(1.10, 6)
+
+
+def test_EL_MES_TAMBIEN_VE_EL_AUDIO(au):
+    """Si el día contara el audio y el mes no, los dos informes darían cifras
+    del mismo dinero que no cuadran y no habría forma de saber cuál miente."""
+    _corre(au.record_ai_tokens("voz", "whisper-1", 0, 0, 0, segundos=120))
+    res = _corre(au.get_usage_summary())
+    assert res["by_model"]["seconds"].get("whisper-1") == 120
+    assert res["by_model"]["cost_eur"]["whisper-1"] == round(2 * 0.0055, 6)
+    assert res["real_cost"] == round(2 * 0.0055, 4)
+
+
+def test_UN_MOTOR_SIN_AUDIO_NO_ESTRENA_UNA_COLUMNA_DE_CEROS(au):
+    """`seconds.<modelo>` solo se escribe si hay segundos. Si se escribiera
+    siempre, todos los modelos de texto y de imagen traerían un cero que no
+    significa nada y la tabla enseñaría una columna vacía."""
+    _corre(au.record_ai_tokens("render", "gemini-2.5-flash-image", 100, 0, 1, count=False))
+    doc = _corre(au.db.ai_usage_diario.find_one({"day": au._day()}))
+    assert "seconds" not in doc, (
+        "un render ha escrito segundos de audio: la tabla se llenaría de ceros")
+
+
+def test_LA_RUTA_DE_DICTADO_PIDE_LA_DURACION_Y_LA_APUNTA():
+    """La duración sale del PROVEEDOR, no del peso del fichero.
+
+    Con el `response_format` por defecto la respuesta solo trae el texto: sin
+    `verbose_json` no hay `duration`, y sin `duration` la única forma de poner
+    un euro sería deducirlo del tamaño del audio — que es inventárselo.
+    """
+    ruta = os.path.join(RAIZ, "routes", "ai_engine.py")
+    with open(ruta, "r", encoding="utf-8") as f:
+        cuerpo = f.read()
+    i = cuerpo.index("async def transcribe_audio")
+    bloque = cuerpo[i:cuerpo.index("@ai_engine_router.post", i + 10)]
+    # Sin los comentarios: este fichero EXPLICA el arreglo justo encima, y un
+    # candado que se cree su propia nota no protege nada (reglas 24, 34, 35).
+    limpio = "\n".join(l for l in bloque.split("\n") if not l.strip().startswith("#"))
+    assert "transcriptions.create" in limpio, "se ha comido el código al quitar los comentarios"
+    assert 'response_format="verbose_json"' in limpio, (
+        "la transcripción ha dejado de pedir la duración: Whisper se factura "
+        "por minuto y sin ella no se puede tarifar")
+    assert "record_ai_tokens" in limpio, "la transcripción ha dejado de apuntarse"
+    assert 'getattr(transcript, "duration"' in limpio, (
+        "los segundos ya no salen de lo que dice el proveedor")
+    # Y no se deduce del peso del audio por ninguna vía.
+    assert "len(audio_data)" not in limpio, (
+        "la duración se está sacando del tamaño del fichero: eso es una cifra "
+        "inventada (regla 7)")
+    assert "except Exception" in limpio, (
+        "apuntar el consumo puede tumbar el dictado del usuario")
