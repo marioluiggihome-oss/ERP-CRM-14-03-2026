@@ -131,7 +131,14 @@ MODEL_PRICES = {
     # parece gastar. Mejor una cifra marcada como aproximada que un cero que
     # miente. Cuando llegue la primera factura de OpenAI, se cuadra.
     "gpt-6-astra":                   {"in": 5.00, "out": 25.0, "img": 0.0},
-    "gpt-image-2.5-sunburst":        {"in": 5.00, "out": 30.0, "img": 0.17},
+    # LA IMAGEN DE OPENAI NO ES UNA LÍNEA DE FACTURA. Se genera como
+    # HERRAMIENTA dentro de un `responses.create`, así que OpenAI la cobra en
+    # los tokens de esa respuesta —que ya se apuntan bajo el modelo director— y
+    # en su panel de Usage sale «0 images, 0 requests» (master, 15/09/2026).
+    # Cobrar aquí 0,17 € por imagen era sumar un importe inventado ENCIMA del
+    # coste real. Se deja a 0: la imagen se sigue CONTANDO para saber el
+    # volumen, pero el euro sale de los tokens, que es como se factura.
+    "gpt-image-2.5-sunburst":        {"in": 5.00, "out": 30.0, "img": 0.0},
     "black-forest-labs/flux-1.1-pro":{"in": 0.00, "out": 0.00, "img": 0.04},
 }
 # Coste estimado por TIPO de llamada cuando no se miden tokens reales.
@@ -169,14 +176,35 @@ def modelo_de_clave(clave: str) -> str:
 
 
 def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0) -> float:
-    """Coste (EUR) exacto de una llamada a partir de tokens reales y/o nº de imágenes."""
+    """Coste (EUR) de una llamada a partir de tokens reales y/o nº de imágenes.
+
+    UNA IMAGEN NO SE COBRA DOS VECES (master, 15/09/2026: «mira la otra IA,
+    tiene que cuadrar», con el consumo de Google y el de OpenAI delante).
+
+    Los dos proveedores facturan la imagen generada COMO TOKENS DE SALIDA. El
+    precio por imagen de esta tabla es ese mismo coste dicho de otra forma —una
+    imagen de `gemini-2.5-flash-image` son ~1.290 tokens de salida, y eso es lo
+    que valen los 0,036 €—. Hasta hoy se sumaban LAS DOS COSAS: los tokens de
+    salida A PRECIO DE TEXTO más el precio por imagen, así que el mismo dibujo
+    se pagaba dos veces en el informe. Nadie lo notaba porque el sobrante era
+    pequeño y el total seguía pareciendo razonable.
+
+    Ahora, cuando la llamada devuelve imágenes, el precio por imagen SUSTITUYE
+    al de los tokens de salida — que son la imagen. Los de ENTRADA se siguen
+    cobrando aparte: eso es el encargo, y se paga igual.
+
+    OJO CON EL ORDEN: esto solo aplica si el modelo tiene precio por imagen. Un
+    modelo de texto que por lo que sea devuelva `images=1` sigue cobrando sus
+    tokens, que es lo correcto.
+    """
     p = MODEL_PRICES.get(modelo_de_clave(model or ""), MODEL_PRICES["gemini-2.5-flash"])
-    return round(
-        (int(in_tokens or 0) / 1_000_000) * p["in"]
-        + (int(out_tokens or 0) / 1_000_000) * p["out"]
-        + int(images or 0) * p["img"],
-        6,
-    )
+    n_img = int(images or 0)
+    coste = (int(in_tokens or 0) / 1_000_000) * p["in"]
+    if n_img and p["img"]:
+        coste += n_img * p["img"]          # la imagen YA son los tokens de salida
+    else:
+        coste += (int(out_tokens or 0) / 1_000_000) * p["out"]
+    return round(coste, 6)
 
 
 async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens: int = 0,

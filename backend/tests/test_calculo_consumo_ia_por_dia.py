@@ -551,3 +551,119 @@ def test_NO_SE_USA_UNA_GLOBAL_QUE_MEZCLE_PETICIONES():
         cuerpo = f.read()
     assert "contextvars.ContextVar" in cuerpo, (
         "el usuario en curso ha dejado de ir en una variable de contexto")
+
+
+# ── Una imagen no se cobra dos veces ─────────────────────────────────────────
+#
+# El master, 15/09/2026, con el panel de Google delante después del de OpenAI:
+# «Y MIRA LA OTRA IA, TIENE QUE CUADRAR».
+#
+# No cuadraba, y el motivo era el mismo en los dos proveedores: LOS DOS
+# FACTURAN LA IMAGEN GENERADA COMO TOKENS DE SALIDA. El precio por imagen de
+# `MODEL_PRICES` es ese mismo coste dicho de otra forma —una imagen de
+# `gemini-2.5-flash-image` son ~1.290 tokens de salida, y eso son los 0,036 €—.
+# `cost_of` sumaba LAS DOS COSAS: los tokens de salida a precio de TEXTO más el
+# precio por imagen. Cada render se pagaba dos veces en el informe.
+#
+# POR QUÉ NO SALTABA A LA VISTA, que es lo de siempre en este repo: no daba
+# ningún error. El sobrante es de un 8-11 % según el modelo, así que el total
+# seguía pareciendo razonable y nadie lo iba a relacionar con nada. Solo se ve
+# poniendo al lado la factura del proveedor, que es justo lo que pidió el
+# master.
+#
+# Y NO ES TEÓRICO: `services/llm_vision.py` apunta el render de Gemini con los
+# tokens REALES **y** `images=1` en la misma llamada. Por eso la primera de
+# estas pruebas recorre la cadena entera —apuntar y después pedir el informe—
+# en vez de llamar a `cost_of` a pelo: comprobar solo la función dejaría pasar
+# que el recorrido real no la use.
+
+
+def test_UNA_IMAGEN_NO_SE_COBRA_DOS_VECES_EN_EL_CAMINO_REAL(au):
+    """Apuntar como lo hace el render de Gemini, y mirar lo que sale."""
+    # Lo mismo que hace `llm_vision.py`: tokens reales de la respuesta Y una
+    # imagen, en el mismo apunte.
+    _corre(au.record_ai_tokens("render", "gemini-2.5-flash-image",
+                               1_000_000, 1290, 1, count=False))
+    inf = _corre(au.get_usage_por_dia(7))
+    fila = [m for m in inf["por_modelo"] if m["modelo"] == "gemini-2.5-flash-image"][0]
+    # Entrada (0,28 €) + la imagen (0,036 €). Los 1.290 tokens de salida SON la
+    # imagen: cobrarlos aparte serían 0,0030 € de más por cada render.
+    assert fila["cost_eur"] == round(0.28 + 0.036, 4), (
+        f"el render de Gemini se cobra {fila['cost_eur']} € en vez de 0,316 €: "
+        "se está pagando la imagen y además sus tokens de salida")
+    # Y la imagen se sigue CONTANDO: no cobrarla dos veces no es dejar de verla.
+    assert fila["imagenes"] == 1
+    assert fila["tokens_out"] == 1290
+
+
+def test_LOS_TOKENS_DE_ENTRADA_SE_SIGUEN_COBRANDO_CON_IMAGEN(au):
+    """El encargo se paga igual: lo que sustituye a la imagen es la SALIDA."""
+    solo_entrada = au.cost_of("gemini-2.5-flash-image", 1_000_000, 0, 0)
+    con_imagen = au.cost_of("gemini-2.5-flash-image", 1_000_000, 1290, 1)
+    assert solo_entrada == round(0.28, 6)
+    assert con_imagen == round(0.28 + 0.036, 6), (
+        "los tokens de entrada han dejado de contarse cuando hay imagen: un "
+        "render con un plano y seis bocetos de referencia saldría casi gratis")
+
+
+def test_SIN_IMAGEN_UN_MODELO_DE_IMAGEN_COBRA_SUS_TOKENS_DE_SALIDA(au):
+    """Una llamada que no devuelve imagen no puede salir a cero.
+
+    La cascada de respaldo, un `finishReason` raro o una respuesta solo de
+    texto: el modelo es de imagen pero no ha pintado nada. Si el corte fuera
+    «modelo de imagen → no cobres la salida», eso se contaría como 0 € y el
+    informe diría que los intentos fallidos no cuestan. Cuestan.
+    """
+    assert au.cost_of("gemini-2.5-flash-image", 0, 1_000_000, 0) == round(2.30, 6)
+
+
+def test_UN_MODELO_DE_TEXTO_QUE_DEVUELVA_IMAGEN_SIGUE_COBRANDO_SUS_TOKENS(au):
+    """El corte es «tiene precio por imagen», no «ha devuelto imágenes».
+
+    Sin esa condición, apuntar `images=1` en un modelo de texto —que no tiene
+    tarifa por imagen— le borraría el coste de salida entero: la llamada más
+    cara del ERP contaría 0,00 € por haber traído una imagen de propina.
+    """
+    assert au.cost_of("gemini-2.5-pro", 0, 1_000_000, 1) == round(9.25, 6)
+
+
+def test_LA_IMAGEN_DE_OPENAI_NO_SE_COBRA_APARTE_PORQUE_YA_VA_EN_LOS_TOKENS(au):
+    """IA PREMIUM: la imagen es una HERRAMIENTA dentro de `responses.create`.
+
+    OpenAI la factura en los tokens de esa respuesta —que el ERP ya apunta bajo
+    el modelo director— y en su panel de Usage sale «0 images, 0 requests»
+    (comprobado con el master el 15/09/2026). El 0,17 € por imagen que había
+    aquí era un importe inventado ENCIMA del real.
+    """
+    assert au.MODEL_PRICES["gpt-image-2.5-sunburst"]["img"] == 0.0, (
+        "ha vuelto el precio por imagen de OpenAI: ese euro no está en su "
+        "factura, la imagen se cobra en los tokens del modelo director")
+    # El apunte que hace `render_3d.py` para el modelo de imagen: 0 tokens y 1
+    # imagen. Tiene que costar 0 — el dinero está en el otro apunte.
+    assert au.cost_of("gpt-image-2.5-sunburst", 0, 0, 1) == 0.0
+    # Y el director SÍ cobra sus tokens, que es donde está el coste de verdad.
+    assert au.cost_of("gpt-6-astra", 1_000_000, 0, 0) == round(5.00, 6)
+
+
+def test_LA_IMAGEN_SIN_TOKENS_SE_SIGUE_COBRANDO_POR_IMAGEN(au):
+    """Flux no devuelve tokens: 0, 0 y una imagen. Ahí el precio por imagen es
+    lo ÚNICO que hay, así que quitarlo dejaría el motor a 0,00 € — el más caro
+    pareciendo el más barato, que es lo que esta tabla existe para evitar."""
+    assert au.cost_of("black-forest-labs/flux-1.1-pro", 0, 0, 1) == round(0.04, 6)
+
+
+def test_VARIAS_IMAGENES_DEL_MISMO_DIA_SE_COBRAN_TODAS(au):
+    """El documento del día trae el ACUMULADO, no una llamada.
+
+    Diez renders son diez imágenes y diez veces sus tokens de entrada. Si el
+    corte se escribiera «si hay imágenes, cobra UNA», un día entero de trabajo
+    costaría lo que un render.
+    """
+    for _ in range(10):
+        _corre(au.record_ai_tokens("render", "gemini-3-pro-image-preview",
+                                   100_000, 1120, 1, count=False))
+    inf = _corre(au.get_usage_por_dia(7))
+    fila = [m for m in inf["por_modelo"] if m["modelo"] == "gemini-3-pro-image-preview"][0]
+    assert fila["imagenes"] == 10
+    # 1.000.000 de entrada a 2,00 € + 10 imágenes a 0,12 €.
+    assert fila["cost_eur"] == round(2.00 + 1.20, 4)
